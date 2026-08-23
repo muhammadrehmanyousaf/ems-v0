@@ -1334,10 +1334,54 @@ export interface ApiPackage {
    * the 120-seat Terrace Lawn.
    */
   subVenueId?: number | null;
+  /**
+   * WW-PKG-UNIT — how this package's price is CHARGED.
+   *
+   * Menus have carried `pricingUnit` since WW-PRICING-OVERHAUL; packages did
+   * not, so the engine read every package as a flat per-event amount and
+   * "Rs 2,500 per head" — how most Pakistani venues actually sell — could not
+   * be entered. NULL / "per_event" is the legacy flat price and is unchanged.
+   * Rule: `lib/pricing/package.ts`, mirroring `src/utils/packagePricing.js`.
+   */
+  pricingUnit?: "per_head" | "per_event" | string | null;
+  /** Minimum billable heads — the Pakistani min-pax guarantee. Per-head only. */
+  minGuaranteeCount?: number | null;
+  /**
+   * TRUE = this price already covers catering, so a selected menu contributes
+   * ZERO. Without it, a venue offering "Gold Rs 2,500/head (food included)"
+   * alongside its "Gold Menu Rs 2,500/head" billed the customer Rs 5,000/head.
+   */
+  includesFood?: boolean | null;
+  /** Advisory band shown on the package card ("200–800 guests"). */
+  guestRangeMin?: number | null;
+  guestRangeMax?: number | null;
+  /** buffet | sit_down | family | hi_tea | stations. NULL = unspecified. */
+  serviceStyle?: string | null;
+  /** The menu this package bundles, when the vendor declared one. */
+  menuId?: number | null;
   createdAt: string;
   updatedAt: string;
   business?: { id: number; name: string };
   subVenue?: { id: number; name: string } | null;
+  bundledMenu?: { id: number; title: string } | null;
+}
+
+/**
+ * WW-PKG-UNIT — the pricing fields accepted by create and update.
+ *
+ * Every key is optional: an older client that sends none of them writes NULL /
+ * default and prices exactly as it does today. On the PATCH path a key that is
+ * absent leaves the stored value alone, so `null` is how a field is CLEARED —
+ * which is why the manager sends them all explicitly.
+ */
+export interface PackagePricingInput {
+  pricingUnit?: "per_head" | "per_event" | null;
+  minGuaranteeCount?: number | null;
+  includesFood?: boolean | null;
+  guestRangeMin?: number | null;
+  guestRangeMax?: number | null;
+  serviceStyle?: string | null;
+  menuId?: number | null;
 }
 
 export class PackagesAPI {
@@ -1354,7 +1398,8 @@ export class PackagesAPI {
     features?: PackageFeatures;
     images?: string[];
     businessId: number;
-  }): Promise<ApiPackage> {
+    subVenueId?: number | null;
+  } & PackagePricingInput): Promise<ApiPackage> {
     const res = await axiosInstance.post(
       "/api/v1/packages/single-package",
       data,
@@ -1371,7 +1416,8 @@ export class PackagesAPI {
       features?: PackageFeatures;
       images?: string[];
       businessId: number;
-    },
+      subVenueId?: number | null;
+    } & PackagePricingInput,
   ): Promise<ApiPackage> {
     const res = await axiosInstance.patch(`/api/v1/packages/${id}`, data);
     return res.data?.data;

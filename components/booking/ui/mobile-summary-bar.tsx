@@ -4,6 +4,12 @@ import { useMemo, useState } from "react"
 import { Receipt, ChevronUp, ChevronDown } from "lucide-react"
 import type { BookingFormData, EventVenue, Vendor } from "@/lib/types"
 import { menuChargeFor, menuIsPerHead, menuBillableHeads } from "@/lib/pricing/menu"
+// WW-PKG-UNIT — per-head packages + the includesFood rule.
+import {
+  composeLineTotal,
+  packageIsPerHead,
+  packageBillableHeads,
+} from "@/lib/pricing/package"
 
 interface MobileSummaryBarProps {
   formData: BookingFormData
@@ -30,13 +36,28 @@ export default function MobileSummaryBar({
     const vehicleQty =
       isCarRental || isBridalWear || isWeddingStationery ? formData.vehicleQuantity || 1 : 1
 
+    // WW-PKG-UNIT — the running total the customer watches while they browse
+    // must agree with the Review step and the server. Both now go through
+    // `composeLineTotal`, so this bar cannot drift by adding the package and the
+    // menu itself — which is how the double-charge stayed invisible for so long.
+    const menuRaw = menuChargeFor(selectedMenuObj, formData.guestCount)
+    const line = composeLineTotal({
+      pkg: selectedPackageObj,
+      guestCount: formData.guestCount,
+      qty: vehicleQty,
+      menuCharge: menuRaw,
+    })
+
     if (selectedPackageObj) {
+      const pkgPerHead = packageIsPerHead(selectedPackageObj)
+      const pkgHeads = packageBillableHeads(selectedPackageObj, formData.guestCount)
       items.push({
-        label:
-          vehicleQty > 1
+        label: pkgPerHead
+          ? `${selectedPackageObj.name} ×${pkgHeads}`
+          : vehicleQty > 1
             ? `${selectedPackageObj.name} ×${vehicleQty}`
             : selectedPackageObj.name,
-        amount: (Number(selectedPackageObj.price) || 0) * vehicleQty,
+        amount: line.packageCharge,
       })
     }
     if (selectedMenuObj) {
@@ -45,8 +66,13 @@ export default function MobileSummaryBar({
       const heads = menuBillableHeads(selectedMenuObj, formData.guestCount)
       const baseLabel = selectedMenuObj.title || selectedMenuObj.name
       items.push({
-        label: perHead ? `${baseLabel} ×${heads}` : baseLabel,
-        amount: menuChargeFor(selectedMenuObj, formData.guestCount),
+        // WW-PKG-UNIT — a Rs 0 row with no explanation reads as a bug. Say why.
+        label: line.menuIncluded
+          ? `${baseLabel} — included`
+          : perHead
+            ? `${baseLabel} ×${heads}`
+            : baseLabel,
+        amount: line.menuCharge,
       })
     }
     if (formData.selectedVendorPackages?.length) {

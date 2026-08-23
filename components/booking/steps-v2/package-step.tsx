@@ -3,6 +3,15 @@
 import { useState } from "react"
 import type { BookingFormData, EventVenue, Vendor } from "@/lib/types"
 import { Check, ChevronDown, ChevronUp, Minus, Plus } from "lucide-react"
+// WW-PKG-UNIT — a package can be priced per head; the card must say so and show
+// what that comes to at this customer's guest count.
+import {
+  packageIsPerHead,
+  packageBillableHeads,
+  packageChargeFor,
+  packageIsAtMinGuarantee,
+  packageIncludesFood,
+} from "@/lib/pricing/package"
 
 interface Props {
   formData: BookingFormData
@@ -167,13 +176,36 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
                     )}
                   </div>
                   <div className="flex items-start gap-3 shrink-0">
+                    {/* WW-PKG-UNIT — the unit NEVER leaves the number.
+                        "Rs 2,500" next to "package" told a customer nothing
+                        about whether that was the whole event or one plate, and
+                        it is the same ambiguity that let vendors enter a
+                        per-head rate as a flat one. For a per-head package we
+                        also show what it comes to at THEIR guest count, because
+                        that is the figure they are actually deciding on. */}
                     <div className="text-right">
                       <p className="font-display italic text-[22px] text-bridal-gold-dark leading-none tabular-nums">
                         Rs. {Number(pkg.price)?.toLocaleString()}
                       </p>
                       <p className="font-bridal text-[10px] uppercase tracking-[0.18em] text-bridal-text-soft mt-1">
-                        {isCarRental ? "per event" : isBridalWear ? "per outfit" : "package"}
+                        {packageIsPerHead(pkg)
+                          ? "per head"
+                          : isCarRental ? "per event" : isBridalWear ? "per outfit" : "package"}
                       </p>
+                      {packageIsPerHead(pkg) && (
+                        <p className="font-bridal text-[11px] text-bridal-text-soft mt-1.5 tabular-nums">
+                          {(() => {
+                            const heads = packageBillableHeads(pkg, formData.guestCount)
+                            const atMin = packageIsAtMinGuarantee(pkg, formData.guestCount)
+                            return `Rs. ${packageChargeFor(pkg, formData.guestCount).toLocaleString()} for ${heads} ${heads === 1 ? "guest" : "guests"}${atMin ? " (min)" : ""}`
+                          })()}
+                        </p>
+                      )}
+                      {packageIncludesFood(pkg) && (
+                        <p className="font-bridal text-[10px] uppercase tracking-[0.16em] text-bridal-sage mt-1">
+                          Food included
+                        </p>
+                      )}
                     </div>
                     <span
                       aria-hidden

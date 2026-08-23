@@ -39,7 +39,27 @@ export function PackagesManager({ businessId }: { businessId: number }) {
   const { data: packages, isLoading } = useQuery<ApiPackage[]>({ queryKey: ["pkgs", businessId], queryFn: () => PackagesAPI.getAll(businessId) })
   const [adding, setAdding] = React.useState(false)
   const [editingId, setEditingId] = React.useState<number | null>(null)
-  const [form, setForm] = React.useState({ name: "", price: "", description: "", features: "", subVenueId: "" })
+  /**
+   * WW-PKG-UNIT — `pricingUnit` is an EXPLICIT vendor choice, never inferred.
+   *
+   * This form asked for a name and a rupee number and nothing else, so a venue
+   * charging "Rs 2,500 per head" had no way to say which of two very different
+   * things that 2,500 meant. The engine read every package as flat, so a
+   * 500-guest wedding billed Rs 2,500 — or the vendor pre-multiplied to
+   * 12,50,000, which then stayed frozen when the guest count changed.
+   *
+   * The default is `per_head`, matching `menus-manager` and the Pakistani norm.
+   * A vendor editing an existing package sees whatever was stored, and a legacy
+   * NULL resolves to `per_event` so nothing reprices behind their back.
+   */
+  const [form, setForm] = React.useState({
+    name: "", price: "", description: "", features: "", subVenueId: "",
+    pricingUnit: "per_head" as "per_head" | "per_event",
+    minGuarantee: "", includesFood: false,
+    guestRangeMin: "", guestRangeMax: "",
+    serviceStyle: "" as string,
+  })
+  const isPerHead = form.pricingUnit === "per_head"
 
   /**
    * The venue's spaces, so a package can say WHERE it is sold.
@@ -64,11 +84,34 @@ export function PackagesManager({ businessId }: { businessId: number }) {
   // Errors show only once a field has been touched, so a freshly-opened blank
   // form doesn't greet the vendor with red text before they've typed anything.
   const [touched, setTouched] = React.useState<Record<string, boolean>>({})
-  const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
+  const set = (k: keyof typeof form, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }) as typeof f)
   const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
-  const reset = () => { setForm({ name: "", price: "", description: "", features: "", subVenueId: "" }); setTouched({}); setAdding(false); setEditingId(null) }
+  const reset = () => {
+    setForm({
+      name: "", price: "", description: "", features: "", subVenueId: "",
+      pricingUnit: "per_head", minGuarantee: "", includesFood: false,
+      guestRangeMin: "", guestRangeMax: "", serviceStyle: "",
+    })
+    setTouched({}); setAdding(false); setEditingId(null)
+  }
   const startEdit = (p: ApiPackage) => {
-    setForm({ name: p.name ?? "", price: String(p.price ?? ""), description: p.description ?? "", features: asFeatures(p.features).join("\n"), subVenueId: p.subVenueId != null ? String(p.subVenueId) : "" })
+    setForm({
+      name: p.name ?? "",
+      price: String(p.price ?? ""),
+      description: p.description ?? "",
+      features: asFeatures(p.features).join("\n"),
+      subVenueId: p.subVenueId != null ? String(p.subVenueId) : "",
+      // WW-PKG-UNIT — a stored NULL is a LEGACY FLAT package. It must open as
+      // per_event, not as the per_head default a new package gets, or simply
+      // opening an old package and pressing Save would silently multiply its
+      // price by the guest count on every future booking.
+      pricingUnit: String((p as any).pricingUnit || "").toLowerCase() === "per_head" ? "per_head" : "per_event",
+      minGuarantee: (p as any).minGuaranteeCount != null ? String((p as any).minGuaranteeCount) : "",
+      includesFood: (p as any).includesFood === true,
+      guestRangeMin: (p as any).guestRangeMin != null ? String((p as any).guestRangeMin) : "",
+      guestRangeMax: (p as any).guestRangeMax != null ? String((p as any).guestRangeMax) : "",
+      serviceStyle: (p as any).serviceStyle ?? "",
+    })
     setTouched({}); setEditingId(p.id); setAdding(true)
   }
   const invalidate = () => qc.invalidateQueries({ queryKey: ["pkgs", businessId] })
@@ -84,6 +127,15 @@ export function PackagesManager({ businessId }: { businessId: number }) {
         // Always sent, including as null, so a vendor can move a package back to
         // venue-wide. Omitting it would make "no space" mean "leave it alone".
         subVenueId: form.subVenueId ? Number(form.subVenueId) : null,
+        // WW-PKG-UNIT — always sent, including the nulls, for the same reason as
+        // subVenueId: a PATCH that omits a key leaves the stored value alone, so
+        // clearing a guarantee would be impossible.
+        pricingUnit: form.pricingUnit,
+        minGuaranteeCount: isPerHead && form.minGuarantee.trim() ? Number(form.minGuarantee) : null,
+        includesFood: form.includesFood,
+        guestRangeMin: form.guestRangeMin.trim() ? Number(form.guestRangeMin) : null,
+        guestRangeMax: form.guestRangeMax.trim() ? Number(form.guestRangeMax) : null,
+        serviceStyle: form.serviceStyle || null,
       }
       return editingId ? PackagesAPI.update(editingId, body) : PackagesAPI.create(body)
     },
@@ -121,21 +173,47 @@ export function PackagesManager({ businessId }: { businessId: number }) {
   // lone `canSave` driving `disabled`, so an invalid price greyed the button out
   // and said nothing — the vendor saw a dead button and concluded the system was
   // broken. Bounds mirror the server so the two can't disagree.
+  // WW-PKG-UNIT — cross-field rules mirrored from the server's
+  // `validatePackagePricingCoherence`, so the vendor is told here rather than
+  // after a round trip. Same three checks, same wording.
+  const rangeLo = form.guestRangeMin.trim() ? Number(form.guestRangeMin) : null
+  const rangeHi = form.guestRangeMax.trim() ? Number(form.guestRangeMax) : null
+  const minG = isPerHead && form.minGuarantee.trim() ? Number(form.minGuarantee) : null
   const errs = {
     name: validateName(form.name, { label: "Package name", max: 150 }),
-    price: validatePkr(form.price, { label: "Price" }),
+    price: validatePkr(form.price, { label: isPerHead ? "Price per head" : "Price" }),
     description: validateOptionalText(form.description, { label: "Description", max: 500 }),
+    minGuarantee:
+      minG != null && (!Number.isFinite(minG) || minG < 1)
+        ? "Minimum guests must be 1 or more."
+        : minG != null && rangeHi != null && minG > rangeHi
+          ? "Minimum billed guests can't be more than the maximum you advertise."
+          : undefined,
+    guestRangeMax:
+      rangeLo != null && rangeHi != null && rangeHi < rangeLo
+        ? "Maximum guests can't be lower than the minimum."
+        : undefined,
   }
   const shown = {
     name: touched.name ? errs.name : undefined,
     price: touched.price ? errs.price : undefined,
     description: touched.description ? errs.description : undefined,
+    minGuarantee: touched.minGuarantee ? errs.minGuarantee : undefined,
+    guestRangeMax: touched.guestRangeMax ? errs.guestRangeMax : undefined,
   }
-  const canSave = !errs.name && !errs.price && !errs.description
+  const canSave =
+    !errs.name && !errs.price && !errs.description &&
+    !errs.minGuarantee && !errs.guestRangeMax
   // If the button is disabled and no field is showing a reason (nothing touched
   // yet), say so explicitly rather than leaving a dead control unexplained.
+  // WW-PKG-UNIT — the new pricing fields join this check. Without them the hint
+  // would fire ALONGSIDE a visible guest-range error and tell the vendor to add
+  // a name and price they had already entered, which reads as the form being
+  // broken rather than as one field needing a fix.
   const blockedHint =
-    !canSave && !shown.name && !shown.price && !shown.description
+    !canSave &&
+    !shown.name && !shown.price && !shown.description &&
+    !shown.minGuarantee && !shown.guestRangeMax
       ? "Add a package name and a price above Rs 0 to save."
       : undefined
 
@@ -185,6 +263,129 @@ export function PackagesManager({ businessId }: { businessId: number }) {
                 />
                 <FieldError id="pkg-price" message={shown.price} />
               </div>
+            </div>
+
+            {/* ── WW-PKG-UNIT — the pricing basis ──────────────────────────
+                The single most consequential question on this form, and until
+                now it was never asked. A radio, never a pre-filled dropdown:
+                the vendor has to look at it. The live multiplication under it
+                is what makes a wrong answer visible in the same eyeful as the
+                number that caused it — "Rs 2,500 per event" reads as fine
+                until it says "300 guests = Rs 2,500". */}
+            <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+              <span className={labelCls}>How is this priced?</span>
+              <div className="flex flex-wrap gap-4">
+                {([
+                  { v: "per_head", label: "Per head", hint: "× your guest count" },
+                  { v: "per_event", label: "Per event", hint: "one flat amount" },
+                ] as const).map((o) => (
+                  <label key={o.v} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="pkg-pricing-unit"
+                      className="accent-primary"
+                      checked={form.pricingUnit === o.v}
+                      onChange={() => set("pricingUnit", o.v)}
+                    />
+                    <span>{o.label}</span>
+                    <span className="text-xs text-muted-foreground">{o.hint}</span>
+                  </label>
+                ))}
+              </div>
+              {Number(form.price) > 0 && (
+                <p className="text-xs text-muted-foreground tabular-nums">
+                  {isPerHead ? (
+                    <>
+                      300 guests = <strong className="text-foreground">{formatPkr(Number(form.price) * 300)}</strong>
+                      {" · "}500 guests = <strong className="text-foreground">{formatPkr(Number(form.price) * 500)}</strong>
+                    </>
+                  ) : (
+                    <>
+                      Any guest count = <strong className="text-foreground">{formatPkr(Number(form.price))}</strong>
+                      {" "}in total.
+                    </>
+                  )}
+                </p>
+              )}
+            </div>
+
+            {/* Guest band + minimum guarantee. The minimum only exists for a
+                per-head package — on a flat one the engine would never read it,
+                so offering the field would promise something that never happens. */}
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <label className={labelCls} htmlFor="pkg-range-min">Min guests (shown)</label>
+                <input id="pkg-range-min" type="number" min={1} step={1} inputMode="numeric"
+                  className={inputCls} value={form.guestRangeMin}
+                  onChange={(e) => set("guestRangeMin", e.target.value)}
+                  placeholder="200" />
+              </div>
+              <div className="space-y-1.5">
+                <label className={labelCls} htmlFor="pkg-range-max">Max guests (shown)</label>
+                <input id="pkg-range-max" type="number" min={1} step={1} inputMode="numeric"
+                  className={cn(inputCls, shown.guestRangeMax && ERROR_INPUT_CLS)}
+                  value={form.guestRangeMax}
+                  onChange={(e) => { set("guestRangeMax", e.target.value); touch("guestRangeMax") }}
+                  onBlur={() => touch("guestRangeMax")}
+                  placeholder="800"
+                  {...fieldAria("pkg-range-max", shown.guestRangeMax)} />
+                <FieldError id="pkg-range-max" message={shown.guestRangeMax} />
+              </div>
+              {isPerHead && (
+                <div className="space-y-1.5">
+                  <label className={labelCls} htmlFor="pkg-min-guarantee">Bill at least</label>
+                  <input id="pkg-min-guarantee" type="number" min={1} step={1} inputMode="numeric"
+                    className={cn(inputCls, shown.minGuarantee && ERROR_INPUT_CLS)}
+                    value={form.minGuarantee}
+                    onChange={(e) => { set("minGuarantee", e.target.value); touch("minGuarantee") }}
+                    onBlur={() => touch("minGuarantee")}
+                    placeholder="200"
+                    {...fieldAria("pkg-min-guarantee", shown.minGuarantee)} />
+                  <FieldError id="pkg-min-guarantee" message={shown.minGuarantee} />
+                  <p className="text-[11px] text-muted-foreground">
+                    Guests you charge for even if fewer attend.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Food included — the flag that stops the double-charge. Worded as
+                a consequence, not a setting, because the consequence is the part
+                the vendor needs to understand. */}
+            <div className="space-y-2 rounded-lg border border-border p-3">
+              <label className="flex items-start gap-2.5 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 accent-primary"
+                  checked={form.includesFood}
+                  onChange={(e) => set("includesFood", e.target.checked)}
+                />
+                <span>
+                  <span className="font-medium">Food is included in this price</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {form.includesFood
+                      ? "Customers still choose their dishes, but the menu won't be charged on top of this package."
+                      : "Leave this off if this price is for the venue only and food is charged separately from your menus."}
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className={labelCls} htmlFor="pkg-service-style">Service style</label>
+              <select
+                id="pkg-service-style"
+                className={inputCls}
+                value={form.serviceStyle}
+                onChange={(e) => set("serviceStyle", e.target.value)}
+              >
+                <option value="">Not specified</option>
+                <option value="buffet">Buffet</option>
+                <option value="sit_down">Sit-down</option>
+                <option value="family">Family style</option>
+                <option value="hi_tea">Hi-tea</option>
+                <option value="stations">Live stations</option>
+              </select>
             </div>
             {/* Which hall this package is sold in.
                 Rendered only when the venue actually models spaces — a

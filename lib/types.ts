@@ -135,6 +135,28 @@ export interface Package {
   features: string[] | Record<string, string[]>;
   businessId: number;
   images?: string[] | null;
+  // WW-PKG-UNIT — how this package's price is CHARGED. Menus have carried
+  // `pricingUnit` since WW-PRICING-OVERHAUL; packages did not, so every package
+  // was read as a flat per-event amount and "Rs 2,500 per head" could not be
+  // expressed at all. NULL / "per_event" is the legacy flat price and is
+  // unchanged. Rule: lib/pricing/package.ts (mirrors the server's
+  // src/utils/packagePricing.js).
+  pricingUnit?: "per_head" | "per_event" | string | null;
+  /** Minimum billable heads — the Pakistani min-pax guarantee. Per-head only. */
+  minGuaranteeCount?: number | null;
+  /**
+   * TRUE = this price already covers catering, so a selected menu contributes
+   * ZERO. The customer still picks their dishes; they are not charged twice.
+   * FALSE (default, every legacy row) keeps the additive package + menu total.
+   */
+  includesFood?: boolean | null;
+  /** Advisory band shown on the card ("200–800 guests"). NULL = unbounded. */
+  guestRangeMin?: number | null;
+  guestRangeMax?: number | null;
+  /** buffet | sit_down | family | hi_tea | stations. NULL = unspecified. */
+  serviceStyle?: string | null;
+  /** The menu this package bundles, when the vendor declared one. */
+  menuId?: number | null;
 }
 
 export interface VendorMenu {

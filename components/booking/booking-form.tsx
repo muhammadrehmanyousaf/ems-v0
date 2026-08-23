@@ -25,6 +25,10 @@ import { VendorAPI } from "@/lib/api/vendors"
 // inquiry instead of dead-ending the customer. This page is the choke point.
 import { isUnpricedVendor } from "@/lib/pricing/unpriced"
 import { menuChargeFor } from "@/lib/pricing/menu"
+// WW-PKG-UNIT — per-head packages + the includesFood rule. The step order below
+// and the submitted payload both derive from this, so a venue whose package
+// covers food never renders a priced Menu step.
+import { composeLineTotal, packageIncludesFood } from "@/lib/pricing/package"
 import VendorInquiryDialog from "@/components/VendorInquiryDialog"
 import { useDateHold } from "@/hooks/use-date-hold"
 import { useBookingDraft } from "@/hooks/use-booking-draft"
@@ -351,11 +355,23 @@ export default function BookingForm() {
     const vendorsPayload: any[] = []
 
     const vehicleQty = isCarRental ? (currentForm.vehicleQuantity || 1) : 1
-    const packagePrice = (Number(venuePackage?.price) || 0) * vehicleQty
     // WW-PRICING-OVERHAUL — a per-head menu bills price × max(guests, min-pax);
     // a flat menu is its price (unchanged). Same helper the server mirrors, so the
     // submitted totalAmount matches the Review the customer agreed to.
-    const menuPrice = menuChargeFor(venueMenu, currentForm.guestCount)
+    const menuPriceRaw = menuChargeFor(venueMenu, currentForm.guestCount)
+    // WW-PKG-UNIT — and the package now honours its own pricing basis, with the
+    // menu zeroed when the package already covers catering. Composed by the same
+    // shared helper the Review step uses, so the number the customer approved is
+    // the number submitted — and the number the server independently recomputes.
+    const {
+      packageCharge: packagePrice,
+      menuCharge: menuPrice,
+    } = composeLineTotal({
+      pkg: venuePackage,
+      guestCount: currentForm.guestCount,
+      qty: vehicleQty,
+      menuCharge: menuPriceRaw,
+    })
 
     // For car rental: service packages belong to the same business — pass as additionalPackageIds
     // so the backend can look them up from DB (avoids duplicate businessId entries)
@@ -632,6 +648,14 @@ export default function BookingForm() {
   // Vendor = everything else (photographers, decorators, caterers, etc.)
   const isVenueBooking = !!venue && Array.isArray((venue as any)?.menus) && ((venue as any)?.menus?.length ?? 0) > 0
   const hasPackages = !!venue?.packages && Array.isArray(venue.packages) && venue.packages.length > 0
+  // WW-PKG-UNIT — the Menu step's existence and its title are derived from
+  // configuration rather than hardcoded into the venue flow.
+  const hasMenus = Array.isArray((venue as any)?.menus) && ((venue as any)?.menus?.length ?? 0) > 0
+  // Reuses `selectedPackageObj` (line ~284), which already resolves against the
+  // ACTIVE event's form — the right scope, because a multi-event booking can
+  // take a food-inclusive package for the Barat and a hall-only one for the
+  // Mehndi, and the Menu step must follow whichever event is on screen.
+  const selectedPackageIncludesFood = packageIncludesFood(selectedPackageObj as any)
   const isCarRental = venue?.vendor?.vendorType === "Car rental"
   const isBridalWear = venue?.vendor?.vendorType === "Bridal wearing"
   const isWeddingStationery = venue?.vendor?.vendorType === "Wedding Invitations and Stationery"
@@ -676,7 +700,22 @@ export default function BookingForm() {
       // VENUE flow: Date → Add Vendors → Packages → Menu → Review → Success
       steps.push({ key: "vendors", title: "Additional Vendors" })
       if (hasPackages) steps.push({ key: "packages", title: "Packages" })
-      steps.push({ key: "menu", title: "Menu" })
+      // WW-PKG-UNIT — the Menu step is now derived, not hardcoded.
+      //
+      //   · venue has no menus at all      -> step does not render
+      //     (a hall-only venue whose customers bring their own caterer had a
+      //      Menu step forced on it with nothing to show)
+      //   · chosen package includes food   -> step renders as "Customise menu",
+      //     a free CHOICE. The customer still picks their dishes — the kitchen
+      //     needs to know, and a package that hides its menu is worse than one
+      //     that shows it — but the price does not move.
+      //   · otherwise                      -> priced Menu step, unchanged.
+      if (hasMenus) {
+        steps.push({
+          key: "menu",
+          title: selectedPackageIncludesFood ? "Customise menu" : "Menu",
+        })
+      }
       steps.push({ key: "review", title: "Review" })
       steps.push({ key: "success", title: "Success" })
     } else {
@@ -687,7 +726,12 @@ export default function BookingForm() {
     }
 
     return steps
-  }, [isVenueBooking, hasPackages])
+    // WW-PKG-UNIT — `hasMenus` and `selectedPackageIncludesFood` are read inside,
+    // so they must be dependencies. Omitting the latter would freeze the step
+    // list at whatever the FIRST package selection implied, and a customer
+    // switching from a hall-only package to a food-inclusive one would keep
+    // being charged for a menu the package already covers.
+  }, [isVenueBooking, hasPackages, hasMenus, selectedPackageIncludesFood])
 
   // ── Step validation (key-based) ──
   const getIsStepValid = (): boolean => {
@@ -807,6 +851,12 @@ export default function BookingForm() {
             formData={activeFormData}
             updateFormData={updateCurrentForm}
             venue={venue}
+            // WW-PKG-UNIT — when the chosen package already covers catering the
+            // menu is a CHOICE, not a CHARGE. The step must say so plainly:
+            // showing per-head prices the customer will not be billed is how
+            // "you charged me twice" starts, even when the total is right.
+            includedInPackage={selectedPackageIncludesFood}
+            packageName={selectedPackageObj?.name}
           />
         )
         break
