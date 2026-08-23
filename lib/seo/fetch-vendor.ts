@@ -26,6 +26,14 @@ export interface VendorDetail {
   reviewCount: number
   reviews: any[]
   packages: any[]
+  /**
+   * WW-OFFERINGS — the venue's catering menus. `GET /businesses/:id` has always
+   * returned these (title, price, pricingUnit, data), but nothing on the public
+   * side read them, so a venue with three menus at Rs 1,850–3,900 per head
+   * showed a couple none of them. A venue whose whole proposition is the food
+   * was selling it invisibly.
+   */
+  menus: any[]
   priceMin?: number | null
   phone?: string
   email?: string
@@ -193,6 +201,7 @@ function normalize(raw: any): VendorDetail {
     reviewCount: Number(raw?.reviewCount ?? 0) || 0,
     reviews: Array.isArray(raw?.reviews) ? raw.reviews : [],
     packages: Array.isArray(raw?.packages) ? raw.packages : [],
+    menus: Array.isArray(raw?.menus) ? raw.menus : [],
     priceMin,
     phone: raw?.phoneNumber ?? raw?.bookingPhone ?? vendor?.phoneNumber,
     email: raw?.bookingEmail ?? vendor?.email,

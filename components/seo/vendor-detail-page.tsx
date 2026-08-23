@@ -24,6 +24,7 @@ import { notFound, redirect, permanentRedirect } from "next/navigation"
 import { VenueSpaceSelector } from "@/components/booking/venue-space-selector"
 import { fetchVendorHasMultiSpace } from "@/lib/seo/fetch-vendor"
 import VendorInquiryCta from "@/components/seo/vendor-inquiry-cta"
+import VendorOfferings from "@/components/seo/vendor-offerings"
 import { SeoVendorSecondaryCtas } from "@/components/seo/seo-vendor-secondary-ctas"
 import {
   CITIES,
@@ -389,31 +390,11 @@ export async function VendorDetailPage(input: PageInput) {
           </section>
         )}
 
-        {/* Packages */}
-        {vendor.packages.length > 0 && (
-          <section className="mb-12">
-            <h2 className="font-display italic text-[24px] text-bridal-charcoal mb-5">
-              Packages
-            </h2>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl">
-              {vendor.packages.map((p: any) => (
-                <li
-                  key={p.id ?? p.name}
-                  className="rounded-md border border-bridal-beige p-5"
-                >
-                  <p className="font-display italic text-[18px] text-bridal-charcoal">
-                    {p.name}
-                  </p>
-                  {Number(p.price) > 0 && (
-                    <p className="mt-1 font-bridal text-[14px] text-bridal-charcoal">
-                      <strong>PKR {Number(p.price).toLocaleString("en-PK")}</strong>
-                    </p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+        {/* WW-OFFERINGS — packages and menus as the pamphlet a venue hands over.
+            The previous block printed a name and a bare number: no unit, so a
+            per-head rate and a per-event rate looked identical, and no menus at
+            all. See components/seo/vendor-offerings.tsx. */}
+        <VendorOfferings packages={vendor.packages} menus={vendor.menus} />
 
         {/* Hierarchical spaces (Hall→Floor→Partition) — renders nothing until the
             venue enables NEXT_PUBLIC_VENUE_HIERARCHY_ON; legacy vendors unaffected. */}
