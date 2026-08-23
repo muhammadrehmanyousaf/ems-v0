@@ -31,6 +31,20 @@ export interface BankDetail {
   verificationDocumentUrl: string | null;
   verifiedAt: string | null;
   verifiedByUserId: number | null;
+  /**
+   * WW-RECORD-MODE — publish this account to customers paying you.
+   *
+   * These rows have existed only for PAYOUTS (platform → vendor) and were never
+   * shown to a customer. In record mode the venue collects the advance directly,
+   * so the customer needs an account to transfer to — but repurposing a payout
+   * account as a published collection account without asking would be a silent
+   * change to live financial data. Opt-in, default false.
+   *
+   * A customer only ever sees an account that is `showToCustomers` AND
+   * `isActive` AND `isVerified`. An unverified IBAN published to customers
+   * routes money to an unchecked account, and a misdirected transfer has no undo.
+   */
+  showToCustomers?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,6 +57,8 @@ export interface UpsertBankDetailInput {
   branchCode?: string | null;
   /** Auto-activates this account when true (deactivates siblings). */
   isActive?: boolean;
+  /** WW-RECORD-MODE — show this account to customers paying you. Opt-in. */
+  showToCustomers?: boolean;
 }
 
 export class BankDetailsAPI {

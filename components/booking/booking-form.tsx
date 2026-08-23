@@ -101,6 +101,14 @@ export default function BookingForm() {
   const [bankTransferData, setBankTransferData] = useState<{ bookingId: number; amount: number; paymentType: string; customerEmail?: string; bookingDate?: string } | null>(null)
   // WW-PRICE0 — drives the price-on-request inquiry dialog on this page.
   const [inquiryOpen, setInquiryOpen] = useState(false)
+  // WW-RECORD-MODE — DEAD as of the record-mode change: nothing sets this any
+  // more, because the new-booking flow no longer routes to the inline Stripe
+  // screen (Stripe cannot onboard Pakistani businesses, so that path could
+  // never complete). The state and its render block below are left in place
+  // deliberately rather than deleted blind: the block also wires
+  // `paymentReturnBookingId` and the cancel-pending call, and this flow cannot
+  // be exercised locally. Remove both together once the payment surfaces are
+  // tested end to end — tracked as Phase 1a follow-up.
   const [paymentScreenData, setPaymentScreenData] = useState<{ bookingId: number; amount: number; customerEmail: string; customerName: string; vendorName: string; bookingDate?: string } | null>(null)
   const { timeRemaining, isHolding, holdFailed, holdFailedUntil, createHold, releaseHold } = useDateHold()
   const { user, loading: userLoading } = getUser();
@@ -566,42 +574,37 @@ export default function BookingForm() {
           return
         }
 
-        // Bank-transfer threshold check — Stripe caps Pakistan card payments
-        // around Rs 999,999, so very large bookings get bank-transfer
-        // instructions instead of an inline payment screen.
+        // WW-RECORD-MODE — bank transfer is the DEFAULT rail, not an overflow.
+        //
+        // This branch used to fire only above Rs 999,999 ("Stripe caps Pakistan
+        // card payments"), which framed the country's most-used payment method
+        // as a fallback for bookings too large to process. The real constraint
+        // is the other way round: Stripe does not onboard Pakistani businesses
+        // at all, so a Lahore marquee cannot receive card money from this flow —
+        // while every one of them can receive a bank transfer.
+        //
+        // The threshold is gone. Every booking now goes to the transfer screen,
+        // which fetches the VENUE's own published account, shows a reference
+        // they can match against their statement, and lets the customer report
+        // the transfer in-product instead of messaging a hardcoded number.
         const summedDownPayment = vendorsPayload.reduce((s, v) => s + (v.downPayment || 0), 0)
-        if (summedDownPayment > 999999) {
-          setBankTransferData({
-            bookingId: realBookingId,
-            amount: summedDownPayment,
-            paymentType: "down_payment",
-            customerEmail: currentForm.email,
-            bookingDate: typeof currentForm.bookingDate === "string"
-              ? currentForm.bookingDate
-              : currentForm.bookingDate instanceof Date
-                ? currentForm.bookingDate.toISOString()
-                : undefined,
-          })
-          return
-        }
-
-        // Render the inline bridal-themed BookingPaymentScreen instead of
-        // redirecting to Stripe-hosted Checkout. The screen creates a
-        // PaymentIntent itself, mounts <PaymentElement>, and confirms the
-        // payment client-side. Stripe webhook (PA-001 signed) marks the
-        // booking paid server-side.
-        setPaymentScreenData({
+        setBankTransferData({
           bookingId: realBookingId,
           amount: summedDownPayment,
+          paymentType: "down_payment",
           customerEmail: currentForm.email,
-          customerName: currentForm.username,
-          vendorName: venue?.name || "",
           bookingDate: typeof currentForm.bookingDate === "string"
             ? currentForm.bookingDate
             : currentForm.bookingDate instanceof Date
               ? currentForm.bookingDate.toISOString()
               : undefined,
         })
+        // The inline Stripe screen that used to run here is gone from THIS
+        // flow. It could never complete for a Pakistani venue — Stripe does not
+        // onboard Pakistani businesses, so there is no account for the money to
+        // land in. `BookingPaymentScreen` itself is untouched and still serves
+        // /user/bookings/[id]/pay and /user/plan/[id]/pay, which is where a card
+        // rail belongs if one is ever provisioned.
       } else {
         throw new Error("Unexpected response")
       }
