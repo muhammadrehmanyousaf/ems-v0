@@ -115,6 +115,30 @@ export class PaymentInstructionsAPI {
     return res.data?.data;
   }
 
+  /**
+   * Attach the transfer screenshot to a claim already filed.
+   *
+   * Deliberately a separate call from `claim()`: a failed or slow upload must
+   * never lose the report itself. The bank reference alone is enough for the
+   * venue to find the payment; the image is corroboration.
+   */
+  static async attachProof(
+    bookingId: number | string,
+    claimId: number,
+    file: File,
+  ): Promise<PaymentClaim> {
+    const fd = new FormData();
+    fd.append("proof", file);
+    const res = await axiosInstance.post(
+      `/api/v1/bookings/${bookingId}/payment-claims/${claimId}/proof`,
+      fd,
+      // Let the browser set the multipart boundary; a hand-written
+      // Content-Type here produces a body the server cannot parse.
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return res.data?.data?.claim;
+  }
+
   /** The shared thread — both the customer and the vendor read the same rows. */
   static async list(bookingId: number | string): Promise<PaymentClaim[]> {
     const res = await axiosInstance.get(

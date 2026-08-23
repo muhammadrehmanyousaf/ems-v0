@@ -8,6 +8,8 @@ import { User, CalendarDays, Package, CreditCard, Building, MapPin } from "lucid
 import { cn } from "@/lib/utils"
 import { VendorChangeRequestsCard } from "@/components/bookings/vendor-change-requests-card"
 import { InstallmentsCard } from "@/components/bookings/installments-card"
+// WW-RECORD-MODE — customer payment reports, and the confirm/reject actions.
+import { PaymentClaimsPanel } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/payment-claims-panel"
 // BK-100.4 — vendor "report no-show" CTA. Only renders inside the
 // 7-day reporting window enforced server-side.
 import { VendorNoShowDialog } from "@/components/bookings/vendor-no-show-dialog"
@@ -289,8 +291,14 @@ export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetai
             </>
           )}
 
-          {/* BK-042 — payment schedule (read-only on vendor side). */}
+          {/* WW-RECORD-MODE — the customer reported paying; the vendor confirms
+              or rejects here. Placed ABOVE the payment schedule because it is
+              the action the vendor has to take before that schedule is right,
+              and it renders nothing at all when there are no reports. */}
           <hr className="border-neutral-100" />
+          <PaymentClaimsPanel bookingId={booking.id} />
+
+          {/* BK-042 — payment schedule (read-only on vendor side). */}
           <InstallmentsCard bookingId={booking.id} />
 
           {/* BK-054/55/56 — customer change requests; vendor approves/declines pending. */}

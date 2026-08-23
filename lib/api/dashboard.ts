@@ -1300,12 +1300,23 @@ export class BookingsAPI {
     id: number,
     paymentType: PaymentType,
     paymentMethod: string,
+    /**
+     * WW-RECORD-MODE — the customer's payment claim this recording confirms.
+     *
+     * Confirming a claim IS recording a payment, so it reuses this endpoint
+     * rather than a parallel money route that would have to duplicate the
+     * status transitions, the PaymentTransaction, the receipt and the
+     * installment apply-loop — and would drift from them. The server closes
+     * the claim after the money commits.
+     */
+    claimId?: number,
   ) {
     const res = await axiosInstance.patch(
       `/api/v1/bookings/${id}/record-payment`,
       {
         paymentType,
         paymentMethod,
+        ...(claimId ? { claimId } : {}),
       },
     );
     return res.data;

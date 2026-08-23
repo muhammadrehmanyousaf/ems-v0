@@ -67,6 +67,9 @@ export default function BankTransferScreen({
   const [submitting, setSubmitting] = useState(false)
   const [claimError, setClaimError] = useState<string | null>(null)
   const [claimed, setClaimed] = useState(false)
+  const [proofFile, setProofFile] = useState<File | null>(null)
+  // Surfaced on the success screen: the report succeeded, only the image didn't.
+  const [proofWarning, setProofWarning] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -95,11 +98,25 @@ export default function BankTransferScreen({
     setSubmitting(true)
     setClaimError(null)
     try {
-      await PaymentInstructionsAPI.claim(bookingId, {
+      const { claim } = await PaymentInstructionsAPI.claim(bookingId, {
         method,
         transactionRef: transactionRef.trim() || undefined,
         notes: notes.trim() || undefined,
       })
+      // The report is already filed and safe. The screenshot is attached
+      // separately and its failure is reported WITHOUT undoing the report —
+      // the venue can find the payment from the reference alone, and losing a
+      // filed claim because an image upload timed out would be the worse bug.
+      if (proofFile && claim?.id) {
+        try {
+          await PaymentInstructionsAPI.attachProof(bookingId, claim.id, proofFile)
+        } catch (e) {
+          setProofWarning(
+            errorMessage(e, "We couldn't attach your screenshot") +
+            " — your payment report went through, so the venue can still find it by reference.",
+          )
+        }
+      }
       setClaimed(true)
     } catch (e) {
       setClaimError(errorMessage(e, "Couldn't send that to the venue"))
@@ -293,6 +310,22 @@ export default function BankTransferScreen({
             </>
           )}
 
+          {/* The screenshot. Optional, and said to be optional — a customer
+              hunting for a file on a phone at 11pm is a place people abandon,
+              and the reference is what the venue actually searches on. */}
+          <label className="block font-bridal text-[11px] uppercase tracking-[0.2em] text-bridal-text-label mb-1.5">
+            Screenshot or receipt <span className="normal-case tracking-normal text-bridal-text-soft">(optional)</span>
+          </label>
+          <input
+            type="file"
+            accept="image/*,application/pdf"
+            onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+            className="w-full font-bridal text-[13px] text-bridal-text mb-1 file:mr-3 file:rounded-[3px] file:border file:border-bridal-beige file:bg-bridal-ivory file:px-3 file:py-1.5 file:font-bridal file:text-[12px] file:text-bridal-charcoal hover:file:border-bridal-gold"
+          />
+          <p className="font-bridal text-[11.5px] text-bridal-text-soft mb-3">
+            {proofFile ? `Attached: ${proofFile.name}` : "Helps the venue confirm faster. Max 8 MB."}
+          </p>
+
           <label className="block font-bridal text-[11px] uppercase tracking-[0.2em] text-bridal-text-label mb-1.5">
             Anything else? <span className="normal-case tracking-normal text-bridal-text-soft">(optional)</span>
           </label>
@@ -335,6 +368,11 @@ export default function BankTransferScreen({
               account, and you&apos;ll see the booking update. Your date is held meanwhile.
             </span>
           </p>
+          {proofWarning && (
+            <p className="font-bridal text-[12.5px] text-bridal-text-soft mt-2 pl-6">
+              {proofWarning}
+            </p>
+          )}
         </div>
       )}
 
