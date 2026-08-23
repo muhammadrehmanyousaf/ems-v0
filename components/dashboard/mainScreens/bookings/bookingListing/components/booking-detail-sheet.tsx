@@ -13,6 +13,8 @@ import { PaymentClaimsPanel } from "@/components/dashboard/mainScreens/bookings/
 // WW-BOOKING-MODE — accept / decline a booking request. Wires PATCH
 // /bookings/:id/approve, which has existed since BK-081 with no UI.
 import { VendorApprovalCard } from "@/components/bookings/vendor-approval-card"
+// WW-REQUIREMENTS — what the customer asked for, and the vendor's answers.
+import { RequirementsCard } from "@/components/bookings/requirements-card"
 // BK-100.4 — vendor "report no-show" CTA. Only renders inside the
 // 7-day reporting window enforced server-side.
 import { VendorNoShowDialog } from "@/components/bookings/vendor-no-show-dialog"
@@ -311,6 +313,11 @@ export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetai
               or rejects here. Placed ABOVE the payment schedule because it is
               the action the vendor has to take before that schedule is right,
               and it renders nothing at all when there are no reports. */}
+          {/* WW-REQUIREMENTS — above the money, because an unanswered
+              requirement is what turns into "we asked for a ladies section"
+              against "nobody told us". Renders nothing when there are none. */}
+          <RequirementsCard bookingId={booking.id} role="vendor" />
+
           <PaymentClaimsPanel bookingId={booking.id} />
 
           {/* BK-042 — payment schedule (read-only on vendor side). */}

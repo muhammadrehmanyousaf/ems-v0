@@ -37,6 +37,10 @@ import BankTransferScreen from "./steps/bank-transfer-screen"
 // WW-BOOKING-MODE — venues that accept a booking before asking for payment.
 import RequestSentScreen from "./steps/request-sent-screen"
 import { requiresVendorApproval } from "@/lib/booking/booking-mode"
+// WW-REQUIREMENTS — the free-text field the flow never had. Everything a family
+// actually needs to say went to WhatsApp instead.
+import RequirementsStep, { type RequirementsDraft } from "./steps/requirements-step"
+import { RequirementsAPI } from "@/lib/api/requirements"
 // 03-DRAFT-RESILIENCE — couples lose laborious vendor/package/menu
 // choices on refresh because useBookingDraft's load was never wired.
 import { DraftResumeBanner, relativeTimeAgo } from "@/components/shared/DraftResumeBanner"
@@ -106,6 +110,20 @@ export default function BookingForm() {
   const [requestSentData, setRequestSentData] = useState<{ bookingId: number; amount: number; bookingDate?: string; guestCount?: number } | null>(null)
   // WW-PRICE0 — drives the price-on-request inquiry dialog on this page.
   const [inquiryOpen, setInquiryOpen] = useState(false)
+  /**
+   * WW-REQUIREMENTS — what the customer needs the venue to know.
+   *
+   * Held at the FORM level rather than per-event: a family's parda requirement,
+   * their diabetic mother-in-law and their under-fives are true of the wedding,
+   * not of the Barat specifically, and asking them three times across a
+   * multi-event booking is how a good field gets abandoned.
+   *
+   * Posted AFTER the booking is created — it needs a bookingId, and a failure
+   * here must never lose the booking.
+   */
+  const [requirements, setRequirements] = useState<RequirementsDraft>({
+    tags: [], dietary: {}, freeText: "",
+  })
   const { timeRemaining, isHolding, holdFailed, holdFailedUntil, createHold, releaseHold } = useDateHold()
   const { user, loading: userLoading } = getUser();
   const { save: saveDraft, load: loadDraft, clear: clearDraft } = useBookingDraft(venueId, user?.id ? String(user.id) : null)
@@ -583,6 +601,36 @@ export default function BookingForm() {
         // which fetches the VENUE's own published account, shows a reference
         // they can match against their statement, and lets the customer report
         // the transfer in-product instead of messaging a hardcoded number.
+        // WW-REQUIREMENTS — filed against the booking that now exists.
+        //
+        // Deliberately AFTER the create and deliberately best-effort. It needs a
+        // bookingId, and a network blip filing a note must never cost the
+        // customer the booking they just made — six steps of work, a held date
+        // and a payment screen, thrown away because a textarea didn't post.
+        //
+        // If it fails they can add it from the booking page, and the venue can
+        // still be told the ordinary way. Losing the booking has no such repair.
+        const hasRequirements =
+          requirements.tags.length > 0 ||
+          requirements.freeText.trim().length > 0 ||
+          Object.keys(requirements.dietary).length > 0
+        if (hasRequirements) {
+          try {
+            await RequirementsAPI.create(realBookingId, {
+              tags: requirements.tags,
+              dietary: requirements.dietary,
+              freeText: requirements.freeText.trim() || undefined,
+              source: "booking_flow",
+            })
+          } catch (reqErr) {
+            console.error("[Requirements] post-booking save failed:", reqErr)
+            toast({
+              title: "Booking made — but your note didn't send",
+              description: "Add it again from your booking page so the venue sees it.",
+            })
+          }
+        }
+
         const summedDownPayment = vendorsPayload.reduce((s, v) => s + (v.downPayment || 0), 0)
 
         // WW-BOOKING-MODE — a venue that reviews first is not asking for money
@@ -735,11 +783,21 @@ export default function BookingForm() {
           title: selectedPackageIncludesFood ? "Customise menu" : "Menu",
         })
       }
+      // WW-REQUIREMENTS — always, and always immediately before Review, so the
+      // customer states what they need while the booking is still theirs to
+      // change. Nothing on it is required; a step that blocked on being filled
+      // in would only be filled in with a full stop.
+      steps.push({ key: "requirements", title: "Your requirements" })
       steps.push({ key: "review", title: "Review" })
       steps.push({ key: "success", title: "Success" })
     } else {
       // VENDOR flow: Date → Packages → Review → Success (NO vendor selection)
       if (hasPackages) steps.push({ key: "packages", title: "Package Selection" })
+      // WW-REQUIREMENTS — always, and always immediately before Review, so the
+      // customer states what they need while the booking is still theirs to
+      // change. Nothing on it is required; a step that blocked on being filled
+      // in would only be filled in with a full stop.
+      steps.push({ key: "requirements", title: "Your requirements" })
       steps.push({ key: "review", title: "Review" })
       steps.push({ key: "success", title: "Success" })
     }
@@ -785,6 +843,10 @@ export default function BookingForm() {
         return true // optional step
       case 'menu':
         return true // optional step
+      case 'requirements':
+        // WW-REQUIREMENTS — never blocks. A step that demanded input would be
+        // satisfied with a full stop and teach people the field is a toll gate.
+        return true
       case 'review':
         return true
       default:
@@ -876,6 +938,18 @@ export default function BookingForm() {
             // "you charged me twice" starts, even when the total is right.
             includedInPackage={selectedPackageIncludesFood}
             packageName={selectedPackageObj?.name}
+          />
+        )
+        break
+      case 'requirements':
+        stepContent = (
+          <RequirementsStep
+            value={requirements}
+            onChange={setRequirements}
+            venueName={venue?.name}
+            // The dietary counts only make sense where food is served. A
+            // photographer has no use for "how many children under 5".
+            showDietary={isVenueBooking || hasMenus}
           />
         )
         break
