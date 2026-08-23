@@ -384,6 +384,17 @@ export interface EventVenue {
   cityCovered: string[];
 
   subBusinessType: string;
+  /**
+   * WW-BOOKING-MODE — how a booking with this venue reaches Confirmed.
+   *
+   *   instant       confirmed once the advance is recorded (legacy behaviour)
+   *   request       the vendor accepts FIRST; payment is asked for after
+   *   inquiry_only  no online booking; the venue calls back
+   *
+   * NULL / absent reads as `instant`, so no existing venue changes behaviour.
+   * Read it through `effectiveBookingMode` rather than comparing directly.
+   */
+  bookingMode?: "instant" | "request" | "inquiry_only" | string | null;
   menus: any[];
   services: string;
   serviceProvided: string[];

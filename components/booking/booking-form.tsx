@@ -34,6 +34,9 @@ import { useDateHold } from "@/hooks/use-date-hold"
 import { useBookingDraft } from "@/hooks/use-booking-draft"
 import PaymentSuccessScreen from "./steps/payment-success-screen"
 import BankTransferScreen from "./steps/bank-transfer-screen"
+// WW-BOOKING-MODE — venues that accept a booking before asking for payment.
+import RequestSentScreen from "./steps/request-sent-screen"
+import { requiresVendorApproval } from "@/lib/booking/booking-mode"
 // 03-DRAFT-RESILIENCE — couples lose laborious vendor/package/menu
 // choices on refresh because useBookingDraft's load was never wired.
 import { DraftResumeBanner, relativeTimeAgo } from "@/components/shared/DraftResumeBanner"
@@ -98,6 +101,9 @@ export default function BookingForm() {
   const [paymentReturnBookingId, setPaymentReturnBookingId] = useState<number | null>(null)
   const [paymentReturnType, setPaymentReturnType] = useState<string>("down_payment")
   const [bankTransferData, setBankTransferData] = useState<{ bookingId: number; amount: number; paymentType: string; customerEmail?: string; bookingDate?: string } | null>(null)
+  // WW-BOOKING-MODE — set instead of bankTransferData when the venue accepts
+  // bookings before payment. Nothing is charged until they do.
+  const [requestSentData, setRequestSentData] = useState<{ bookingId: number; amount: number; bookingDate?: string; guestCount?: number } | null>(null)
   // WW-PRICE0 — drives the price-on-request inquiry dialog on this page.
   const [inquiryOpen, setInquiryOpen] = useState(false)
   const { timeRemaining, isHolding, holdFailed, holdFailedUntil, createHold, releaseHold } = useDateHold()
@@ -578,6 +584,26 @@ export default function BookingForm() {
         // they can match against their statement, and lets the customer report
         // the transfer in-product instead of messaging a hardcoded number.
         const summedDownPayment = vendorsPayload.reduce((s, v) => s + (v.downPayment || 0), 0)
+
+        // WW-BOOKING-MODE — a venue that reviews first is not asking for money
+        // yet. Sending this customer to a transfer screen would have them pay
+        // for a date the venue may still decline, which then has to be refunded
+        // by hand. The server refuses a payment claim in this state too, so a
+        // customer who reaches the payment screen by URL is also stopped.
+        if (requiresVendorApproval(venue)) {
+          setRequestSentData({
+            bookingId: realBookingId,
+            amount: summedDownPayment,
+            bookingDate: typeof currentForm.bookingDate === "string"
+              ? currentForm.bookingDate
+              : currentForm.bookingDate instanceof Date
+                ? currentForm.bookingDate.toISOString()
+                : undefined,
+            guestCount: currentForm.guestCount,
+          })
+          return
+        }
+
         setBankTransferData({
           bookingId: realBookingId,
           amount: summedDownPayment,
@@ -985,6 +1011,25 @@ export default function BookingForm() {
   }
 
   // Show bank transfer instructions for large amounts (> Rs 999,999)
+  // WW-BOOKING-MODE — the venue reviews before payment, so this replaces the
+  // transfer screen entirely. Placed FIRST so it wins if both are somehow set.
+  if (requestSentData) {
+    return (
+      <div className="w-full">
+        <div className="rounded-xl bg-white border border-zinc-200 overflow-hidden p-6 sm:p-8 lg:p-10 shadow-sm">
+          <RequestSentScreen
+            bookingId={requestSentData.bookingId}
+            venueName={venue?.name}
+            bookingDate={requestSentData.bookingDate}
+            guestCount={requestSentData.guestCount}
+            amountDue={requestSentData.amount}
+            whatsappNumber={(venue as any)?.whatsappNumber ?? null}
+          />
+        </div>
+      </div>
+    )
+  }
+
   if (bankTransferData) {
     return (
       <div className="w-full">

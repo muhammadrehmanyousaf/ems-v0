@@ -10,6 +10,9 @@ import { VendorChangeRequestsCard } from "@/components/bookings/vendor-change-re
 import { InstallmentsCard } from "@/components/bookings/installments-card"
 // WW-RECORD-MODE — customer payment reports, and the confirm/reject actions.
 import { PaymentClaimsPanel } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/payment-claims-panel"
+// WW-BOOKING-MODE — accept / decline a booking request. Wires PATCH
+// /bookings/:id/approve, which has existed since BK-081 with no UI.
+import { VendorApprovalCard } from "@/components/bookings/vendor-approval-card"
 // BK-100.4 — vendor "report no-show" CTA. Only renders inside the
 // 7-day reporting window enforced server-side.
 import { VendorNoShowDialog } from "@/components/bookings/vendor-no-show-dialog"
@@ -291,11 +294,23 @@ export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetai
             </>
           )}
 
+          {/* WW-BOOKING-MODE — accept or decline a booking request. First,
+              because until the vendor decides, nothing below it matters: the
+              customer has not been asked to pay and the schedule is provisional.
+              Renders nothing once the booking is confirmed or cancelled. */}
+          <hr className="border-neutral-100" />
+          <VendorApprovalCard
+            bookingId={booking.id}
+            status={booking.status}
+            bookingDetailsId={details[0]?.id ?? null}
+            customerName={booking.customerName}
+            eventDate={formatDate(booking.bookingDate)}
+          />
+
           {/* WW-RECORD-MODE — the customer reported paying; the vendor confirms
               or rejects here. Placed ABOVE the payment schedule because it is
               the action the vendor has to take before that schedule is right,
               and it renders nothing at all when there are no reports. */}
-          <hr className="border-neutral-100" />
           <PaymentClaimsPanel bookingId={booking.id} />
 
           {/* BK-042 — payment schedule (read-only on vendor side). */}

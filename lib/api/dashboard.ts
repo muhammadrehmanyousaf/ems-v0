@@ -267,6 +267,12 @@ export interface ApiBusiness {
   // WW-PRICING-OVERHAUL — vendor-declared pricing mode (NULL = legacy inferred).
   pricingMode?: string | null;
   pricingConfigJson?: Record<string, any> | null;
+  /**
+   * WW-BOOKING-MODE — does this venue accept a booking before the customer is
+   * asked to pay? NULL reads as `instant`, which is what every existing venue
+   * does. One of: instant | request | inquiry_only.
+   */
+  bookingMode?: string | null;
   amenitiesJson?: string[] | null;
   comfortCapacity?: number | null;
   seatedCapacity?: number | null;
@@ -1294,6 +1300,40 @@ export class BookingsAPI {
       rows, businessId, dryRun,
     });
     return res.data?.data;
+  }
+
+  /**
+   * WW-BOOKING-MODE — the vendor accepts a booking request.
+   *
+   * `PATCH /bookings/:id/approve` has existed on the server since BK-081, with
+   * vendor-ownership checks and the state-machine transition, and has never
+   * been reachable from any interface — so a venue that wanted to review before
+   * confirming had no way to say yes. This wires it.
+   */
+  static async approveBooking(id: number) {
+    const res = await axiosInstance.patch(`/api/v1/bookings/${id}/approve`);
+    return res.data;
+  }
+
+  /**
+   * Decline one vendor's line on a booking.
+   *
+   * BK-030 is surgical by design: only this line's share is refunded and only
+   * this vendor's payouts are cancelled, and it auto-escalates to a
+   * whole-booking cancel when no active lines remain. That is the right shape
+   * for a decline — a photographer turning down a multi-vendor cart should not
+   * cancel the venue too.
+   */
+  static async declineBookingLine(
+    id: number,
+    bookingDetailsId: number,
+    reason: string,
+  ) {
+    const res = await axiosInstance.patch(
+      `/api/v1/bookings/${id}/lines/${bookingDetailsId}/decline`,
+      { reason },
+    );
+    return res.data;
   }
 
   static async recordPayment(

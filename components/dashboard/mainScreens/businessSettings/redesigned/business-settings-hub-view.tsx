@@ -266,6 +266,8 @@ export function BusinessSettingsHubView() {
         cancelationPolicy: biz.cancelationPolicy ?? "",
         // WW-PRICING-OVERHAUL — vendor-declared pricing mode ("" = not set = legacy).
         pricingMode: biz.pricingMode ?? "",
+        // WW-BOOKING-MODE — do you accept a booking before payment? "" = legacy instant.
+        bookingMode: biz.bookingMode ?? "",
         /**
          * `Boolean(null)` is `false`, so an amenity nobody has answered loaded
          * as an explicit "we do not provide this". Kept as null here, and the
@@ -288,6 +290,7 @@ export function BusinessSettingsHubView() {
         downPayment: biz.downPayment ?? "",
         cancelationPolicy: biz.cancelationPolicy ?? "",
         pricingMode: biz.pricingMode ?? "",
+        bookingMode: biz.bookingMode ?? "",
         ...Object.fromEntries(BOOLS.map((b) => [b.key, biz[b.key] ?? null])),
       })
       setDirty(false)
@@ -448,6 +451,8 @@ export function BusinessSettingsHubView() {
       cancelationPolicy: form.cancelationPolicy || null,
       // WW-PRICING-OVERHAUL — "" (Auto) sends null, restoring legacy inferred pricing.
       pricingMode: form.pricingMode || null,
+      // WW-BOOKING-MODE — "" sends null, which reads as the legacy `instant`.
+      bookingMode: form.bookingMode || null,
       // A boolean the vendor has not touched stays null — unanswered — rather
       // than becoming an explicit "we don't provide this".
       ...Object.fromEntries(
@@ -467,6 +472,7 @@ export function BusinessSettingsHubView() {
       downPaymentType: baseline.downPaymentType || null,
       cancelationPolicy: baseline.cancelationPolicy || null,
       pricingMode: baseline.pricingMode || null,
+      bookingMode: baseline.bookingMode || null,
     }
     const patch: Record<string, any> = {}
     for (const [k, v] of Object.entries(next)) {
@@ -484,7 +490,7 @@ export function BusinessSettingsHubView() {
     const changed = Object.keys(patch).filter((k) => k !== "name" || patch.name !== baseline.name)
     const inTab: Record<string, string[]> = {
       Profile: ["name", "description", "city", "subArea", "brandLogo"],
-      "Capacity & pricing": ["minimumPrice", "minCapacity", "maxCapacity", "downPaymentType", "downPayment", "cancelationPolicy"],
+      "Capacity & pricing": ["minimumPrice", "minCapacity", "maxCapacity", "downPaymentType", "downPayment", "cancelationPolicy", "bookingMode"],
       "Amenities & services": BOOLS.map((b) => String(b.key)),
     }
     const hit = Object.entries(inTab).filter(([, keys]) => changed.some((c) => keys.includes(c)))
@@ -806,6 +812,36 @@ export function BusinessSettingsHubView() {
                 </Row>
               </div>
               <Row id="biz-cancellation" label="Cancellation policy"><textarea id="biz-cancellation" className={cn(inputCls, "h-24 resize-y py-2")} value={form.cancelationPolicy ?? ""} onChange={(e) => set("cancelationPolicy", e.target.value)} placeholder="e.g. Advance non-refundable within 30 days of event." /></Row>
+
+              {/* WW-BOOKING-MODE — the flow has been instant-book: a customer
+                  picks a date, pays, and the vendor finds out afterwards. No
+                  Pakistani marquee sells a peak Saturday that way. This lets a
+                  venue say it wants to see the request first.
+
+                  "" = the legacy instant behaviour, so nobody's venue changes
+                  on deploy — it is an opt-in, not a migration. Lives here
+                  beside the advance and cancellation terms because these are
+                  all "how you sell"; a dedicated Booking rules tab is the
+                  eventual home once the other rules land. */}
+              <Row id="biz-booking-mode" label="When a customer books">
+                <select
+                  id="biz-booking-mode"
+                  className={inputCls}
+                  value={form.bookingMode ?? ""}
+                  onChange={(e) => set("bookingMode", e.target.value)}
+                >
+                  <option value="">Confirm as soon as they pay (default)</option>
+                  <option value="request">I accept the request first, then they pay</option>
+                  <option value="inquiry_only">Enquiries only — I&apos;ll contact them</option>
+                </select>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  {form.bookingMode === "request"
+                    ? "Requests appear on the booking, with Accept and Decline. We only ask for the advance once you've accepted — good for peak dates you want to control."
+                    : form.bookingMode === "inquiry_only"
+                      ? "Your listing takes enquiries instead of bookings. Nothing is held and nothing is charged."
+                      : "Fastest for the customer, but a booking can be made without you seeing it first."}
+                </p>
+              </Row>
             </Section>
           )}
 
