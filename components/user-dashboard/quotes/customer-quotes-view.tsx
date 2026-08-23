@@ -11,8 +11,11 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { QuotesAPI, isMyTurn, hasStandingOffer, formatPkr, type Quote } from "@/lib/api/quotes"
+import { QuotesAPI, isMyTurn, hasStandingOffer, formatPkr, quoteIsExpired, type Quote } from "@/lib/api/quotes"
+import { QuoteLinesTable } from "@/components/quotes/quote-document"
+import { SiteVisitCard } from "@/components/quotes/site-visit-card"
 import { PageContainer, PageHeader, EmptyState } from "@/components/user-dashboard"
 import { QuoteStatusBadge } from "@/components/quotes/quote-status-badge"
 import { NegotiateDialog } from "@/components/quotes/negotiate-dialog"
@@ -44,6 +47,7 @@ function QuoteHistory({ quote }: { quote: Quote }) {
 
 export function CustomerQuotesView() {
   const qc = useQueryClient()
+  const router = useRouter()
   const [counterFor, setCounterFor] = React.useState<Quote | null>(null)
 
   const { data: quotes, isLoading, isError } = useQuery<Quote[]>({
@@ -55,7 +59,19 @@ export function CustomerQuotesView() {
 
   const acceptMut = useMutation({
     mutationFn: (id: number) => QuotesAPI.accept(id),
-    onSuccess: () => { toast.success("Quote accepted — the vendor will be in touch"); invalidate() },
+    // WW-QUOTE-PIPELINE — accepting used to change a status and nothing else,
+    // so "the vendor will be in touch" was the honest description of a dead
+    // end. It now creates the booking and holds the date, and the advance is
+    // the next step — so take them to it rather than leaving them guessing.
+    onSuccess: (res) => {
+      invalidate()
+      if (res.bookingId) {
+        toast.success("Accepted — your date is held. Pay the advance to confirm it.")
+        router.push(`/user/bookings/${res.bookingId}`)
+      } else {
+        toast.success("Quote accepted — the vendor will be in touch")
+      }
+    },
     onError: (e: any) => toast.error(e?.response?.data?.message || "Couldn't accept"),
   })
   const declineMut = useMutation({
@@ -103,20 +119,59 @@ export function CustomerQuotesView() {
                   </div>
                   <div className="text-right">
                     <div className="text-lg font-semibold tabular-nums">{formatPkr(q.quotedPrice)}</div>
+                    {q.version && q.version > 1 && (
+                      <div className="text-[11px] text-muted-foreground">Quotation v{q.version}</div>
+                    )}
                     {hasStandingOffer(q) && !terminal && (
                       <div className="text-[11px] text-muted-foreground">{myTurn ? "Your move" : `Waiting for ${vendorName}`}</div>
                     )}
                   </div>
                 </div>
 
+                {/* WW-QUOTE-PIPELINE — what you're actually paying for. Without
+                    this the customer compares venues on a single number and
+                    cannot see that one includes the food and the other doesn't. */}
+                {Array.isArray(q.lineItems) && q.lineItems.length > 0 && (
+                  <div className="mt-3 rounded-lg border border-border p-3">
+                    <QuoteLinesTable lines={q.lineItems} guestCount={q.guestCount} total={q.quotedPrice as any} />
+                  </div>
+                )}
+
+                {q.validUntil && !terminal && (
+                  <p className={"mt-2 text-xs " + (quoteIsExpired(q) ? "text-destructive" : "text-muted-foreground")}>
+                    {quoteIsExpired(q)
+                      ? `This price expired on ${fmtDate(q.validUntil)} — ask ${vendorName} to re-issue it.`
+                      : `${vendorName} is holding this price until ${fmtDate(q.validUntil)}.`}
+                  </p>
+                )}
+
+                {q.status === "accepted" && q.bookingId && (
+                  <Link
+                    href={`/user/bookings/${q.bookingId}`}
+                    className="mt-3 block rounded-lg border border-emerald-300 bg-emerald-50/60 px-3 py-2 text-sm text-emerald-900 hover:bg-emerald-50 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300"
+                  >
+                    Your date is held — booking #{q.bookingId}. Pay the advance to confirm it.
+                  </Link>
+                )}
+
+                <div className="mt-3">
+                  <SiteVisitCard quote={q} role="customer" />
+                </div>
+
                 <QuoteHistory quote={q} />
 
                 {!terminal && (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {myTurn && hasStandingOffer(q) && (
-                      <Button size="sm" onClick={() => acceptMut.mutate(q.id)} disabled={acceptMut.isPending}>Accept {formatPkr(q.quotedPrice)}</Button>
+                    {/* An expired price can't be accepted — the server refuses
+                        it, so offering the button would only produce an error
+                        the customer can do nothing about. */}
+                    {myTurn && hasStandingOffer(q) && !quoteIsExpired(q) && (
+                      <Button size="sm" onClick={() => acceptMut.mutate(q.id)} disabled={acceptMut.isPending}>
+                        {acceptMut.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                        Accept {formatPkr(q.quotedPrice)} &amp; hold the date
+                      </Button>
                     )}
-                    {myTurn && hasStandingOffer(q) && (
+                    {myTurn && hasStandingOffer(q) && !quoteIsExpired(q) && (
                       <Button size="sm" variant="outline" onClick={() => setCounterFor(q)}>Counter</Button>
                     )}
                     <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => declineMut.mutate(q.id)} disabled={declineMut.isPending}>Decline</Button>

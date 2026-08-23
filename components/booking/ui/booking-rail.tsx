@@ -47,15 +47,23 @@ export default function BookingTopBar({
           </div>
         </div>
 
+        {/* WW-TRUST-COPY — this read "Stripe-secured · PCI compliant". Stripe
+            does not onboard Pakistani businesses, so no venue on the platform
+            can take card money and the venue flow does not route there: the
+            advance is transferred to the venue directly. A trust badge naming a
+            rail the payment never touches is worse than none — it is the same
+            class of claim as the placeholder IBAN this flow already carried.
+            What IS true, and is what a couple actually needs to know, is who
+            ends up holding the money. */}
         <div className="hidden md:flex items-center gap-2.5 font-bridal text-[10.5px] text-bridal-text-soft shrink-0">
           <span className="inline-flex items-center gap-1">
             <Lock className="h-3 w-3 text-bridal-gold-dark" />
-            Stripe-secured
+            You pay the venue directly
           </span>
           <span className="text-bridal-beige">·</span>
           <span className="inline-flex items-center gap-1">
             <ShieldCheck className="h-3 w-3 text-bridal-gold-dark" />
-            PCI compliant
+            Every payment recorded
           </span>
         </div>
       </div>

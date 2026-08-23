@@ -32,6 +32,15 @@ interface Props {
   bookingDetailsId?: number | null;
   customerName?: string | null;
   eventDate?: string | null;
+  /**
+   * WW-APPROVE-VS-CONFIRM — when this vendor accepted. Non-null hides the card.
+   *
+   * Required because acceptance no longer moves a request-mode booking to
+   * `Confirmed`: it stays `Awaiting Payment` until the advance lands, which is
+   * a status still in AWAITING. Without this the card would sit there asking
+   * for a decision the vendor already made, and a second click would 400.
+   */
+  vendorApprovedAt?: string | null;
 }
 
 /** Statuses where a vendor decision is still meaningful. */
@@ -43,6 +52,7 @@ export function VendorApprovalCard({
   bookingDetailsId,
   customerName,
   eventDate,
+  vendorApprovedAt,
 }: Props) {
   const qc = useQueryClient();
   const [declining, setDeclining] = useState(false);
@@ -71,6 +81,9 @@ export function VendorApprovalCard({
     onError: (e: any) => toast.error(errorMessage(e, "Couldn't decline this booking")),
   });
 
+  // Already accepted — the decision is made, even though a request-mode
+  // booking legitimately stays in an AWAITING status until the advance lands.
+  if (vendorApprovedAt) return null;
   if (!AWAITING.includes(String(status || ""))) return null;
 
   return (

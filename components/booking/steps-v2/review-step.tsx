@@ -714,8 +714,13 @@ export default function ReviewStep({
         </div>
       </section>
 
+      {/* WW-TRUST-COPY — "Payments are Stripe-secured" was not true of this
+          flow: the advance goes to the venue's own account and the platform
+          records it rather than holding it. Saying so plainly also sets the
+          right expectation about refunds, which are the venue's. */}
       <p className="text-center font-bridal text-[11.5px] text-bridal-text-soft">
-        By confirming, you agree to the vendor&apos;s terms. Payments are Stripe-secured.
+        By confirming, you agree to the vendor&apos;s terms. You pay the venue
+        directly — Wedding Wala records the payment, and doesn&apos;t hold it.
       </p>
     </div>
   )

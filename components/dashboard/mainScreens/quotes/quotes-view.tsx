@@ -12,7 +12,9 @@
 import * as React from "react"
 import { usePagedRows, PaginationBar } from "@/components/dashboard/primitives/pagination"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { QuotesAPI, isMyTurn, hasStandingOffer, formatPkr, type Quote } from "@/lib/api/quotes"
+import { QuotesAPI, isMyTurn, hasStandingOffer, formatPkr, quoteIsExpired, type Quote } from "@/lib/api/quotes"
+import { QuoteLinesTable } from "@/components/quotes/quote-document"
+import { SiteVisitCard } from "@/components/quotes/site-visit-card"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { QuoteStatusBadge } from "@/components/quotes/quote-status-badge"
 import { NegotiateDialog } from "@/components/quotes/negotiate-dialog"
@@ -73,7 +75,17 @@ export function QuotesView() {
 
   const acceptMut = useMutation({
     mutationFn: (id: number) => QuotesAPI.accept(id),
-    onSuccess: () => { toast.success("Offer accepted"); invalidate() },
+    // WW-QUOTE-PIPELINE — accepting now creates the booking and holds the date.
+    // Say so: "Offer accepted" gave no hint that anything had been committed,
+    // which was accurate before (nothing was) and is misleading now.
+    onSuccess: (res) => {
+      toast.success(
+        res.bookingId
+          ? `Accepted — booking #${res.bookingId} created and the date is held.`
+          : "Offer accepted.",
+      )
+      invalidate()
+    },
     onError: (e: any) => toast.error(e?.response?.data?.message || "Couldn't accept"),
   })
   const declineMut = useMutation({
@@ -145,10 +157,39 @@ export function QuotesView() {
                   </div>
                   <div className="text-right">
                     <div className="text-lg font-semibold tabular-nums">{formatPkr(q.quotedPrice)}</div>
+                    {q.version && q.version > 1 && (
+                      <div className="text-[11px] text-muted-foreground">Quotation v{q.version}</div>
+                    )}
                     {!terminal && (
                       <div className="text-[11px] text-muted-foreground">{myTurn ? "Your move" : "Waiting for customer"}</div>
                     )}
                   </div>
+                </div>
+
+                {/* WW-QUOTE-PIPELINE — the itemised quotation, when there is
+                    one. A legacy single-number quote renders nothing here and
+                    looks exactly as it did before. */}
+                {Array.isArray(q.lineItems) && q.lineItems.length > 0 && (
+                  <div className="mt-3 rounded-lg border border-border p-3">
+                    <QuoteLinesTable lines={q.lineItems} guestCount={q.guestCount} total={q.quotedPrice as any} />
+                  </div>
+                )}
+
+                {q.validUntil && !terminal && (
+                  <p
+                    className={
+                      "mt-2 text-xs " +
+                      (quoteIsExpired(q) ? "text-destructive" : "text-muted-foreground")
+                    }
+                  >
+                    {quoteIsExpired(q)
+                      ? `This price expired on ${fmtDate(q.validUntil)} — re-issue it to keep negotiating.`
+                      : `Price held until ${fmtDate(q.validUntil)}.`}
+                  </p>
+                )}
+
+                <div className="mt-3">
+                  <SiteVisitCard quote={q} role="vendor" />
                 </div>
 
                 <QuoteHistory quote={q} />
@@ -167,8 +208,10 @@ export function QuotesView() {
                           consequence={
                             <>
                               You&apos;ll be committing to <strong>{formatPkr(q.quotedPrice)}</strong> for{" "}
-                              {q.customer?.fullName || "this customer"}. The customer is told straight away,
-                              and the negotiation closes — you can&apos;t re-open it from this screen.
+                              {q.customer?.fullName || "this customer"}. This <strong>creates the booking
+                              and holds {q.deliveryDate ? fmtDate(q.deliveryDate) : "the date"}</strong> at
+                              that price, and the customer is asked for the advance. The negotiation closes —
+                              you can&apos;t re-open it from this screen.
                             </>
                           }
                           confirmLabel={`Accept ${formatPkr(q.quotedPrice)}`}
@@ -221,15 +264,21 @@ export function QuotesView() {
         open={priceFor != null}
         onOpenChange={(v) => { if (!v) setPriceFor(null) }}
         title={priceFor?.status === "inquiry" ? "Send your quote" : "Counter offer"}
-        description="Enter your price. The customer can accept it or counter back."
+        description="Give one number, or itemise it — hall, menu, extras — so they can see what they're paying for."
         ctaLabel={priceFor?.status === "inquiry" ? "Send quote" : "Send counter"}
         initialPrice={priceFor?.quotedPrice != null ? Number(priceFor.quotedPrice) : null}
-        onSubmit={async (price, message) => {
+        // The vendor is the party issuing a quotation, so the builder is theirs.
+        allowItemised
+        initialLines={priceFor?.lineItems ?? null}
+        guestCount={priceFor?.guestCount ?? null}
+        initialValidUntil={priceFor?.validUntil ?? null}
+        initialEventTime={priceFor?.eventTime ?? null}
+        onSubmit={async (price, message, extras) => {
           if (!priceFor) return
           if (priceFor.status === "inquiry") {
-            await QuotesAPI.respond(priceFor.id, price, message)
+            await QuotesAPI.respond(priceFor.id, price, message, extras)
           } else {
-            await QuotesAPI.counter(priceFor.id, price, message)
+            await QuotesAPI.counter(priceFor.id, price, message, extras)
           }
           toast.success("Sent to customer")
           invalidate()

@@ -1465,10 +1465,15 @@ export default function BookingForm() {
                       loading={isSubmitting}
                       disabled={!isStepValid && !isSubmitting}
                     >
+                      {/* WW-APPROVE-VS-CONFIRM — the label has to match what the
+                          click actually does. In request mode it sends a request
+                          and charges nothing: the very next screen says "Nothing
+                          has been charged", so "Pay & confirm" was a promise the
+                          flow immediately contradicted. */}
                       {isSubmitting
                         ? "Processing…"
                         : isReviewStep
-                        ? "Pay & confirm"
+                        ? (requiresVendorApproval(venue) ? "Send request" : "Pay & confirm")
                         : "Continue"}
                       {!isSubmitting && <ArrowRight className="h-3.5 w-3.5" />}
                     </BridalButton>

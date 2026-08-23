@@ -34,6 +34,39 @@ const labelCls = "text-xs font-medium text-muted-foreground"
 const asFeatures = (f: ApiPackage["features"]): string[] =>
   Array.isArray(f) ? (f as string[]) : f && typeof f === "object" ? Object.values(f as Record<string, unknown>).map(String) : []
 
+/**
+ * WW-INCLUDESFOOD-BACKFILL — does this feature text sell catering?
+ *
+ * Mirrors the veto-aware classifier in the backend's
+ * `scripts/ww-backfill-includes-food.js`, deliberately: the script fixes the
+ * rows that already exist, this stops new ones being created the same way, and
+ * a vendor should not see one verdict here and a different one there.
+ *
+ * Returns the matched phrase (so the warning can quote it back) or null.
+ */
+const FOOD_VETO =
+  /\b(?:menu|food|catering|dinner|lunch|meal)s?\b[^\n]{0,28}\b(?:not\s+included|excluded|charged\s+separately|separately|extra\s+cost|at\s+extra|additional\s+cost)\b|\b(?:excluding|excl\.?|without)\s+(?:the\s+)?(?:menu|food|catering|dinner)\b|\bfood\s+(?:testing|tasting)\b|\boutside\s+cater|\bown\s+cater|\bbring\s+your\s+own\b|\bhall\s+only\b/i
+const FOOD_HINTS = [
+  /\b\w+\s+menu\b/i,
+  /\bmenu\s*\(\s*\d+\s*dish/i,
+  /\b\d+\s*dish(?:es)?\b/i,
+  /\b(?:dinner|lunch|meal|catering)\s+included\b/i,
+  /\bincludes?\s+(?:dinner|lunch|catering|food)\b/i,
+  /\bbuffet\b/i,
+]
+function featuresMentionFood(featuresText: string): string | null {
+  // Line-by-line so a veto on one bullet cannot silence a different bullet,
+  // and so the phrase quoted back is the one the vendor actually typed.
+  for (const line of String(featuresText || "").split("\n")) {
+    if (!line.trim() || FOOD_VETO.test(line)) continue
+    for (const re of FOOD_HINTS) {
+      const m = re.exec(line)
+      if (m) return m[0].trim()
+    }
+  }
+  return null
+}
+
 export function PackagesManager({ businessId }: { businessId: number }) {
   const qc = useQueryClient()
   const { data: packages, isLoading } = useQuery<ApiPackage[]>({ queryKey: ["pkgs", businessId], queryFn: () => PackagesAPI.getAll(businessId) })
@@ -369,6 +402,24 @@ export function PackagesManager({ businessId }: { businessId: number }) {
                   </span>
                 </span>
               </label>
+
+              {/* WW-INCLUDESFOOD-BACKFILL — the flag defaults to off and nobody
+                  ever turned it on, so on production every package selling a
+                  menu in its own feature text still billed the menu again on
+                  top: Rs 1,320,000 advertised, Rs 2,490,000 charged at 300
+                  guests. Catching it here, while the vendor is looking at the
+                  words they just typed, is the only place it gets fixed before
+                  a customer pays it. A hint, not a block — a venue may
+                  legitimately name a menu it does not include. */}
+              {!form.includesFood && featuresMentionFood(form.features) && (
+                <p className="rounded-md border border-amber-300 bg-amber-50/60 px-2.5 py-2 text-xs leading-snug text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-300">
+                  Your features mention{" "}
+                  <strong>&ldquo;{featuresMentionFood(form.features)}&rdquo;</strong>, but this
+                  package is set to charge food separately — so a customer who picks one of your
+                  menus pays for it <em>on top</em> of this price. Tick the box if the food is
+                  already in it.
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">

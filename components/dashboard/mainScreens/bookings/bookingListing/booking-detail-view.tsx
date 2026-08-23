@@ -64,6 +64,7 @@ import {
   type Lead,
 } from '@/lib/api/leads';
 import { InstallmentsCard } from '@/components/bookings/installments-card';
+import { VendorApprovalCard } from '@/components/bookings/vendor-approval-card';
 import { BookingReceiptsCard, BookingDisputesCard } from '@/components/bookings/booking-related-lists';
 import { OrderBuilderCard } from '@/components/bookings/order-builder-card';
 import { BeoSheetCard } from '@/components/bookings/beo-sheet-card';
@@ -341,6 +342,23 @@ export default function BookingDetailView({
       <div className="grid gap-6 lg:grid-cols-3">
         {/* ─── Main column ─────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-6">
+          {/* WW-APPROVE-VS-CONFIRM — the accept/decline card lived ONLY in the
+              list's side sheet. Clicking a booking navigates here instead, so a
+              vendor who opened the booking the obvious way — or followed the
+              link in the request email — found no way to accept at all, while
+              the customer sat on "waiting for the venue to accept". First in
+              the column, because until this is decided nothing below it is
+              settled. Renders nothing once accepted or once the booking is no
+              longer awaiting a decision. */}
+          <VendorApprovalCard
+            bookingId={booking.id}
+            status={booking.status}
+            bookingDetailsId={details[0]?.id ?? null}
+            customerName={booking.customerName}
+            eventDate={booking.bookingDate}
+            vendorApprovedAt={(booking as any).vendorApprovedAt ?? null}
+          />
+
           {/* Customer */}
           <Card>
             <CardContent className="p-5 space-y-3">

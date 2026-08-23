@@ -307,6 +307,7 @@ export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetai
             bookingDetailsId={details[0]?.id ?? null}
             customerName={booking.customerName}
             eventDate={formatDate(booking.bookingDate)}
+            vendorApprovedAt={(booking as any).vendorApprovedAt ?? null}
           />
 
           {/* WW-RECORD-MODE — the customer reported paying; the vendor confirms
