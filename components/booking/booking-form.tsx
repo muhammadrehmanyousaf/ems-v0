@@ -34,7 +34,6 @@ import { useDateHold } from "@/hooks/use-date-hold"
 import { useBookingDraft } from "@/hooks/use-booking-draft"
 import PaymentSuccessScreen from "./steps/payment-success-screen"
 import BankTransferScreen from "./steps/bank-transfer-screen"
-import BookingPaymentScreen from "./steps-v2/booking-payment-screen"
 // 03-DRAFT-RESILIENCE — couples lose laborious vendor/package/menu
 // choices on refresh because useBookingDraft's load was never wired.
 import { DraftResumeBanner, relativeTimeAgo } from "@/components/shared/DraftResumeBanner"
@@ -101,15 +100,6 @@ export default function BookingForm() {
   const [bankTransferData, setBankTransferData] = useState<{ bookingId: number; amount: number; paymentType: string; customerEmail?: string; bookingDate?: string } | null>(null)
   // WW-PRICE0 — drives the price-on-request inquiry dialog on this page.
   const [inquiryOpen, setInquiryOpen] = useState(false)
-  // WW-RECORD-MODE — DEAD as of the record-mode change: nothing sets this any
-  // more, because the new-booking flow no longer routes to the inline Stripe
-  // screen (Stripe cannot onboard Pakistani businesses, so that path could
-  // never complete). The state and its render block below are left in place
-  // deliberately rather than deleted blind: the block also wires
-  // `paymentReturnBookingId` and the cancel-pending call, and this flow cannot
-  // be exercised locally. Remove both together once the payment surfaces are
-  // tested end to end — tracked as Phase 1a follow-up.
-  const [paymentScreenData, setPaymentScreenData] = useState<{ bookingId: number; amount: number; customerEmail: string; customerName: string; vendorName: string; bookingDate?: string } | null>(null)
   const { timeRemaining, isHolding, holdFailed, holdFailedUntil, createHold, releaseHold } = useDateHold()
   const { user, loading: userLoading } = getUser();
   const { save: saveDraft, load: loadDraft, clear: clearDraft } = useBookingDraft(venueId, user?.id ? String(user.id) : null)
@@ -1026,35 +1016,16 @@ export default function BookingForm() {
     )
   }
 
-  // Inline bridal-themed payment screen (replaces redirect to Stripe Checkout).
-  if (paymentScreenData) {
-    return (
-      <div className="w-full">
-        <div className="rounded-md bg-bridal-cream border border-bridal-beige overflow-hidden p-5 sm:p-6 lg:p-8 shadow-[0_18px_44px_-32px_rgba(176,125,84,0.4)]">
-          <BookingPaymentScreen
-            bookingId={paymentScreenData.bookingId}
-            amount={paymentScreenData.amount}
-            customerEmail={paymentScreenData.customerEmail}
-            customerName={paymentScreenData.customerName}
-            vendorName={paymentScreenData.vendorName}
-            bookingDate={paymentScreenData.bookingDate}
-            paymentType="down_payment"
-            onSuccess={() => {
-              setPaymentReturnBookingId(paymentScreenData.bookingId)
-              setPaymentReturnType("down_payment")
-              setPaymentScreenData(null)
-            }}
-            onCancel={() => {
-              axiosInstance
-                .delete(`${BACKEND_URL}api/v1/bookings/${paymentScreenData.bookingId}/cancel-pending`)
-                .catch(() => {})
-              setPaymentScreenData(null)
-            }}
-          />
-        </div>
-      </div>
-    )
-  }
+  // WW-RECORD-MODE — the inline Stripe payment screen that used to render here
+  // is gone. Nothing could set its state once the new-booking flow stopped
+  // routing to Stripe, and Stripe cannot onboard Pakistani businesses, so the
+  // path could never have completed for a venue on this platform.
+  //
+  // The `paymentReturnBookingId` block ABOVE deliberately stays: it is reached
+  // from the URL (`?ps=1&bid=…&redirect_status=…`, line ~222), not from here,
+  // so it still serves anyone returning from a card payment made on
+  // /user/bookings/[id]/pay. `BookingPaymentScreen` itself is untouched and
+  // still serves that page and /user/plan/[id]/pay.
 
   // WW-PRICE0 — the booking funnel's choke point.
   //
