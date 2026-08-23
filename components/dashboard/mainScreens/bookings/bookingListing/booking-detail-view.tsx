@@ -66,6 +66,7 @@ import {
 import { InstallmentsCard } from '@/components/bookings/installments-card';
 import { VendorApprovalCard } from '@/components/bookings/vendor-approval-card';
 import { SettlementCard } from '@/components/bookings/settlement-card';
+import { VendorCancelCard } from '@/components/bookings/vendor-cancel-card';
 import { BookingReceiptsCard, BookingDisputesCard } from '@/components/bookings/booking-related-lists';
 import { OrderBuilderCard } from '@/components/bookings/order-builder-card';
 import { BeoSheetCard } from '@/components/bookings/beo-sheet-card';
@@ -365,6 +366,19 @@ export default function BookingDetailView({
               was settled on WhatsApp at the gate. Sits above Customer because
               on the day of an event it is the only thing the vendor wants. */}
           <SettlementCard bookingId={booking.id} role="vendor" />
+
+          {/* BK-036 — the venue cancels. The endpoint existed with a forced
+              100% refund and no interface ever called it, so a venue that had
+              to pull out could only ask the CUSTOMER to cancel — which applies
+              the customer's policy and forfeits their advance for the venue's
+              problem. Last in the column: it is the action of last resort. */}
+          <VendorCancelCard
+            bookingId={booking.id}
+            status={booking.status}
+            customerName={booking.customerName}
+            eventDate={fmtDate(booking.bookingDate)}
+            amountPaid={(booking as any).amountPaid ?? booking.downPayment}
+          />
 
           {/* Customer */}
           <Card>
