@@ -273,6 +273,26 @@ export interface ApiBusiness {
    * does. One of: instant | request | inquiry_only.
    */
   bookingMode?: string | null;
+  /**
+   * WW-SETTLEMENT — the terms that decide the FINAL bill.
+   *
+   * A Pakistani venue bills max(guaranteed, actual), counted on the night.
+   * Every one of these is NULL on production and every reader must fall back to
+   * the conservative reading — no band, children as adults, no deposit — which
+   * is exactly today's behaviour. Resolve them through the server's
+   * `resolveSettlementPolicy` rather than reading the columns directly.
+   */
+  securityDepositPkr?: number | string | null;
+  depositReturnDays?: number | null;
+  balanceDueDays?: number | null;
+  headcountLockDays?: number | null;
+  toleranceBandPct?: number | string | null;
+  walkInRatePerHead?: number | string | null;
+  serviceChargePct?: number | string | null;
+  childUnder5Pct?: number | null;
+  child5to12Pct?: number | null;
+  staffMealRatePkr?: number | string | null;
+  advanceTransferMonths?: number | null;
   amenitiesJson?: string[] | null;
   comfortCapacity?: number | null;
   seatedCapacity?: number | null;
