@@ -90,7 +90,22 @@ export async function approveGate(businessId: number, gate: VerificationGate): P
 /**
  * Turn a gate down. This CLEARS the submitted value, so the vendor has to send
  * it again — which is why the reason is not optional here.
+ *
+ * `force` covers the case the server guards under WW-176: rejecting an
+ * ALREADY-VERIFIED gate erases the value permanently with no recovery, so a
+ * plain reject on one is refused with 409 GATE_ALREADY_VERIFIED. Pass it only
+ * when the reviewer has been asked a second time and said yes — never to make a
+ * 409 go away, which is the whole point of the guard.
  */
-export async function rejectGate(businessId: number, gate: VerificationGate, reason: string): Promise<void> {
-  await axiosInstance.post(`/api/v1/admin/verification-queue/${businessId}/reject`, { gate, reason })
+export async function rejectGate(
+  businessId: number,
+  gate: VerificationGate,
+  reason: string,
+  force = false,
+): Promise<void> {
+  await axiosInstance.post(`/api/v1/admin/verification-queue/${businessId}/reject`, {
+    gate,
+    reason,
+    ...(force ? { force: true } : {}),
+  })
 }
