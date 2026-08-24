@@ -41,6 +41,13 @@ interface Props {
    * for a decision the vendor already made, and a second click would 400.
    */
   vendorApprovedAt?: string | null;
+  /**
+   * Called after a decision lands. Surfaces that host a booking through
+   * useEffect rather than react-query do not see the query invalidation, so
+   * without this the card stays on screen after the vendor accepts and the
+   * obvious next click 400s.
+   */
+  onChanged?: () => void;
 }
 
 /** Statuses where a vendor decision is still meaningful. */
@@ -53,6 +60,7 @@ export function VendorApprovalCard({
   customerName,
   eventDate,
   vendorApprovedAt,
+  onChanged,
 }: Props) {
   const qc = useQueryClient();
   const [declining, setDeclining] = useState(false);
@@ -65,6 +73,7 @@ export function VendorApprovalCard({
     onSuccess: () => {
       toast.success("Accepted. The customer can now pay the advance.");
       invalidate();
+      onChanged?.();
     },
     onError: (e: any) => toast.error(errorMessage(e, "Couldn't accept this booking")),
   });
@@ -77,6 +86,7 @@ export function VendorApprovalCard({
       setDeclining(false);
       setReason("");
       invalidate();
+      onChanged?.();
     },
     onError: (e: any) => toast.error(errorMessage(e, "Couldn't decline this booking")),
   });

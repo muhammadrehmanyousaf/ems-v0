@@ -141,6 +141,13 @@ export default function BookingDetailView({
 }) {
   const router = useRouter();
   const [booking, setBooking] = useState<BookingData | null>(null);
+  // This page loads through useEffect, not react-query, so a card that
+  // invalidates the ["bookings"] query key does NOT refetch it. Bumping this
+  // is how an action on a card tells the page to reload — without it a vendor
+  // accepts a booking, sees the toast, and the Accept button is still sitting
+  // there. The obvious next click 400s.
+  const [reloadKey, setReloadKey] = useState(0);
+  const reload = React.useCallback(() => setReloadKey((k) => k + 1), []);
 
   // WW-CASHREFUND — outstanding refunds this vendor owes on THIS booking.
   // Kept separate from the main load so a backend that predates the endpoint
@@ -151,7 +158,7 @@ export default function BookingDetailView({
     PaymentAPI.getBookingPaymentStatus(bookingId)
       .then((s) => setCashRefundsOwed(s?.cashRefundsOwed ?? []))
       .catch(() => setCashRefundsOwed([]));
-  }, [bookingId]);
+  }, [bookingId, reloadKey]);
   useEffect(() => {
     refreshCashRefunds();
   }, [refreshCashRefunds]);
@@ -360,6 +367,7 @@ export default function BookingDetailView({
             customerName={booking.customerName}
             eventDate={booking.bookingDate}
             vendorApprovedAt={(booking as any).vendorApprovedAt ?? null}
+            onChanged={reload}
           />
 
           {/* WW-SETTLEMENT — the final bill. settlementPolicy.js could always
@@ -379,6 +387,7 @@ export default function BookingDetailView({
             customerName={booking.customerName}
             eventDate={fmtDate(booking.bookingDate)}
             amountPaid={(booking as any).amountPaid ?? booking.downPayment}
+            onChanged={reload}
           />
 
           {/* WW-REQUIREMENTS — what the customer asked for, and the answers.
