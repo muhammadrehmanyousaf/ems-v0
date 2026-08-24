@@ -394,7 +394,7 @@ export async function VendorDetailPage(input: PageInput) {
             The previous block printed a name and a bare number: no unit, so a
             per-head rate and a per-event rate looked identical, and no menus at
             all. See components/seo/vendor-offerings.tsx. */}
-        <VendorOfferings packages={vendor.packages} menus={vendor.menus} />
+        <VendorOfferings packages={vendor.packages} menus={vendor.menus} city={vendor.city ?? null} />
 
         {/* Hierarchical spaces (Hall→Floor→Partition) — renders nothing until the
             venue enables NEXT_PUBLIC_VENUE_HIERARCHY_ON; legacy vendors unaffected. */}

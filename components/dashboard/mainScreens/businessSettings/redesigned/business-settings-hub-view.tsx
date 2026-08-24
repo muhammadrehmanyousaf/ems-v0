@@ -1207,7 +1207,7 @@ export function BusinessSettingsHubView() {
           {active === "packages" && (
             <>
               <PackagesManager businessId={biz.id} />
-              <OfferingsPreview businessId={biz.id} />
+              <OfferingsPreview businessId={biz.id} city={form.city ?? biz.city ?? null} />
             </>
           )}
           {active === "menus" && (
@@ -1216,6 +1216,10 @@ export function BusinessSettingsHubView() {
                 businessId={biz.id}
                 minCapacity={biz.minCapacity ?? null}
                 maxCapacity={biz.maxCapacity ?? null}
+                // WW-JURISDICTION — decides whether the one-dish rule is judged
+                // at all. `form.city` rather than `biz.city` so switching the
+                // city updates the verdict before the vendor even saves.
+                city={form.city ?? biz.city ?? null}
               />
               <OfferingsPreview businessId={biz.id} />
             </>

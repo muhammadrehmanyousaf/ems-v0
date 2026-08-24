@@ -88,9 +88,67 @@ for (const [label, data] of CASES) {
     console.log("        mirror :", JSON.stringify({ status: fe.status, reason: fe.unknownReason, counts: fe.counts, says: fe.violations.map(feDescribe) }));
   }
 }
+
+/**
+ * WW-JURISDICTION — the fourth state.
+ *
+ * The one-dish rule is s.5 of the PUNJAB Act, and `checkOneDish` was called with
+ * no jurisdiction at all, so a Karachi menu with two salans was shown a red
+ * violation for a law that does not reach Sindh. Both halves gained a
+ * `ruleApplies` option, and they must agree about it too — a mirror that keeps
+ * warning after the server has stopped is the same defect wearing a hat.
+ */
+const TWO_SALANS = { items: [dish("Chicken Karahi", "salan"), dish("Mutton Qorma", "salan")] };
+const CLEAN = { items: [dish("Chicken Karahi", "salan"), dish("Zarda", "sweet")] };
+
+console.log("\n  jurisdiction scoping\n");
+const JCASES: [string, any, any][] = [
+  ["omitted — unchanged behaviour", TWO_SALANS, undefined],
+  ["applies — still a violation", TWO_SALANS, { ruleApplies: "applies" }],
+  ["does_not_apply — not judged", TWO_SALANS, { ruleApplies: "does_not_apply" }],
+  ["unknown province — not judged", TWO_SALANS, { ruleApplies: "unknown" }],
+  ["clean menu, rule applies", CLEAN, { ruleApplies: "applies" }],
+  ["clean menu, rule does not apply", CLEAN, { ruleApplies: "does_not_apply" }],
+  ["clean menu, province unknown", CLEAN, { ruleApplies: "unknown" }],
+];
+for (const [label, data, opts] of JCASES) {
+  const be = beCheck(data, opts);
+  const fe = feCheck(data, opts);
+  const same =
+    be.status === fe.status &&
+    be.compliant === fe.compliant &&
+    be.unknownReason === fe.unknownReason &&
+    be.ruleApplies === fe.ruleApplies;
+  if (!same) bad++;
+  console.log(`  ${same ? "PASS" : "FAIL"}  ${label.padEnd(34)} ${String(be.status).padEnd(15)} reason=${be.unknownReason ?? "-"}`);
+  if (!same) {
+    console.log("        backend:", JSON.stringify({ status: be.status, reason: be.unknownReason, applies: be.ruleApplies }));
+    console.log("        mirror :", JSON.stringify({ status: fe.status, reason: fe.unknownReason, applies: fe.ruleApplies }));
+  }
+}
+
+/**
+ * The two directions this must never get wrong. Claims about the RULE rather
+ * than about the mirror, so they are asserted on the backend alone.
+ */
+const violates = beCheck(TWO_SALANS, { ruleApplies: "applies" });
+const notHere = beCheck(TWO_SALANS, { ruleApplies: "does_not_apply" });
+const CHECKS: [string, boolean][] = [
+  ["a real breach in Punjab is still red", violates.status === "violation"],
+  ["the same menu elsewhere is NOT called a breach", notHere.status === "not_applicable"],
+  ["and is NOT called compliant either", notHere.compliant === false],
+  ["the counts survive so the vendor can still read them", notHere.counts.salan === 2],
+];
+console.log("\n  what the fourth state must and must not claim\n");
+for (const [label, ok] of CHECKS) {
+  if (!ok) bad++;
+  console.log(`  ${ok ? "PASS" : "FAIL"}  ${label}`);
+}
+
+const TOTAL = CASES.length + JCASES.length + CHECKS.length;
 console.log(
   bad
     ? `\n  ${bad} DIVERGENCE(S) — the vendor's editor and the server disagree about the same menu.\n`
-    : `\n  ${CASES.length}/${CASES.length} — the two surfaces agree on every shape.\n`,
+    : `\n  ${TOTAL}/${TOTAL} — the two surfaces agree on every shape.\n`,
 );
 process.exit(bad ? 1 : 0);

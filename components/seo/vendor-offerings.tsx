@@ -36,6 +36,7 @@ import {
   type CountsAs,
   type MenuDish,
 } from "@/lib/compliance/one-dish";
+import { oneDishAppliesInCity, type RuleApplies } from "@/lib/compliance/jurisdiction";
 
 const pkr = (n: number) => `Rs ${Math.round(n).toLocaleString("en-PK")}`;
 const num = (v: unknown) => {
@@ -263,10 +264,10 @@ function PackageCard({ pkg, menusById }: { pkg: any; menusById: Map<number, any>
 
 /* ── Menu pamphlet ─────────────────────────────────────────────────────── */
 
-function MenuCard({ menu }: { menu: any }) {
+function MenuCard({ menu, ruleApplies }: { menu: any; ruleApplies: RuleApplies }) {
   const price = num(menu?.price);
   const perHead = String(menu?.pricingUnit || "").toLowerCase() === "per_head";
-  const verdict = checkOneDish(menu?.data);
+  const verdict = checkOneDish(menu?.data, { ruleApplies });
   const minGuar = num(menu?.minGuaranteeCount);
 
   const dishCount = verdict.items.length;
@@ -416,7 +417,14 @@ function MenuCard({ menu }: { menu: any }) {
 
 /* ── Section ───────────────────────────────────────────────────────────── */
 
-export function VendorOfferings({ packages, menus }: { packages: any[]; menus: any[] }) {
+export function VendorOfferings({ packages, menus, city }: { packages: any[]; menus: any[]; city?: string | null }) {
+  /**
+   * WW-JURISDICTION — the one-dish rule is s.5 of the PUNJAB Act, and this
+   * pamphlet judged every venue in Pakistan against it. A Karachi marquee got a
+   * "served in a reduced form" notice for a law that does not reach Sindh,
+   * which is a warning against the venue for no reason.
+   */
+  const ruleApplies = oneDishAppliesInCity(city);
   const pkgs = Array.isArray(packages) ? packages : [];
   const mns = Array.isArray(menus) ? menus : [];
   if (pkgs.length === 0 && mns.length === 0) return null;
@@ -452,7 +460,7 @@ export function VendorOfferings({ packages, menus }: { packages: any[]; menus: a
           </p>
           <ul className="grid max-w-4xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {mns.map((m: any) => (
-              <MenuCard key={m?.id ?? m?.title} menu={m} />
+              <MenuCard key={m?.id ?? m?.title} menu={m} ruleApplies={ruleApplies} />
             ))}
           </ul>
         </section>
