@@ -309,7 +309,11 @@ export function MenusManager({
       return editingId ? MenusAPI.update(editingId, body) : MenusAPI.create(body)
     },
     onSuccess: () => { showSuccessToast(editingId ? "Menu updated" : "Menu added"); reset(); invalidate() },
-    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save menu")),
+    // A refused save now carries instructions — the rate-card guard explains
+    // which of the two things to change and names the mode that allows it.
+    // Held long enough to read, matching the precedent set for validation
+    // messages elsewhere: this is something to act on, not acknowledge.
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save menu"), { duration: 10000 }),
   })
   const removeMut = useMutation({
     mutationFn: (id: number) => MenusAPI.delete(id),
