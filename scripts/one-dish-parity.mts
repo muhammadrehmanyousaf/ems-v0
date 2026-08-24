@@ -259,7 +259,56 @@ for (const [city, expected] of FORMS) {
   console.log(`  ${ok ? "PASS" : "FAIL"}  ${city.padEnd(22)} ${got ?? "null"}`);
 }
 
-const TOTAL = CASES.length + JCASES.length + CHECKS.length + 1 + FORMS.length;
+/**
+ * The city -> verdict resolution, against the rules that are ACTUALLY SEEDED.
+ *
+ * This is the check that was missing, and its absence shipped a defect. Every
+ * jurisdiction case above hands `checkOneDish` an explicit `ruleApplies`, so
+ * both halves agreed perfectly about what to do WITH a verdict while disagreeing
+ * about how to REACH one: the mirror had Sindh as `does_not_apply`, reading the
+ * lifted austerity notification as a one-dish rule when it is a GUEST_CAP row.
+ *
+ * Driven off the migration's own RULES array so the mirror is asserted against
+ * the seed rather than against a hand-kept copy of it.
+ */
+console.log("\n  city -> does the rule apply? (against the seeded rules)\n");
+const { RULES: SEEDED } = require(path.join(BACKEND, "src/migrations/20260629102000-venueos-create-compliance-rules.js"));
+const { ruleStatusFor: beStatus, provinceOf: beProvince } = require(path.join(BACKEND, "src/utils/jurisdiction.js"));
+const { ruleAppliesTo: feApplies, provinceOf: feProv } = await import("@/lib/compliance/jurisdiction");
+
+// The migration stores rules in short form (j/t/v/inForce); `ruleStatusFor`
+// reads the column names. Map once, here, rather than in either implementation.
+const asRows = (SEEDED as any[]).map((r) => ({
+  jurisdiction: r.j,
+  ruleType: r.t,
+  active: r.v !== false,
+  inForce: r.inForce !== false,
+}));
+
+const CITY_CASES = [
+  "Lahore", "Rawalpindi", "Muridke",       // Punjab — the rule applies
+  "Karachi", "Hyderabad", "Sukkur",        // Sindh — no ONE_DISH row seeded
+  "Peshawar", "Quetta", "Islamabad",       // no row either
+  "Gilgit", "Muzaffarabad",
+  "Nowhere", "",                            // unplaceable
+];
+let verdictBad = 0;
+for (const city of CITY_CASES) {
+  const be = beStatus(beProvince({ city }), "ONE_DISH", asRows);
+  const fe = feApplies(feProv(city));
+  const same = be === fe;
+  if (!same) { verdictBad++; bad++; }
+  console.log(
+    `  ${same ? "PASS" : "FAIL"}  ${(city || "(blank)").padEnd(16)} ${String(be).padEnd(16)}${same ? "" : `  mirror said ${fe}`}`,
+  );
+}
+console.log(
+  verdictBad
+    ? `  ${verdictBad} city/cities where the editor and the server disagree about which law applies.`
+    : `  PASS  all ${CITY_CASES.length} resolve identically on both halves`,
+);
+
+const TOTAL = CASES.length + JCASES.length + CHECKS.length + 1 + FORMS.length + CITY_CASES.length + 1;
 console.log(
   bad
     ? `\n  ${bad} DIVERGENCE(S) — the vendor's editor and the server disagree about the same menu.\n`

@@ -79,16 +79,36 @@ export function provinceOf(city: unknown): Province | null {
 /**
  * Mirrors the seeded `ComplianceRules` for ONE_DISH.
  *
- *   PUNJAB — Punjab Marriage Functions Act 2016 s.5, live since 2016-06-01.
- *   SINDH  — the April 2026 austerity notification, seeded `inForce: false`
- *            with the note "LIFTED 16-May-2026 — time-bound, never a statute.
- *            DO NOT enforce as current law."
+ * PUNJAB is the only jurisdiction with a ONE_DISH row: the Marriage Functions
+ * Act 2016 s.5, live since 2016-06-01.
  *
- * Everything else is absent from the seed, which is NOT the same as "no such
- * law" — see `ruleAppliesTo` below.
+ * SINDH was listed below as "recorded lifted" and that was WRONG. The 2026
+ * austerity notification it referred to is a GUEST_CAP row — its `oneDish:
+ * true` lives inside `valueJson`, not in `ruleType` — so there is no ONE_DISH
+ * row for Sindh at all. The server answered `unknown` while this file answered
+ * `does_not_apply`, so a Karachi vendor read "we don't check menus against it
+ * here" in the editor while the server was saying "we haven't confirmed whether
+ * this applies".
+ *
+ * Both are amber rather than a false verdict, so no menu was ever mis-judged.
+ * But two surfaces disagreeing about the same menu is the exact failure this
+ * mirror exists to prevent — and the parity script could not catch it, because
+ * it only ever exercised `checkOneDish` with an explicit `ruleApplies` and
+ * never the city -> verdict resolution that produces one. It does now.
+ *
+ * Everything absent from the seed is `unknown`, which is NOT the same as "no
+ * such law" — see `ruleAppliesTo` below.
  */
 const ONE_DISH_LIVE: Province[] = ["PUNJAB"]
-const ONE_DISH_RECORDED_LIFTED: Province[] = ["SINDH"]
+/**
+ * A province whose ONE_DISH row exists but is recorded as NOT in force.
+ *
+ * Empty today — no such row is seeded. Kept because the distinction is real: a
+ * researched "this was repealed" is a different answer from "nobody has looked
+ * yet", and flattening the two is how a legal warning gets switched off by
+ * accident.
+ */
+const ONE_DISH_RECORDED_LIFTED: Province[] = []
 
 /**
  * Does the one-dish rule reach this province?
