@@ -25,6 +25,7 @@ import {
   flattenMenuItems,
   COUNTS_AS,
   COUNTS_AS_LABELS,
+  readChoiceGroups,
   describeViolation,
   type CountsAs,
 } from "@/lib/compliance/one-dish"
@@ -55,7 +56,7 @@ import {
  * "special salad". So a suggestion is shown, and until the vendor confirms it
  * the dish still counts as unclassified and the menu stays amber.
  */
-interface FormDish { name: string; countsAs: CountsAs; inferred: boolean; suggested?: CountsAs | null; suggestNote?: string | null }
+interface FormDish { name: string; countsAs: CountsAs; inferred: boolean; suggested?: CountsAs | null; suggestNote?: string | null; group?: string | null }
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
@@ -84,14 +85,21 @@ export function MenusManager({
   const [form, setForm] = React.useState<{
     title: string; price: string; dishes: FormDish[]; minGuarantee: string;
     pricingUnit: "per_head" | "per_event";
-  }>({ title: "", price: "", dishes: [], minGuarantee: "", pricingUnit: "per_head" })
+    /**
+     * WW-CHOICE-GROUPS — "pick N of these" sets, keyed by the id a dish names.
+     *
+     * A menu with no groups is every menu that exists today, and behaves
+     * exactly as it always has: every dish is always served.
+     */
+    groups: Record<string, { label: string; choose: number }>;
+  }>({ title: "", price: "", dishes: [], minGuarantee: "", pricingUnit: "per_head", groups: {} })
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
   const isPerHead = form.pricingUnit === "per_head"
   // Errors show only after a field is touched, so a blank new form doesn't open
   // covered in red.
   const [touched, setTouched] = React.useState<Record<string, boolean>>({})
   const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
-  const reset = () => { setForm({ title: "", price: "", dishes: [], minGuarantee: "", pricingUnit: "per_head" }); setTouched({}); setAdding(false); setEditingId(null) }
+  const reset = () => { setForm({ title: "", price: "", dishes: [], minGuarantee: "", pricingUnit: "per_head", groups: {} }); setTouched({}); setAdding(false); setEditingId(null) }
 
   // ── WW-ONE-DISH — dish rows ────────────────────────────────────────────
   const setDish = (i: number, patch: Partial<FormDish>) =>
@@ -153,6 +161,52 @@ export function MenusManager({
   const removeDish = (i: number) =>
     setForm((f) => ({ ...f, dishes: f.dishes.filter((_, j) => j !== i) }))
 
+  /* ── WW-CHOICE-GROUPS — "the customer picks N of these" ────────────────
+   *
+   * The rule, the stored shape and both mirrors already understand groups and
+   * judge the WORST menu a vendor permits: "pick 2 of three mains" is a
+   * violation even though only one main is ever served, because the vendor is
+   * offering the combination. A vendor simply had no way to say it.
+   *
+   * Ids are generated and never shown. The vendor names the group ("Main
+   * dish"), and the id only has to be stable within this menu.
+   */
+  const addGroup = () =>
+    setForm((f) => {
+      const n = Object.keys(f.groups).length + 1
+      let id = `g${n}`
+      while (f.groups[id]) id = `${id}x`
+      return { ...f, groups: { ...f.groups, [id]: { label: `Choice ${n}`, choose: 1 } } }
+    })
+
+  const setGroup = (id: string, patch: Partial<{ label: string; choose: number }>) =>
+    setForm((f) => ({ ...f, groups: { ...f.groups, [id]: { ...f.groups[id], ...patch } } }))
+
+  /**
+   * Removing a group must also release its dishes.
+   *
+   * A dish left pointing at a deleted group is read as ungrouped by both
+   * implementations — so it would still be counted, which is safe — but it
+   * would carry a dead reference that no screen could explain. Clearing it
+   * keeps what is stored and what is shown the same thing.
+   */
+  const removeGroup = (id: string) =>
+    setForm((f) => {
+      const { [id]: _gone, ...rest } = f.groups
+      return {
+        ...f,
+        groups: rest,
+        dishes: f.dishes.map((d) => (d.group === id ? { ...d, group: null } : d)),
+      }
+    })
+
+  /** Assigning a dish to a group is not a claim about what it IS. */
+  const setDishGroup = (i: number, group: string | null) =>
+    setForm((f) => ({ ...f, dishes: f.dishes.map((d, j) => (j === i ? { ...d, group } : d)) }))
+
+  const groupEntries = Object.entries(form.groups)
+  const membersOf = (id: string) => form.dishes.filter((d) => d.group === id && d.name.trim()).length
+
   /**
    * Bulk paste — vendors have their menu written down and type it in one go.
    * Each new line becomes a row defaulted to "other", which is what leaves the
@@ -187,11 +241,20 @@ export function MenusManager({
   const oneDish = React.useMemo(
     () =>
       checkOneDish({
+        // WW-CHOICE-GROUPS — the verdict has to see the groups, or "pick 1 of
+        // three mains" reads as three mains and reports a breach that cannot
+        // happen. Fed the same shape that gets saved, so what the vendor sees
+        // while typing is what the server will say afterwards.
+        groups: form.groups,
         items: form.dishes
           .filter((d) => d.name.trim())
-          .map((d) => (d.inferred ? d.name : { name: d.name, countsAs: d.countsAs })),
+          .map((d) => ({
+            name: d.name,
+            ...(d.inferred ? {} : { countsAs: d.countsAs }),
+            ...(d.group ? { group: d.group } : {}),
+          })),
       }),
-    [form.dishes],
+    [form.dishes, form.groups],
   )
   const invalidate = () => qc.invalidateQueries({ queryKey: ["menus", businessId] })
 
@@ -271,6 +334,9 @@ export function MenusManager({
       name: d.name,
       countsAs: d.countsAs,
       inferred: d.inferred,
+      // WW-CHOICE-GROUPS — carried back so re-opening a menu shows the
+      // groups the vendor set, rather than silently flattening them.
+      group: d.group ?? null,
     }))
 
   const startEdit = (m: ApiMenu) => {
@@ -281,25 +347,74 @@ export function MenusManager({
       minGuarantee: m.minGuaranteeCount != null ? String(m.minGuaranteeCount) : "",
       // A NULL saved pricingUnit is a legacy flat menu (per_event).
       pricingUnit: String(m.pricingUnit || "").toLowerCase() === "per_head" ? "per_head" : "per_event",
+      // Read through the shared reader, so the editor and the rule agree
+      // about what a group is — including a missing `choose`, which both
+      // treat as one.
+      groups: Object.fromEntries(
+        Object.entries(readChoiceGroups((m as any).data)).map(([id, g]) => [
+          id, { label: g.label ?? id, choose: g.choose },
+        ]),
+      ),
     })
     setEditingId(m.id); setAdding(true)
   }
 
   const saveMut = useMutation({
     mutationFn: () => {
-      // WW-ONE-DISH — dishes save as objects carrying their classification, so
-      // the rule reads a declaration rather than guessing from the name. Blank
-      // rows are dropped; `inferred` is a UI concern and is not persisted.
+      /**
+       * WW-ONE-DISH — dishes save as objects carrying their classification, so
+       * the rule reads a declaration rather than guessing from the name. Blank
+       * rows are dropped.
+       *
+       * An UNCLASSIFIED row saves WITHOUT `countsAs`, and that is the whole
+       * point of this block.
+       *
+       * It used to write `countsAs` unconditionally, including for rows we had
+       * only guessed at. So a vendor opening a legacy menu — every dish
+       * inferred "other" — changing nothing but the price and pressing Save
+       * persisted our guesses as their declarations, and the menu flipped from
+       * `unknown` to `compliant`. A green badge on a menu nobody had ever
+       * classified, produced by the act of saving something unrelated.
+       *
+       * Omitting the field leaves the dish exactly as unclassified as it was,
+       * which is what the vendor actually did: nothing.
+       */
       const items = form.dishes
-        .map((d) => ({ name: d.name.trim(), countsAs: d.countsAs }))
-        .filter((d) => d.name)
+        .filter((d) => d.name.trim())
+        .map((d) => ({
+          name: d.name.trim(),
+          ...(d.inferred ? {} : { countsAs: d.countsAs }),
+          // WW-CHOICE-GROUPS — which "pick N of these" set this dish sits in.
+          ...(d.group ? { group: d.group } : {}),
+        }))
       const guarantee = form.minGuarantee.trim()
       const perHead = form.pricingUnit === "per_head"
       const body = {
         title: form.title.trim(),
         price: Number(form.price) || 0,
         businessId,
-        data: items.length ? { items } : {},
+        /**
+         * Groups ride alongside the items, and only when there are any — a menu
+         * with no choice groups saves the shape it always has, byte for byte.
+         *
+         * A group with no members is dropped rather than stored: it would sit
+         * in the data describing nothing, and the reader would give it a
+         * contribution of zero anyway.
+         */
+        data: items.length
+          ? {
+              items,
+              ...(groupEntries.some(([id]) => items.some((it) => it.group === id))
+                ? {
+                    groups: Object.fromEntries(
+                      groupEntries
+                        .filter(([id]) => items.some((it) => it.group === id))
+                        .map(([id, g]) => [id, { label: g.label.trim() || id, choose: g.choose }]),
+                    ),
+                  }
+                : {}),
+            }
+          : {},
         // WW-PRICING-OVERHAUL — pricingUnit now always reflects the explicit
         // toggle. A minimum guarantee only applies to a per-head menu; a flat
         // menu clears it (a flat menu ignores heads anyway on the server).
@@ -466,6 +581,13 @@ export function MenusManager({
                       Suggest for {unclassifiedRows} unclassified
                     </Button>
                   )}
+                  {/* WW-CHOICE-GROUPS — a menu needs dishes before "pick N of
+                      these" means anything, so the control appears with them. */}
+                  {form.dishes.length > 0 && (
+                    <Button size="sm" variant="ghost" onClick={addGroup}>
+                      <Icon name="Plus" size={14} className="mr-1" /> Add a choice
+                    </Button>
+                  )}
                   <Button size="sm" variant="ghost" onClick={addDish}>
                     <Icon name="Plus" size={14} className="mr-1" /> Add dish
                   </Button>
@@ -506,6 +628,65 @@ export function MenusManager({
                   placeholder={"Paste your menu here, one dish per line —\nChicken Biryani\nMutton Karahi\nSeekh Kebab\nZarda"}
                   onBlur={(e) => { addDishesFromText(e.target.value); e.target.value = "" }}
                 />
+              )}
+
+              {/* ── WW-CHOICE-GROUPS — "the customer picks N of these" ──────
+                  Real Pakistani menus are full of these: one main dish chosen
+                  from three, one sweet from two. Listing all five as served
+                  reported a breach that could not happen, and there was no way
+                  to say otherwise.
+
+                  The rule counts the WORST menu the group permits, so "pick 2
+                  of three mains" is a violation even though only two are ever
+                  eaten — the vendor is offering the combination, and s.5 makes
+                  the venue liable for the function that happens. */}
+              {groupEntries.length > 0 && (
+                <div className="space-y-2 rounded-lg border border-border/70 bg-muted/30 p-3">
+                  <p className="text-xs text-muted-foreground">
+                    Choices — the customer picks from these instead of being served all of them.
+                    Set which dishes belong to each using the dropdown on the rows above.
+                  </p>
+                  {groupEntries.map(([id, g]) => {
+                    const n = membersOf(id)
+                    return (
+                      <div key={id} className="flex flex-wrap items-center gap-2">
+                        <input
+                          className={cn(inputCls, "flex-1 min-w-[9rem]")}
+                          value={g.label}
+                          maxLength={40}
+                          onChange={(e) => setGroup(id, { label: e.target.value })}
+                          placeholder="Main dish"
+                          aria-label="What this choice is called"
+                        />
+                        <span className="text-xs text-muted-foreground">customer picks</span>
+                        <input
+                          type="number" min={1} max={Math.max(1, n)} step={1} inputMode="numeric"
+                          className={cn(inputCls, "w-[4.5rem] tabular-nums")}
+                          value={g.choose}
+                          onChange={(e) => setGroup(id, { choose: Math.max(1, Number(e.target.value) || 1) })}
+                          aria-label="How many the customer picks"
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {n === 0
+                            ? "— no dishes in this choice yet"
+                            : `of ${n} ${n === 1 ? "dish" : "dishes"}`}
+                        </span>
+                        <Button size="sm" variant="ghost" onClick={() => removeGroup(id)} aria-label={`Remove ${g.label || "choice"}`}>
+                          <Icon name="Trash2" size={14} />
+                        </Button>
+                        {/* A choice of everything is not a choice, and reads to
+                            the rule as every dish being served — which is what
+                            it would then correctly report. Better to say so. */}
+                        {n > 0 && g.choose >= n && (
+                          <p className="basis-full text-[11px] text-amber-700 dark:text-amber-400">
+                            Picking {g.choose} of {n} means every dish here is served — the same as not
+                            making it a choice at all.
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               )}
 
               {/* WW-DISH-LIBRARY — dishes this vendor has already classified.
@@ -561,6 +742,22 @@ export function MenusManager({
                       <option key={c} value={c}>{COUNTS_AS_LABELS[c]}</option>
                     ))}
                   </select>
+                  {/* WW-CHOICE-GROUPS — offered only once a group exists, so a
+                      vendor who does not use them never sees a control they
+                      would have to think about. */}
+                  {groupEntries.length > 0 && (
+                    <select
+                      className={cn(inputCls, "w-[13rem]")}
+                      value={d.group ?? ""}
+                      onChange={(e) => setDishGroup(i, e.target.value || null)}
+                      title="Is this dish always served, or one the customer chooses?"
+                    >
+                      <option value="">Always served</option>
+                      {groupEntries.map(([id, g]) => (
+                        <option key={id} value={id}>In: {g.label || id}</option>
+                      ))}
+                    </select>
+                  )}
                   <Button size="sm" variant="ghost" onClick={() => removeDish(i)} aria-label={`Remove ${d.name || "dish"}`}>
                     <Icon name="Trash2" size={14} />
                   </Button>
