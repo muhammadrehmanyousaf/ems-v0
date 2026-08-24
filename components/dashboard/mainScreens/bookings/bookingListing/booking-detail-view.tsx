@@ -66,6 +66,7 @@ import {
 import { InstallmentsCard } from '@/components/bookings/installments-card';
 import { VendorApprovalCard } from '@/components/bookings/vendor-approval-card';
 import { SettlementCard } from '@/components/bookings/settlement-card';
+import { RequirementsCard } from '@/components/bookings/requirements-card';
 import { VendorCancelCard } from '@/components/bookings/vendor-cancel-card';
 import { BookingReceiptsCard, BookingDisputesCard } from '@/components/bookings/booking-related-lists';
 import { OrderBuilderCard } from '@/components/bookings/order-builder-card';
@@ -379,6 +380,15 @@ export default function BookingDetailView({
             eventDate={fmtDate(booking.bookingDate)}
             amountPaid={(booking as any).amountPaid ?? booking.downPayment}
           />
+
+          {/* WW-REQUIREMENTS — what the customer asked for, and the answers.
+              This lived ONLY in the list side-sheet, so a vendor who opened a
+              booking the obvious way could not see the one thing the customer
+              wrote in their own words. An unanswered requirement is what turns
+              into "we asked for a ladies section" against "nobody told us", and
+              it settles nothing if only one surface shows it. Renders nothing
+              when there are none. */}
+          <RequirementsCard bookingId={booking.id} role="vendor" />
 
           {/* Customer */}
           <Card>
