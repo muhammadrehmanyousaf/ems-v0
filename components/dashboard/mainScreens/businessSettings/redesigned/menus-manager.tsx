@@ -196,6 +196,67 @@ export function MenusManager({
   const invalidate = () => qc.invalidateQueries({ queryKey: ["menus", businessId] })
 
   /**
+   * WW-DISH-LIBRARY — the dishes this vendor has already used, with the
+   * classification they already gave them.
+   *
+   * A venue with a Standard, Gold and Platinum menu types "Chicken Karahi"
+   * three times and classifies it three times, and any one of those three can
+   * be classified differently from the others — at which point the platform is
+   * holding two contradictory declarations about the same dish and counting
+   * whichever it happens to read.
+   *
+   * Derived from the menus already in this screen's cache, so there is no new
+   * endpoint, no migration, and it is correct the moment a menu is saved.
+   *
+   * A DECLARED classification always wins over an inferred one: the same dish
+   * may sit unclassified in an old menu and classified in a new one, and the
+   * vendor's own answer is the one worth reusing.
+   */
+  const dishLibrary = React.useMemo(() => {
+    const byName = new Map<string, { name: string; countsAs: CountsAs; declared: boolean; uses: number }>()
+    for (const m of menus ?? []) {
+      for (const d of flattenMenuItems(m.data)) {
+        const key = d.name.trim().toLowerCase()
+        if (!key) continue
+        const prev = byName.get(key)
+        if (!prev) {
+          byName.set(key, { name: d.name.trim(), countsAs: d.countsAs, declared: !d.inferred, uses: 1 })
+          continue
+        }
+        prev.uses += 1
+        // Upgrade to the declared answer if this menu has one and we did not.
+        if (!prev.declared && !d.inferred) {
+          prev.countsAs = d.countsAs
+          prev.declared = true
+        }
+      }
+    }
+    return [...byName.values()].sort((a, b) => b.uses - a.uses || a.name.localeCompare(b.name))
+  }, [menus])
+
+  /**
+   * What the library can offer: dishes the vendor has actually CLASSIFIED, and
+   * that are not already on the open menu.
+   *
+   * The `declared` filter is the important half. An unclassified dish carries
+   * nothing worth reusing — and adding one would write our guess back as the
+   * vendor's own declaration, which is precisely what turns an unread menu
+   * green. Typing the name again costs them nothing; a false verdict costs
+   * them in front of an inspector.
+   *
+   * So the library starts empty for a vendor whose menus predate the
+   * classifier, and fills as they answer for each dish once.
+   */
+  const librarySuggestions = React.useMemo(() => {
+    const onForm = new Set(form.dishes.map((d) => d.name.trim().toLowerCase()).filter(Boolean))
+    return dishLibrary.filter((d) => d.declared && !onForm.has(d.name.toLowerCase()))
+  }, [dishLibrary, form.dishes])
+
+  /** Add a library dish, carrying its classification as a declaration. */
+  const addFromLibrary = (name: string, countsAs: CountsAs) =>
+    setForm((f) => ({ ...f, dishes: [...f.dishes, { name, countsAs, inferred: false }] }))
+
+  /**
    * WW-ONE-DISH — dishes are read through the shared flattener, so a menu saved
    * in ANY of this column's historic shapes opens correctly: a flat string list
    * from this form, a classified object list, or the sectioned
@@ -441,6 +502,40 @@ export function MenusManager({
                   placeholder={"Paste your menu here, one dish per line —\nChicken Biryani\nMutton Karahi\nSeekh Kebab\nZarda"}
                   onBlur={(e) => { addDishesFromText(e.target.value); e.target.value = "" }}
                 />
+              )}
+
+              {/* WW-DISH-LIBRARY — dishes this vendor has already classified.
+                  Adding one carries its classification, so a dish is answered
+                  for once rather than re-answered on every menu — which is also
+                  how the same dish ends up classified two different ways. */}
+              {librarySuggestions.length > 0 && (
+                <div className="rounded-lg border border-border/70 bg-muted/30 p-2.5">
+                  <p className="mb-1.5 text-xs text-muted-foreground">
+                    From your other menus — adding one keeps how you classified it
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {librarySuggestions.slice(0, 24).map((d) => (
+                      <button
+                        key={d.name}
+                        type="button"
+                        onClick={() => addFromLibrary(d.name, d.countsAs)}
+                        title={`${COUNTS_AS_LABELS[d.countsAs]}${d.uses > 1 ? ` · on ${d.uses} menus` : ""}`}
+                        className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-xs hover:bg-accent"
+                      >
+                        <Icon name="Plus" size={11} />
+                        {d.name}
+                        <span className="text-[10px] text-muted-foreground">
+                          {COUNTS_AS_LABELS[d.countsAs]}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  {librarySuggestions.length > 24 && (
+                    <p className="mt-1.5 text-[11px] text-muted-foreground">
+                      …and {librarySuggestions.length - 24} more. Type a name to add anything else.
+                    </p>
+                  )}
+                </div>
               )}
 
               {form.dishes.map((d, i) => (
