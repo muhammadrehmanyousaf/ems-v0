@@ -58,3 +58,6 @@ next-env.d.ts
 
 # QA harness result dumps (ephemeral test output)
 /qa-out/
+
+# Scratch PR bodies — not part of the codebase
+PR-BODY-*.md
