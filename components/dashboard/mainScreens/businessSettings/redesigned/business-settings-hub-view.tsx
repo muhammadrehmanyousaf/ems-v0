@@ -25,6 +25,9 @@ import { Switch } from "@/components/ui/switch"
 import { BankAccountsManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/bank-accounts-manager"
 import { PackagesManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/packages-manager"
 import { MenusManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/menus-manager"
+// WW-RATECARD 9.5 — renders the public offerings component with this vendor's
+// own published data, so the preview and the listing cannot disagree.
+import { OfferingsPreview } from "@/components/dashboard/mainScreens/businessSettings/redesigned/offerings-preview"
 import { AvailabilityManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/availability-manager"
 import { ImagesManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/images-manager"
 import { TypeSpecificManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/type-specific-manager"
@@ -1124,13 +1127,27 @@ export function BusinessSettingsHubView() {
             />
           )}
           {active === "bank" && <BankAccountsManager />}
-          {active === "packages" && <PackagesManager businessId={biz.id} />}
+          {/* WW-RATECARD 9.5 — the packages and menus tabs each build half of
+              one block on the listing, and neither showed the block. The
+              preview renders the SAME component the public detail page uses, so
+              it cannot drift into being a preview of a page that does not
+              exist. Mounted under both, because a vendor asks "what does this
+              look like" from whichever half they are editing. */}
+          {active === "packages" && (
+            <>
+              <PackagesManager businessId={biz.id} />
+              <OfferingsPreview businessId={biz.id} />
+            </>
+          )}
           {active === "menus" && (
-            <MenusManager
-              businessId={biz.id}
-              minCapacity={biz.minCapacity ?? null}
-              maxCapacity={biz.maxCapacity ?? null}
-            />
+            <>
+              <MenusManager
+                businessId={biz.id}
+                minCapacity={biz.minCapacity ?? null}
+                maxCapacity={biz.maxCapacity ?? null}
+              />
+              <OfferingsPreview businessId={biz.id} />
+            </>
           )}
           {active === "availability" && <AvailabilityManager businessId={biz.id} />}
           {active === "images" && <ImagesManager businessId={biz.id} images={biz.images || []} />}
