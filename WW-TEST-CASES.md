@@ -280,12 +280,12 @@ Two rows remain open and stay marked `GAP`.
 | 8.6 | Count rises after lock (A6) | Venue accepts at walk-in rate or refuses on capacity | API · H-7 — billed at walk-in; implausible counts refused (H-9) |
 | 8.7 | Children (A7) | `childUnder5Pct`; come **out** of the stated total | API · A8-2 — 20 under-5 free, 10 aged 5–12 at half |
 | 8.8 | Drivers / domestic staff (A8) | `staffMealRatePkr`; leave the head count | API · A8-5 — 30 staff leave the count, billed 30 × Rs 800 |
-| 8.9 | Vendor crew meals (A9) | `crewMealCount` on the BEO | GAP |
+| 8.9 | Vendor crew meals (A9) | `finalCrewMeals` + `crewMealRatePkr` | UNIT · 23 — additive, outside the head count AND the walk-in band; rate falls back crew → staff → per-head, never to free |
 | 8.10 | Fractions round up | Never against the venue | API · A8-7 — 420 adults + 1 half-plate = 421, rounded up |
 | 8.11 | UC-09 — more guests than guaranteed | Walk-in arithmetic shown before the night | API · H-10 — the customer can read the arithmetic beforehand |
 | 8.12 | UC-10 — fewer guests | Guarantee bills; no dispute at the door | API · H-5b — “the food was prepared for 250” |
 | 8.13 | UC-14 — 421 vs 391 billable heads | Staff billed separately leave the head count | API · A8-3 — 421 stated → 361 adults → 366 billable |
-| 8.14 | Cash settlement on the night (A25) | `confirm-cash` wired to settlement | GAP |
+| 8.14 | Cash settlement on the night (A25) | `POST /:id/settlement/confirm-cash` | UNIT · 37 — a real money event: transaction, installment paydown, receipt, then status. Partial handovers supported |
 
 ---
 
@@ -323,7 +323,7 @@ at registration must also be editable in the portal (`VENDOR-PORTAL-...` §1.2).
 | 10.4 | Requirements step never blocks | A full stop must not be a toll gate | UNIT |
 | 10.5 | Free-text requirement stored verbatim | Urdu exactly as typed (UC-14) | AUTO |
 | 10.6 | Requirements visible to both parties | One component, two roles | MANUAL |
-| 10.7 | Adaptive step engine from rate-card groups (§5.1) | | GAP |
+| 10.7 | Per-unit quantity step | The step, the running total, Review and the payload all agree | PARITY · 26/26 against the real engine |
 | 10.8 | Slot hold on date select | 15-minute hold; auto-release | AUTO |
 | 10.9 | Hold failure surfaced | Date cleared, told why | MANUAL |
 | 10.10 | UC-24 — two families race a peak Saturday | Hold decides; loser told immediately | GAP |
@@ -375,8 +375,10 @@ Verified identical on clean `main` by stashing. **8 failures, 3 suites.**
 | 5 Request-to-book | 13 | 2 |
 | 6 Quote pipeline | 31 | 1 |
 | 7 Payment | 11 | 3 |
-| 8 **Settlement** | **0** | **14** |
+| 8 **Settlement** | **14** | **0** |
 | 9 Registration | 6 | 8 |
-| 10 Booking mechanics | 8 | 10 |
+| 10 Booking mechanics | 9 | 9 |
 
-Settlement is the largest untouched block and the one with real money attached.
+Settlement is complete. All fourteen cases are built and tested, including the
+two that only happen on the night itself: the vendors own crew eating at the
+venue, and the balance counted out in cash at the gate.

@@ -29,6 +29,8 @@ import { menuChargeFor } from "@/lib/pricing/menu"
 // and the submitted payload both derive from this, so a venue whose package
 // covers food never renders a priced Menu step.
 import { composeLineTotal, packageIncludesFood } from "@/lib/pricing/package"
+import { readUnitConfig, sellsByTheUnit, unitLineFor } from "@/lib/pricing/per-unit"
+import UnitQuantityStep from "./steps/unit-quantity-step"
 import VendorInquiryDialog from "@/components/VendorInquiryDialog"
 import { useDateHold } from "@/hooks/use-date-hold"
 import { useBookingDraft } from "@/hooks/use-booking-draft"
@@ -376,7 +378,12 @@ export default function BookingForm() {
 
     const vendorsPayload: any[] = []
 
-    const vehicleQty = isCarRental ? (currentForm.vehicleQuantity || 1) : 1
+    // WW-RATECARD 10.7 — a per-unit vendor's quantity is the whole rate card,
+    // and they need not be one of the three hardcoded vendor types this used to
+    // read. Their floor is the vendor's own minimum, not 1.
+    const vehicleQty = sellsByUnit
+      ? (currentForm.vehicleQuantity || unitConfig?.minUnitQty || 1)
+      : isCarRental ? (currentForm.vehicleQuantity || 1) : 1
     // WW-PRICING-OVERHAUL — a per-head menu bills price × max(guests, min-pax);
     // a flat menu is its price (unchanged). Same helper the server mirrors, so the
     // submitted totalAmount matches the Review the customer agreed to.
@@ -425,7 +432,7 @@ export default function BookingForm() {
       downPayment: mainDownPayment,
       specialRequests: specialNotes.join(' | ')
     }
-    if ((isCarRental || isBridalWear || isWeddingStationery) && vehicleQty > 1) mainBusinessEntry.vehicleQuantity = vehicleQty
+    if ((isCarRental || isBridalWear || isWeddingStationery || sellsByUnit) && vehicleQty > 1) mainBusinessEntry.vehicleQuantity = vehicleQty
     if (additionalPackageIds.length > 0) mainBusinessEntry.additionalPackageIds = additionalPackageIds
     // Pin the booking to the chosen hall/lawn/partition (BusinessResource) when the
     // customer selected one. Additive — omitted entirely if left as "whole venue".
@@ -482,14 +489,32 @@ export default function BookingForm() {
     }
 
     if (vendorsPayload.length === 0) {
-      const fallbackTotal = Number(venue?.minimumPrice) || 0
+      /**
+       * WW-RATECARD 10.7 — a per-unit vendor lands here, and it used to lose
+       * both halves of their rate card.
+       *
+       * The main entry above is only pushed when a package or a menu was
+       * chosen, and a per-unit vendor has neither. So this fallback ran, sent
+       * `minimumPrice` as the total, and — the part that actually cost money —
+       * sent no `vehicleQuantity` at all. The server recomputes the total
+       * itself, so it would have billed one unit however many were asked for,
+       * and the Review screen would have shown a minimumPrice the booking was
+       * never going to cost.
+       */
+      const unitLine = sellsByUnit && unitConfig ? unitLineFor(unitConfig, vehicleQty) : null
+      const fallbackTotal = unitLine ? unitLine.total : Number(venue?.minimumPrice) || 0
       vendorsPayload.push({
         businessId: venue.id,
         packageId: null,
         menuId: null,
         totalAmount: fallbackTotal,
         downPayment: calculateDownPayment(fallbackTotal, venue),
-        specialRequests: ''
+        // The quantity is the selection here, so it travels even when it is 1 —
+        // unlike the `> 1` shorthand above, where 1 is genuinely the default.
+        ...(unitLine ? { vehicleQuantity: unitLine.billedQty } : {}),
+        specialRequests: unitLine
+          ? `Quantity: ${unitLine.billedQty} ${unitConfig!.unitLabel}`
+          : '',
       })
     }
 
@@ -723,6 +748,22 @@ export default function BookingForm() {
   // take a food-inclusive package for the Barat and a hall-only one for the
   // Mehndi, and the Menu step must follow whichever event is on screen.
   const selectedPackageIncludesFood = packageIncludesFood(selectedPackageObj as any)
+  /**
+   * WW-RATECARD 10.7 — a vendor whose rate card IS a unit.
+   *
+   * `pricingMode = "per_unit"` plus a priced unit in `pricingConfigJson` is the
+   * whole rate card for a car-rental firm, a stationery press or a chair
+   * supplier. `pricingService` bills it; nothing in this flow ever asked how
+   * many, because the only quantity control lived inside the package step and a
+   * per-unit vendor has no packages to put it in.
+   *
+   * `sellsByTheUnit` is deliberately narrower than "has a unit configured": the
+   * server bills the unit line only when nothing else is selected, so a vendor
+   * with packages or menus never reaches it. A quantity control that does not
+   * move the price would be worse than no control at all.
+   */
+  const unitConfig = useMemo(() => readUnitConfig(venue as any), [venue])
+  const sellsByUnit = useMemo(() => sellsByTheUnit(venue as any), [venue])
   const isCarRental = venue?.vendor?.vendorType === "Car rental"
   const isBridalWear = venue?.vendor?.vendorType === "Bridal wearing"
   const isWeddingStationery = venue?.vendor?.vendorType === "Wedding Invitations and Stationery"
@@ -793,6 +834,12 @@ export default function BookingForm() {
     } else {
       // VENDOR flow: Date → Packages → Review → Success (NO vendor selection)
       if (hasPackages) steps.push({ key: "packages", title: "Package Selection" })
+      // WW-RATECARD 10.7 — for a per-unit vendor this step IS the rate card, so
+      // it takes the place the packages step would have had. `sellsByTheUnit`
+      // already guarantees the two can never both appear.
+      if (sellsByUnit && unitConfig) {
+        steps.push({ key: "unit", title: `How many ${unitConfig.unitLabel}?` })
+      }
       // WW-REQUIREMENTS — always, and always immediately before Review, so the
       // customer states what they need while the booking is still theirs to
       // change. Nothing on it is required; a step that blocked on being filled
@@ -808,7 +855,7 @@ export default function BookingForm() {
     // list at whatever the FIRST package selection implied, and a customer
     // switching from a hall-only package to a food-inclusive one would keep
     // being charged for a menu the package already covers.
-  }, [isVenueBooking, hasPackages, hasMenus, selectedPackageIncludesFood])
+  }, [isVenueBooking, hasPackages, hasMenus, selectedPackageIncludesFood, sellsByUnit, unitConfig])
 
   // ── Step validation (key-based) ──
   const getIsStepValid = (): boolean => {
@@ -843,6 +890,14 @@ export default function BookingForm() {
         return true // optional step
       case 'menu':
         return true // optional step
+      case 'unit':
+        /**
+         * Never blocks. The stepper cannot produce an invalid quantity — it is
+         * clamped to the vendor's minimum and the server's cap of 50 — and the
+         * field opens at a bookable number, so there is nothing to refuse. A
+         * gate here could only ever fire on a state the UI cannot reach.
+         */
+        return true
       case 'requirements':
         // WW-REQUIREMENTS — never blocks. A step that demanded input would be
         // satisfied with a full stop and teach people the field is a toll gate.
@@ -940,6 +995,16 @@ export default function BookingForm() {
             packageName={selectedPackageObj?.name}
           />
         )
+        break
+      case 'unit':
+        stepContent = unitConfig ? (
+          <UnitQuantityStep
+            config={unitConfig}
+            quantity={activeFormData.vehicleQuantity || unitConfig.minUnitQty || 1}
+            onChange={(qty) => updateFormDataPartial({ vehicleQuantity: qty })}
+            vendorName={venue?.name}
+          />
+        ) : null
         break
       case 'requirements':
         stepContent = (
