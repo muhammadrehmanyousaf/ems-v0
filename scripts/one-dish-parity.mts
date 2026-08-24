@@ -1,0 +1,96 @@
+/**
+ * WW-ONE-DISH — prove the mirror still agrees with the rule it mirrors.
+ *
+ * `lib/compliance/one-dish.ts` exists so a vendor sees the count WHILE they
+ * build a menu, rather than after a save round-trip. It states in its own
+ * header that it mirrors `oneDishRule.js`, and the whole reason the arithmetic
+ * lives in one shape is so no surface can quietly disagree about the same menu.
+ *
+ * Nothing enforced that. Twice now the backend rule changed and the mirror did
+ * not: once when a menu with no readable dishes stopped being called compliant,
+ * and once when a choice-group breach stopped being described as "listed" —
+ * which left the vendor's own editor saying "2 main dishes listed ()", an empty
+ * bracket and a claim they can see is false.
+ *
+ * This compares both implementations across every menu shape the column has
+ * held, including the ones that only appear in production data, and fails on
+ * any difference in status, counts, reason or wording.
+ *
+ * Run:
+ *   node --experimental-strip-types scripts/one-dish-parity.mts
+ *   WW_BACKEND=/path/to/ems-v0-backend node --experimental-strip-types scripts/one-dish-parity.mts
+ */
+import { createRequire } from "node:module";
+import path from "node:path";
+import { checkOneDish as feCheck, describeViolation as feDescribe } from "../lib/compliance/one-dish.ts";
+
+const require = createRequire(import.meta.url);
+const BACKEND = process.env.WW_BACKEND || "C:/Projects/ems-v0-backend";
+const rulePath = path.join(BACKEND, "src/utils/oneDishRule.js");
+
+let beCheck: (d: any) => any;
+let beDescribe: (v: any) => string;
+try {
+  ({ checkOneDish: beCheck, describeViolation: beDescribe } = require(rulePath));
+} catch (e) {
+  console.error(`\nCould not load the backend rule at ${rulePath}`);
+  console.error("Set WW_BACKEND to the backend checkout to run this.\n");
+  process.exit(2);
+}
+
+const dish = (name: string, countsAs: string, group?: string) =>
+  ({ name, countsAs, ...(group ? { group } : {}) });
+
+/** Every shape `Menu.data` has ever held, plus the choice groups. */
+const CASES: [string, any][] = [
+  // Legacy production data: flat strings, nothing declared.
+  ["legacy flat strings", { items: ["Karahi", "Naan"] }],
+  ["legacy three curries", { items: ["Karahi", "Qorma", "Handi"] }],
+  ["sectioned legacy", { mains: { items: ["Karahi"] }, bread: { items: ["Naan"] } }],
+  // Declared.
+  ["classified, compliant", { items: [dish("Karahi", "salan"), dish("Naan", "bread")] }],
+  ["three salans listed", { items: [dish("K", "salan"), dish("Q", "salan"), dish("N", "salan")] }],
+  ["two sweets listed", { items: [dish("Kheer", "sweet"), dish("Firni", "sweet"), dish("K", "salan")] }],
+  // Choice groups.
+  ["pick 1 of 3 salans", { groups: { m: { label: "Main dish", choose: 1 } }, items: [dish("K", "salan", "m"), dish("Q", "salan", "m"), dish("N", "salan", "m")] }],
+  ["pick 2 of 3 salans", { groups: { m: { label: "Main dish", choose: 2 } }, items: [dish("K", "salan", "m"), dish("Q", "salan", "m"), dish("N", "salan", "m")] }],
+  ["mixed group pick 2", { groups: { p: { label: "Choose two", choose: 2 } }, items: [dish("K", "salan", "p"), dish("B", "rice", "p"), dish("Pu", "rice", "p")] }],
+  ["ungrouped plus group", { groups: { e: { label: "Extra main", choose: 1 } }, items: [dish("N", "salan"), dish("K", "salan", "e"), dish("Q", "salan", "e")] }],
+  ["choose above group size", { groups: { m: { label: "Mains", choose: 9 } }, items: [dish("K", "salan", "m")] }],
+  ["choose missing reads as 1", { groups: { m: { label: "Main dish" } }, items: [dish("K", "salan", "m"), dish("Q", "salan", "m")] }],
+  ["ghost group reference", { items: [dish("K", "salan", "ghost"), dish("Q", "salan", "ghost")] }],
+  ["sweets capped in a group", { groups: { s: { label: "Sweet", choose: 2 } }, items: [dish("Kheer", "sweet", "s"), dish("Firni", "sweet", "s"), dish("K", "salan")] }],
+  // Odds and ends that must not throw or diverge.
+  ["supplement carried", { items: [{ name: "Raan", countsAs: "salan", supplementPerHead: 600 }] }],
+  ["empty object", {}],
+  ["null", null],
+  ["items not an array", { items: "Karahi" }],
+  ["groups not an object", { groups: [], items: [dish("K", "salan")] }],
+];
+
+let bad = 0;
+console.log("\nONE-DISH PARITY — the rule and its mirror must agree\n");
+for (const [label, data] of CASES) {
+  const be = beCheck(data);
+  const fe = feCheck(data);
+  const same =
+    be.status === fe.status &&
+    be.compliant === fe.compliant &&
+    be.unknownReason === fe.unknownReason &&
+    JSON.stringify(be.counts) === JSON.stringify(fe.counts) &&
+    JSON.stringify(be.unclassified) === JSON.stringify(fe.unclassified) &&
+    be.violations.length === fe.violations.length &&
+    be.violations.every((v: any, i: number) => beDescribe(v) === feDescribe(fe.violations[i]));
+  if (!same) bad++;
+  console.log(`  ${same ? "PASS" : "FAIL"}  ${label.padEnd(26)} ${String(be.status).padEnd(10)} salan=${be.counts.salan} sweet=${be.counts.sweet}`);
+  if (!same) {
+    console.log("        backend:", JSON.stringify({ status: be.status, reason: be.unknownReason, counts: be.counts, says: be.violations.map(beDescribe) }));
+    console.log("        mirror :", JSON.stringify({ status: fe.status, reason: fe.unknownReason, counts: fe.counts, says: fe.violations.map(feDescribe) }));
+  }
+}
+console.log(
+  bad
+    ? `\n  ${bad} DIVERGENCE(S) — the vendor's editor and the server disagree about the same menu.\n`
+    : `\n  ${CASES.length}/${CASES.length} — the two surfaces agree on every shape.\n`,
+);
+process.exit(bad ? 1 : 0);
