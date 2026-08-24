@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import type { BookingFormData, EventVenue, Vendor } from "@/lib/types"
 import { Receipt, ChevronUp, ChevronDown, Lock } from "lucide-react"
+import { readUnitConfig, sellsByTheUnit, unitLineFor, describeUnitQty } from "@/lib/pricing/per-unit"
 
 interface LivePricingPanelProps {
   formData: BookingFormData
@@ -55,11 +56,29 @@ export default function LivePricingPanel({
     }
 
     if (!selectedPackageObj && !selectedMenuObj && venue) {
-      items.push({
-        label: venue.name,
-        type: "Venue",
-        amount: Number(venue.minimumPrice) || 0,
-      })
+      /**
+       * WW-RATECARD 10.7 — a per-unit vendor has no package and no menu, so
+       * they land on this fallback. Showing `minimumPrice` here would be a
+       * number the booking will never cost: the server prices the unit line and
+       * skips the minimum floor entirely for exactly this case.
+       */
+      const unitCfg = readUnitConfig(venue as any)
+      const unitLine = unitCfg && sellsByTheUnit(venue as any)
+        ? unitLineFor(unitCfg, formData.vehicleQuantity || unitCfg.minUnitQty || 1)
+        : null
+      items.push(
+        unitLine
+          ? {
+              label: `${venue.name} — ${describeUnitQty(unitLine.unitLabel, unitLine.billedQty)}`,
+              type: "Rate",
+              amount: unitLine.total,
+            }
+          : {
+              label: venue.name,
+              type: "Venue",
+              amount: Number(venue.minimumPrice) || 0,
+            },
+      )
     }
 
     const vendorIdsWithPackages = new Set<string>()

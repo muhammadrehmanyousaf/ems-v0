@@ -10,6 +10,7 @@ import {
   packageIsPerHead,
   packageBillableHeads,
 } from "@/lib/pricing/package"
+import { readUnitConfig, sellsByTheUnit, unitLineFor, describeUnitQty } from "@/lib/pricing/per-unit"
 
 interface MobileSummaryBarProps {
   formData: BookingFormData
@@ -74,6 +75,17 @@ export default function MobileSummaryBar({
             : baseLabel,
         amount: line.menuCharge,
       })
+    }
+    // WW-RATECARD 10.7 — a per-unit vendor has neither a package nor a menu, so
+    // without this the bar stays at Rs 0 and hides itself while the customer is
+    // choosing a quantity that plainly costs money. Same mirror as the Review
+    // step and the payload, so the three cannot drift.
+    if (!selectedPackageObj && !selectedMenuObj && venue) {
+      const cfg = readUnitConfig(venue as any)
+      if (cfg && sellsByTheUnit(venue as any)) {
+        const ul = unitLineFor(cfg, formData.vehicleQuantity || cfg.minUnitQty || 1)
+        items.push({ label: describeUnitQty(ul.unitLabel, ul.billedQty), amount: ul.total })
+      }
     }
     if (formData.selectedVendorPackages?.length) {
       formData.selectedVendorPackages.forEach((pkgId) => {

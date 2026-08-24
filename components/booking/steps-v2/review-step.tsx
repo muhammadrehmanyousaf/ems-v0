@@ -26,6 +26,8 @@ import {
 } from "@/lib/api/bundledServices"
 // SLOTS step 10 — the single slot vocabulary.
 import { slotText } from "@/lib/booking/slot-vocabulary"
+// WW-RATECARD 10.7 — a vendor whose rate card IS a unit (cars, chairs, cards).
+import { readUnitConfig, sellsByTheUnit, unitLineFor, describeUnitQty } from "@/lib/pricing/per-unit"
 // WW-PRICING-OVERHAUL — single source for per-head menu math (must match server).
 import {
   menuChargeFor,
@@ -138,13 +140,28 @@ export default function ReviewStep({
     packageCharge,
     menuCharge: menuPrice,
     menuIncluded,
-    baseTotal,
+    baseTotal: composedBase,
   } = composeLineTotal({
     pkg: selectedPackageObj,
     guestCount: formData.guestCount,
     qty,
     menuCharge: menuPriceRaw,
   })
+
+  /**
+   * WW-RATECARD 10.7 — a vendor whose rate card IS a unit.
+   *
+   * They have no package and no menu, so `composeLineTotal` returns 0 and this
+   * screen would have shown a booking that costs nothing. The unit line is
+   * their whole rate card, priced by the same mirror the payload uses, so the
+   * number the customer approves here is the number the server independently
+   * recomputes.
+   */
+  const unitConfig = readUnitConfig(venue as any)
+  const unitLine = unitConfig && sellsByTheUnit(venue as any)
+    ? unitLineFor(unitConfig, formData.vehicleQuantity || unitConfig.minUnitQty || 1)
+    : null
+  const baseTotal = unitLine ? unitLine.total : composedBase
 
   // BK-100.52 Layer 2c — fetch the venue's optional bundled add-ons.
   // Filter to active + non-mandatory + non-included rows (those baked
@@ -336,6 +353,15 @@ export default function ReviewStep({
     { icon: Clock,    label: "Time of day", value: timeLabel },
   ]
   if (showGuests) bookingRows.push({ icon: Users, label: "Guests", value: formData.guestCount ? `${formData.guestCount} ${formData.guestCount === 1 ? "guest" : "guests"}` : "—" })
+  if (unitLine) {
+    // WW-RATECARD 10.7 — the arithmetic, not just the answer, for the same
+    // reason a per-head package shows "Rs 2,500/head × 500". The minimum is
+    // named when it lifted the quantity, so a number the customer did not ask
+    // for never appears without its reason.
+    let unitValue = `${describeUnitQty(unitLine.unitLabel, unitLine.billedQty)} — Rs ${unitLine.unitPrice.toLocaleString()} each`
+    if (unitLine.liftedByMinimum) unitValue += ` (min ${unitLine.minUnitQty})`
+    bookingRows.push({ icon: PackageIcon, label: "Booking", value: unitValue })
+  }
   if (selectedPackageObj) {
     // WW-PKG-UNIT — a per-head package must show its basis, exactly as a
     // per-head menu already does. "Gold" alone next to Rs 12,50,000 gives the
