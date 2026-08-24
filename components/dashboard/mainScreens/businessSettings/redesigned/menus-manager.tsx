@@ -382,9 +382,21 @@ export function MenusManager({
                   )}
                   {oneDish.status === "unknown" && (
                     <p className="mt-2 text-amber-800 dark:text-amber-300">
-                      Set what each dish counts as — {oneDish.unclassified.length} still to
-                      go. We can&apos;t tell you whether this menu is within the one-dish rule
-                      until you do.
+                      {/* Two different asks. "0 still to go" is what this said
+                          for a menu with no readable dishes at all, which tells
+                          the vendor nothing about what to do next. */}
+                      {oneDish.unknownReason === "no_items" ? (
+                        <>
+                          Add the dishes on this menu. We can&apos;t tell you whether it is
+                          within the one-dish rule until we can see what you serve.
+                        </>
+                      ) : (
+                        <>
+                          Set what each dish counts as — {oneDish.unclassified.length} still to
+                          go. We can&apos;t tell you whether this menu is within the one-dish
+                          rule until you do.
+                        </>
+                      )}
                     </p>
                   )}
                   {oneDish.status === "compliant" && (

@@ -112,6 +112,8 @@ export type OneDishStatus = "compliant" | "violation" | "unknown";
 export interface OneDishResult {
   status: OneDishStatus;
   compliant: boolean;
+  /** Set only when `status` is "unknown" — why we could not reach a verdict. */
+  unknownReason: "no_items" | "unclassified" | null;
   counts: Record<CountsAs, number>;
   violations: { countsAs: CountsAs; allowed: number; found: number; items: string[] }[];
   unclassified: string[];
@@ -146,12 +148,35 @@ export function checkOneDish(data: any): OneDishResult {
    * menu. A menu we cannot read is `unknown`, and the UI asks rather than
    * reassures.
    */
+  /**
+   * A menu with NO readable dishes is `unknown` too, not `compliant`.
+   *
+   * The three states above refuse to call a menu compliant when SOME dishes
+   * could not be placed, but zero items parsed produced no violations and
+   * nothing unclassified, and fell through to "compliant" — a clean verdict on
+   * a menu that was never read.
+   *
+   * Found on production, where every menu row carries `data: NULL`, so every
+   * menu on the platform was reporting compliant on the strength of nothing.
+   * Kept identical to the backend rule: this file is a mirror, and the reason
+   * the verdict is computed in one place is so no surface can quietly disagree.
+   */
+  const nothingRead = items.length === 0;
+
   const status: OneDishStatus =
-    violations.length > 0 ? "violation" : unclassified.length > 0 ? "unknown" : "compliant";
+    violations.length > 0 ? "violation"
+      : unclassified.length > 0 || nothingRead ? "unknown"
+        : "compliant";
 
   return {
     status,
     compliant: status === "compliant",
+    /**
+     * Why it is `unknown`, so the screen asks the right question: "no_items"
+     * means no dishes are recorded at all, "unclassified" means the dishes are
+     * there but some could not be placed into a course.
+     */
+    unknownReason: status !== "unknown" ? null : (nothingRead ? "no_items" : "unclassified"),
     counts,
     violations,
     unclassified: unclassified.map((i) => i.name),
