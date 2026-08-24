@@ -58,6 +58,8 @@ export interface MenuDish {
   section?: string | null;
   isLive?: boolean;
   supplementPerHead?: number;
+  /** WW-CHOICE-GROUPS — the "pick N of these" set this dish belongs to. */
+  group?: string | null;
 }
 
 /**
@@ -93,6 +95,10 @@ export function flattenMenuItems(data: any): MenuDish[] {
         section: section ?? raw.section ?? null,
         isLive: raw.isLive === true,
         supplementPerHead: Number(raw.supplementPerHead) > 0 ? Number(raw.supplementPerHead) : 0,
+        // WW-CHOICE-GROUPS — which "pick N of these" set this dish belongs to.
+        // Optional: a dish with no group is always served, which is every dish
+        // on every menu written before this existed.
+        group: raw.group ? String(raw.group) : null,
       });
     }
   };
@@ -115,26 +121,108 @@ export interface OneDishResult {
   /** Set only when `status` is "unknown" — why we could not reach a verdict. */
   unknownReason: "no_items" | "unclassified" | null;
   counts: Record<CountsAs, number>;
-  violations: { countsAs: CountsAs; allowed: number; found: number; items: string[] }[];
+  /**
+   * `items` lists only the ALWAYS-SERVED dishes in this category. A breach
+   * caused by a choice group carries `viaChoice` and `why` instead, because
+   * such a menu may list none — and "2 main dishes listed ()" reads to a
+   * vendor as a platform error rather than as their own setting.
+   */
+  violations: {
+    countsAs: CountsAs; allowed: number; found: number; items: string[];
+    viaChoice?: { group: string; label: string; worst: number; of: number; pick: number }[];
+    why?: string;
+  }[];
   unclassified: string[];
   hasInferred: boolean;
   items: MenuDish[];
 }
 
+/**
+ * WW-CHOICE-GROUPS — the "pick N of these" sets a menu declares.
+ *
+ *   data.groups = { mains: { label: "Main dish", choose: 1 }, … }
+ *   data.items  = [ { name, countsAs, group: "mains" }, … ]
+ *
+ * A dish with no group, or one naming a group that does not exist, is always
+ * served. A group with no `choose` reads as one, because "pick from these" with
+ * no number is a choice of one on every printed menu.
+ *
+ * Kept identical to `oneDishRule.readChoiceGroups` — this file is a mirror, and
+ * the reason the verdict is computed in one shape is so no surface can quietly
+ * disagree about the same menu.
+ */
+export function readChoiceGroups(data: any): Record<string, { label: string | null; choose: number }> {
+  const raw = data && typeof data === "object" ? data.groups : null;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, { label: string | null; choose: number }> = {};
+  for (const [id, g] of Object.entries<any>(raw)) {
+    if (!id || !g || typeof g !== "object") continue;
+    const choose = parseInt(g.choose, 10);
+    out[String(id)] = {
+      label: g.label != null ? String(g.label) : null,
+      choose: Number.isFinite(choose) && choose > 0 ? choose : 1,
+    };
+  }
+  return out;
+}
+
 export function checkOneDish(data: any): OneDishResult {
   const items = flattenMenuItems(data);
+  const groups = readChoiceGroups(data);
+
+  /**
+   * Count the WORST MENU THE VENDOR IS OFFERING, not the list of dishes.
+   *
+   * "Pick 1 of: Karahi, Qorma, Nihari" serves one salan, so counting the three
+   * listed would report a breach that cannot happen. "Pick 2 of" the same three
+   * lets a customer assemble two, so counting one would certify a menu the
+   * vendor is plainly offering illegally.
+   *
+   * s.5 makes the VENUE liable for the function that actually happens, so if
+   * any combination the vendor allows breaches, the vendor is offering a
+   * breach. Every ungrouped dish is always served and always counts; each group
+   * contributes as many as a customer could take from it.
+   */
   const counts = Object.fromEntries(COUNTS_AS.map((c) => [c, 0])) as Record<CountsAs, number>;
-  for (const it of items) counts[it.countsAs] = (counts[it.countsAs] ?? 0) + 1;
+  for (const it of items) {
+    if (it.group && groups[it.group]) continue; // counted per group below
+    counts[it.countsAs] = (counts[it.countsAs] ?? 0) + 1;
+  }
+  const groupContribution: Record<string, { group: string; label: string; worst: number; of: number; pick: number }[]> = {};
+  for (const [gid, g] of Object.entries(groups)) {
+    const members = items.filter((i) => i.group === gid);
+    if (members.length === 0) continue;
+    // `choose` above the number of members means the whole group is served.
+    const pick = Math.max(0, Math.min(Number(g.choose) || 0, members.length));
+    for (const c of COUNTS_AS) {
+      const inGroup = members.filter((i) => i.countsAs === c).length;
+      if (inGroup === 0) continue;
+      const worst = Math.min(pick, inGroup);
+      counts[c] = (counts[c] ?? 0) + worst;
+      if (worst > 0) (groupContribution[c] ||= []).push({ group: gid, label: g.label || gid, worst, of: inGroup, pick });
+    }
+  }
 
   const violations: OneDishResult["violations"] = [];
   for (const [countsAs, allowed] of Object.entries(CAPPED)) {
     const found = counts[countsAs as CountsAs] ?? 0;
     if (found > (allowed as number)) {
+      const fromChoice = groupContribution[countsAs] ?? [];
       violations.push({
         countsAs: countsAs as CountsAs,
         allowed: allowed as number,
         found,
-        items: items.filter((i) => i.countsAs === countsAs).map((i) => i.name),
+        items: items
+          .filter((i) => i.countsAs === countsAs && (!i.group || !groups[i.group]))
+          .map((i) => i.name),
+        ...(fromChoice.length
+          ? {
+              viaChoice: fromChoice,
+              // The group clause only — describeViolation supplies the sentence
+              // around it, so the two cannot repeat each other.
+              why: fromChoice.map((f) => `“${f.label}” lets them pick ${f.pick} from ${f.of}`).join(", "),
+            }
+          : {}),
       });
     }
   }
@@ -188,5 +276,20 @@ export function checkOneDish(data: any): OneDishResult {
 /** Human sentence for a violation, in the words a vendor would use. */
 export function describeViolation(v: OneDishResult["violations"][number]): string {
   const label = v.countsAs === "salan" ? "main dishes" : "sweet dishes";
+
+  /**
+   * A choice-driven breach must not be described as "listed".
+   *
+   * A menu offering "pick 2 of: Karahi, Qorma, Nihari" and nothing else lists
+   * no ungrouped main dish at all, so this produced "2 main dishes listed ()" —
+   * an empty bracket and a claim the vendor can see is false, which reads as a
+   * platform error rather than as their own setting.
+   *
+   * Kept identical to the backend's wording: a parity check compares the two
+   * strings, and it caught this exact sentence drifting.
+   */
+  if (v.viaChoice && v.viaChoice.length) {
+    return `A customer could end up with ${v.found} ${label} — ${v.why}. The law allows one.`;
+  }
   return `${v.found} ${label} listed (${v.items.join(", ")}). The law allows one.`;
 }
