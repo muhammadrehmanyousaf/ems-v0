@@ -28,6 +28,8 @@ import {
   describeViolation,
   type CountsAs,
 } from "@/lib/compliance/one-dish"
+// A data-entry aid, never a verdict — see the contract at the top of that file.
+import { suggestCountsAs } from "@/lib/compliance/suggest-counts-as"
 import {
   FormBlockedHint,
   FieldError,
@@ -44,7 +46,16 @@ import {
  * the row can flag itself for confirmation instead of the guess being saved
  * back as though they had chosen it.
  */
-interface FormDish { name: string; countsAs: CountsAs; inferred: boolean }
+/**
+ * `suggested` holds a proposed classification the vendor has NOT confirmed yet.
+ *
+ * It is deliberately separate from `countsAs`. A suggestion is read from the
+ * dish NAME, and the one-dish rule refuses to reach a verdict that way on
+ * purpose — the documented way around the law is listing a second salan as a
+ * "special salad". So a suggestion is shown, and until the vendor confirms it
+ * the dish still counts as unclassified and the menu stays amber.
+ */
+interface FormDish { name: string; countsAs: CountsAs; inferred: boolean; suggested?: CountsAs | null; suggestNote?: string | null }
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
@@ -87,9 +98,56 @@ export function MenusManager({
     setForm((f) => ({
       ...f,
       // Touching a row means the vendor has looked at it, so it is no longer
-      // our inference — it is their declaration, and the badge says so.
-      dishes: f.dishes.map((d, j) => (j === i ? { ...d, ...patch, inferred: false } : d)),
+      // our inference — it is their declaration, and the badge says so. Any
+      // pending suggestion on that row is spent, whichever way they went.
+      dishes: f.dishes.map((d, j) => (j === i ? { ...d, ...patch, inferred: false, suggested: null, suggestNote: null } : d)),
     }))
+
+  /**
+   * WW-ONE-DISH BACKFILL — propose a classification for every unclassified row.
+   *
+   * A venue carrying menus from before the classifier shipped has every dish
+   * sitting at "other", and clearing that by hand is a dropdown per dish across
+   * every menu. That friction is why real venues stay on an amber badge.
+   *
+   * This fills in a PROPOSAL only. Nothing is saved, and — the part that
+   * matters — an unconfirmed suggestion does not count toward the verdict, so
+   * the badge cannot go green off the back of a name match. The vendor accepts
+   * them (one click, or row by row) and that acceptance is the declaration.
+   */
+  const suggestDishes = () =>
+    setForm((f) => ({
+      ...f,
+      dishes: f.dishes.map((d) => {
+        // Never overwrite a classification the vendor already made.
+        if (!d.inferred || !d.name.trim()) return d
+        const s = suggestCountsAs(d.name)
+        return { ...d, suggested: s.countsAs, suggestNote: s.note }
+      }),
+    }))
+
+  const acceptSuggestion = (i: number) =>
+    setForm((f) => ({
+      ...f,
+      dishes: f.dishes.map((d, j) =>
+        j === i && d.suggested ? { ...d, countsAs: d.suggested, inferred: false, suggested: null, suggestNote: null } : d,
+      ),
+    }))
+
+  const acceptAllSuggestions = () =>
+    setForm((f) => ({
+      ...f,
+      dishes: f.dishes.map((d) =>
+        d.suggested ? { ...d, countsAs: d.suggested, inferred: false, suggested: null, suggestNote: null } : d,
+      ),
+    }))
+
+  const pendingSuggestions = form.dishes.filter((d) => d.suggested).length
+  const unclassifiedRows = form.dishes.filter((d) => d.name.trim() && d.inferred).length
+  // Whether we have already had a go at this menu. Without it, a menu whose
+  // every remaining dish is one we decline to guess at would keep offering a
+  // button that can only do nothing.
+  const hasProposed = form.dishes.some((d) => d.suggested || d.suggestNote)
   const addDish = () =>
     setForm((f) => ({ ...f, dishes: [...f.dishes, { name: "", countsAs: "salan", inferred: false }] }))
   const removeDish = (i: number) =>
@@ -109,10 +167,30 @@ export function MenusManager({
     }))
   }
 
-  // Live verdict, recomputed as they type — the whole point of checking here
-  // rather than after a save round-trip.
+  /**
+   * Live verdict, recomputed as they type — the whole point of checking here
+   * rather than after a save round-trip.
+   *
+   * An UNCLASSIFIED row is passed as a bare name, not as `countsAs: "other"`.
+   *
+   * That distinction is the whole verdict. "other" is a real classification a
+   * vendor can choose (a live counter, a starter), so handing the checker
+   * `{ countsAs: "other" }` reads as a DECLARATION and the dish counts as
+   * placed. A legacy menu loads with every dish at "other" and `inferred:
+   * true`, and passing it straight through made the editor answer "Within the
+   * one-dish rule" — a green badge — on exactly the menus the server calls
+   * `unknown`. The two surfaces disagreed about the same menu, which is the one
+   * thing computing this in a shared module is supposed to prevent.
+   *
+   * A bare name is what the server sees for those rows, so both now agree.
+   */
   const oneDish = React.useMemo(
-    () => checkOneDish({ items: form.dishes.filter((d) => d.name.trim()) }),
+    () =>
+      checkOneDish({
+        items: form.dishes
+          .filter((d) => d.name.trim())
+          .map((d) => (d.inferred ? d.name : { name: d.name, countsAs: d.countsAs })),
+      }),
     [form.dishes],
   )
   const invalidate = () => qc.invalidateQueries({ queryKey: ["menus", businessId] })
@@ -313,10 +391,49 @@ export function MenusManager({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className={labelCls}>Dishes</label>
-                <Button size="sm" variant="ghost" onClick={addDish}>
-                  <Icon name="Plus" size={14} className="mr-1" /> Add dish
-                </Button>
+                <div className="flex items-center gap-1">
+                  {/* Offered only when there is unclassified work to save the
+                      vendor — on a menu they have already classified it would
+                      be a button that does nothing. */}
+                  {unclassifiedRows > 0 && !hasProposed && (
+                    <Button size="sm" variant="ghost" onClick={suggestDishes}>
+                      <Icon name="Wand2" size={14} className="mr-1" />
+                      Suggest for {unclassifiedRows} unclassified
+                    </Button>
+                  )}
+                  <Button size="sm" variant="ghost" onClick={addDish}>
+                    <Icon name="Plus" size={14} className="mr-1" /> Add dish
+                  </Button>
+                </div>
               </div>
+
+              {/* The suggestions are a proposal, and this says so in the words
+                  that matter: they are read from the dish name, the law turns
+                  on what the dish actually is, and nothing counts until the
+                  vendor accepts it. */}
+              {pendingSuggestions > 0 && (
+                <div className="rounded-lg border border-sky-300 bg-sky-50/60 p-3 text-sm dark:border-sky-900/50 dark:bg-sky-950/20">
+                  <p className="text-sky-900 dark:text-sky-200">
+                    We&apos;ve suggested a classification for {pendingSuggestions}{" "}
+                    {pendingSuggestions === 1 ? "dish" : "dishes"}, read from the name. Check each
+                    one — a second main dish listed as a salad is the known way around this rule,
+                    and only you know what these dishes are. Nothing counts until you accept it.
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={acceptAllSuggestions}>
+                      <Icon name="CheckCircle2" size={14} className="mr-1.5" />
+                      Accept all {pendingSuggestions}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setForm((f) => ({ ...f, dishes: f.dishes.map((d) => ({ ...d, suggested: null, suggestNote: null })) }))}
+                    >
+                      Dismiss
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {form.dishes.length === 0 && (
                 <textarea
@@ -348,6 +465,25 @@ export function MenusManager({
                   <Button size="sm" variant="ghost" onClick={() => removeDish(i)} aria-label={`Remove ${d.name || "dish"}`}>
                     <Icon name="Trash2" size={14} />
                   </Button>
+
+                  {/* The proposal for this row, accepted or overruled on its
+                      own. A dish we would not guess at shows the reason instead
+                      of a button — "we did not guess" is a real answer, and a
+                      gap the vendor fills beats a coin flip they rubber-stamp. */}
+                  {d.suggested && (
+                    <div className="basis-full pl-1 flex items-center gap-2 text-xs text-sky-800 dark:text-sky-300">
+                      <span>
+                        Suggested: <b>{COUNTS_AS_LABELS[d.suggested]}</b>
+                        {d.suggestNote ? <span className="text-muted-foreground"> — {d.suggestNote}</span> : null}
+                      </span>
+                      <Button size="sm" variant="outline" className="h-6 px-2 py-0" onClick={() => acceptSuggestion(i)}>
+                        Accept
+                      </Button>
+                    </div>
+                  )}
+                  {!d.suggested && d.suggestNote && (
+                    <div className="basis-full pl-1 text-xs text-muted-foreground">{d.suggestNote}</div>
+                  )}
                 </div>
               ))}
 
