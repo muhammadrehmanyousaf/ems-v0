@@ -300,6 +300,11 @@ export function BusinessSettingsHubView() {
         cancelationPolicy: biz.cancelationPolicy ?? "",
         // WW-PRICING-OVERHAUL — vendor-declared pricing mode ("" = not set = legacy).
         pricingMode: biz.pricingMode ?? "",
+        // WW-RATECARD — the per_unit knobs live in pricingConfigJson. Flattened
+        // into the form so they edit like any other field, and folded back on save.
+        unitLabel: (biz.pricingConfigJson as any)?.unitLabel ?? "",
+        unitPricePkr: (biz.pricingConfigJson as any)?.unitPricePkr ?? "",
+        minUnitQty: (biz.pricingConfigJson as any)?.minUnitQty ?? "",
         // WW-BOOKING-MODE — do you accept a booking before payment? "" = legacy instant.
         bookingMode: biz.bookingMode ?? "",
         // WW-SETTLEMENT — terms that decide the FINAL bill. "" = not
@@ -327,6 +332,11 @@ export function BusinessSettingsHubView() {
         downPayment: biz.downPayment ?? "",
         cancelationPolicy: biz.cancelationPolicy ?? "",
         pricingMode: biz.pricingMode ?? "",
+        // WW-RATECARD — the per_unit knobs live in pricingConfigJson. Flattened
+        // into the form so they edit like any other field, and folded back on save.
+        unitLabel: (biz.pricingConfigJson as any)?.unitLabel ?? "",
+        unitPricePkr: (biz.pricingConfigJson as any)?.unitPricePkr ?? "",
+        minUnitQty: (biz.pricingConfigJson as any)?.minUnitQty ?? "",
         bookingMode: biz.bookingMode ?? "",
         // WW-SETTLEMENT — terms that decide the FINAL bill. "" = not
         // configured, which every reader resolves to the conservative default.
@@ -491,6 +501,26 @@ export function BusinessSettingsHubView() {
       cancelationPolicy: form.cancelationPolicy || null,
       // WW-PRICING-OVERHAUL — "" (Auto) sends null, restoring legacy inferred pricing.
       pricingMode: form.pricingMode || null,
+      /**
+       * WW-RATECARD — fold the flattened per-unit knobs back into the JSON
+       * column they live in.
+       *
+       * Only sent for `per_unit`. Under any other mode they mean nothing, and
+       * writing them would leave a stale unit price behind a vendor who has
+       * since switched to packages — the sort of leftover that reads as
+       * configuration long after it stopped applying.
+       *
+       * `null` when the mode is anything else, which the server treats as
+       * "clear it".
+       */
+      pricingConfigJson:
+        form.pricingMode === "per_unit"
+          ? {
+              unitLabel: String(form.unitLabel ?? "").trim() || null,
+              unitPricePkr: numOrNull(String(form.unitPricePkr ?? "")),
+              minUnitQty: numOrNull(String(form.minUnitQty ?? "")),
+            }
+          : null,
       // WW-BOOKING-MODE — "" sends null, which reads as the legacy `instant`.
       bookingMode: form.bookingMode || null,
       // WW-SETTLEMENT — "" sends null, which clears a term back to "not
@@ -517,6 +547,16 @@ export function BusinessSettingsHubView() {
       downPaymentType: baseline.downPaymentType || null,
       cancelationPolicy: baseline.cancelationPolicy || null,
       pricingMode: baseline.pricingMode || null,
+      // Built the same way as `next` above so the diff below compares like with
+      // like. Without a counterpart here it would differ on every render.
+      pricingConfigJson:
+        (baseline.pricingMode || null) === "per_unit"
+          ? {
+              unitLabel: String(baseline.unitLabel ?? "").trim() || null,
+              unitPricePkr: numOrNull(String(baseline.unitPricePkr ?? "")),
+              minUnitQty: numOrNull(String(baseline.minUnitQty ?? "")),
+            }
+          : null,
       bookingMode: baseline.bookingMode || null,
       ...Object.fromEntries(
         SETTLEMENT_FIELDS.map((f) => [f.key, numOrNull(String(baseline[f.key] ?? ""))]),
@@ -524,7 +564,15 @@ export function BusinessSettingsHubView() {
     }
     const patch: Record<string, any> = {}
     for (const [k, v] of Object.entries(next)) {
-      if (v !== prev[k]) patch[k] = v
+      // Objects are compared by value. `!==` on two structurally identical
+      // objects is always true, so `pricingConfigJson` would land in every
+      // patch and the sticky save bar would never go away — the form would
+      // read as permanently dirty on a screen nobody had touched.
+      const changed =
+        v !== null && typeof v === "object"
+          ? JSON.stringify(v) !== JSON.stringify(prev[k] ?? null)
+          : v !== prev[k]
+      if (changed) patch[k] = v
     }
     // The name is the one field the API treats as required on this route.
     if (Object.keys(patch).length > 0 && patch.name === undefined) patch.name = form.name
@@ -538,7 +586,9 @@ export function BusinessSettingsHubView() {
     const changed = Object.keys(patch).filter((k) => k !== "name" || patch.name !== baseline.name)
     const inTab: Record<string, string[]> = {
       Profile: ["name", "description", "city", "subArea", "brandLogo"],
-      "Capacity & pricing": ["minimumPrice", "minCapacity", "maxCapacity", "downPaymentType", "downPayment", "cancelationPolicy", "bookingMode", ...SETTLEMENT_FIELDS.map((f) => String(f.key))],
+      // `pricingMode` was missing here, so a vendor who changed only how they
+      // charge got a save bar that could not name the tab it belonged to.
+      "Capacity & pricing": ["minimumPrice", "minCapacity", "maxCapacity", "downPaymentType", "downPayment", "cancelationPolicy", "bookingMode", "pricingMode", "pricingConfigJson", ...SETTLEMENT_FIELDS.map((f) => String(f.key))],
       "Amenities & services": BOOLS.map((b) => String(b.key)),
     }
     const hit = Object.entries(inTab).filter(([, keys]) => changed.some((c) => keys.includes(c)))
@@ -567,13 +617,39 @@ export function BusinessSettingsHubView() {
     focusField(fieldParam, () => syncUrl({ field: null }))
   }, [fieldParam, biz, syncUrl])
 
+  /**
+   * WW-RATECARD — the server's verdict on whether "How you charge" matches what
+   * this business actually has set up.
+   *
+   * The mode was validated against an enum, saved, and published on the public
+   * payload, and checked against nothing. A Lahore venue on production declares
+   * per-head with no menus and a Rs 1,850 "starting price", so a 400-guest
+   * wedding totals Rs 1,850 rather than Rs 740,000 — the platform took the
+   * declaration and quietly did something else.
+   *
+   * The save is never blocked on it. Holding a vendor out of their own settings
+   * because we disagree with their setup is worse than telling them plainly.
+   */
+  const [pricingCoherence, setPricingCoherence] = React.useState<{
+    mode: string | null
+    status: "ok" | "warning" | "error"
+    findings: { severity: "error" | "warning"; code: string; message: string; fix: string }[]
+  } | null>(null)
+
   const saveMut = useMutation({
     mutationFn: () => BusinessesAPI.update(biz!.id, buildPatch() as Partial<ApiBusiness>),
     /* One business record is cached under three query keys across the
        dashboard; invalidating only this screen's own is what left every other
        screen — and the checklist that sent the vendor here — showing the old
        value until a browser reload. See lib/query/business-keys.ts. */
-    onSuccess: () => { showSuccessToast("Business profile saved"); setDirty(false); invalidateBusinessData(qc) },
+    onSuccess: (res: any) => {
+      showSuccessToast("Business profile saved")
+      setDirty(false)
+      invalidateBusinessData(qc)
+      // The save has already committed; the verdict rides along with the reply.
+      const c = res?.pricingCoherence ?? res?.data?.pricingCoherence ?? null
+      setPricingCoherence(c && c.status !== "ok" ? c : null)
+    },
     // Surface the SERVER's reason, not axios's generic wrapper.
     //
     // This read `e?.message`, which for an axios error is the useless string
@@ -806,6 +882,84 @@ export function BusinessSettingsHubView() {
                 <p className="text-xs text-muted-foreground">
                   {PRICING_MODE_HINT[form.pricingMode || ""] ?? PRICING_MODE_HINT[""]}
                 </p>
+
+                {/* WW-RATECARD — what the server made of the last save.
+                    Shown here rather than as a toast because it is a thing to
+                    read and act on, not a thing to acknowledge and dismiss. */}
+                {pricingCoherence && pricingCoherence.findings.length > 0 && (
+                  <div
+                    className={cn(
+                      "mt-2 rounded-lg border p-3 text-sm",
+                      pricingCoherence.status === "error"
+                        ? "border-destructive/40 bg-destructive/5"
+                        : "border-amber-300 bg-amber-50/60 dark:border-amber-900/50 dark:bg-amber-950/20",
+                    )}
+                  >
+                    <p className="font-medium">
+                      {pricingCoherence.status === "error"
+                        ? "This doesn't match how you're set up"
+                        : "Worth knowing"}
+                    </p>
+                    <ul className="mt-1.5 space-y-2">
+                      {pricingCoherence.findings.map((f) => (
+                        <li key={f.code}>
+                          <span
+                            className={
+                              f.severity === "error"
+                                ? "text-destructive"
+                                : "text-amber-800 dark:text-amber-300"
+                            }
+                          >
+                            {f.message}
+                          </span>
+                          <span className="block text-xs text-muted-foreground">{f.fix}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Your changes are saved either way — this is a heads-up, not a block.
+                    </p>
+                  </div>
+                )}
+
+                {/* WW-RATECARD — the per-unit knobs.
+                    `per_unit` was offered in the picker with nowhere to set the
+                    unit or its price, so choosing it was a dead end: the mode
+                    saved, and there was nothing for the engine to multiply.
+                    Shown only for this mode — they mean nothing under any other. */}
+                {form.pricingMode === "per_unit" && (
+                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div className="space-y-1">
+                      <label className={labelCls} htmlFor="biz-unitlabel">What is one unit?</label>
+                      <input
+                        id="biz-unitlabel" className={inputCls} maxLength={40}
+                        placeholder="car · kilo · card · hour"
+                        value={form.unitLabel ?? ""}
+                        onChange={(e) => set("unitLabel", e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">Named the way a customer would say it.</p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className={labelCls} htmlFor="biz-unitprice">Price per unit (Rs)</label>
+                      <input
+                        id="biz-unitprice" type="number" min={0} step="1" inputMode="numeric"
+                        className={cn(inputCls, "tabular-nums")}
+                        value={form.unitPricePkr ?? ""}
+                        onChange={(e) => set("unitPricePkr", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className={labelCls} htmlFor="biz-minunits">Minimum units</label>
+                      <input
+                        id="biz-minunits" type="number" min={0} step="1" inputMode="numeric"
+                        className={cn(inputCls, "tabular-nums")}
+                        value={form.minUnitQty ?? ""}
+                        onChange={(e) => set("minUnitQty", e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">Blank = no minimum.</p>
+                    </div>
+                  </div>
+                )}
               </Row>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <Row label="Starting price (Rs)">
