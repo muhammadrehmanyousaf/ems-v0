@@ -28,6 +28,27 @@ const require = createRequire(import.meta.url);
 const BACKEND = process.env.WW_BACKEND || "C:/Projects/ems-v0-backend";
 const rulePath = path.join(BACKEND, "src/utils/oneDishRule.js");
 
+/**
+ * Which backend checkout this is actually reading.
+ *
+ * The script loads whatever is on disk at WW_BACKEND, so it silently compares
+ * against whichever BRANCH happens to be checked out there. That cost real time
+ * once: 53 "divergences" that were only the backend sitting on a branch without
+ * the rule the mirror had already been updated for.
+ *
+ * Printing the branch turns a confusing failure into an obvious one.
+ */
+try {
+  const { execSync } = await import("node:child_process");
+  const branch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: BACKEND })
+    .toString().trim();
+  console.log(`
+  backend: ${BACKEND}  [${branch}]`);
+} catch {
+  console.log(`
+  backend: ${BACKEND}  [branch unknown]`);
+}
+
 let beCheck: (d: any) => any;
 let beDescribe: (v: any) => string;
 try {

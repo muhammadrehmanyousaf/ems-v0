@@ -115,6 +115,29 @@ export function oneDishAppliesInCity(city: unknown): RuleApplies {
   return ruleAppliesTo(provinceOf(city))
 }
 
+/**
+ * Provinces that enforce the 10pm wedding-hall closure.
+ *
+ * Mirrors `CLOSURE_PROVINCES` in the backend's `pakistanLocations.js`, which is
+ * what the booking path actually enforces — Sindh is excluded there by the
+ * Karachi convention, and this list must not disagree with the guard that
+ * refuses the booking.
+ *
+ * Unlike the one-dish rule this is a straight two-state answer, because the
+ * backend set is explicit rather than inferred from an absent row.
+ */
+const CLOSURE_PROVINCES: Province[] = ["PUNJAB", "KP", "BALOCHISTAN", "ICT"]
+
+/** The legal closing time where this venue is, or null where none applies. */
+export function closingTimeFor(city: unknown): { province: Province; closeBy: string } | null {
+  const p = provinceOf(city)
+  if (!p || !CLOSURE_PROVINCES.includes(p)) return null
+  // 22:00 is the seeded PUNJAB_CLOSING_TIME value and the figure the booking
+  // guard enforces. Shown to a customer BEFORE they pick a slot, so a late
+  // baraat is a conversation rather than a refusal at checkout.
+  return { province: p, closeBy: "10pm" }
+}
+
 /** What the vendor is told. The two ways of not knowing read differently. */
 export function describeJurisdiction(province: Province | null, status: RuleApplies): string {
   const where = province ? PROVINCE_LABELS[province] : null

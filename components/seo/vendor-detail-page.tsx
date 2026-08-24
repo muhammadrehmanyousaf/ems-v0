@@ -55,6 +55,7 @@ import { fetchCityVendors } from "@/lib/seo/fetch-vendors"
 import { getVendorTypeGuidePillar } from "@/lib/seo/pricing-guide"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 import { getLocationImagery } from "@/lib/seo/location-imagery"
+import { VenueAnswers } from "@/components/seo/venue-answers"
 
 interface PageInput {
   typeSlug: VendorTypeSlug
@@ -326,8 +327,25 @@ export async function VendorDetailPage(input: PageInput) {
               )}
             </p>
 
+            {/*
+              WW-TEST-CASES 2.23 — the six answers that decide whether this
+              venue is even a candidate: how the price is counted, how many
+              people fit, the date, whether food is included, the deposit, and
+              when the music has to stop.
+
+              The hero answered two of them. Everything else lived further down
+              the page, inside a package card, or nowhere — so a couple learned
+              that "From Rs 450,000" was the HALL ONLY after they had already
+              been misled by the headline.
+
+              Placed ABOVE the description on purpose: prose is what you read
+              once you are interested, and these are what decide whether you get
+              that far.
+            */}
+            <VenueAnswers raw={vendor.raw} />
+
             {vendor.description && (
-              <p className="mt-4 font-bridal text-[14.5px] text-bridal-text leading-relaxed line-clamp-5">
+              <p className="mt-5 font-bridal text-[14.5px] text-bridal-text leading-relaxed line-clamp-5">
                 {vendor.description}
               </p>
             )}
