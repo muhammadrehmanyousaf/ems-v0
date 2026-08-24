@@ -221,7 +221,12 @@ export default function BookingDetailView({
     return () => {
       cancelled = true;
     };
-  }, [bookingId]);
+  // reloadKey — a card acting on this booking bumps it, which is what re-runs
+  // the loader below. It was previously attached only to the cash-refunds
+  // effect, so `reload()` refetched refunds and left the booking itself stale:
+  // the Accept button stayed on screen after accepting, which is the exact
+  // symptom the reload was added to cure.
+  }, [bookingId, reloadKey]);
 
   if (loading) {
     return (
