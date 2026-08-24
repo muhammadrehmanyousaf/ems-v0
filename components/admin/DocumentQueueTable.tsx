@@ -27,6 +27,9 @@ import { KycStatusPill } from "@/components/ui/verification-badge"
 import {
   listDocumentQueue, approveDocument, rejectDocument, requestChangesDocument,
 } from "@/lib/api/adminQueue"
+// WW-VERIFY-GATES — the identity gates behind the listing: NTN, CNIC, address
+// proof, and whether anyone has actually stood in the venue.
+import { approveGate, GATE_LABELS, type VerificationGate } from "@/lib/api/adminVerification"
 import {
   type VendorDocument, type VendorDocumentStatus, type KycBusiness,
   DOCUMENT_TYPE_LABELS, DOCUMENT_STATUS_LABELS,
@@ -85,7 +88,34 @@ function groupByBusiness(docs: VendorDocument[]): BusinessGroup[] {
 }
 
 /** One verification fact ("NTN verified 3 Aug" vs "NTN not verified"). */
-function VerifFact({ label, verified, date }: { label: string; verified: boolean; date?: string | null }) {
+/**
+ * WW-VERIFY-GATES — a gate pill, and the action that sets it.
+ *
+ * These three pills have been on this screen for a while showing NTN, CNIC and
+ * Address as unverified, with no way to change that: the four approve endpoints
+ * had no client, so nothing on the platform could stamp `ntnVerifiedAt` and its
+ * siblings. Eight backend files read them. Every vendor therefore read as
+ * unverified on all three, forever.
+ *
+ * The action belongs HERE rather than on a queue of its own, because this is the
+ * screen where the reviewer already has the NTN certificate open in front of
+ * them. Verifying is one click away from the evidence, which is the only place
+ * it can honestly be done.
+ *
+ * `submitted` gates the button: with nothing submitted the server answers 400
+ * "No NTN submitted", and offering a button that can only fail is worse than
+ * offering none.
+ */
+function VerifFact({
+  label, verified, date, submitted, busy, onVerify,
+}: {
+  label: string
+  verified: boolean
+  date?: string | null
+  submitted?: boolean
+  busy?: boolean
+  onVerify?: () => void
+}) {
   return (
     <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${
       verified
@@ -94,6 +124,19 @@ function VerifFact({ label, verified, date }: { label: string; verified: boolean
     }`}>
       {verified ? <ShieldCheck className="w-3 h-3" /> : <ShieldAlert className="w-3 h-3" />}
       {label}{verified && date ? ` · ${fmtDate(date)}` : ""}
+      {!verified && submitted && onVerify ? (
+        <button
+          type="button"
+          onClick={onVerify}
+          disabled={busy}
+          className="ml-1 rounded-full border border-green-300 bg-white px-1.5 py-[1px] text-[10px] font-medium text-green-700 hover:bg-green-50 disabled:opacity-50"
+        >
+          {busy ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : "Verify"}
+        </button>
+      ) : null}
+      {!verified && submitted === false ? (
+        <span className="ml-0.5 text-[10px] text-bridal-text-soft/80">not submitted</span>
+      ) : null}
     </span>
   )
 }
@@ -108,6 +151,34 @@ export function DocumentQueueTable() {
   const [points, setPoints] = useState<Set<string>>(new Set())
   const [submitting, setSubmitting] = useState(false)
   const [lightbox, setLightbox] = useState<{ url: string; label: string } | null>(null)
+  // Which gate is mid-flight, keyed "<businessId>:<gate>", so two businesses
+  // in the same folder list cannot share a spinner.
+  const [gateBusy, setGateBusy] = useState<string | null>(null)
+
+  /**
+   * Stamp one identity gate verified.
+   *
+   * The server's refusals carry the reason — 400 "No NTN submitted", 409
+   * "Already verified" — and both are worth showing a reviewer verbatim. A
+   * generic "action failed" would leave them clicking a button that will never
+   * work without telling them why.
+   */
+  const verifyGate = async (businessId: number, gate: VerificationGate) => {
+    const key = `${businessId}:${gate}`
+    setGateBusy(key)
+    try {
+      await approveGate(businessId, gate)
+      toast({ title: `${GATE_LABELS[gate]} verified` })
+      await refresh()
+    } catch (e: any) {
+      toast({
+        title: `Could not verify ${GATE_LABELS[gate]}`,
+        description: e?.response?.data?.message || "Try again.",
+      })
+    } finally {
+      setGateBusy(null)
+    }
+  }
 
   const refresh = async () => {
     try {
@@ -235,9 +306,36 @@ export function DocumentQueueTable() {
                         <div className="flex flex-wrap items-center gap-1.5 pt-1">
                           <span className="text-[11px] text-bridal-text-soft mr-1">Business status:</span>
                           <span className="text-[11px] px-2 py-0.5 rounded-full border border-bridal-beige bg-white text-bridal-charcoal capitalize">{biz?.status || "—"}</span>
-                          <VerifFact label="NTN" verified={!!biz?.ntnVerifiedAt} date={biz?.ntnVerifiedAt} />
-                          <VerifFact label="CNIC" verified={!!biz?.cnicVerifiedAt} date={biz?.cnicVerifiedAt} />
-                          <VerifFact label="Address" verified={!!biz?.addressVerifiedAt} date={biz?.addressVerifiedAt} />
+                          <VerifFact
+                            label="NTN" verified={!!biz?.ntnVerifiedAt} date={biz?.ntnVerifiedAt}
+                            submitted={!!biz?.ntnNumber}
+                            busy={gateBusy === `${biz?.id}:ntn`}
+                            onVerify={biz?.id ? () => verifyGate(biz.id, "ntn") : undefined}
+                          />
+                          <VerifFact
+                            label="CNIC" verified={!!biz?.cnicVerifiedAt} date={biz?.cnicVerifiedAt}
+                            // The encrypted CNIC never reaches the client, so a
+                            // submitted CNIC is only visible as the document in
+                            // this very folder. Offer the action either way and
+                            // let the server's 400 be the authority.
+                            submitted
+                            busy={gateBusy === `${biz?.id}:cnic`}
+                            onVerify={biz?.id ? () => verifyGate(biz.id, "cnic") : undefined}
+                          />
+                          <VerifFact
+                            label="Address" verified={!!biz?.addressVerifiedAt} date={biz?.addressVerifiedAt}
+                            submitted={!!biz?.addressProofUrl}
+                            busy={gateBusy === `${biz?.id}:address`}
+                            onVerify={biz?.id ? () => verifyGate(biz.id, "address") : undefined}
+                          />
+                          {/* A site visit has nothing to submit — it is a record
+                              that someone went, so it is always offerable. */}
+                          <VerifFact
+                            label="Site visit" verified={!!biz?.visitedAt} date={biz?.visitedAt}
+                            submitted
+                            busy={gateBusy === `${biz?.id}:visited`}
+                            onVerify={biz?.id ? () => verifyGate(biz.id, "visited") : undefined}
+                          />
                           {biz?.ntnNumber ? <span className="text-[11px] text-bridal-text-soft">NTN {biz.ntnNumber}</span> : null}
                         </div>
                       </div>

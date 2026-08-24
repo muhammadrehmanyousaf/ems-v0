@@ -34,6 +34,15 @@ export interface KycBusiness {
   ntnVerifiedAt: string | null
   cnicVerifiedAt: string | null
   addressVerifiedAt: string | null
+  /**
+   * WW-VERIFY-GATES — the reviewer stamps these gates from the folder view, so
+   * the folder carries them. Kept in step with the attribute allowlist in
+   * `kycService.listQueue`: a field named here and missing there arrives as
+   * undefined and the pill silently never updates.
+   */
+  visitedAt: string | null
+  /** Gates whether the address Verify action is offerable at all. */
+  addressProofUrl: string | null
   ownerName: string | null
   whatsappNumber: string | null
   yearsInBusiness: number | null
