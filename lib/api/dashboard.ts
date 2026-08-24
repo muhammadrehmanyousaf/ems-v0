@@ -208,6 +208,16 @@ export interface ApiBusiness {
   subArea: string | null;
   description: string | null;
   additionalInfo: string | null;
+  /**
+   * WW-NTN-EDIT — the tax registration number.
+   *
+   * Present ONLY for the owner (and the admin queue). `getUserBusinessesById`
+   * strips it for every other viewer via BUSINESS_SENSITIVE_ATTRS, so a public
+   * detail response has no such key — hence optional, not `| null`.
+   */
+  ntnNumber?: string | null;
+  /** Set once an admin has checked the number above. Public — it drives the badge. */
+  ntnVerifiedAt?: string | null;
   minimumPrice: number | null;
   images: string[];
   maxCapacity: number | null;
