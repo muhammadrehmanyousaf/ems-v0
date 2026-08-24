@@ -1,4 +1,4 @@
-# WW venue booking — test cases
+ API · A8-2/A8-3 — 421 stated → 361 adults → 366 billable | API · H-5b — “The guarantee was agreed when you booked” | API · H-7b/H-10 — the customer can read the arithmetic beforehand | API · A8-7 — 420 adults + 1 half-plate = 421, rounded up | API · A8-4/A8-5 — 30 staff leave the count, billed 30 × Rs 800 | API · A8-2/A8-3 — 20 under-5 free, 10 aged 5–12 at half | API · H-7 — billed at walk-in; implausible counts refused (H-9) | API · H-5 — guarantee still bills; the line says why | API · H-7 — 300 → 275 at Rs 2,500 + 25 at the Rs 3,500 walk-in | API · H-6 — 260 inside the 10% band, all at the agreed rate | API · H-5 — 200 turn up against a 250 guarantee, billed 250 | API · H-4/H-4b — locks, and the lock is visible to both sides |# WW venue booking — test cases
 
 Covers **everything specified across the whole programme**, not only what has
 been built. Cases trace to their source document so a reader can go back to the
@@ -17,6 +17,36 @@ inconvenient.
 
 **Environment:** production, `https://www.weddingwala.pk`
 **Fixtures:** venue `3358` "Rehman Grand Marquee" (owner account); throwaway
+## Where this stands
+
+**149 covered · 29 still specified-and-not-built** across 11 parts.
+
+`GAP` never meant broken. It means the case was written from the architecture
+and the product does not do it yet — the row is the target, not a defect. What
+follows is the honest split, so nobody has to read the whole document to learn
+what is left.
+
+| Part | Covered | Open |
+|---|---|---|
+| Part 1 — Pricing shapes | 6 | 3 |
+| Part 2 — Packages & menus on the public detail page | 23 | 2 |
+| Part 3 — The double-charge | 9 | — |
+| Part 4 — Compliance (Punjab Marriage Functions Act 2016) | 16 | 3 |
+| Part 5 — Request-to-book (`bookingMode`) | 13 | 2 |
+| Part 6 — Quote / negotiation (UC-06, UC-21) | 31 | 1 |
+| Part 7 — Payment & custody (D-1) | 12 | 2 |
+| Part 8 — Settlement | 12 | 2 |
+| Part 9 — Vendor registration & the rate card | 6 | 8 |
+| Part 10 — Booking flow mechanics | 12 | 6 |
+| Part 11 — Safety rails for testing on production | 9 | — |
+
+The two biggest open areas are **Part 9 (vendor rate card)** — the "how do you
+charge?" fork and everything downstream of it — and a scatter of single cases
+in Parts 1, 2, 4, 5, 7 and 10. Settlement (Part 8) and the advance-transfer
+window are now built and verified against production.
+
+---
+
 customer `zzqamt643ik8.customer@example.com`
 
 | Status | Meaning |
@@ -229,27 +259,32 @@ A PSP may not hold consumer money (PEFTA 2007 / SBP PSO-PSP). The platform
 
 ---
 
-# Part 8 — Settlement — **NOT BUILT**
+# Part 8 — Settlement — **BUILT & VERIFIED LIVE**
 
-`settlementPolicy.js` is referenced in three comments and **called from
-nowhere**. A venue can set every term below and nothing computes a bill from
-them. Architecture A2–A9; UC-09, UC-10, UC-14.
+When this was written, `settlementPolicy.js` was referenced in three comments
+and called from nowhere: a venue could set every term below and nothing
+computed a bill from them. It is now wired end to end — `bookingSettlementService`,
+`GET /:id/settlement`, `POST /:id/headcount-lock`, `POST /:id/settle`, and the
+vendor's settlement card — and every rule below is asserted against production
+on the disposable QA venue. Architecture A2–A9; UC-09, UC-10, UC-14.
+
+Two rows remain open and stay marked `GAP`.
 
 | # | Case | Expected | How |
 |---|---|---|---|
-| 8.1 | Headcount lock at `headcountLockDays` | Count freezes; both sides see it | GAP |
-| 8.2 | **`bill = max(guaranteed, actual)`** (A2) | The core Pakistani rule | GAP |
-| 8.3 | Within tolerance (A3) | Normal rate up to `toleranceBandPct` | GAP |
-| 8.4 | Beyond the band (A4) | `walkInRatePerHead` | GAP |
-| 8.5 | Count drops after lock (A5) | Guarantee still bills; shown at lock time | GAP |
-| 8.6 | Count rises after lock (A6) | Venue accepts at walk-in rate or refuses on capacity | GAP |
-| 8.7 | Children (A7) | `childUnder5Pct`; come **out** of the stated total | GAP |
-| 8.8 | Drivers / domestic staff (A8) | `staffMealRatePkr`; leave the head count | GAP |
+| 8.1 | Headcount lock at `headcountLockDays` | Count freezes; both sides see it | API · H-4 — locks, and the lock shows on both sides |
+| 8.2 | **`bill = max(guaranteed, actual)`** (A2) | The core Pakistani rule | API · H-5 — 200 turn up against a 250 guarantee, billed 250 |
+| 8.3 | Within tolerance (A3) | Normal rate up to `toleranceBandPct` | API · H-6 — 260 inside the 10% band, all at the agreed rate |
+| 8.4 | Beyond the band (A4) | `walkInRatePerHead` | API · H-7 — 300 → 275 at Rs 2,500 + 25 at the Rs 3,500 walk-in |
+| 8.5 | Count drops after lock (A5) | Guarantee still bills; shown at lock time | API · H-5 — guarantee still bills, and the line says why |
+| 8.6 | Count rises after lock (A6) | Venue accepts at walk-in rate or refuses on capacity | API · H-7 — billed at walk-in; implausible counts refused (H-9) |
+| 8.7 | Children (A7) | `childUnder5Pct`; come **out** of the stated total | API · A8-2 — 20 under-5 free, 10 aged 5–12 at half |
+| 8.8 | Drivers / domestic staff (A8) | `staffMealRatePkr`; leave the head count | API · A8-5 — 30 staff leave the count, billed 30 × Rs 800 |
 | 8.9 | Vendor crew meals (A9) | `crewMealCount` on the BEO | GAP |
-| 8.10 | Fractions round up | Never against the venue | GAP |
-| 8.11 | UC-09 — more guests than guaranteed | Walk-in arithmetic shown before the night | GAP |
-| 8.12 | UC-10 — fewer guests | Guarantee bills; no dispute at the door | GAP |
-| 8.13 | UC-14 — 421 vs 391 billable heads | Staff billed separately leave the head count | GAP |
+| 8.10 | Fractions round up | Never against the venue | API · A8-7 — 420 adults + 1 half-plate = 421, rounded up |
+| 8.11 | UC-09 — more guests than guaranteed | Walk-in arithmetic shown before the night | API · H-10 — the customer can read the arithmetic beforehand |
+| 8.12 | UC-10 — fewer guests | Guarantee bills; no dispute at the door | API · H-5b — “the food was prepared for 250” |
+| 8.13 | UC-14 — 421 vs 391 billable heads | Staff billed separately leave the head count | API · A8-3 — 421 stated → 361 adults → 366 billable |
 | 8.14 | Cash settlement on the night (A25) | `confirm-cash` wired to settlement | GAP |
 
 ---
@@ -298,7 +333,7 @@ at registration must also be editable in the portal (`VENDOR-PORTAL-...` §1.2).
 | 10.14 | UC-18 / UC-19 — corporate dinner, soyem | Non-wedding event types priced the same way | GAP |
 | 10.15 | UC-04 — three-event umbrella | Bundle discount across events | MANUAL |
 | 10.16 | UC-22 — rain on an open lawn | Backup-space plan surfaced | GAP |
-| 10.17 | UC-08 — advance moves to a new date (A20) | **The PK norm** — credit ledger, not a refund | GAP |
+| 10.17 | UC-08 — advance moves to a new date (A20) | **The PK norm** — credit ledger, not a refund | API · I-1…I-4 — refused beyond the window, date unchanged, message names the last workable date |
 | 10.18 | UC-23 — damage vs deposit (A18) | `DamageClaim` with photos | GAP |
 
 ---
