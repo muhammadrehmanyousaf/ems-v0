@@ -42,6 +42,7 @@ export function VendorCancelCard({
   customerName,
   eventDate,
   amountPaid,
+  onChanged,
 }: {
   bookingId: number;
   status?: string | null;
@@ -49,6 +50,8 @@ export function VendorCancelCard({
   eventDate?: string | null;
   /** What the customer has actually paid — what must go back to them. */
   amountPaid?: number | string | null;
+  /** See VendorApprovalCard — this page reloads through a callback, not a query. */
+  onChanged?: () => void;
 }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -63,6 +66,7 @@ export function VendorCancelCard({
       setReason("");
       qc.invalidateQueries({ queryKey: ["bookings"] });
       qc.invalidateQueries({ queryKey: ["settlement", bookingId] });
+      onChanged?.();
     },
     onError: (e: any) => toast.error(errorMessage(e, "Couldn't cancel this booking")),
   });
