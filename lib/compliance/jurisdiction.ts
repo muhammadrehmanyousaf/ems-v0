@@ -22,6 +22,8 @@
  * and where a screen has that it should prefer it over this.
  */
 
+// The canonical marketplace city list. `scripts/one-dish-parity.mts` checks
+// this map against the backend's `pakistanLocations` on every city in it.
 import { CITIES } from "@/lib/seo/constants"
 
 export type Province = "PUNJAB" | "SINDH" | "KP" | "BALOCHISTAN" | "ICT" | "GB" | "AJK"

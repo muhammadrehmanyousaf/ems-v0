@@ -145,7 +145,76 @@ for (const [label, ok] of CHECKS) {
   console.log(`  ${ok ? "PASS" : "FAIL"}  ${label}`);
 }
 
-const TOTAL = CASES.length + JCASES.length + CHECKS.length;
+/**
+ * WW-JURISDICTION — the city map itself.
+ *
+ * The backend owns `utils/pakistanLocations.js` and the client builds its map
+ * from `lib/seo/constants.ts` CITIES. A first pass of this work gave the
+ * backend a SECOND city table generated from CITIES, which is the rival source
+ * of truth this codebase keeps being bitten by; the two were reconciled instead
+ * (42 marketplace towns merged in, zero disagreements).
+ *
+ * Reconciled once is not the same as staying reconciled. This walks every city
+ * the marketplace knows and fails if the two halves ever place one differently.
+ */
+const bePak = require(path.join(BACKEND, "src/utils/pakistanLocations.js"));
+/**
+ * Compared against CITIES directly rather than against the frontend module.
+ *
+ * `lib/compliance/jurisdiction.ts` builds its map FROM CITIES, so CITIES is the
+ * thing the mirror actually asserts — and importing that module here would drag
+ * in its `@/` alias, which plain node cannot resolve and which tsc refuses to
+ * let us write as a `.ts` path.
+ */
+const { CITIES } = await import("../lib/seo/constants.ts");
+const REGION_TO_CODE: Record<string, string> = {
+  Punjab: "PUNJAB", Sindh: "SINDH", "Khyber Pakhtunkhwa": "KP",
+  Balochistan: "BALOCHISTAN", "Islamabad Capital Territory": "ICT",
+  "Gilgit-Baltistan": "GB", "Azad Kashmir": "AJK",
+};
+const feProvince = (name: string) => REGION_TO_CODE[
+  (CITIES as { name: string; region: string }[]).find((c) => c.name === name)?.region ?? ""
+] ?? null;
+
+console.log("\n  the city map\n");
+let cityBad = 0;
+let cityChecked = 0;
+for (const c of CITIES as { name: string; region: string }[]) {
+  if (c.region === "Pakistan") continue; // the catch-all row, not a city
+  const be = bePak.cityToProvince(c.name);
+  const fe = feProvince(c.name);
+  cityChecked++;
+  const same = (be ? String(be).toUpperCase() : null) === (fe ?? null);
+  if (!same) {
+    cityBad++;
+    bad++;
+    console.log(`  FAIL  ${c.name.padEnd(22)} backend=${be ?? "null"}  mirror=${fe ?? "null"}`);
+  }
+}
+console.log(
+  cityBad
+    ? `  ${cityBad} of ${cityChecked} cities are placed differently by the two halves.`
+    : `  PASS  all ${cityChecked} marketplace cities are placed identically`,
+);
+
+/** The free-text forms the column actually holds, which only the backend normalises. */
+console.log("\n  free-text city forms\n");
+const FORMS: [string, string | null][] = [
+  ["Lahore Cantt", "PUNJAB"],
+  ["Karachi South", "SINDH"],
+  ["Lahore.", "PUNJAB"],
+  ["Rahim Yar Khan", "PUNJAB"],
+  ["Nowhere", null],
+];
+for (const [city, expected] of FORMS) {
+  const be = bePak.cityToProvince(city);
+  const got = be ? String(be).toUpperCase() : null;
+  const ok = got === expected;
+  if (!ok) bad++;
+  console.log(`  ${ok ? "PASS" : "FAIL"}  ${city.padEnd(22)} ${got ?? "null"}`);
+}
+
+const TOTAL = CASES.length + JCASES.length + CHECKS.length + 1 + FORMS.length;
 console.log(
   bad
     ? `\n  ${bad} DIVERGENCE(S) — the vendor's editor and the server disagree about the same menu.\n`
