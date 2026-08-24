@@ -420,6 +420,34 @@ export function BusinessSettingsHubView() {
   })()
 
   /**
+   * WW-NTN-EDIT — mirrors `validateNtn` in the backend's
+   * vendorRegistrationValidators: 7–13 digits once spaces and dashes are
+   * stripped. Blank is fine; the field is optional.
+   *
+   * Checked here so a vendor is told at the field rather than by a 400 after
+   * pressing save on a form full of other unrelated changes.
+   */
+  const ntnErr = (() => {
+    const raw = String(form.ntnNumber ?? "").trim()
+    if (!raw) return undefined
+    const stripped = raw.replace(/[\s-]/g, "")
+    if (!/^\d+$/.test(stripped)) return "An NTN is digits only."
+    if (stripped.length < 7 || stripped.length > 13) return "An NTN is between 7 and 13 digits."
+    return undefined
+  })()
+
+  /**
+   * Whether the vendor is editing an NTN that has already been verified.
+   *
+   * Compared on the STRIPPED value, so re-formatting the same number with
+   * dashes is not treated as a change — the server normalises before comparing
+   * too, and warning about a re-typed identical number would be a lie.
+   */
+  const ntnChanged =
+    String(form.ntnNumber ?? "").replace(/[\s-]/g, "") !==
+    String((biz as any)?.ntnNumber ?? "").replace(/[\s-]/g, "")
+
+  /**
    * City is free text on a marketplace whose public URLs are
    * /{type}/{city}/{slug} and whose whole SEO programme is city pages. A typo
    * doesn't fail — it files the listing under a city that does not exist.
@@ -526,6 +554,10 @@ export function BusinessSettingsHubView() {
           : null,
       // WW-BOOKING-MODE — "" sends null, which reads as the legacy `instant`.
       bookingMode: form.bookingMode || null,
+      // WW-NTN-EDIT — normalised the way the server does, so re-typing the same
+      // number with dashes is not a change and cannot bounce a verified NTN
+      // back into the review queue for nothing.
+      ntnNumber: String(form.ntnNumber ?? "").replace(/[\s-]/g, "") || null,
       // WW-SETTLEMENT — "" sends null, which clears a term back to "not
       // configured" rather than sticking at a value the vendor never meant.
       ...Object.fromEntries(
@@ -561,6 +593,7 @@ export function BusinessSettingsHubView() {
             }
           : null,
       bookingMode: baseline.bookingMode || null,
+      ntnNumber: String((baseline as any).ntnNumber ?? "").replace(/[\s-]/g, "") || null,
       ...Object.fromEntries(
         SETTLEMENT_FIELDS.map((f) => [f.key, numOrNull(String(baseline[f.key] ?? ""))]),
       ),
@@ -858,6 +891,44 @@ export function BusinessSettingsHubView() {
                     </button>.
                   </p>
                 </Row>
+                {/*
+                  WW-NTN-EDIT — the NTN could be typed at registration and never
+                  again. `updateBusiness` did not list the field, so any edit was
+                  dropped and answered with a 200, and no screen offered it after
+                  signup anyway. A vendor who skipped it could never add one, and
+                  the admin verification queue — which gates on this column being
+                  set — could only ever hold vendors who happened to fill it in on
+                  the day they registered.
+                */}
+                <Row id="biz-ntn" label="NTN (tax registration)">
+                  <input
+                    id="biz-ntn"
+                    inputMode="numeric"
+                    className={cn(inputCls, ntnErr && ERROR_INPUT_CLS)}
+                    value={form.ntnNumber ?? ""}
+                    onChange={(e) => set("ntnNumber", e.target.value)}
+                    placeholder="7–13 digits"
+                    {...fieldAria("biz-ntn", ntnErr)}
+                  />
+                  <FieldError id="biz-ntn" message={ntnErr} />
+                  {biz?.ntnVerifiedAt ? (
+                    ntnChanged ? (
+                      // Stated before the save, not discovered after it. An NTN
+                      // was checked as a specific filing number, so a new number
+                      // cannot inherit the old one's approval.
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        This NTN is verified. Changing it sends it back for review — the
+                        verification belongs to the number that was checked, not to your listing.
+                      </p>
+                    ) : (
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400">Verified.</p>
+                    )
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Optional, and only ever shown to our team. Needed before you can issue a tax invoice.
+                    </p>
+                  )}
+                </Row>
               </Section>
             </>
           )}
@@ -1136,7 +1207,7 @@ export function BusinessSettingsHubView() {
           {active === "packages" && (
             <>
               <PackagesManager businessId={biz.id} />
-              <OfferingsPreview businessId={biz.id} />
+              <OfferingsPreview businessId={biz.id} city={form.city ?? biz.city ?? null} />
             </>
           )}
           {active === "menus" && (
@@ -1145,6 +1216,10 @@ export function BusinessSettingsHubView() {
                 businessId={biz.id}
                 minCapacity={biz.minCapacity ?? null}
                 maxCapacity={biz.maxCapacity ?? null}
+                // WW-JURISDICTION — decides whether the one-dish rule is judged
+                // at all. `form.city` rather than `biz.city` so switching the
+                // city updates the verdict before the vendor even saves.
+                city={form.city ?? biz.city ?? null}
               />
               <OfferingsPreview businessId={biz.id} />
             </>

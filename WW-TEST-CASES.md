@@ -163,14 +163,14 @@ Liability reaches the **venue and the caterer** (s.5), not only the host.
 | 4.14 | Inferred classification | Amber "we guessed" | AUTO |
 | 4.15 | Customer-side notice on the date step | Shown | AUTO |
 | 4.16 | UC-12 — customer wants two mains | Venue told; menu served in reduced form | MANUAL |
-| 4.17 | Region without the rule | No warning; not every city is Punjab/ICT | GAP |
+| 4.17 | Region without the rule | No warning; not every city is Punjab/ICT | UNIT · 45 + PARITY 36/36 — four-state verdict; `not_applicable` renders NEUTRAL, never green |
 
 ## 4C — Timing (s.6)
 
 | # | Case | Expected | How |
 |---|---|---|---|
 | 4.18 | Slot at/after legal closing | Refused | UNIT |
-| 4.19 | UC-11 — baraat late, clock is the law | Overtime add-on **capped** by closing time (A26) | GAP |
+| 4.19 | UC-11 — baraat late, clock is the law | Slot end capped by the legal close | BUILT — `closureGuard` + `pakistanLocations`, province-aware. 42 towns and 3 normaliser gaps that failed OPEN were fixed |
 
 ---
 
@@ -191,7 +191,7 @@ Liability reaches the **venue and the caterer** (s.5), not only the host.
 | 5.11 | Instant mode unchanged | Approve still confirms (BK-081) | API |
 | 5.12 | Card hides after acceptance | Both surfaces; second click must not 400 | AUTO |
 | 5.13 | UC-20 — venue declines | Reason reaches the customer; nothing charged | MANUAL |
-| 5.14 | `inquiry_only` | No online booking; venue calls back | GAP |
+| 5.14 | `inquiry_only` | No online booking; venue calls back | UNIT · 14 — refused server-side; the wizard is replaced by the enquiry screen |
 | 5.15 | Multi-vendor cart | Waits on the **strictest** vendor | GAP |
 
 ---
@@ -252,7 +252,7 @@ A PSP may not hold consumer money (PEFTA 2007 / SBP PSO-PSP). The platform
 | 7.8 | Only verified accounts shown | `showToCustomers && isActive && isVerified` | UNIT |
 | 7.9 | Methods offered | Bank transfer · Raast · IBFT · JazzCash · Easypaisa · Cash | AUTO |
 | 7.10 | Chargeback warning | "keep your receipt" | AUTO |
-| 7.11 | A17 — security deposit ≠ advance | Separate refundable line, own ledger | GAP |
+| 7.11 | A17 — security deposit ≠ advance | Separate refundable line, own ledger | UNIT · 30 — snapshotted, never in the quoted total (asserted) |
 | 7.12 | A24 — instalments | `BookingInstallment` | MANUAL |
 | 7.13 | A22 — diaspora pays in USD/GBP (UC-16) | | GAP |
 | 7.14 | A23 — post-dated cheque | | MANUAL |
@@ -300,16 +300,16 @@ at registration must also be editable in the portal (`VENDOR-PORTAL-...` §1.2).
 | 9.2 | A5 — rate card pre-filled from A4 | | GAP |
 | 9.3 | `RateCardLine` model | Replaces the `pricingShape` enum | GAP |
 | 9.4 | Three `selection` values | required · optional · one-of | GAP |
-| 9.5 | A7 — preview & publish (the pamphlet) | Same component as the detail page (§4.6) | GAP |
+| 9.5 | A7 — preview & publish (the pamphlet) | Same component as the detail page (§4.6) | BUILT — `offerings-preview.tsx` renders the real `VendorOfferings` |
 | 9.6 | Nothing is registration-only | Every field editable later | MANUAL |
 | 9.7 | Package form: per-head/per-event radios | With live multiplication | AUTO |
 | 9.8 | Settlement terms editable | All five fields save | AUTO |
 | 9.9 | Booking rules editable | `bookingMode` saves | AUTO |
 | 9.10 | Menu builder classification | Dish rows + `countsAs` | AUTO |
 | 9.11 | Bank details published to customers | `showToCustomers` | MANUAL |
-| 9.12 | Three-severity validation (§2.4) | Never a silent save | GAP |
-| 9.13 | Dish library (§3.2) | Reuse across menus | GAP |
-| 9.14 | Customer-choice groups (§3.3) | "pick 2 of 5" | GAP |
+| 9.12 | Three-severity validation (§2.4) | Never a silent save | BUILT — `pricingModeCoherence`, error/warning/ok |
+| 9.13 | Dish library (§3.2) | Reuse across menus | BUILT — only offers `declared` dishes |
+| 9.14 | Customer-choice groups (§3.3) | "pick 2 of 5" | BUILT — worst-case counting; parity-checked |
 
 ---
 
@@ -334,7 +334,7 @@ at registration must also be editable in the portal (`VENDOR-PORTAL-...` §1.2).
 | 10.15 | UC-04 — three-event umbrella | Bundle discount across events | MANUAL |
 | 10.16 | UC-22 — rain on an open lawn | Backup-space plan surfaced | GAP |
 | 10.17 | UC-08 — advance moves to a new date (A20) | **The PK norm** — credit ledger, not a refund | API · I-1…I-4 — refused beyond the window, date unchanged, message names the last workable date |
-| 10.18 | UC-23 — damage vs deposit (A18) | `DamageClaim` with photos | GAP |
+| 10.18 | UC-23 — damage vs deposit (A18) | `DamageClaim` with photos | UNIT · 37 — transitions split between the parties; a vendor cannot settle a disputed claim |
 
 ---
 
@@ -371,13 +371,13 @@ Verified identical on clean `main` by stashing. **8 failures, 3 suites.**
 | 1 Pricing shapes | 6 | 3 |
 | 2 Detail page | 22 | 3 |
 | 3 Double-charge | 9 | 0 |
-| 4 Compliance | 17 | 3 |
-| 5 Request-to-book | 13 | 2 |
+| 4 Compliance | 19 | 1 |
+| 5 Request-to-book | 14 | 1 |
 | 6 Quote pipeline | 31 | 1 |
-| 7 Payment | 11 | 3 |
+| 7 Payment | 12 | 2 |
 | 8 **Settlement** | **14** | **0** |
-| 9 Registration | 6 | 8 |
-| 10 Booking mechanics | 9 | 9 |
+| 9 Registration | 10 | 4 |
+| 10 Booking mechanics | 10 | 8 |
 
 Settlement is complete. All fourteen cases are built and tested, including the
 two that only happen on the night itself: the vendors own crew eating at the

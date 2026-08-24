@@ -55,6 +55,8 @@ import { fetchCityVendors } from "@/lib/seo/fetch-vendors"
 import { getVendorTypeGuidePillar } from "@/lib/seo/pricing-guide"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 import { getLocationImagery } from "@/lib/seo/location-imagery"
+import { VenueAnswers } from "@/components/seo/venue-answers"
+import { StickyQuoteBar } from "@/components/seo/sticky-quote-bar"
 
 interface PageInput {
   typeSlug: VendorTypeSlug
@@ -326,8 +328,25 @@ export async function VendorDetailPage(input: PageInput) {
               )}
             </p>
 
+            {/*
+              WW-TEST-CASES 2.23 — the six answers that decide whether this
+              venue is even a candidate: how the price is counted, how many
+              people fit, the date, whether food is included, the deposit, and
+              when the music has to stop.
+
+              The hero answered two of them. Everything else lived further down
+              the page, inside a package card, or nowhere — so a couple learned
+              that "From Rs 450,000" was the HALL ONLY after they had already
+              been misled by the headline.
+
+              Placed ABOVE the description on purpose: prose is what you read
+              once you are interested, and these are what decide whether you get
+              that far.
+            */}
+            <VenueAnswers raw={vendor.raw} />
+
             {vendor.description && (
-              <p className="mt-4 font-bridal text-[14.5px] text-bridal-text leading-relaxed line-clamp-5">
+              <p className="mt-5 font-bridal text-[14.5px] text-bridal-text leading-relaxed line-clamp-5">
                 {vendor.description}
               </p>
             )}
@@ -394,7 +413,7 @@ export async function VendorDetailPage(input: PageInput) {
             The previous block printed a name and a bare number: no unit, so a
             per-head rate and a per-event rate looked identical, and no menus at
             all. See components/seo/vendor-offerings.tsx. */}
-        <VendorOfferings packages={vendor.packages} menus={vendor.menus} />
+        <VendorOfferings packages={vendor.packages} menus={vendor.menus} city={vendor.city ?? null} />
 
         {/* Hierarchical spaces (Hall→Floor→Partition) — renders nothing until the
             venue enables NEXT_PUBLIC_VENUE_HIERARCHY_ON; legacy vendors unaffected. */}
@@ -578,6 +597,25 @@ export async function VendorDetailPage(input: PageInput) {
             ← Browse more {vt.plural.toLowerCase()} in {city.name}
           </Link>
         </section>
+
+        {/*
+          WW-TEST-CASES 2.24 — the sticky quote bar.
+
+          The page showed "From PKR 450,000". A Pakistani wedding is priced per
+          head ON TOP of that, so the headline is not a price — it is the start
+          of an arithmetic problem the couple has to finish themselves, having
+          scrolled past the packages, the menus and the minimum guarantee to
+          find the three numbers they need.
+
+          Last in the DOM but sticky, so it sits over the page from the moment
+          they scroll and is still there when the photographs or the menus make
+          them wonder again.
+        */}
+        <StickyQuoteBar
+          raw={vendor.raw}
+          vendorId={vendor.id}
+          ctaLabel={vendor.priceMin ? "Check availability" : "Ask for a price"}
+        />
       </div>
     </>
   )

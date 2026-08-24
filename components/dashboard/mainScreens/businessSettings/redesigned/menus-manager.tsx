@@ -31,6 +31,9 @@ import {
 } from "@/lib/compliance/one-dish"
 // A data-entry aid, never a verdict — see the contract at the top of that file.
 import { suggestCountsAs } from "@/lib/compliance/suggest-counts-as"
+// WW-JURISDICTION — s.5 is a Punjab statute; this editor used to judge every
+// venue in Pakistan against it.
+import { provinceOf, ruleAppliesTo, describeJurisdiction } from "@/lib/compliance/jurisdiction"
 import {
   FormBlockedHint,
   FieldError,
@@ -62,9 +65,16 @@ const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 t
 const labelCls = "text-xs font-medium text-muted-foreground"
 
 export function MenusManager({
-  businessId, minCapacity, maxCapacity,
+  businessId, minCapacity, maxCapacity, city,
 }: {
   businessId: number
+  /**
+   * WW-JURISDICTION — the one-dish rule is s.5 of the PUNJAB Act. Without the
+   * city this editor judged every venue in Pakistan against it, so a Karachi
+   * menu with two salans showed a red breach of a law that does not reach
+   * Sindh. Optional: no city simply means the rule is not judged.
+   */
+  city?: string | null
   /**
    * WWL-479 — the venue's own guest range, so a menu's minimum guarantee can be
    * checked against the bookings this business actually takes. Optional: a
@@ -238,6 +248,11 @@ export function MenusManager({
    *
    * A bare name is what the server sees for those rows, so both now agree.
    */
+  // WW-JURISDICTION — resolved once from the venue's city, so the whole editor
+  // agrees about which rules it is even judging against.
+  const province = React.useMemo(() => provinceOf(city), [city])
+  const ruleApplies = React.useMemo(() => ruleAppliesTo(province), [province])
+
   const oneDish = React.useMemo(
     () =>
       checkOneDish({
@@ -253,8 +268,8 @@ export function MenusManager({
             ...(d.inferred ? {} : { countsAs: d.countsAs }),
             ...(d.group ? { group: d.group } : {}),
           })),
-      }),
-    [form.dishes, form.groups],
+      }, { ruleApplies }),
+    [form.dishes, form.groups, ruleApplies],
   )
   const invalidate = () => qc.invalidateQueries({ queryKey: ["menus", businessId] })
 
@@ -795,7 +810,13 @@ export function MenusManager({
                       ? "border-destructive/40 bg-destructive/5"
                       : oneDish.status === "unknown"
                         ? "border-amber-300 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20"
-                        : "border-emerald-300 bg-emerald-50/40 dark:border-emerald-900/50 dark:bg-emerald-950/20",
+                        // WW-JURISDICTION — neutral, not green. "We did not
+                        // check this" must never look like "we checked and it
+                        // is fine"; the whole point of the fourth state is that
+                        // it claims nothing.
+                        : oneDish.status === "not_applicable"
+                          ? "border-border bg-muted/40"
+                          : "border-emerald-300 bg-emerald-50/40 dark:border-emerald-900/50 dark:bg-emerald-950/20",
                   )}
                 >
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums text-muted-foreground">
@@ -817,7 +838,12 @@ export function MenusManager({
                       {/* Two different asks. "0 still to go" is what this said
                           for a menu with no readable dishes at all, which tells
                           the vendor nothing about what to do next. */}
-                      {oneDish.unknownReason === "no_items" ? (
+                      {oneDish.unknownReason === "jurisdiction_unknown" ? (
+                        // Nothing to do with the dishes — the vendor would
+                        // otherwise be sent to classify a menu that is already
+                        // fully classified.
+                        <>{describeJurisdiction(province, ruleApplies)}</>
+                      ) : oneDish.unknownReason === "no_items" ? (
                         <>
                           Add the dishes on this menu. We can&apos;t tell you whether it is
                           within the one-dish rule until we can see what you serve.
@@ -829,6 +855,12 @@ export function MenusManager({
                           rule until you do.
                         </>
                       )}
+                    </p>
+                  )}
+                  {oneDish.status === "not_applicable" && (
+                    <p className="mt-2 text-muted-foreground">
+                      {describeJurisdiction(province, ruleApplies)}{" "}
+                      The counts above are still shown so you can see what this menu serves.
                     </p>
                   )}
                   {oneDish.status === "compliant" && (

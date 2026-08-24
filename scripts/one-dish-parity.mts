@@ -28,6 +28,27 @@ const require = createRequire(import.meta.url);
 const BACKEND = process.env.WW_BACKEND || "C:/Projects/ems-v0-backend";
 const rulePath = path.join(BACKEND, "src/utils/oneDishRule.js");
 
+/**
+ * Which backend checkout this is actually reading.
+ *
+ * The script loads whatever is on disk at WW_BACKEND, so it silently compares
+ * against whichever BRANCH happens to be checked out there. That cost real time
+ * once: 53 "divergences" that were only the backend sitting on a branch without
+ * the rule the mirror had already been updated for.
+ *
+ * Printing the branch turns a confusing failure into an obvious one.
+ */
+try {
+  const { execSync } = await import("node:child_process");
+  const branch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: BACKEND })
+    .toString().trim();
+  console.log(`
+  backend: ${BACKEND}  [${branch}]`);
+} catch {
+  console.log(`
+  backend: ${BACKEND}  [branch unknown]`);
+}
+
 let beCheck: (d: any) => any;
 let beDescribe: (v: any) => string;
 try {
@@ -88,9 +109,160 @@ for (const [label, data] of CASES) {
     console.log("        mirror :", JSON.stringify({ status: fe.status, reason: fe.unknownReason, counts: fe.counts, says: fe.violations.map(feDescribe) }));
   }
 }
+
+/**
+ * WW-JURISDICTION — the fourth state.
+ *
+ * The one-dish rule is s.5 of the PUNJAB Act, and `checkOneDish` was called with
+ * no jurisdiction at all, so a Karachi menu with two salans was shown a red
+ * violation for a law that does not reach Sindh. Both halves gained a
+ * `ruleApplies` option, and they must agree about it too — a mirror that keeps
+ * warning after the server has stopped is the same defect wearing a hat.
+ */
+const TWO_SALANS = { items: [dish("Chicken Karahi", "salan"), dish("Mutton Qorma", "salan")] };
+
+/**
+ * Does this backend checkout even HAVE jurisdiction scoping?
+ *
+ * The script reads whatever is on disk, so a backend sitting on a branch that
+ * predates the feature reports every jurisdiction case as a divergence — 53 of
+ * them, which reads as a catastrophe and is really just the wrong branch. It
+ * has cost real time twice.
+ *
+ * A missing feature and a broken feature deserve different messages.
+ */
+{
+  const probe = beCheck(TWO_SALANS, { ruleApplies: "does_not_apply" });
+  if (probe.status !== "not_applicable") {
+    console.log("\n  SKIPPED — this backend checkout has no jurisdiction scoping.");
+    console.log("  Check out the branch carrying `utils/jurisdiction.js` to run these.\n");
+    console.log(
+      bad
+        ? `  ${bad} DIVERGENCE(S) in the cases that DID run.\n`
+        : `  ${CASES.length}/${CASES.length} — agreement on every menu shape that could be checked.\n`,
+    );
+    process.exit(bad ? 1 : 0);
+  }
+}
+const CLEAN = { items: [dish("Chicken Karahi", "salan"), dish("Zarda", "sweet")] };
+
+console.log("\n  jurisdiction scoping\n");
+const JCASES: [string, any, any][] = [
+  ["omitted — unchanged behaviour", TWO_SALANS, undefined],
+  ["applies — still a violation", TWO_SALANS, { ruleApplies: "applies" }],
+  ["does_not_apply — not judged", TWO_SALANS, { ruleApplies: "does_not_apply" }],
+  ["unknown province — not judged", TWO_SALANS, { ruleApplies: "unknown" }],
+  ["clean menu, rule applies", CLEAN, { ruleApplies: "applies" }],
+  ["clean menu, rule does not apply", CLEAN, { ruleApplies: "does_not_apply" }],
+  ["clean menu, province unknown", CLEAN, { ruleApplies: "unknown" }],
+];
+for (const [label, data, opts] of JCASES) {
+  const be = beCheck(data, opts);
+  const fe = feCheck(data, opts);
+  const same =
+    be.status === fe.status &&
+    be.compliant === fe.compliant &&
+    be.unknownReason === fe.unknownReason &&
+    be.ruleApplies === fe.ruleApplies;
+  if (!same) bad++;
+  console.log(`  ${same ? "PASS" : "FAIL"}  ${label.padEnd(34)} ${String(be.status).padEnd(15)} reason=${be.unknownReason ?? "-"}`);
+  if (!same) {
+    console.log("        backend:", JSON.stringify({ status: be.status, reason: be.unknownReason, applies: be.ruleApplies }));
+    console.log("        mirror :", JSON.stringify({ status: fe.status, reason: fe.unknownReason, applies: fe.ruleApplies }));
+  }
+}
+
+/**
+ * The two directions this must never get wrong. Claims about the RULE rather
+ * than about the mirror, so they are asserted on the backend alone.
+ */
+const violates = beCheck(TWO_SALANS, { ruleApplies: "applies" });
+const notHere = beCheck(TWO_SALANS, { ruleApplies: "does_not_apply" });
+const CHECKS: [string, boolean][] = [
+  ["a real breach in Punjab is still red", violates.status === "violation"],
+  ["the same menu elsewhere is NOT called a breach", notHere.status === "not_applicable"],
+  ["and is NOT called compliant either", notHere.compliant === false],
+  ["the counts survive so the vendor can still read them", notHere.counts.salan === 2],
+];
+console.log("\n  what the fourth state must and must not claim\n");
+for (const [label, ok] of CHECKS) {
+  if (!ok) bad++;
+  console.log(`  ${ok ? "PASS" : "FAIL"}  ${label}`);
+}
+
+/**
+ * WW-JURISDICTION — the city map itself.
+ *
+ * The backend owns `utils/pakistanLocations.js` and the client builds its map
+ * from `lib/seo/constants.ts` CITIES. A first pass of this work gave the
+ * backend a SECOND city table generated from CITIES, which is the rival source
+ * of truth this codebase keeps being bitten by; the two were reconciled instead
+ * (42 marketplace towns merged in, zero disagreements).
+ *
+ * Reconciled once is not the same as staying reconciled. This walks every city
+ * the marketplace knows and fails if the two halves ever place one differently.
+ */
+const bePak = require(path.join(BACKEND, "src/utils/pakistanLocations.js"));
+/**
+ * Compared against CITIES directly rather than against the frontend module.
+ *
+ * `lib/compliance/jurisdiction.ts` builds its map FROM CITIES, so CITIES is the
+ * thing the mirror actually asserts — and importing that module here would drag
+ * in its `@/` alias, which plain node cannot resolve and which tsc refuses to
+ * let us write as a `.ts` path.
+ */
+const { CITIES } = await import("../lib/seo/constants.ts");
+const REGION_TO_CODE: Record<string, string> = {
+  Punjab: "PUNJAB", Sindh: "SINDH", "Khyber Pakhtunkhwa": "KP",
+  Balochistan: "BALOCHISTAN", "Islamabad Capital Territory": "ICT",
+  "Gilgit-Baltistan": "GB", "Azad Kashmir": "AJK",
+};
+const feProvince = (name: string) => REGION_TO_CODE[
+  (CITIES as { name: string; region: string }[]).find((c) => c.name === name)?.region ?? ""
+] ?? null;
+
+console.log("\n  the city map\n");
+let cityBad = 0;
+let cityChecked = 0;
+for (const c of CITIES as { name: string; region: string }[]) {
+  if (c.region === "Pakistan") continue; // the catch-all row, not a city
+  const be = bePak.cityToProvince(c.name);
+  const fe = feProvince(c.name);
+  cityChecked++;
+  const same = (be ? String(be).toUpperCase() : null) === (fe ?? null);
+  if (!same) {
+    cityBad++;
+    bad++;
+    console.log(`  FAIL  ${c.name.padEnd(22)} backend=${be ?? "null"}  mirror=${fe ?? "null"}`);
+  }
+}
+console.log(
+  cityBad
+    ? `  ${cityBad} of ${cityChecked} cities are placed differently by the two halves.`
+    : `  PASS  all ${cityChecked} marketplace cities are placed identically`,
+);
+
+/** The free-text forms the column actually holds, which only the backend normalises. */
+console.log("\n  free-text city forms\n");
+const FORMS: [string, string | null][] = [
+  ["Lahore Cantt", "PUNJAB"],
+  ["Karachi South", "SINDH"],
+  ["Lahore.", "PUNJAB"],
+  ["Rahim Yar Khan", "PUNJAB"],
+  ["Nowhere", null],
+];
+for (const [city, expected] of FORMS) {
+  const be = bePak.cityToProvince(city);
+  const got = be ? String(be).toUpperCase() : null;
+  const ok = got === expected;
+  if (!ok) bad++;
+  console.log(`  ${ok ? "PASS" : "FAIL"}  ${city.padEnd(22)} ${got ?? "null"}`);
+}
+
+const TOTAL = CASES.length + JCASES.length + CHECKS.length + 1 + FORMS.length;
 console.log(
   bad
     ? `\n  ${bad} DIVERGENCE(S) — the vendor's editor and the server disagree about the same menu.\n`
-    : `\n  ${CASES.length}/${CASES.length} — the two surfaces agree on every shape.\n`,
+    : `\n  ${TOTAL}/${TOTAL} — the two surfaces agree on every shape.\n`,
 );
 process.exit(bad ? 1 : 0);

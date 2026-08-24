@@ -38,7 +38,7 @@ import PaymentSuccessScreen from "./steps/payment-success-screen"
 import BankTransferScreen from "./steps/bank-transfer-screen"
 // WW-BOOKING-MODE — venues that accept a booking before asking for payment.
 import RequestSentScreen from "./steps/request-sent-screen"
-import { requiresVendorApproval } from "@/lib/booking/booking-mode"
+import { requiresVendorApproval, effectiveBookingMode } from "@/lib/booking/booking-mode"
 // WW-REQUIREMENTS — the free-text field the flow never had. Everything a family
 // actually needs to say went to WhatsApp instead.
 import RequirementsStep, { type RequirementsDraft } from "./steps/requirements-step"
@@ -1227,25 +1227,55 @@ export default function BookingForm() {
   // choice (even if they carry a starting price), so route them to the same
   // inquiry flow as an unpriced vendor.
   const wantsQuote = (venue as any)?.pricingMode === "quote"
-  if (!loading && venue && (isUnpricedVendor(venue as any) || wantsQuote)) {
+  /**
+   * WW-TEST-CASES 5.14 — `inquiry_only` means NO ONLINE BOOKING.
+   *
+   * The mode was selectable in the portal, labelled "Enquiries only — I'll
+   * contact them", and hinted "No online booking. Customers send an enquiry and
+   * you contact them." It then behaved exactly like `request`:
+   * `requiresVendorApproval` returns true for both, so the customer walked the
+   * whole wizard, picked a date, and created a booking the venue had said they
+   * did not take.
+   *
+   * A vendor who chose this told us in plain words that their calendar is not
+   * bookable online. Taking the booking anyway is the platform overruling them
+   * about their own availability — and the customer finds out later, holding a
+   * confirmation the venue never agreed to.
+   *
+   * They land on the same enquiry screen an unpriced or quote-only vendor
+   * already lands on, which exists and works.
+   */
+  const inquiryOnly = effectiveBookingMode(venue as any) === "inquiry_only"
+  if (!loading && venue && (isUnpricedVendor(venue as any) || wantsQuote || inquiryOnly)) {
     return (
       <div className="w-full">
         <div className="mx-auto max-w-xl rounded-md bg-bridal-cream border border-bridal-beige p-6 sm:p-8 text-center shadow-[0_18px_44px_-32px_rgba(176,125,84,0.4)]">
           <h1 className="font-display italic text-[26px] sm:text-[30px] text-bridal-charcoal leading-tight">
-            {wantsQuote
-              ? `${venue.name} prices each event with a custom quote`
-              : `${venue.name} hasn't published a price yet`}
+            {inquiryOnly
+              ? `${venue.name} takes bookings by enquiry`
+              : wantsQuote
+                ? `${venue.name} prices each event with a custom quote`
+                : `${venue.name} hasn't published a price yet`}
           </h1>
           <p className="mt-3 text-[14px] text-bridal-charcoal/75 leading-relaxed">
-            Send them a quick inquiry with your date and guest count — they&apos;ll reply
-            with a quote, and you can book once you agree on the price.
+            {inquiryOnly ? (
+              <>
+                They don&apos;t take bookings online. Send your date and guest count and
+                they&apos;ll get back to you to arrange it.
+              </>
+            ) : (
+              <>
+                Send them a quick inquiry with your date and guest count — they&apos;ll reply
+                with a quote, and you can book once you agree on the price.
+              </>
+            )}
           </p>
           <button
             type="button"
             onClick={() => setInquiryOpen(true)}
             className="mt-6 inline-flex items-center justify-center gap-2 h-12 px-7 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium transition-colors"
           >
-            Ask for a price
+            {inquiryOnly ? "Send an enquiry" : "Ask for a price"}
           </button>
         </div>
         <VendorInquiryDialog

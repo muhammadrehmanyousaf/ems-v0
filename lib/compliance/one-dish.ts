@@ -113,13 +113,26 @@ export function flattenMenuItems(data: any): MenuDish[] {
   return out;
 }
 
-export type OneDishStatus = "compliant" | "violation" | "unknown";
+/**
+ * WW-JURISDICTION — a fourth state: the rule may not reach this venue at all.
+ *
+ * The one-dish rule is s.5 of the PUNJAB Marriage Functions Act 2016. Judging a
+ * Karachi menu against it produced a red badge for a law that does not extend
+ * to Sindh — and a badge that fires where it shouldn't is untrustworthy in
+ * exactly the same way as one that stays silent where it should.
+ */
+export type OneDishStatus = "compliant" | "violation" | "unknown" | "not_applicable";
+
+/** Mirrors the server's `jurisdiction.ruleStatusFor`. */
+export type RuleApplies = "applies" | "does_not_apply" | "unknown";
 
 export interface OneDishResult {
   status: OneDishStatus;
   compliant: boolean;
   /** Set only when `status` is "unknown" — why we could not reach a verdict. */
-  unknownReason: "no_items" | "unclassified" | null;
+  unknownReason: "no_items" | "unclassified" | "jurisdiction_unknown" | null;
+  /** Whether the rule reaches this venue. Defaults to "applies" when unset. */
+  ruleApplies?: RuleApplies;
   counts: Record<CountsAs, number>;
   /**
    * `items` lists only the ALWAYS-SERVED dishes in this category. A breach
@@ -166,7 +179,7 @@ export function readChoiceGroups(data: any): Record<string, { label: string | nu
   return out;
 }
 
-export function checkOneDish(data: any): OneDishResult {
+export function checkOneDish(data: any, opts?: { ruleApplies?: RuleApplies }): OneDishResult {
   const items = flattenMenuItems(data);
   const groups = readChoiceGroups(data);
 
@@ -251,10 +264,16 @@ export function checkOneDish(data: any): OneDishResult {
    */
   const nothingRead = items.length === 0;
 
+  // Omitted by every existing caller, and omitting it keeps the old behaviour
+  // exactly. Only a caller that resolved the province can turn the rule off.
+  const applies: RuleApplies = opts?.ruleApplies ?? "applies";
+
   const status: OneDishStatus =
-    violations.length > 0 ? "violation"
-      : unclassified.length > 0 || nothingRead ? "unknown"
-        : "compliant";
+    applies === "does_not_apply" ? "not_applicable"
+      : applies === "unknown" ? "unknown"
+        : violations.length > 0 ? "violation"
+          : unclassified.length > 0 || nothingRead ? "unknown"
+            : "compliant";
 
   return {
     status,
@@ -264,9 +283,25 @@ export function checkOneDish(data: any): OneDishResult {
      * means no dishes are recorded at all, "unclassified" means the dishes are
      * there but some could not be placed into a course.
      */
-    unknownReason: status !== "unknown" ? null : (nothingRead ? "no_items" : "unclassified"),
+    unknownReason:
+      status !== "unknown"
+        ? null
+        : applies === "unknown"
+          ? "jurisdiction_unknown"
+          : nothingRead
+            ? "no_items"
+            : "unclassified",
+    ruleApplies: applies,
+    /**
+     * Cleared when the rule does not reach this venue — a statement of fact,
+     * not a convenience: there are no violations of a rule that does not bind
+     * you. It is also the safe shape, because every surface renders red off
+     * `violations.length`, so leaving them populated would keep the false red
+     * on a Karachi menu whatever `status` said. `counts` is deliberately kept:
+     * the vendor should still be able to read their own menu.
+     */
     counts,
-    violations,
+    violations: status === "not_applicable" ? [] : violations,
     unclassified: unclassified.map((i) => i.name),
     hasInferred: items.some((i) => i.inferred),
     items,

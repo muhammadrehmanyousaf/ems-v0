@@ -26,7 +26,7 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import VendorOfferings from "@/components/seo/vendor-offerings"
 
-export function OfferingsPreview({ businessId }: { businessId: number }) {
+export function OfferingsPreview({ businessId, city }: { businessId: number; city?: string | null }) {
   const [open, setOpen] = React.useState(false)
 
   /**
@@ -93,7 +93,7 @@ export function OfferingsPreview({ businessId }: { businessId: number }) {
                it is not judged against a dashboard palette it will never be
                seen on. */
             <div className="rounded-lg bg-white p-4 text-bridal-charcoal dark:bg-white">
-              <VendorOfferings packages={packages} menus={menus} />
+              <VendorOfferings packages={packages} menus={menus} city={city ?? null} />
             </div>
           )}
 
