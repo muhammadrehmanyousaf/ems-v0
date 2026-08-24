@@ -173,7 +173,9 @@ export function PackagesManager({ businessId }: { businessId: number }) {
       return editingId ? PackagesAPI.update(editingId, body) : PackagesAPI.create(body)
     },
     onSuccess: () => { showSuccessToast(editingId ? "Package updated" : "Package added"); reset(); invalidate() },
-    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save package")),
+    // Held long enough to read: the rate-card guard's refusal explains which
+    // of the two things to change and names the mode that allows it.
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save package"), { duration: 10000 }),
   })
   // Remove had no confirmation and no way back — one stray click destroyed a
   // priced package. Recreating it from the same values is a faithful undo.
