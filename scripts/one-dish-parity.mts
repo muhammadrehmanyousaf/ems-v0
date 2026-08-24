@@ -120,6 +120,30 @@ for (const [label, data] of CASES) {
  * warning after the server has stopped is the same defect wearing a hat.
  */
 const TWO_SALANS = { items: [dish("Chicken Karahi", "salan"), dish("Mutton Qorma", "salan")] };
+
+/**
+ * Does this backend checkout even HAVE jurisdiction scoping?
+ *
+ * The script reads whatever is on disk, so a backend sitting on a branch that
+ * predates the feature reports every jurisdiction case as a divergence — 53 of
+ * them, which reads as a catastrophe and is really just the wrong branch. It
+ * has cost real time twice.
+ *
+ * A missing feature and a broken feature deserve different messages.
+ */
+{
+  const probe = beCheck(TWO_SALANS, { ruleApplies: "does_not_apply" });
+  if (probe.status !== "not_applicable") {
+    console.log("\n  SKIPPED — this backend checkout has no jurisdiction scoping.");
+    console.log("  Check out the branch carrying `utils/jurisdiction.js` to run these.\n");
+    console.log(
+      bad
+        ? `  ${bad} DIVERGENCE(S) in the cases that DID run.\n`
+        : `  ${CASES.length}/${CASES.length} — agreement on every menu shape that could be checked.\n`,
+    );
+    process.exit(bad ? 1 : 0);
+  }
+}
 const CLEAN = { items: [dish("Chicken Karahi", "salan"), dish("Zarda", "sweet")] };
 
 console.log("\n  jurisdiction scoping\n");
