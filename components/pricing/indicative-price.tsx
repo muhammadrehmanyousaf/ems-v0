@@ -35,6 +35,20 @@ import { fxApi, type FxQuote } from "@/lib/api/fx"
 /** Remembered per browser, so a family doesn't re-pick on every venue. */
 const STORAGE_KEY = "ww_display_currency"
 
+/**
+ * "I don't want this" is a choice, and it has to be storable.
+ *
+ * Choosing "Rupees only" used to DELETE the stored value, which is the same
+ * state as never having chosen anything — so on the next page the locale kicked
+ * in and the conversion came straight back. The customer said no and was
+ * ignored, politely, forever.
+ *
+ * A sentinel distinguishes the two: PKR means "asked for, declined", absent
+ * means "never asked". Not a supported currency, so it can never be mistaken
+ * for one server-side.
+ */
+const DECLINED = "PKR"
+
 const readStored = (): string | null => {
   try {
     return localStorage.getItem(STORAGE_KEY)
@@ -47,8 +61,7 @@ const readStored = (): string | null => {
 
 const writeStored = (v: string | null) => {
   try {
-    if (v) localStorage.setItem(STORAGE_KEY, v)
-    else localStorage.removeItem(STORAGE_KEY)
+    localStorage.setItem(STORAGE_KEY, v || DECLINED)
   } catch {
     /* see readStored */
   }
@@ -87,15 +100,24 @@ export function IndicativePrice({ amountPkr, className, tone = "default" }: Prop
      * currency on a wedding quote is worse than none.
      */
     const stored = readStored()
+    const declined = stored === DECLINED
+
+    // Asked for even when declined, because the SELECTOR still has to render —
+    // a customer who said "rupees only" must be able to change their mind.
+    // Only the conversion is dropped, not the control.
     fxApi
-      .quote(pkr, stored)
+      .quote(pkr, declined ? null : stored)
       .then((r) => {
         if (cancelled) return
         setAvailable(r.available || [])
-        setQuote(r.quote)
+        setQuote(declined ? null : r.quote)
         // Reflect what the server actually answered with, which may be the
         // locale's currency rather than anything this browser asked for.
-        setCurrency(r.quote?.currency ?? (stored && (r.available || []).includes(stored) ? stored : null))
+        setCurrency(
+          declined
+            ? null
+            : r.quote?.currency ?? (stored && (r.available || []).includes(stored) ? stored : null),
+        )
         setAsked(true)
       })
       .catch(() => {
