@@ -35,6 +35,20 @@ import { fxApi, type FxQuote } from "@/lib/api/fx"
 /** Remembered per browser, so a family doesn't re-pick on every venue. */
 const STORAGE_KEY = "ww_display_currency"
 
+/**
+ * "I don't want this" is a choice, and it has to be storable.
+ *
+ * Choosing "Rupees only" used to DELETE the stored value, which is the same
+ * state as never having chosen anything — so on the next page the locale kicked
+ * in and the conversion came straight back. The customer said no and was
+ * ignored, politely, forever.
+ *
+ * A sentinel distinguishes the two: PKR means "asked for, declined", absent
+ * means "never asked". Not a supported currency, so it can never be mistaken
+ * for one server-side.
+ */
+const DECLINED = "PKR"
+
 const readStored = (): string | null => {
   try {
     return localStorage.getItem(STORAGE_KEY)
@@ -47,8 +61,7 @@ const readStored = (): string | null => {
 
 const writeStored = (v: string | null) => {
   try {
-    if (v) localStorage.setItem(STORAGE_KEY, v)
-    else localStorage.removeItem(STORAGE_KEY)
+    localStorage.setItem(STORAGE_KEY, v || DECLINED)
   } catch {
     /* see readStored */
   }
@@ -87,15 +100,24 @@ export function IndicativePrice({ amountPkr, className, tone = "default" }: Prop
      * currency on a wedding quote is worse than none.
      */
     const stored = readStored()
+    const declined = stored === DECLINED
+
+    // Asked for even when declined, because the SELECTOR still has to render —
+    // a customer who said "rupees only" must be able to change their mind.
+    // Only the conversion is dropped, not the control.
     fxApi
-      .quote(pkr, stored)
+      .quote(pkr, declined ? null : stored)
       .then((r) => {
         if (cancelled) return
         setAvailable(r.available || [])
-        setQuote(r.quote)
+        setQuote(declined ? null : r.quote)
         // Reflect what the server actually answered with, which may be the
         // locale's currency rather than anything this browser asked for.
-        setCurrency(r.quote?.currency ?? (stored && (r.available || []).includes(stored) ? stored : null))
+        setCurrency(
+          declined
+            ? null
+            : r.quote?.currency ?? (stored && (r.available || []).includes(stored) ? stored : null),
+        )
         setAsked(true)
       })
       .catch(() => {
@@ -133,27 +155,67 @@ export function IndicativePrice({ amountPkr, className, tone = "default" }: Prop
   // is exactly what it was before this existed.
   if (!hasPrice || !asked || available.length === 0) return null
 
+  /**
+   * The rate's date, in the reader's words rather than the database's.
+   *
+   * "2026-08-25" is a column value; "25 Aug" is what tells a person how fresh
+   * the number is at a glance. The full ISO date stays in the hover text, so
+   * nothing is lost — it just stops shouting.
+   */
+  const asOfShort = (() => {
+    const d = new Date(`${quote?.asOf}T00:00:00Z`)
+    return Number.isNaN(d.getTime())
+      ? quote?.asOf
+      : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })
+  })()
+
+  /* ── Why this is two lines and not five ──────────────────────────────────
+   *
+   * It was: an uppercase "SHOW APPROX IN" eyebrow, a boxed native select, the
+   * figure, then BOTH the caveat and the note — which overlap almost word for
+   * word ("indicative"/"at today's rate", "paid in rupees"/"you'll be billed
+   * Rs …"). Five lines of chrome under a two-line price, stacking a second
+   * shouty label directly beneath "STARTING FROM" and saying the same thing
+   * twice.
+   *
+   * Now the figure carries its own control — `≈ £924 · GBP` — and one quiet
+   * line states the promise. Every claim the compliance rules require is still
+   * on screen: that it is indicative, that the venue is paid in rupees, the
+   * rupee amount itself, and the DATE of the rate. The server's longer
+   * sentence moves to the hover title, where it is available without
+   * competing with the price it is annotating.
+   */
+  const muted = onDark ? "text-bridal-ivory/65" : "text-bridal-text-soft"
+
   return (
     <div className={className}>
-      <div className="flex items-center gap-2 flex-wrap">
-        <label
-          className={
-            onDark
-              ? "font-bridal text-[10px] uppercase tracking-[0.25em] text-bridal-gold"
-              : "font-bridal text-[10px] uppercase tracking-[0.25em] text-bridal-text-label"
-          }
-        >
-          Show approx in
-        </label>
+      <div className="flex items-baseline gap-1.5 flex-wrap">
+        {quote ? (
+          // Deliberately smaller than the rupee price above it. The typography
+          // is part of the claim: that is the price, this is a guide.
+          <span
+            className={`font-display italic text-[17px] leading-none ${
+              onDark ? "text-bridal-ivory/90" : "text-bridal-charcoal/85"
+            }`}
+          >
+            ≈ {quote.symbol}
+            {quote.approx.toLocaleString("en-GB")}
+          </span>
+        ) : (
+          <span className={`font-bridal text-[11px] ${muted}`}>Show approx in</span>
+        )}
+
+        {/* A quiet inline control, not a boxed form field. It belongs to the
+           figure beside it, so it carries no separate label. */}
         <select
           value={currency || ""}
           onChange={(e) => void pick(e.target.value)}
           aria-label="Show an approximate price in another currency"
-          className={
+          className={`cursor-pointer appearance-none border-0 bg-transparent p-0 pr-3 font-bridal text-[11px] tracking-wide underline decoration-dotted underline-offset-[3px] outline-none focus-visible:ring-1 focus-visible:ring-offset-2 ${
             onDark
-              ? "rounded-md border border-bridal-ivory/30 bg-black/30 px-2 py-1 font-bridal text-[12px] text-bridal-ivory outline-none focus:border-bridal-gold"
-              : "rounded-md border border-bridal-beige bg-bridal-ivory px-2 py-1 font-bridal text-[12px] text-bridal-charcoal outline-none focus:border-bridal-gold-dark"
-          }
+              ? "text-bridal-gold focus-visible:ring-bridal-gold"
+              : "text-bridal-gold-dark focus-visible:ring-bridal-gold-dark"
+          }`}
         >
           <option value="">Rupees only</option>
           {available.map((c) => (
@@ -165,29 +227,12 @@ export function IndicativePrice({ amountPkr, className, tone = "default" }: Prop
       </div>
 
       {quote && (
-        <div className="mt-1.5 space-y-0.5">
-          {/* Smaller and quieter than the rupee figure above it, deliberately.
-             The typography is part of the claim: this is the guide, that is
-             the price. */}
-          <p
-            className={
-              onDark
-                ? "font-display italic text-[18px] text-bridal-ivory/85 leading-none"
-                : "font-display italic text-[18px] text-bridal-charcoal/80 leading-none"
-            }
-          >
-            ≈ {quote.symbol}
-            {quote.approx.toLocaleString("en-GB")}
-          </p>
-          {/* The rate and its DATE, both shown. The date is what makes an
-             indicative figure honest rather than a number with no provenance. */}
-          <p className={onDark ? "font-bridal text-[10.5px] text-bridal-ivory/70" : "font-bridal text-[10.5px] text-bridal-text-soft"}>
-            {quote.caveat}
-          </p>
-          <p className={onDark ? "font-bridal text-[10.5px] text-bridal-ivory/70" : "font-bridal text-[10.5px] text-bridal-text-soft"}>
-            {quote.note}
-          </p>
-        </div>
+        // One line. `title` keeps the server's fuller sentence a hover away —
+        // it is the same promise, at more length, for anyone who wants it.
+        <p className={`mt-1 font-bridal text-[10.5px] leading-snug ${muted}`} title={quote.note}>
+          Indicative only — you&apos;ll be billed Rs {quote.amountPkr.toLocaleString("en-PK")}. Rate of{" "}
+          {asOfShort}.
+        </p>
       )}
     </div>
   )

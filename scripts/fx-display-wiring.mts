@@ -99,7 +99,23 @@ try {
    */
   check("the rupee price is still what the page shows", /formatPrice\(startingPrice\)/.test(desktop) && /\{priceLabel\}/.test(mobile));
   check("the converted figure is marked approximate", /≈/.test(component));
-  check("the caveat is rendered, not just fetched", /\{quote\.caveat\}/.test(component));
+
+  /**
+   * The CLAIMS, not the field names.
+   *
+   * This used to assert `{quote.caveat}` appeared verbatim. That pinned the
+   * markup rather than the promise — redesigning the block to one line broke
+   * the guard while every claim was still on screen, which is a guard testing
+   * the wrong thing. What must survive any redesign is: the figure is called
+   * indicative, the customer is told the rupee amount they will actually be
+   * billed, and the rate carries the date it was taken.
+   */
+  check("it still says the figure is indicative", /Indicative only/i.test(component));
+  check("it still names the rupee amount that will be billed",
+    /billed Rs \{quote\.amountPkr/.test(component));
+  check("the rate still carries its date", /Rate of\b/.test(component) && /asOf/.test(component));
+  // The server's fuller sentence must stay reachable, not be dropped.
+  check("the longer explanation is still offered", /title=\{quote\.note\}/.test(component));
   check("the rate's own date reaches the customer", /asOf/.test(client));
 
   // With no rate set anywhere the page must be byte-identical to what it was
