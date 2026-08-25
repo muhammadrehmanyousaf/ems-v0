@@ -61,6 +61,7 @@ import { ChatDrawer } from "@/components/chat/chat-drawer";
 import { toast as sonnerToast } from "sonner";
 // WW-PRICE0 — an unpriced vendor cannot be booked; the booking funnel shows a
 // price-on-request panel with the inquiry, so the CTA must say so up front.
+import { IndicativePrice } from "@/components/pricing/indicative-price";
 import { priceLabelFor, ctaLabelFor } from "@/lib/pricing/unpriced";
 // Shaadi Plan — additive, flag-gated "Add to my wedding plan" action. Renders
 // null while the flag is off, so this vendor surface stays byte-identical.
@@ -820,6 +821,15 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                         <p className="font-display italic text-[28px] sm:text-[32px] text-bridal-gold-dark leading-none mt-1">
                           {formatPrice(startingPrice)}
                         </p>
+                        {/* 7.13 — an approximate figure for a family reading
+                           from Bradford or Toronto. Rendered BELOW the rupee
+                           price and never in place of it: the venue is paid in
+                           rupees, and this is only a guide. Renders nothing at
+                           all until an admin sets a rate. */}
+                        <IndicativePrice
+                          amountPkr={Number(startingPrice)}
+                          className="mt-2 sm:flex sm:flex-col sm:items-end"
+                        />
                       </div>
                     ) : null}
                   </div>

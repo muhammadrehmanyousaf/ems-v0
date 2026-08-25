@@ -18,6 +18,21 @@ import { Badge } from "@/components/ui/badge";
 import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 const KINDS = ["HALL", "FLOOR", "SECTION", "LAWN", "MARQUEE", "BASEMENT", "ROOFTOP", "OTHER"];
+
+/**
+ * 10.13 — mirrors `SubVenue.genderMode`, in the venue's own words rather than
+ * the column's. SEGREGABLE is the normal Pakistani answer — a hall with a
+ * partition — and a venue that picks it can host any of the others.
+ */
+const GENDER_MODES = [
+  { value: "MIXED", label: "everyone together" },
+  { value: "SEGREGABLE", label: "can be partitioned" },
+  { value: "ZENANA", label: "ladies only (zenana)" },
+  { value: "MARDANA", label: "men only (mardana)" },
+];
+
+/** 10.16 — the kinds the weather can reach. Mirrors the server's OPEN_AIR_KINDS. */
+const OPEN_AIR = new Set(["LAWN", "ROOFTOP"]);
 const PKR = (n: number | string | null | undefined): string => (n == null || n === "" ? "—" : "Rs " + Math.round(Number(n)).toLocaleString("en-PK"));
 function readErr(e: unknown, fallback: string): string {
   return (e as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
@@ -115,12 +130,68 @@ export function VenueSpacesManagerView(): React.ReactElement | null {
                 <Badge variant="secondary">{n.kind}</Badge>
                 <span className="font-medium">{n.name}</span>
                 <span className="text-xs text-muted-foreground">cap {n.comfortCapacity ?? n.fireRatedCapacity ?? "—"} · {PKR(n.basePricePkr)} · {n.bookingMode === "WHOLE_DAY" ? "whole-day" : "session"}</span>
+
+                {/* 10.13 — what this space can host.
+
+                   The column has existed on every space since the hierarchy
+                   work and no screen ever showed it, so every hall on the
+                   platform sat at its MIXED default. A customer asking for a
+                   zenana function was then told "mixed" by a venue that may
+                   well have a partition. This is the venue's own answer, and
+                   it is the only place it can come from. */}
+                <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  hosts
+                  <select
+                    value={n.genderMode || "MIXED"}
+                    onChange={(e) => void guard(async () => { await venueSpacesApi.updateSubVenue(n.id, { genderMode: e.target.value }); await reload(); })}
+                    disabled={busy}
+                    aria-label={`What ${n.name} can host`}
+                    className="rounded-md border border-input bg-background px-1.5 py-0.5 text-[11px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {GENDER_MODES.map((g) => (
+                      <option key={g.value} value={g.value}>{g.label}</option>
+                    ))}
+                  </select>
+                </label>
+
+                {/* 10.16 — the wet-weather plan, for open-air spaces only.
+
+                   `backupSubVenueId` has been on the row all along with no
+                   route that could set it, so the customer-facing rule could
+                   only ever reach its "no wet-weather plan is recorded"
+                   branch — including at venues that have had a plan for
+                   twenty years. Only indoor spaces are offered: another lawn
+                   is not a wet-weather plan, and the server refuses one. */}
+                {OPEN_AIR.has(String(n.kind || "").toUpperCase()) && (
+                  <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                    if it rains →
+                    <select
+                      value={n.backupSubVenueId ?? ""}
+                      onChange={(e) => void guard(async () => { await venueSpacesApi.updateSubVenue(n.id, { backupSubVenueId: e.target.value ? Number(e.target.value) : null }); await reload(); })}
+                      disabled={busy}
+                      aria-label={`Wet-weather backup for ${n.name}`}
+                      className="rounded-md border border-input bg-background px-1.5 py-0.5 text-[11px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <option value="">no plan recorded</option>
+                      {flat
+                        .filter((c) => c.id !== n.id && !OPEN_AIR.has(String(c.kind || "").toUpperCase()))
+                        .map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                    </select>
+                  </label>
+                )}
+
                 <div className="ml-auto flex gap-1">
                   <Button size="sm" variant="ghost" onClick={() => { setParentId(n.id); setKind(n.depth === 0 ? "FLOOR" : "SECTION"); }}>+ child</Button>
                   <Button size="sm" variant="ghost" className="text-destructive" onClick={() => void guard(async () => { await venueSpacesApi.deleteSubVenue(n.id); await reload(); })} disabled={busy}>delete</Button>
                 </div>
               </div>
             ))}
+            <p className="pt-1 text-[11px] text-muted-foreground">
+              What a space can host, and where an open-air one moves if the weather turns, are both
+              shown to customers before they book.
+            </p>
           </div>
         )}
 

@@ -257,6 +257,17 @@ export interface BookingFormData {
   slotStartTime?: string | null;
   slotEndTime?: string | null;
   guestCount: number;
+  /**
+   * 10.13 (UC-15) — how the function is arranged: MIXED, MARDANA, ZENANA or
+   * SEGREGABLE, mirroring `SubVenue.genderMode` and the CHECK constraint on
+   * `Bookings.requestedGenderMode`.
+   *
+   * Optional and three-state: `null`/absent means the family stated no
+   * preference, which is NOT the same as choosing MIXED. The check reports
+   * `unknown` rather than inventing a requirement on their behalf, and the
+   * payload omits the field entirely.
+   */
+  requestedGenderMode?: "MIXED" | "MARDANA" | "ZENANA" | "SEGREGABLE" | null;
 
   // Package
   selectedPackage: string;

@@ -174,6 +174,12 @@ export const data = {
     { name: "Audit logs", url: "/dashboard/admin/audit-logs",   icon: ScrollText },   // super-only
     { name: "Roles",      url: "/dashboard/roles",              icon: Settings2 },    // super-only
     { name: "Users",      url: "/dashboard/users",              icon: Users },        // super-only
+    // 7.13 — the indicative-currency rates. Super-only: a converted figure is a
+    // platform-wide number, and a vendor setting their own would let two venues
+    // quote the same rupee price at different pounds. Without this entry the
+    // routes exist and nothing can reach them, which is how the rule they feed
+    // came to be dead in the first place.
+    { name: "Currency rates", url: "/dashboard/admin/fx-rates", icon: CircleDollarSign }, // super-only
   ],
 
   // Highest-trust emergency tools — super-admin only.

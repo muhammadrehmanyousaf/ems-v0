@@ -48,7 +48,7 @@ const TAB_LABELS: Record<SettingsTabKey, string> = {
 // ROLE_LABEL moved to nav-user.tsx with the role line itself.
 
 // Items inside `adminPlatform` that are super-admin only.
-const SUPER_ONLY_PLATFORM = new Set(["Audit logs", "Roles", "Users"])
+const SUPER_ONLY_PLATFORM = new Set(["Audit logs", "Roles", "Users", "Currency rates"])
 
 function buildVendorSections(
   user: ReturnType<typeof useUser>["user"],
