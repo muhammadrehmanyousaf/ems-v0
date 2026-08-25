@@ -555,6 +555,23 @@ export default function BookingForm() {
       payload.guestCount = currentForm.guestCount;
     }
 
+    /**
+     * 10.13 (UC-15) — the arrangement the family asked for.
+     *
+     * The column, its CHECK constraint, the comparison against the hall's own
+     * `genderMode` and the verdict on the response have all existed; this is
+     * the value that makes any of them mean anything. Without it every booking
+     * arrived stating nothing, `checkGenderFit` returned `unknown` forever, and
+     * a family asking for a zenana function had no way to say so.
+     *
+     * Omitted entirely when the customer expressed no preference — absence is
+     * not a value, and sending "MIXED" for "didn't say" would record a
+     * requirement they never stated.
+     */
+    if (currentForm.requestedGenderMode) {
+      payload.requestedGenderMode = currentForm.requestedGenderMode;
+    }
+
     // BK-100.53 — service-location mode + address + notes. All optional.
     // Backend defaults absent fields to NULL (treated as at_vendor).
     if (currentForm.serviceLocationMode) {

@@ -34,6 +34,14 @@ export interface SubVenueNode {
   depth: number;
   basePricePkr: string | null;
   bookingMode: BookingMode;
+  /**
+   * 10.16 — the space this one moves to if the weather turns.
+   *
+   * On the row since the hierarchy work, and until now no route let a vendor
+   * SET it, so `describeBackupPlan` could only ever reach its "no wet-weather
+   * plan is recorded" branch. Nullable: most spaces are indoors and need none.
+   */
+  backupSubVenueId: number | null;
   children?: SubVenueNode[];
 }
 export interface SpaceTree {
@@ -129,7 +137,7 @@ export const venueSpacesApi = {
     businessId: number,
     body: { name: string; kind?: string; genderMode?: string; parentSubVenueId?: number | null; fireRatedCapacity?: number; comfortCapacity?: number; basePricePkr?: number; bookingMode?: BookingMode; displayOrder?: number },
   ): Promise<SubVenueNode> => unwrap<SubVenueNode>(api.post(`${BASE}/business/${businessId}/sub-venues`, body)),
-  updateSubVenue: (id: number, patch: Partial<{ name: string; kind: string; genderMode: string; fireRatedCapacity: number; comfortCapacity: number; basePricePkr: number; bookingMode: BookingMode; displayOrder: number; active: boolean }>): Promise<SubVenueNode> =>
+  updateSubVenue: (id: number, patch: Partial<{ name: string; kind: string; genderMode: string; fireRatedCapacity: number; comfortCapacity: number; basePricePkr: number; bookingMode: BookingMode; displayOrder: number; active: boolean; backupSubVenueId: number | null }>): Promise<SubVenueNode> =>
     unwrap<SubVenueNode>(api.patch(`${BASE}/sub-venues/${id}`, patch)),
   moveSubVenue: (id: number, newParentSubVenueId: number | null): Promise<SubVenueNode> => unwrap<SubVenueNode>(api.post(`${BASE}/sub-venues/${id}/move`, { newParentSubVenueId })),
   deleteSubVenue: (id: number): Promise<{ deleted: number; ids: number[] }> => unwrap(api.delete(`${BASE}/sub-venues/${id}`)),

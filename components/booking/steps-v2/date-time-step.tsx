@@ -17,6 +17,16 @@ import { ServiceLocationPicker } from "@/components/booking/service-location-pic
 import { venueSpacesApi, type SubVenueNode } from "@/lib/api/venueSpaces"
 // SLOTS step 10 — the single slot vocabulary.
 import { LEGACY_PERIODS, formatSlotRange } from "@/lib/booking/slot-vocabulary"
+// 10.13 / 10.16 — the arrangement a family needs, and rain on an open lawn.
+// A mirror of src/utils/spaceRequirements.js, held to it by
+// scripts/space-fit-parity.mts. The server re-runs the same check at booking
+// time and its answer is authoritative; this only says the same thing earlier,
+// while the customer can still pick a different hall.
+import {
+  ARRANGEMENT_CHOICES,
+  checkGenderFit,
+  describeBackupPlan,
+} from "@/lib/booking/space-fit"
 
 interface Props {
   formData: BookingFormData
@@ -168,6 +178,11 @@ export default function DateTimeStep({
   type FlatSpace = {
     id: number; name: string; kind: string; depth: number
     fireRatedCapacity: number | null; comfortCapacity: number | null
+    /* 10.13 / 10.16 — both of these were already on the wire and both were
+       dropped by this flatten, so the two things a space knows about itself
+       that a family most needs to hear could never be said. */
+    genderMode: string | null
+    backupSubVenueId: number | null
   }
   const [subVenueSpaces, setSubVenueSpaces] = useState<FlatSpace[]>([])
   useEffect(() => {
@@ -189,6 +204,8 @@ export default function DateTimeStep({
             id: n.id, name: n.name, kind: n.kind, depth,
             fireRatedCapacity: n.fireRatedCapacity ?? null,
             comfortCapacity: n.comfortCapacity ?? null,
+            genderMode: (n as any).genderMode ?? null,
+            backupSubVenueId: (n as any).backupSubVenueId ?? null,
           })
           if (n.children) walk(n.children, depth + 1)
         })
@@ -405,6 +422,33 @@ export default function DateTimeStep({
   const isWeddingStationery = vendorTypeName === "Wedding Invitations and Stationery"
   const needsGuestCount = GUEST_COUNT_VENDOR_TYPES.has(vendorTypeName)
   const enforceCapacity = !!venue?.maxCapacity || !!venue?.minCapacity
+
+  /* ── 10.13 / 10.16 — the space, and what it can and can't do ───────────── */
+
+  const selectedSubVenue = useMemo(
+    () => subVenueSpaces.find((s) => String(s.id) === String((formData as any).selectedSubVenueId)) || null,
+    [subVenueSpaces, (formData as any).selectedSubVenueId],
+  )
+
+  /**
+   * The verdict, computed only once a space is actually chosen.
+   *
+   * On "whole venue / any hall" there is no space to check, so the honest
+   * answer is silence — not "fits". A family that has picked no hall has been
+   * told nothing about any hall.
+   */
+  const genderFit = useMemo(
+    () => checkGenderFit(formData.requestedGenderMode, selectedSubVenue),
+    [formData.requestedGenderMode, selectedSubVenue],
+  )
+
+  const backupPlan = useMemo(() => {
+    if (!selectedSubVenue) return null
+    const backup = selectedSubVenue.backupSubVenueId
+      ? subVenueSpaces.find((s) => s.id === selectedSubVenue.backupSubVenueId) || null
+      : null
+    return describeBackupPlan(selectedSubVenue, backup)
+  }, [selectedSubVenue, subVenueSpaces])
 
   // Venue compliance soft-warnings (flag-gated, advisory only — never blocks).
   // Reads the optional limits the vendor set in Settings → Availability →
@@ -799,6 +843,46 @@ export default function DateTimeStep({
           </section>
         )}
 
+        {/* 10.13 (UC-15) — how the function is arranged.
+
+           `SubVenue.genderMode` has been on every space on the platform since
+           the venue-hierarchy work, and nothing ever compared it to what the
+           customer wanted, because no screen ever asked. A family booking a
+           zenana function into a MIXED hall found out when the guests arrived
+           — and for a lot of Pakistani households that decides whether the
+           women of the family attend at all.
+
+           Optional, and never blocking. A family that states nothing is not
+           refused and is told nothing, which is the honest answer: they have
+           not been checked. */}
+        {(vendorTypeName === "Wedding venue" || subVenueSpaces.length >= 1) && (
+          <section className="space-y-2">
+            <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
+              How is the function arranged?
+            </p>
+            <select
+              value={formData.requestedGenderMode || ""}
+              onChange={(e) =>
+                updateFormData((prev) => ({
+                  ...prev,
+                  requestedGenderMode: (e.target.value || null) as BookingFormData["requestedGenderMode"],
+                }))
+              }
+              className="w-full rounded-md border border-bridal-beige bg-bridal-ivory px-3 py-2.5 font-bridal text-[13px] text-bridal-charcoal outline-none focus:border-bridal-gold-dark"
+            >
+              <option value="">No preference / decide later</option>
+              {ARRANGEMENT_CHOICES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label} — {c.hint}
+                </option>
+              ))}
+            </select>
+            <p className="font-bridal text-[10.5px] text-bridal-text-soft">
+              We&apos;ll check the hall you pick can be arranged that way, and tell the venue.
+            </p>
+          </section>
+        )}
+
         {/* F-2 — canonical sub-venue picker (venue-hierarchy). Shown when the
            venue built ANY space(s); sends subVenueId (the per-hall path). Was
            gated `> 1`, which silently hid a venue's only hall (QA #19) — now
@@ -825,6 +909,46 @@ export default function DateTimeStep({
             <p className="font-bridal text-[10.5px] text-bridal-text-soft">
               Pick a specific hall, floor or partition, or leave as the whole venue.
             </p>
+
+            {/* 10.13 — the answer, while it can still change the decision.
+
+               Reported, never refused. A MIXED hall is not an error, it is a
+               fact the family needs BEFORE the night, while there is still
+               time to pick another hall or ask for a partition. Blocking here
+               would refuse a booking the venue may well be able to
+               accommodate, over a question only the venue can answer. */}
+            {genderFit.status === "mismatch" && genderFit.reason && (
+              <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-300 px-3 py-2 font-bridal text-[12px] text-amber-800">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <p>{genderFit.reason}</p>
+              </div>
+            )}
+            {genderFit.status === "fits" && (
+              <p className="font-bridal text-[11px] text-[#3F6B43]">
+                This hall can be arranged the way you&apos;ve asked.
+              </p>
+            )}
+            {/* The venue has not recorded what it can do — said as a question
+               for the venue, not a defect of it. */}
+            {genderFit.status === "unknown" && genderFit.reason && (
+              <p className="font-bridal text-[11px] text-bridal-text-soft">{genderFit.reason}</p>
+            )}
+
+            {/* 10.16 (UC-22) — rain on an open lawn. A December wedding on an
+               open lawn in Lahore is a normal thing to book and an abnormal
+               thing to have no plan for. */}
+            {backupPlan?.exposed && backupPlan.message && (
+              <div
+                className={
+                  backupPlan.hasPlan
+                    ? "flex items-start gap-2 rounded-md bg-bridal-sage/15 border border-bridal-sage/40 px-3 py-2 font-bridal text-[12px] text-[#3F6B43]"
+                    : "flex items-start gap-2 rounded-md bg-amber-50 border border-amber-300 px-3 py-2 font-bridal text-[12px] text-amber-800"
+                }
+              >
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <p>{backupPlan.message}</p>
+              </div>
+            )}
           </section>
         )}
       </div>{/* end right column */}
