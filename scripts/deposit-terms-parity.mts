@@ -107,6 +107,41 @@ for (const [what, ok] of claims) {
   else failures.push(`A17 claim not met: ${what}\n     text: ${live}`);
 }
 
+/**
+ * And that the sentences actually REACH a screen.
+ *
+ * This is the bug that started all of it. `describeDepositTerms` existed on the
+ * server, was correct, was unit-tested — and was called by nothing, so a
+ * customer agreed to a Rs 50,000 deposit that appeared nowhere. Equality with a
+ * dead function is worth nothing, so parity alone would not have caught it.
+ *
+ * A source-level check rather than a render test, because this app has no test
+ * runner: it asserts the Review step imports the helper AND uses its result in
+ * JSX. Cheap, and it fails the moment someone deletes the block.
+ */
+import fs from "node:fs";
+const REVIEW = "components/booking/steps-v2/review-step.tsx";
+try {
+  const src = fs.readFileSync(new URL(`../${REVIEW}`, import.meta.url), "utf8");
+  const wiring: Array<[string, boolean]> = [
+    ["Review imports describeDepositTerms", /import\s*\{[^}]*describeDepositTerms[^}]*\}\s*from\s*["']@\/lib\/booking\/deposit-terms["']/.test(src)],
+    ["Review calls it", /describeDepositTerms\s*\(/.test(src)],
+    // Deliberately matches the RENDER, not the variable. A first version of
+    // this check tested for "{depositTerms" and passed happily while the
+    // sentences were replaced by {null} — it was matching the surrounding
+    // `{depositTerms.length > 0 && ...}` conditional. Verified by deleting the
+    // render and watching this fail.
+    ["Review renders the sentences", /\{\s*depositTerms\.join\(/.test(src)],
+    ["Review renders the amount", /\{\s*formatPKR\(depositAmount\)\s*\}/.test(src)],
+  ];
+  for (const [what, ok] of wiring) {
+    if (ok) { pass++; console.log(`  PASS  ${what}`); }
+    else failures.push(`the deposit is computed but never shown: ${what} — ${REVIEW}`);
+  }
+} catch (e) {
+  failures.push(`cannot read ${REVIEW}: ${(e as Error).message}`);
+}
+
 const total = pass + failures.length;
 if (failures.length) {
   console.error(`\n  ${failures.length}/${total} FAILED\n`);
