@@ -36,7 +36,9 @@ const inputCls =
 function blankLine(kind: QuoteLineKind = "extra"): QuoteLine {
   const unit: QuoteLineUnit =
     kind === "menu" ? "per_head" : kind === "discount" || kind === "tax" ? "percent" : "per_event"
-  return { label: "", kind, unit, unitPrice: 0, qty: null }
+  // `note` is the discount reason (6.32/A14) and starts empty, so a new
+  // discount row opens showing the amber prompt rather than looking complete.
+  return { label: "", kind, unit, unitPrice: 0, qty: null, note: null }
 }
 
 export function QuoteLinesEditor({
@@ -177,6 +179,42 @@ export function QuoteLinesEditor({
                   </div>
                 )}
               </div>
+
+              {/*
+                WW-TEST-CASES 6.32 / A14 — a discount has to say WHY.
+
+                An unexplained discount is the one line on a quote nobody can
+                check later: the vendor's own books cannot answer "why did we
+                drop 15% on this booking", and on a marketplace taking
+                commission it is exactly where revenue goes missing.
+
+                The field is only shown for a discount. Every other kind is
+                self-explanatory from its label, and a note box on all six rows
+                would be noise nobody fills in.
+
+                Asked HERE rather than left to the server's 400, for the same
+                reason the negative-amount rule is enforced in this component:
+                a refusal after pressing Send is the worst place to learn a
+                field was needed.
+              */}
+              {l.kind === "discount" && (
+                <div className="mt-2">
+                  <input
+                    className={`${inputCls}${!String(l.note ?? "").trim() ? " border-amber-400" : ""}`}
+                    value={l.note ?? ""}
+                    disabled={disabled}
+                    placeholder="Why? e.g. third booking this year, paying the balance up front"
+                    maxLength={200}
+                    onChange={(e) => set(i, { note: e.target.value })}
+                    aria-label="Reason for this discount"
+                  />
+                  {!String(l.note ?? "").trim() && (
+                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                      The customer sees this, and you&apos;ll be asked about it later.
+                    </p>
+                  )}
+                </div>
+              )}
 
               {l.unit === "per_head" && (
                 <p className="mt-1.5 text-right text-xs tabular-nums text-muted-foreground">
