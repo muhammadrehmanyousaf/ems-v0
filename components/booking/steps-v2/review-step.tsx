@@ -35,6 +35,8 @@ import {
   menuBillableHeads,
   menuIsAtMinGuarantee,
 } from "@/lib/pricing/menu"
+// A17 — the deposit sentences, mirrored from the server and parity-guarded.
+import { describeDepositTerms } from "@/lib/booking/deposit-terms"
 // WW-PKG-UNIT — per-head packages + the includesFood rule. `composeLineTotal`
 // is the ONE place package and menu are added together, so this surface cannot
 // reintroduce the double-charge by adding them itself.
@@ -257,6 +259,17 @@ export default function ReviewStep({
 
   // `total` is now base + add-ons. Umbrella discount applies on top.
   const total = baseTotal + addOnTotal
+
+  /**
+   * A17 — the deposit is read from the VENUE's policy, never added to `total`.
+   *
+   * At Review the booking does not exist yet, so there is no server response to
+   * take the sentences from; they come from the venue's own
+   * securityDepositPkr / depositReturnDays, through a mirror of the server
+   * helper that `scripts/deposit-terms-parity.mts` keeps honest.
+   */
+  const depositAmount = Number((venue as any)?.securityDepositPkr) || 0
+  const depositTerms = describeDepositTerms(venue as any)
 
   let downPayment = 0
   if (venue) {
@@ -739,6 +752,30 @@ export default function ReviewStep({
           )}
         </div>
       </section>
+
+      {/* A17 — the security deposit, DELIBERATELY OUTSIDE the total block above.
+          It is a second sum of money: refundable, held by the venue, and not
+          part of the price. Putting it inside that block — even as its own
+          figure — invites the customer to read it as another slice of the same
+          total, which is the exact confusion this rule exists to prevent.
+
+          Driving the live wizard to Review against a venue with a Rs 50,000
+          deposit showed Rs 250,000 and nothing else; a grep of the booking form
+          for "deposit" returned zero hits. The server had been returning it for
+          two deploys. */}
+      {depositTerms.length > 0 && (
+        <section className="rounded-md border border-bridal-gold/35 bg-bridal-gold/[0.06] px-5 py-4">
+          <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-charcoal/70 mb-1.5">
+            Refundable security deposit
+          </p>
+          <p className="font-display italic text-[22px] text-bridal-charcoal leading-none tabular-nums">
+            {formatPKR(depositAmount)}
+          </p>
+          <p className="font-bridal text-[12px] text-bridal-text-soft mt-2 leading-relaxed">
+            {depositTerms.join(" ")}
+          </p>
+        </section>
+      )}
 
       {/* WW-TRUST-COPY — "Payments are Stripe-secured" was not true of this
           flow: the advance goes to the venue's own account and the platform
