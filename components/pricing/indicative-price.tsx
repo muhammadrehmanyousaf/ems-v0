@@ -227,9 +227,16 @@ export function IndicativePrice({ amountPkr, className, tone = "default" }: Prop
       </div>
 
       {quote && (
-        // One line. `title` keeps the server's fuller sentence a hover away —
-        // it is the same promise, at more length, for anyone who wants it.
-        <p className={`mt-1 font-bridal text-[10.5px] leading-snug ${muted}`} title={quote.note}>
+        // One line, with the fuller promise a hover away — and the
+        // UNABBREVIATED date with it. The visible line drops the year to stay
+        // short, and the comment here used to claim the full date "stays in
+        // the hover text" when it appeared nowhere on the page at all. A
+        // rate's provenance is what makes an indicative figure honest rather
+        // than a number from nowhere, so it has to be recoverable.
+        <p
+          className={`mt-1 font-bridal text-[10.5px] leading-snug ${muted}`}
+          title={`${quote.note} Rate taken ${quote.asOf}.`}
+        >
           Indicative only — you&apos;ll be billed Rs {quote.amountPkr.toLocaleString("en-PK")}. Rate of{" "}
           {asOfShort}.
         </p>

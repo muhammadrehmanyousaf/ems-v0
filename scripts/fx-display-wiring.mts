@@ -115,7 +115,11 @@ try {
     /billed Rs \{quote\.amountPkr/.test(component));
   check("the rate still carries its date", /Rate of\b/.test(component) && /asOf/.test(component));
   // The server's fuller sentence must stay reachable, not be dropped.
-  check("the longer explanation is still offered", /title=\{quote\.note\}/.test(component));
+  check("the longer explanation is still offered", /\{quote\.note\}/.test(component));
+  // The visible line abbreviates the date to stay short, so the unabbreviated
+  // one has to survive somewhere — a rate's provenance is what makes an
+  // indicative figure honest rather than a number from nowhere.
+  check("and the unabbreviated rate date with it", /Rate taken \$\{quote\.asOf\}/.test(component));
   check("the rate's own date reaches the customer", /asOf/.test(client));
 
   // With no rate set anywhere the page must be byte-identical to what it was
@@ -127,10 +131,43 @@ try {
    * The client must do NO arithmetic. If a division by a rate ever appears
    * here, the four refusals above have quietly been duplicated — and the copy
    * will not be the one that gets updated.
+   *
+   * Comments are STRIPPED before this runs. The check reads `/` followed by
+   * optional space and "rate", which a line comment containing the word rate
+   * matches perfectly — "// rate's provenance" tripped it and reported a
+   * conversion that does not exist. A guard that fails on prose trains people
+   * to ignore it, which is worse than not having it.
    */
+  const code = component
+    .replace(/\/\*[\s\S]*?\*\//g, " ")   // block comments
+    .replace(/^\s*\/\/.*$/gm, " ")        // whole-line comments
+    .replace(/\s\/\/.*$/gm, " ");         // trailing comments
+
+  /**
+   * Stated as the invariant rather than as a pattern-match on one spelling.
+   *
+   * The old check looked for a slash followed by a rate identifier. Injecting a
+   * real conversion — `pkr / (quote?.pkrPerUnit ?? 1)` — sailed straight past
+   * it, because a single parenthesis broke the regex. A guard that passes on
+   * the very thing it exists to catch is worse than none: it reports safety it
+   * has not established.
+   *
+   * The honest invariant: the client renders only what the server DECIDED —
+   * symbol, approx, amountPkr, asOf, note. The inputs a re-implementation would
+   * need (the raw rate, the age, the staleness ceiling) must not appear in the
+   * component at all. Any conversion, however spelled, needs one of them.
+   */
+  const REIMPL_INPUTS = ["pkrPerUnit", "rateAgeDays", "maxRateAgeDays"]
+  const leaked = REIMPL_INPUTS.filter((f) => code.includes(f))
   check(
-    "the browser never divides by a rate itself",
-    !/\/\s*(pkrPerUnit|rate\b|perUnit)/.test(component) && !/Math\.(ceil|round)\s*\([^)]*pkrPerUnit/.test(component),
+    "the browser never touches the raw rate, so it cannot convert at all",
+    leaked.length === 0,
+    leaked.length ? `component references ${leaked.join(", ")} — the inputs a second implementation needs` : "",
+  );
+  // Belt and braces: no arithmetic operator near a currency amount either.
+  check(
+    "and does no arithmetic on the amount",
+    !/\bpkr\s*[/*]/.test(code) && !/Math\.(ceil|round|floor)\s*\(/.test(code),
     "a conversion in the client is a second implementation of the staleness rules",
   );
 } catch (e) {
