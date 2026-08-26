@@ -224,9 +224,15 @@ export class BookingAPI {
   }
 
   // BK-067 — open + read dispute
+  /**
+   * `noShowWindowDays` rides along on BOTH the 200 and the 404 — "no dispute
+   * on this booking" is the normal pre-filing state, and it is exactly when a
+   * vendor needs to know how long they have to report a no-show. Read it off
+   * the error payload in that case (`err.response.data.data`).
+   */
   static async getDispute(
     bookingId: number,
-  ): Promise<{ dispute: BookingDispute | null }> {
+  ): Promise<{ dispute: BookingDispute | null; noShowWindowDays?: number }> {
     const res = await axiosInstance.get(`${v1}/${bookingId}/dispute`);
     return res.data?.data;
   }

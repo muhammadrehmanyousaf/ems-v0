@@ -16,13 +16,15 @@
  *     201 { dispute }                        — success
  *     400 reason_too_short                   — reason < 15 chars
  *     400 event_not_yet_passed               — too early
- *     400 noshow_window_expired              — > 7 days post-event
+ *     400 noshow_window_expired              — past NOSHOW_REPORT_WINDOW_DAYS
+ *                                              (default 2, NOT 7); the payload
+ *                                              carries the real `windowDays`
  *     400 booking_not_confirmed_or_completed — wrong status
  *     403 not_authorized                     — caller not a booked vendor
  *     409 dispute_already_exists             — already filed
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,14 +61,20 @@ const REASON_MAX = 1000;
  * Coerce backend error codes into user-friendly messages. The list
  * mirrors the exhaustive switch in `disputeController.openNoShowReport`.
  */
-function humaniseError(code: string | undefined): string {
+function humaniseError(code: string | undefined, windowDays?: number | null): string {
   switch (code) {
     case "reason_too_short":
       return `Please provide a more detailed reason (at least ${REASON_MIN} characters).`;
     case "event_not_yet_passed":
       return "You can only report a no-show after the event date has passed.";
     case "noshow_window_expired":
-      return "The no-show reporting window has closed (7 days after the event).";
+      // The server sends the real window back with this very error
+      // (disputeService: `{ code: "noshow_window_expired", daysSinceEvent,
+      // windowDays }`). Hard-coding "7 days" here told a vendor they had
+      // missed a deadline that never existed — the default is 2.
+      return windowDays
+        ? `The no-show reporting window has closed (${windowDays} day${windowDays === 1 ? "" : "s"} after the event).`
+        : "The no-show reporting window has closed.";
     case "booking_not_confirmed_or_completed":
       return "This booking is not in a state where a no-show can be reported.";
     case "not_authorized":
@@ -99,6 +107,36 @@ export function VendorNoShowDialog({
   const [photoLink, setPhotoLink] = useState("");
   const [contactAttempts, setContactAttempts] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  /**
+   * The real reporting window, from the server.
+   *
+   * This dialog used to state "Available for 7 days after the event date".
+   * The window is NOSHOW_REPORT_WINDOW_DAYS, default 2 — so the screen invited
+   * a vendor whose couple never arrived to take a week over a decision they
+   * had 48 hours to make, and the expiry error then blamed them for missing a
+   * seven-day deadline that never existed.
+   *
+   * `GET /bookings/:id/dispute` carries it on the 404 as well as the 200,
+   * because "no dispute yet" IS the state a vendor is in when they need to
+   * know. Until it arrives the copy states no number at all rather than
+   * guessing one — a vague-but-true line beats a confident wrong one.
+   */
+  const [windowDays, setWindowDays] = useState<number | null>(null);
+  useEffect(() => {
+    if (!open || windowDays !== null) return;
+    let cancelled = false;
+    BookingAPI.getDispute(bookingId)
+      .then((d) => { if (!cancelled && d?.noShowWindowDays) setWindowDays(Number(d.noShowWindowDays)); })
+      .catch((err) => {
+        // The 404 ("no dispute on this booking") is the normal pre-filing
+        // case and still carries the window.
+        const n = (err as { response?: { data?: { data?: { noShowWindowDays?: number } } } })
+          ?.response?.data?.data?.noShowWindowDays;
+        if (!cancelled && n) setWindowDays(Number(n));
+      });
+    return () => { cancelled = true; };
+  }, [open, bookingId, windowDays]);
 
   const resetForm = () => {
     setReason("");
@@ -140,11 +178,12 @@ export function VendorNoShowDialog({
       handleClose(false);
       onReported?.();
     } catch (err) {
-      const data = (err as { response?: { data?: { message?: string } } })
-        ?.response?.data;
+      const data = (err as {
+        response?: { data?: { message?: string; data?: { windowDays?: number } } };
+      })?.response?.data;
       toast({
         title: "Couldn't file no-show report",
-        description: humaniseError(data?.message),
+        description: humaniseError(data?.message, data?.data?.windowDays ?? windowDays),
         variant: "destructive",
       });
     } finally {
@@ -181,8 +220,10 @@ export function VendorNoShowDialog({
                 our team and pauses payouts on this booking.
               </span>
               <span className="block text-xs text-neutral-500">
-                Available for 7 days after the event date. Once filed, your
-                evidence helps us decide on refund or release.
+                {windowDays
+                  ? `Available for ${windowDays} day${windowDays === 1 ? "" : "s"} after the event date.`
+                  : "Available for a short window after the event date."}{" "}
+                Once filed, your evidence helps us decide on refund or release.
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
