@@ -31,6 +31,7 @@ import {
     BusinessesAPI, PackagesAPI, MenusAPI,
     type ApiBusiness, type ApiPackage, type ApiMenu,
 } from '@/lib/api/dashboard';
+import { isSettled } from '@/lib/payment-status';
 
 interface EditBookingDialogProps {
     open: boolean;
@@ -367,7 +368,10 @@ export function EditBookingDialog({ open, onOpenChange, booking, onSuccess }: Ed
 
     const isOfflineEmail  = (booking.customerEmail ?? '').startsWith('offline_');
     const canComplete     = booking.status === 'Confirmed';
-    const isFullyPaid     = booking.paymentStatus === 'Paid';
+    // isSettled gates the Mark as Completed switch below. A vendor who gave a
+    // goodwill refund after the wedding had still been paid in full, so a bare
+    // 'Paid' equality left them unable to ever close the booking.
+    const isFullyPaid     = isSettled(booking.paymentStatus);
     const packageChanged  = selectedPackageId !== (detail?.packageId ? String(detail.packageId) : '');
     const menuChanged     = selectedMenuId    !== (detail?.menuId    ? String(detail.menuId)    : '');
 

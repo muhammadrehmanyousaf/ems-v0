@@ -129,6 +129,21 @@ const PAYMENT_CONFIG: Record<string, { label: string; tone: string }> = {
     label: "Partial",
     tone: "border-bridal-rose/45 bg-bridal-blush text-bridal-mauve",
   },
+  // WW-PARTIALREFUND. The key is the lowercased server value, so this one
+  // carries a space — statusKey() only lowercases.
+  //
+  // It has to exist. An unrecognised key falls through to PAYMENT_CONFIG.pending
+  // below, so without this entry a couple who had just been sent money back
+  // would be told their wedding was "Unpaid" — the most alarming possible
+  // reading of a refund arriving.
+  //
+  // Muted ground puts it in the refund family; the coloured border and darker
+  // text say it is not the finished article, and keep it distinct from
+  // "Partial", which is the opposite direction of travel (money still owed).
+  "partially refunded": {
+    label: "Partly refunded",
+    tone: "border-bridal-mauve/45 bg-muted text-bridal-charcoal",
+  },
   refunded: {
     label: "Refunded",
     tone: "border-border bg-muted text-muted-foreground",

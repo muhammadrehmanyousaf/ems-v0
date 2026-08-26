@@ -25,6 +25,7 @@ import { Loader2, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import axiosInstance from '@/lib/axiosConfig';
 import type { BookingData } from '@/lib/dashboard-types';
+import { isSettled } from "@/lib/payment-status";
 
 interface RecordRefundDialogProps {
     open: boolean;
@@ -63,7 +64,12 @@ export function RecordRefundDialog({
     const vendorDP = details.reduce((s, d) => s + (Number(d.downPayment) || 0), 0);
     const total = vendorTotal > 0 ? vendorTotal : Number(booking.totalAmount) || 0;
     const isPartial = booking.paymentStatus === 'Partial';
-    const isPaid = booking.paymentStatus === 'Paid';
+    // isSettled, not a bare 'Paid'. After a first partial refund the status is
+    // Partially Refunded, which made `received` below fall to 0 — so every
+    // further refund was rejected as exceeding what was received and a vendor
+    // could never record the second half of a staged refund. The backend
+    // ledger stays the real cap (refund_exceeds_refundable).
+    const isPaid = isSettled(booking.paymentStatus);
     const received = isPaid ? total : isPartial ? (vendorDP || Number(booking.downPayment) || 0) : 0;
 
     const handleSubmit = async () => {
