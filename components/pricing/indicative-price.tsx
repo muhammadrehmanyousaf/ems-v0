@@ -185,7 +185,30 @@ export function IndicativePrice({ amountPkr, className, tone = "default" }: Prop
    * sentence moves to the hover title, where it is available without
    * competing with the price it is annotating.
    */
-  const muted = onDark ? "text-bridal-ivory/65" : "text-bridal-text-soft"
+  /**
+   * ── Why this block carries its own backdrop on dark ─────────────────────
+   *
+   * On a venue hero the only thing between this text and the vendor's photo
+   * was a page-wide gradient scrim. Measured on the live hero, the currency
+   * control came out at 1.54:1 at worst on mobile and 2.36:1 on the brightest
+   * desktop slide, against the 4.5:1 that WCAG 2.2 AA asks of 11px text; the
+   * compliance line reached 3.4:1. Both are legibility that depends on which
+   * photograph the vendor happened to upload — a floor no vendor knows they
+   * are setting, on the line that has to say the venue is paid in rupees.
+   *
+   * So the control and the disclosure sit on a near-opaque charcoal chip.
+   * Composited over the worst case a photo can present (white), the chip
+   * lands at L≈0.049, which puts ivory text at ~9.8:1 and the disclosure at
+   * ~6.5:1 — above the floor for ANY image, not for the ones we sampled.
+   *
+   * Gold does not survive that test: #C9956A over the same worst case is
+   * 4.05:1, under the line. It stays as the focus ring and the chevron,
+   * where 3:1 non-text contrast applies, and the label itself goes ivory.
+   */
+  const muted = onDark ? "text-bridal-ivory/75" : "text-bridal-text-soft"
+  const chip = onDark
+    ? "bg-bridal-charcoal/85 ring-1 ring-bridal-ivory/20 backdrop-blur-[2px]"
+    : "bg-white/70 ring-1 ring-bridal-charcoal/10"
 
   return (
     <div className={className}>
@@ -205,25 +228,47 @@ export function IndicativePrice({ amountPkr, className, tone = "default" }: Prop
           <span className={`font-bridal text-[11px] ${muted}`}>Show approx in</span>
         )}
 
-        {/* A quiet inline control, not a boxed form field. It belongs to the
-           figure beside it, so it carries no separate label. */}
-        <select
-          value={currency || ""}
-          onChange={(e) => void pick(e.target.value)}
-          aria-label="Show an approximate price in another currency"
-          className={`cursor-pointer appearance-none border-0 bg-transparent p-0 pr-3 font-bridal text-[11px] tracking-wide underline decoration-dotted underline-offset-[3px] outline-none focus-visible:ring-1 focus-visible:ring-offset-2 ${
-            onDark
-              ? "text-bridal-gold focus-visible:ring-bridal-gold"
-              : "text-bridal-gold-dark focus-visible:ring-bridal-gold-dark"
-          }`}
+        {/* A quiet control, but a control. It reads as one now: a chevron
+           rather than a dotted underline (`appearance-none` had removed the
+           native arrow and left nothing in its place), and a 24px box, which
+           is the floor WCAG 2.2 AA sets for a touch target — the old one was
+           16.5px tall with no padding, comfortably under it. */}
+        <span
+          className={`relative inline-flex items-center rounded-full ${chip}`}
         >
-          <option value="">Rupees only</option>
-          {available.map((c) => (
-            <option key={c} value={c}>
-              {c}
+          <select
+            value={currency || ""}
+            onChange={(e) => void pick(e.target.value)}
+            aria-label="Show an approximate price in another currency"
+            className={`min-h-[24px] cursor-pointer appearance-none border-0 bg-transparent py-0 pl-2.5 pr-6 font-bridal text-[11px] tracking-wide outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+              onDark
+                ? "text-bridal-ivory focus-visible:ring-bridal-gold focus-visible:ring-offset-bridal-charcoal"
+                : "text-bridal-gold-dark focus-visible:ring-bridal-gold-dark"
+            }`}
+          >
+            {/* The native popup paints options on the OS menu surface, not on
+               this chip, so they get explicit colours rather than inheriting
+               a transparent background that no longer applies. */}
+            <option value="" className="bg-white text-bridal-charcoal">
+              Rupees only
             </option>
-          ))}
-        </select>
+            {available.map((c) => (
+              <option key={c} value={c} className="bg-white text-bridal-charcoal">
+                {c}
+              </option>
+            ))}
+          </select>
+          {/* Decorative: the select beside it already carries the label. */}
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 10 6"
+            className={`pointer-events-none absolute right-2 h-[6px] w-[10px] ${
+              onDark ? "text-bridal-gold" : "text-bridal-gold-dark"
+            }`}
+          >
+            <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </span>
       </div>
 
       {quote && (
@@ -234,7 +279,9 @@ export function IndicativePrice({ amountPkr, className, tone = "default" }: Prop
         // rate's provenance is what makes an indicative figure honest rather
         // than a number from nowhere, so it has to be recoverable.
         <p
-          className={`mt-1 font-bridal text-[10.5px] leading-snug ${muted}`}
+          className={`mt-1 font-bridal text-[10.5px] leading-snug ${muted} ${
+            onDark ? `inline-block rounded px-1.5 py-0.5 ${chip}` : ""
+          }`}
           title={`${quote.note} Rate taken ${quote.asOf}.`}
         >
           Indicative only — you&apos;ll be billed Rs {quote.amountPkr.toLocaleString("en-PK")}. Rate of{" "}
