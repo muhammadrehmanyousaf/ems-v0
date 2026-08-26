@@ -11,7 +11,7 @@
     "typecheck": "tsc -p tsconfig.ratchet.json --noEmit",
     "typecheck:ratchet": "node scripts/typecheck-ratchet.mjs",
     "typecheck:baseline": "node scripts/typecheck-ratchet.mjs --update",
-    "guards": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/deposit-terms-parity.mts && node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/space-fit-parity.mts && node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/fx-display-wiring.mts",
+    "guards": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/deposit-terms-parity.mts && node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/space-fit-parity.mts && node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/fx-display-wiring.mts && node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/plan-events-shape.mts",
     "guard:deposit": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/deposit-terms-parity.mts",
     "guard:space-fit": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/space-fit-parity.mts",
     "guard:fx": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/fx-display-wiring.mts",
