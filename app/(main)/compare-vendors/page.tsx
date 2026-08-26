@@ -147,7 +147,7 @@ function ComparePage() {
             <code className="text-xs">/compare-vendors?ids=12,18,42</code>.
           </p>
           <Link
-            href="/all-vendors"
+            href="/vendors"
             className="inline-block bg-bridal-gold text-white px-5 py-2 rounded-md text-sm font-semibold hover:bg-bridal-gold-dark"
           >
             Browse all vendors
@@ -177,7 +177,7 @@ function ComparePage() {
             or your link may be incomplete.
           </p>
           <Link
-            href="/all-vendors"
+            href="/vendors"
             className="inline-block bg-bridal-gold text-white px-5 py-2 rounded-md text-sm font-semibold"
           >
             Back to vendors
