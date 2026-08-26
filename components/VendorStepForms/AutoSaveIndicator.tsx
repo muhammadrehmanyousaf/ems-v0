@@ -39,9 +39,39 @@ function timeAgo(then: Date): string {
 
 export function AutoSaveIndicator({ lastSavedAt, saving }: AutoSaveIndicatorProps) {
   const [, force] = useState(0);
-  const [online, setOnline] = useState<boolean>(
-    typeof navigator !== "undefined" ? navigator.onLine : true,
-  );
+
+  /* Start optimistic, and learn the truth in the effect below.
+
+     This used to read `typeof navigator !== "undefined" ? navigator.onLine : true`,
+     which looks like a correct SSR guard and is not one. Node has defined
+     `navigator` as a GLOBAL since v21, so on the server `typeof navigator` is
+     "object" — the guard passes — but Node's navigator has no `onLine`, so the
+     expression evaluated to `undefined`. Falsy. The server therefore rendered
+     the OFFLINE branch. Measured on production: the server HTML for
+     /business-registration contains "Offline — kept on this device".
+
+     Two separate things went wrong from that one line:
+
+     1. Every vendor was told they had no network for the first paint of the
+        page whose entire job is to promise their work is being saved. This
+        component exists to stop vendors treating the form as hostile; it was
+        doing the opposite.
+
+     2. The browser hydrates with navigator.onLine === true, renders nothing,
+        and React finds a <span> in the server HTML the client did not produce.
+        It cannot reconcile that, so it throws away the whole root and
+        re-renders client-side (React #418 then #423). A root re-render
+        remounts the registration form and every useState goes back to its
+        initial value — which is exactly how a vendor who had completed all 8
+        steps landed back on a blank step 1 with their account already created.
+        See the note at business-registration-form.tsx:140, which worked around
+        the symptom; this is the cause.
+
+     `true` is the only safe initial value because it is the one the server can
+     also produce, and because a false "offline" is far more alarming than a
+     briefly-missing badge. Someone genuinely offline at page load is corrected
+     one tick later by the effect. */
+  const [online, setOnline] = useState<boolean>(true);
 
   // Re-render every 15s so "Saved 2s ago" → "Saved 17s ago" stays honest
   // without burning a render per second.
@@ -51,7 +81,12 @@ export function AutoSaveIndicator({ lastSavedAt, saving }: AutoSaveIndicatorProp
   }, []);
 
   useEffect(() => {
+    // `window` IS a real SSR guard — Node does not define it, unlike navigator.
     if (typeof window === "undefined") return;
+    // Read the real value only now, after hydration has matched the server.
+    // Someone who loaded the page with no connection sees the badge one tick
+    // late; the alternative is telling everyone else they are offline.
+    setOnline(window.navigator.onLine);
     const on = () => setOnline(true);
     const off = () => setOnline(false);
     window.addEventListener("online", on);
