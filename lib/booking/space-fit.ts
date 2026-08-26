@@ -45,6 +45,32 @@ export const GENDER_LABELS: Record<string, string> = {
 }
 
 /**
+ * The same four values read in two grammatical slots, so they need two forms.
+ *
+ * One label set was doing both jobs and only fit one: "You've asked for a
+ * SEGREGABLE function" rendered as "You've asked for a separate mardana and
+ * zenana sides function" — shown to a family at the moment they are deciding
+ * whether the women of the household can attend. Broken English there does not
+ * read as a typo; it reads as a venue that did not understand the question.
+ *
+ * Mirrors REQUEST_LABELS / SPACE_LABELS in src/utils/spaceRequirements.js.
+ */
+export const REQUEST_LABELS: Record<string, string> = {
+  MIXED: "a mixed function",
+  MARDANA: "a men-only (mardana) function",
+  ZENANA: "a women-only (zenana) function",
+  SEGREGABLE: "separate mardana and zenana sides",
+}
+
+/** The predicate form: the space name followed by "is ___". */
+export const SPACE_LABELS: Record<string, string> = {
+  MIXED: "mixed",
+  MARDANA: "men only (mardana)",
+  ZENANA: "women only (zenana)",
+  SEGREGABLE: "able to be partitioned",
+}
+
+/**
  * What the CUSTOMER is asked, which is not the same as what the column stores.
  *
  * The column's vocabulary is the venue's ("this hall is SEGREGABLE"). A family
@@ -124,7 +150,7 @@ export function checkGenderFit(requested: unknown, space: SpaceLike): GenderFit 
    */
   return {
     status: "mismatch",
-    reason: `You've asked for a ${GENDER_LABELS[want]} function, and ${space?.name || "this space"} is ${GENDER_LABELS[has]}. Ask the venue whether another space or a partition is possible.`,
+    reason: `You've asked for ${REQUEST_LABELS[want]}, and ${space?.name || "this space"} is ${SPACE_LABELS[has]}. Ask the venue whether another space or a partition is possible.`,
   }
 }
 

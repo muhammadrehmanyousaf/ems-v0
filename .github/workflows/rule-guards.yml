@@ -1,0 +1,90 @@
+# Rule guards — the checks that stop a business rule going silently dead.
+#
+# ── What these protect ────────────────────────────────────────────────────
+#
+# Several rules on this platform exist in TWO places on purpose: once on the
+# server (authoritative) and once mirrored in the browser, because the customer
+# needs the answer BEFORE the booking exists and there is no server response to
+# read it from yet. That is a deliberate trade, and it is only safe while
+# something proves the two copies still say the same thing.
+#
+#   scripts/deposit-terms-parity.mts   the security-deposit sentences
+#   scripts/space-fit-parity.mts       the mardana/zenana fit + wet-weather note
+#   scripts/fx-display-wiring.mts      the indicative-currency rules and wiring
+#
+# They also assert the rules REACH A SCREEN. That half matters more than the
+# parity: this codebase has produced six separate rules that were written,
+# correct, unit-tested — and called by nothing. Arithmetic tests prove a
+# function works; they cannot prove anybody calls it.
+#
+# ── Why the parity guards need BOTH repos ─────────────────────────────────
+#
+# Each one loads the real backend module and drives it against the frontend
+# mirror over the same inputs. With no backend checkout they exit non-zero
+# rather than skipping, which is correct — a parity check that quietly passes
+# when it compared nothing is exactly the failure mode they exist to prevent.
+# So this workflow checks out ems-v0-backend alongside and points WW_BACKEND
+# at it.
+#
+# That cross-repo checkout needs a token with read access to the backend repo.
+# Set a repository secret named BACKEND_REPO_TOKEN (a fine-grained PAT with
+# Contents: Read on muhammadrehmanyousaf/ems-v0-backend). Without it the
+# checkout step fails loudly, which is the honest outcome — it does not fall
+# back to running a weaker check.
+#
+# ── Why this does not run on push yet ─────────────────────────────────────
+#
+# Same reason as seo-quality.yml: GitHub Actions is blocked at the
+# account-billing level, so jobs fail before any step runs and every commit
+# gets a red ✗ that means nothing. Un-comment `pull_request` and `push` below
+# the day that is sorted — that is the single change needed to make these gate
+# every PR. Until then they are runnable on demand from the Actions tab, and
+# `npm run guards` runs the identical set locally.
+
+name: Rule Guards
+
+on:
+  workflow_dispatch:
+  # pull_request:
+  # push:
+  #   branches:
+  #     - main
+
+jobs:
+  guards:
+    name: Parity + wiring guards
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the frontend
+        uses: actions/checkout@v4
+        with:
+          path: ems-v0
+
+      - name: Check out the backend (the parity guards compare against it)
+        uses: actions/checkout@v4
+        with:
+          repository: muhammadrehmanyousaf/ems-v0-backend
+          token: ${{ secrets.BACKEND_REPO_TOKEN }}
+          path: ems-v0-backend
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ems-v0/package-lock.json
+
+      - name: Install
+        working-directory: ems-v0
+        run: npm ci
+
+      # WW_BACKEND overrides the guards' default, which is a local Windows
+      # absolute path suited to the machine this was written on.
+      - name: Run the rule guards
+        working-directory: ems-v0
+        env:
+          WW_BACKEND: ${{ github.workspace }}/ems-v0-backend
+        run: npm run guards
+
+      - name: TypeScript ratchet
+        working-directory: ems-v0
+        run: node scripts/typecheck-ratchet.mjs
