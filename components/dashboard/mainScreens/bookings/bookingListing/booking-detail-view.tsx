@@ -271,6 +271,22 @@ export default function BookingDetailView({
   }
 
   const details = booking.bookingDetails || [];
+  /**
+   * The line THIS vendor can act on — not line zero.
+   *
+   * Accept/decline was mounted with `details[0]?.id`. On a multi-vendor cart
+   * that is whoever happens to be first, so a vendor clicking "Can't take this
+   * date" aimed at another venue's line and got a 403; the control did not
+   * work on multi-vendor bookings at all. The server now marks each line with
+   * `ownedByMe` (it knows req.user; the client cannot, because `business` is
+   * serialised without `userId` on this shared customer/vendor route).
+   *
+   * Falling back to line zero when nothing is marked keeps single-line
+   * bookings — the overwhelming majority, and the only shape where the old
+   * code was ever right — behaving exactly as before.
+   */
+  const myLineId =
+    (details.find((d: any) => d?.ownedByMe)?.id ?? details[0]?.id) ?? null;
   const vendorTotal = details.reduce(
     (sum, d) => sum + (Number(d.totalAmount) || 0),
     0,
@@ -368,7 +384,7 @@ export default function BookingDetailView({
           <VendorApprovalCard
             bookingId={booking.id}
             status={booking.status}
-            bookingDetailsId={details[0]?.id ?? null}
+            bookingDetailsId={myLineId}
             customerName={booking.customerName}
             eventDate={booking.bookingDate}
             vendorApprovedAt={(booking as any).vendorApprovedAt ?? null}

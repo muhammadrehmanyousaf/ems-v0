@@ -55,6 +55,13 @@ const formatTime = (t?: string) => {
 
 export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetailSheetProps) {
   const details = booking.bookingDetails || []
+  /**
+   * The line THIS vendor can act on. See the same note in
+   * booking-detail-view.tsx — `details[0]` targeted another venue's line on a
+   * multi-vendor cart and 403'd. `ownedByMe` is stamped server-side.
+   */
+  const myLineId =
+    (details.find((d: any) => d?.ownedByMe)?.id ?? details[0]?.id) ?? null
   // WWL-050 — the venue whose hall the vendor is recording, or null.
   const [assignFor, setAssignFor] = React.useState<number | null>(null)
   const vendorTotal = details.reduce((sum, d) => sum + (Number(d.totalAmount) || 0), 0)
@@ -304,7 +311,7 @@ export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetai
           <VendorApprovalCard
             bookingId={booking.id}
             status={booking.status}
-            bookingDetailsId={details[0]?.id ?? null}
+            bookingDetailsId={myLineId}
             customerName={booking.customerName}
             eventDate={formatDate(booking.bookingDate)}
             vendorApprovedAt={(booking as any).vendorApprovedAt ?? null}
