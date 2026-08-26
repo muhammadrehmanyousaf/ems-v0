@@ -361,10 +361,33 @@ export class WeddingPlansAPI {
     const res = await axiosInstance.get(`${BASE}/${id}`);
     const d = res.data?.data;
     if (!d) return null;
-    // Normalise: events[] may already carry items[]; if the BE sent a
-    // flat items[] instead, group it by event so the builder never has
-    // to care which shape arrived.
-    const events: WeddingEvent[] = Array.isArray(d.events) ? d.events : [];
+    // ── Unwrap the per-event envelope ───────────────────────────────────
+    //
+    // This endpoint does NOT return WeddingEvent[]. Each entry is a wrapper:
+    //
+    //   { event: { id, eventType, eventDate, ... }, items, subtotal,
+    //     itemCount, bookedCount }
+    //
+    // Read as an event, that wrapper has no `eventType`, no `eventDate` and
+    // no `id` — but it DOES have `items`, so the vendor lines rendered
+    // normally and the breakage looked cosmetic. On the checkout screen
+    // every function came out as "Function · Date TBD", so a family booking
+    // a mehndi and a baraat could not tell which was which, or when, on the
+    // screen where they commit to booking the whole wedding.
+    //
+    // Flattened here rather than at each call site: the same wrapper reaches
+    // the builder and the checkout, and the next reader would hit it too.
+    const rawEvents: unknown[] = Array.isArray(d.events) ? d.events : [];
+    const events: WeddingEvent[] = rawEvents.map((entry) => {
+      const e = entry as Record<string, unknown>;
+      if (e && typeof e === "object" && e.event && typeof e.event === "object") {
+        return {
+          ...(e.event as WeddingEvent),
+          items: (Array.isArray(e.items) ? e.items : []) as PlanItem[],
+        };
+      }
+      return e as unknown as WeddingEvent;
+    });
     const flatItems: PlanItem[] = Array.isArray(d.items) ? d.items : [];
     if (flatItems.length && events.every((e) => !e.items)) {
       for (const e of events) {
