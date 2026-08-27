@@ -26,6 +26,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import axiosInstance from '@/lib/axiosConfig';
+import { vendorLeafHref } from '@/lib/seo/vendor-href';
 
 interface VendorCol {
   id: number;
@@ -347,12 +348,33 @@ function ComparePage() {
               <h3 className="text-sm font-semibold truncate">
                 {v.name || `Vendor #${v.id}`}
               </h3>
-              <Link
-                href={`/all-vendors/${v.id}`}
-                className="block text-center bg-bridal-gold text-white py-1.5 rounded-md text-xs font-semibold hover:bg-bridal-gold-dark"
-              >
-                View profile
-              </Link>
+              {/* `/all-vendors/:id` is not a route — it 404s. The canonical
+                  profile URL has four rules that are not guessable from here
+                  (see lib/seo/vendor-href.ts), and the cost of guessing is not
+                  a 404 but a 200 rendering somebody else's venue, which is why
+                  this was left dead rather than given an invented href.
+                  `vendorLeafHref` is the same builder the listing cards and
+                  the sitemap use. It returns undefined when no URL can land on
+                  this vendor, so render the button as disabled rather than
+                  sending the couple somewhere arbitrary. */}
+              {(() => {
+                const href = vendorLeafHref(v);
+                return href ? (
+                  <Link
+                    href={href}
+                    className="block text-center bg-bridal-gold text-white py-1.5 rounded-md text-xs font-semibold hover:bg-bridal-gold-dark"
+                  >
+                    View profile
+                  </Link>
+                ) : (
+                  <span
+                    className="block text-center bg-neutral-100 text-neutral-400 py-1.5 rounded-md text-xs font-semibold cursor-not-allowed"
+                    title="This vendor has no public profile page yet"
+                  >
+                    No profile
+                  </span>
+                );
+              })()}
             </div>
           ))}
 
