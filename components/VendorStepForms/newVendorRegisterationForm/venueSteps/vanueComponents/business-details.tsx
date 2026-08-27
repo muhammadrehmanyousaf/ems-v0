@@ -6,6 +6,7 @@ import MultipleRadio from '@/components/VendorStepForms/components/multiple-radi
 import MultipleSelect from '@/components/VendorStepForms/components/multiple-select'
 import RadioButton from '@/components/VendorStepForms/components/radio-button'
 import { useFormContext } from '@/lib/context/form-context'
+import { EVENT_OPTIONS_SELECT } from '@/lib/event-options'
 import React, { useEffect, useState } from 'react'
 import { BiFemale } from 'react-icons/bi'
 import { FaFemale, FaMale } from 'react-icons/fa'
@@ -90,13 +91,11 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
         { value: 'Transgender', icon: <BiFemale /> },
     ];
 
-    const Expertise = [
-        { value: "Engagement", label: "Engagement" },
-        { value: "Wedding", label: "Wedding" },
-        { value: "Parties", label: "Parties" },
-        { value: "Fashion Show", label: "Fashion Show" },
-        { value: "Dinner", label: "Dinner" },
-    ];
+    // Shared with the booking flow — a venue's Expertise IS the list a couple
+    // picks from on "What are you celebrating?" (event-selection-step reads
+    // venue.expertise first). Keeping one list means a vendor can never offer
+    // something the booking form won't show, or vice versa.
+    const Expertise = EVENT_OPTIONS_SELECT;
     // const types = [
     //     { value: 'Marquee', icon: <IoMdMail /> },
     //     { value: 'Hall', icon: <IoMdMail /> },
