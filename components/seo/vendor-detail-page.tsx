@@ -56,6 +56,7 @@ import { getVendorTypeGuidePillar } from "@/lib/seo/pricing-guide"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 import { getLocationImagery } from "@/lib/seo/location-imagery"
 import { VenueAnswers } from "@/components/seo/venue-answers"
+import { resolveAmenityLabels } from "@/lib/amenities"
 import { StickyQuoteBar } from "@/components/seo/sticky-quote-bar"
 
 interface PageInput {
@@ -153,6 +154,16 @@ export async function VendorDetailPage(input: PageInput) {
   const otherTypes = VENDOR_TYPES.filter((t) => t.slug !== vt.slug).slice(0, 6)
 
   // Schema — venues use EventVenue, everything else uses LocalBusiness.
+  /**
+   * WW-AMENITIES — the vendor's ticked facilities.
+   *
+   * Reads `amenitiesJson` (canonical, machine keys) FIRST and falls back to the
+   * legacy `amenities` label column. Reading only the legacy column would show
+   * a vendor fewer facilities than they ticked — measured on production, 3
+   * labels against 5 keys on the same row. See lib/amenities.ts.
+   */
+  const amenityList = resolveAmenityLabels(vendor.raw, vendor.amenities)
+
   const isVenue = vt.slug === "wedding-venues"
   const ldSchema = isVenue
     ? venueLD({
@@ -403,6 +414,43 @@ export async function VendorDetailPage(input: PageInput) {
                     sizes="(min-width: 1024px) 25vw, 50vw"
                     className="object-cover"
                   />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* WW-AMENITIES — what the vendor actually ticked in Setup.
+
+            `lib/seo/fetch-vendor.ts` had already normalised `amenities` onto
+            VendorDetail, and this page never referenced it. So a vendor could
+            tick AC, bridal suite, valet, generator backup and covered parking
+            in Business Settings, watch them save, and none of it ever reached
+            the page a couple reads. The data was arriving; the render threw it
+            away.
+
+            Resolution goes through lib/amenities.ts because there are TWO
+            columns and the obvious one is wrong: `amenitiesJson` is canonical
+            (the editor writes it, the server whitelists it) while `amenities`
+            is an older label column holding a subset — 3 labels against 5 keys
+            on the same production row. Rendering the legacy column would have
+            shown fewer facilities than the vendor ticked, which is the original
+            complaint wearing a different hat.
+
+            Renders nothing when the vendor has ticked nothing — an empty
+            heading tells a couple less than no heading at all. */}
+        {amenityList.length > 0 && (
+          <section className="mb-12">
+            <h2 className="font-display italic text-[24px] text-bridal-charcoal mb-5">
+              What&rsquo;s included
+            </h2>
+            <ul className="flex flex-wrap gap-2 max-w-3xl">
+              {amenityList.map((a) => (
+                <li
+                  key={a}
+                  className="inline-flex items-center rounded-full border border-bridal-beige bg-bridal-cream px-3.5 py-1.5 font-bridal text-[13px] text-bridal-text"
+                >
+                  {a}
                 </li>
               ))}
             </ul>

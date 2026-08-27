@@ -11,7 +11,7 @@
     "typecheck": "tsc -p tsconfig.ratchet.json --noEmit",
     "typecheck:ratchet": "node scripts/typecheck-ratchet.mjs",
     "typecheck:baseline": "node scripts/typecheck-ratchet.mjs --update",
-    "guards": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/deposit-terms-parity.mts && node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/space-fit-parity.mts && node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/fx-display-wiring.mts && node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/plan-events-shape.mts",
+    "guards": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/deposit-terms-parity.mts && node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/space-fit-parity.mts && node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/fx-display-wiring.mts && node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/plan-events-shape.mts && node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/amenities-check.mts",
     "guard:deposit": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/deposit-terms-parity.mts",
     "guard:space-fit": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/space-fit-parity.mts",
     "guard:fx": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/fx-display-wiring.mts",
@@ -25,7 +25,8 @@
     "cy:modules": "cypress run --e2e --spec \"cypress/e2e/10-modules/**/*.cy.ts\"",
     "cy:regression": "cypress run --e2e --spec \"cypress/e2e/02-regression/**/*.cy.ts\"",
     "cy:inventory": "node scripts/cypress-module-inventory.mjs",
-    "cy:generate": "node scripts/cypress-module-inventory.mjs && node scripts/cypress-generate-module-specs.mjs"
+    "cy:generate": "node scripts/cypress-module-inventory.mjs && node scripts/cypress-generate-module-specs.mjs",
+    "guard:amenities": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/amenities-check.mts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

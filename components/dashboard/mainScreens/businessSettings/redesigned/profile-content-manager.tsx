@@ -27,6 +27,7 @@ import {
   validatePkPhone,
   validateEmail,
 } from "@/components/dashboard/primitives/field-error"
+import { VENUE_AMENITIES } from "@/lib/amenities"
 
 const inputCls =
   "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
@@ -43,20 +44,12 @@ const VENUE_TYPES = [
   ["four_star", "4-star hotel"], ["five_star", "5-star hotel"], ["rooftop", "Rooftop"],
   ["beach", "Beach"], ["private_estate", "Private estate"], ["masjid", "Masjid"],
 ] as const
-const VENUE_AMENITIES = [
-  // Air conditioning was in none of the amenity surfaces — not this list, not
-  // the Amenities & services switches, not the backend whitelist — while the
-  // onboarding checklist's own copy for this very item read "AC, generator
-  // backup, bridal room — these are what a listing is compared on". The vendor
-  // was told AC is what couples compare on and given nowhere to say they have
-  // it. Added to Business.AMENITY_KEYS in the same change, since the server
-  // silently drops slugs it does not recognise.
-  ["air_conditioning", "Air conditioning"],
-  ["bridal_suite", "Bridal suite"], ["grooms_room", "Groom's room"], ["imam_room", "Imam room"],
-  ["vip_lounge", "VIP lounge"], ["kids_area", "Kids area"], ["prayer_hall", "Prayer hall"],
-  ["wudu_area", "Wudu area"], ["valet", "Valet parking"], ["generator_backup", "Generator backup"],
-  ["parking_covered", "Covered parking"], ["wheelchair_access", "Wheelchair access"],
-] as const
+// WW-AMENITIES — the catalogue moved to lib/amenities.ts, unchanged (same 12
+// keys, same order, same labels). It is shared now because the customer-facing
+// vendor page needs the identical key→label map to render what the vendor ticks
+// here: while the list lived privately in this file, the couple's page could not
+// read it, and the ticks reached nobody. Adding an amenity means adding it in
+// BOTH repos — the server drops slugs missing from Business.AMENITY_KEYS.
 const DAYS: [string, string][] = [
   ["mon", "Monday"], ["tue", "Tuesday"], ["wed", "Wednesday"], ["thu", "Thursday"],
   ["fri", "Friday"], ["sat", "Saturday"], ["sun", "Sunday"],
