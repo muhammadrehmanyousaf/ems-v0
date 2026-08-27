@@ -12,25 +12,11 @@
  */
 
 import { BACKEND_URL } from "@/lib/backend-url"
-import { slugifyName } from "./fetch-vendor"
-import {
-  VENDOR_TYPE_BACKEND_MAP,
-  BACKEND_TYPE_ALIASES,
-  getCity,
-  type VendorTypeSlug,
-} from "./constants"
-
-// Reverse the SEO→backend map (primary 1:1 entries + fold aliases) so we can
-// derive the SEO slug from the backend's `vendorType` string. Used to compute
-// canonical leaf URLs for listing cards.
-const BACKEND_TO_SEO: Record<string, VendorTypeSlug> = {
-  ...Object.fromEntries(
-    Object.entries(VENDOR_TYPE_BACKEND_MAP)
-      .filter(([, backend]) => backend != null)
-      .map(([seo, backend]) => [backend as string, seo as VendorTypeSlug]),
-  ),
-  ...BACKEND_TYPE_ALIASES,
-}
+// The canonical leaf-URL builder moved to ./vendor-href so a second caller
+// (compare-vendors) could stop guessing at it. Behaviour is unchanged; this
+// file was where it already lived correctly, just privately. The type map,
+// city lookup and slugifier went with it, and are no longer used here.
+import { vendorLeafHref } from "./vendor-href"
 
 /**
  * Is this image from the seeded stock pool rather than the vendor's own upload?
@@ -249,25 +235,10 @@ function normalize(raw: any): VendorListItem {
   const city = raw?.city ?? raw?.location ?? vendor?.city ?? ""
   const name = raw?.name ?? raw?.businessName ?? "Unnamed business"
 
-  // Build the L6-canonical leaf URL. Reference: docs/seo/03-url-conventions-LOCKED.md §L6.
-  // City is NOT required: a null/unmapped city routes under the "pakistan"
-  // national catch-all, which the detail route resolves by the trailing id (the
-  // same fallback the sitemap uses). Only id + a mapped type are load-bearing —
-  // without them the card would otherwise render a dead `href="#"`.
-  let href: string | undefined
-  if (id && vendorType) {
-    const seoTypeSlug = BACKEND_TO_SEO[vendorType]
-    if (seoTypeSlug) {
-      // Mirror the sitemap exactly: an empty OR unlisted city routes under the
-      // "pakistan" national catch-all, which the detail route resolves via
-      // getCity(). Anything else would 404 (the page does notFound() on an
-      // unresolvable city), which is worse than the old dead "#".
-      const raw = slugifyName(city)
-      const citySlug = raw && getCity(raw) ? raw : "pakistan"
-      const nameSlug = slugifyName(name)
-      href = `/${seoTypeSlug}/${citySlug}/${nameSlug}-${id}`
-    }
-  }
+  // The L6-canonical leaf URL, built by ./vendor-href. Undefined when there is
+  // no URL that lands on this vendor (no id, or a vendorType with no SEO slug),
+  // which the card renders as a disabled state rather than a dead "#".
+  const href = vendorLeafHref({ id, name, city, vendorType })
 
   return {
     id,
