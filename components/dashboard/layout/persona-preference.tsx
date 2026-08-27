@@ -14,9 +14,27 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useNavPersona, type NavPersona } from "@/lib/nav/nav-persona"
 
 
+/**
+ * The subtitles used to read "sirf zaroori cheezein" and "full features",
+ * promising a smaller and a larger FEATURE SET. No such difference exists:
+ * `navLabel()` "never renames a route, only the words shown", and the store's
+ * `full` flag is written by onboarding and read by nothing — every consumer
+ * (app-sidebar, mobile-bottom-nav, money-hub-view) destructures `persona`
+ * alone.
+ *
+ * That copy is why this control gets reported as broken. A vendor flips it
+ * expecting the product to change, sees the same screen, and files a bug —
+ * externally reported as "upon changing from Asaan to professional and
+ * professional to asaan nothing is changes", tested from this very page, where
+ * nothing is persona-driven and nothing was ever going to change.
+ *
+ * So the copy now says what the control does: it renames the menu. Either fix
+ * the words or build the feature — leaving a switch that advertises something
+ * it does not do costs a bug report every time someone new looks at it.
+ */
 const OPTIONS: { value: NavPersona; title: string; sub: string }[] = [
-  { value: "aasaan", title: "Aasaan · آسان", sub: "Roman-Urdu, sirf zaroori cheezein" },
-  { value: "professional", title: "Professional", sub: "Industry English, full features" },
+  { value: "aasaan", title: "Aasaan · آسان", sub: "Menu ke naam Roman-Urdu mein" },
+  { value: "professional", title: "Professional", sub: "Menu ke naam industry English mein" },
 ]
 
 export function PersonaPreference() {
@@ -28,7 +46,7 @@ export function PersonaPreference() {
         <div className="mb-3">
           <h3 className="text-sm font-semibold text-foreground">Naam kaise dikhayein? · Label style</h3>
           <p className="text-xs text-muted-foreground">
-            Aap ke hisaab se — aasaan Urdu, ya professional English.
+            Sirf left menu aur neeche ke tabs ke naam badalte hain — features wahi rehte hain.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Label style">
