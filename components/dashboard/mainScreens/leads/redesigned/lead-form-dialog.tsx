@@ -198,18 +198,49 @@ export function LeadFormDialog({
       : undefined,
     inquiry: validateOptionalText(form.inquiry, { label: "Inquiry / notes", max: 2000 }),
   }
-  // Errors only after a field is touched, so opening the dialog doesn't flag
-  // the empty phone the vendor is about to type.
+  /**
+   * WWL-LEADFREEZE — stored data the vendor never typed must not lock the record.
+   *
+   * Measured on production: 73 of this vendor's 78 leads carried a 10-digit
+   * contactPhone (e.g. "0311619148"), one digit short of a PK mobile. Those
+   * numbers predate the validation above and were written by the system, not
+   * typed here. The result was that 93% of the lead inbox could not be edited
+   * AT ALL — changing a lead's STATUS was blocked by a PHONE the vendor had
+   * never touched and could not be expected to know the correct digits for.
+   *
+   * Worse, the vendor was never shown why. `hasError` counted every field,
+   * while `shown` revealed errors only for TOUCHED ones — so nothing was ever
+   * highlighted, under a message reading "Fix the highlighted fields to save."
+   * A disabled button, no highlight, and an instruction to fix highlights that
+   * do not exist.
+   *
+   * Two separate corrections, because they are two separate faults:
+   *
+   *   1. SHOW it. A non-empty invalid value is flagged immediately, touched or
+   *      not. The `touched` gate exists so an EMPTY field the vendor is about
+   *      to fill is not pre-flagged; that intent is kept by requiring a value.
+   *   2. Do not BLOCK on it. Only fields the vendor actually supplied — typed
+   *      into, or changed from what loaded — can prevent a save. Type a bad
+   *      number and it is still refused, which is the whole point of the
+   *      validation; inherit one and you can still work the lead.
+   */
+  const initial = React.useMemo(() => blank(lead, prefill), [lead, prefill])
+  const vendorSupplied = (k: string) =>
+    !!touched[k] || form[k as keyof FormState] !== initial[k as keyof FormState]
+
   // A server-reported error wins over the local one: it is the reason the save
   // actually failed, and it is what the vendor has to act on (WWL-031).
   const shown = Object.fromEntries(
     Object.entries({ ...errs, ...serverErrs }).map(([k, v]) => [
       k,
-      serverErrs[k] ?? (touched[k] ? v : undefined),
+      serverErrs[k] ??
+        (touched[k] || String(form[k as keyof FormState] ?? "").trim() !== "" ? v : undefined),
     ]),
   ) as Record<string, string | undefined>
 
-  const hasError = Object.values(errs).some(Boolean)
+  // Only what the vendor supplied can block the save.
+  const blocking = Object.entries(errs).filter(([k, v]) => v && vendorSupplied(k))
+  const hasError = blocking.length > 0
   const canSave = form.contactName.trim() && !hasError && (isEdit || effectiveBusinessId != null)
 
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
