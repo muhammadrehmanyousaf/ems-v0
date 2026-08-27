@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { venueSpacesApi } from "@/lib/api/venueSpaces"
 // WW-ONE-DISH — Punjab / ICT allow one main dish and one sweet dish at a
 // marriage function, and the duty falls on the VENUE and the CATERER as much as
 // the host. Checked here, while the vendor builds, when fixing it is free.
@@ -85,6 +86,23 @@ export function MenusManager({
 }) {
   const qc = useQueryClient()
   const { data: menus, isLoading } = useQuery<ApiMenu[]>({ queryKey: ["menus", businessId], queryFn: () => MenusAPI.getAll(businessId) })
+  /**
+   * The venue's spaces, so a menu can say WHERE it is served. Same source the
+   * package editor uses, so the two lists can never disagree about what spaces
+   * exist. A venue that does not model spaces gets no picker at all.
+   */
+  const { data: spaceTree } = useQuery({
+    queryKey: ["venue-spaces-flat", businessId],
+    queryFn: () => venueSpacesApi.publicTree(businessId),
+    staleTime: 60_000,
+  })
+  const spaces = React.useMemo(() => {
+    const flat: { id: number; name: string; depth: number }[] = []
+    const walk = (ns: any[], depth: number) =>
+      (ns || []).forEach((n: any) => { flat.push({ id: n.id, name: n.name, depth }); if (n.children) walk(n.children, depth + 1) })
+    walk((spaceTree as any)?.tree || [], 0)
+    return flat
+  }, [spaceTree])
   const [adding, setAdding] = React.useState(false)
   const [editingId, setEditingId] = React.useState<number | null>(null)
   // WW-PRICING-OVERHAUL — pricingUnit is now an EXPLICIT vendor choice, not
@@ -102,14 +120,21 @@ export function MenusManager({
      * exactly as it always has: every dish is always served.
      */
     groups: Record<string, { label: string; choose: number }>;
-  }>({ title: "", price: "", dishes: [], minGuarantee: "", pricingUnit: "per_head", groups: {} })
+    /**
+     * Which space serves this menu. "" = venue-wide, which is what every menu
+     * meant before `Menus.subVenueId` existed. A hall with its own kitchen and
+     * its own rate card can now say so; before, every menu was offered in every
+     * space — the same defect packages had until they gained the column.
+     */
+    subVenueId: string;
+  }>({ title: "", price: "", dishes: [], minGuarantee: "", pricingUnit: "per_head", groups: {}, subVenueId: "" })
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
   const isPerHead = form.pricingUnit === "per_head"
   // Errors show only after a field is touched, so a blank new form doesn't open
   // covered in red.
   const [touched, setTouched] = React.useState<Record<string, boolean>>({})
   const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
-  const reset = () => { setForm({ title: "", price: "", dishes: [], minGuarantee: "", pricingUnit: "per_head", groups: {} }); setTouched({}); setAdding(false); setEditingId(null) }
+  const reset = () => { setForm({ title: "", price: "", dishes: [], minGuarantee: "", pricingUnit: "per_head", groups: {}, subVenueId: "" }); setTouched({}); setAdding(false); setEditingId(null) }
 
   // ── WW-ONE-DISH — dish rows ────────────────────────────────────────────
   const setDish = (i: number, patch: Partial<FormDish>) =>
@@ -370,6 +395,9 @@ export function MenusManager({
           id, { label: g.label ?? id, choose: g.choose },
         ]),
       ),
+      // NULL / absent = venue-wide, the value every menu carried before the
+      // column existed.
+      subVenueId: (m as any).subVenueId != null ? String((m as any).subVenueId) : "",
     })
     setEditingId(m.id); setAdding(true)
   }
@@ -408,6 +436,10 @@ export function MenusManager({
         title: form.title.trim(),
         price: Number(form.price) || 0,
         businessId,
+        // Which space serves this menu. Always sent — including as null — so
+        // clearing it back to venue-wide actually reaches the server rather than
+        // reading as "field omitted, leave it alone".
+        subVenueId: form.subVenueId === "" ? null : Number(form.subVenueId),
         /**
          * Groups ride alongside the items, and only when there are any — a menu
          * with no choice groups saves the shape it always has, byte for byte.
@@ -571,6 +603,32 @@ export function MenusManager({
                 {guaranteeNote && (
                   <p className="text-xs text-amber-600 dark:text-amber-400">{guaranteeNote}</p>
                 )}
+              </div>
+            )}
+            {/* Which hall serves this menu.
+                Rendered only when the venue actually models spaces, so a
+                single-space vendor is not asked a question that has one
+                answer. Defaults to venue-wide, which is what every existing
+                menu means. Mirrors the package editor's "Sold in" exactly. */}
+            {spaces.length > 1 && (
+              <div className="space-y-1.5">
+                <label className={labelCls} htmlFor="menu-space">Served in</label>
+                <select
+                  id="menu-space"
+                  className={inputCls}
+                  value={form.subVenueId}
+                  onChange={(e) => set("subVenueId", e.target.value)}
+                >
+                  <option value="">Every space in this venue</option>
+                  {spaces.map((sp) => (
+                    <option key={sp.id} value={String(sp.id)}>
+                      {" ".repeat(sp.depth * 3)}{sp.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-muted-foreground">
+                  Pick a space and this menu is only offered to couples booking that space.
+                </p>
               </div>
             )}
             {/* ── WW-ONE-DISH — dishes, each with what it counts as ────────

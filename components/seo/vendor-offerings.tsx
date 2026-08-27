@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * WW-OFFERINGS — how a venue's packages and menus look to a couple.
  *
@@ -23,7 +25,10 @@
  *
  * Server component: pure render off already-fetched data, no hooks, no client JS.
  */
+import * as React from "react";
 import Image from "next/image";
+import { useQuery } from "@tanstack/react-query";
+import { venueSpacesApi } from "@/lib/api/venueSpaces";
 import {
   packageIsPerHead,
   packagePriceBasisLabel,
@@ -417,7 +422,50 @@ function MenuCard({ menu, ruleApplies }: { menu: any; ruleApplies: RuleApplies }
 
 /* ── Section ───────────────────────────────────────────────────────────── */
 
-export function VendorOfferings({ packages, menus, city }: { packages: any[]; menus: any[]; city?: string | null }) {
+export function VendorOfferings({ packages, menus, city, businessId }: { packages: any[]; menus: any[]; city?: string | null; businessId?: number | null }) {
+  /**
+   * Which hall the couple is reading about.
+   *
+   * Packages and menus each record the space they belong to (`subVenueId`,
+   * NULL = venue-wide). This pamphlet showed the lot regardless, so someone
+   * reading about the 120-seat Terrace Lawn saw the Main Hall's 500-guest
+   * walima package and the Main Hall kitchen's menu — neither of which the
+   * venue can deliver in the room being described.
+   *
+   * null = the whole venue, and that is its own answer rather than "no
+   * filter": it shows the venue-wide offerings the vendor set up for the
+   * property, not every hall's private list. Identical rule to package-step
+   * and menu-selection-step, so the pamphlet and the booking wizard can never
+   * advertise different things.
+   */
+  const [spaceFilter, setSpaceFilter] = React.useState<number | null>(null);
+  const { data: spaceTree } = useQuery({
+    queryKey: ["venue-spaces-flat", businessId],
+    queryFn: () => venueSpacesApi.publicTree(Number(businessId)),
+    enabled: !!businessId,
+    staleTime: 60_000,
+  });
+  const venueSpaces = React.useMemo(() => {
+    const flat: { id: number; name: string }[] = [];
+    const walk = (ns: any[]) =>
+      (ns || []).forEach((n: any) => {
+        if (n?.id && n?.name) flat.push({ id: n.id, name: n.name });
+        if (n?.children) walk(n.children);
+      });
+    walk((spaceTree as any)?.tree || []);
+    return flat;
+  }, [spaceTree]);
+  /**
+   * One rule for both lists. If narrowing would leave NOTHING, the full list
+   * stands — an empty offerings panel reads as "this venue sells nothing" and
+   * would cost the vendor the enquiry.
+   */
+  const inSpace = (rows: any[]): any[] => {
+    const scoped = rows.filter(
+      (r) => r?.subVenueId == null || (spaceFilter != null && Number(r.subVenueId) === spaceFilter),
+    );
+    return scoped.length > 0 ? scoped : rows;
+  };
   /**
    * WW-JURISDICTION — the one-dish rule is s.5 of the PUNJAB Act, and this
    * pamphlet judged every venue in Pakistan against it. A Karachi marquee got a
@@ -439,6 +487,36 @@ export function VendorOfferings({ packages, menus, city }: { packages: any[]; me
 
   return (
     <>
+      {/* Which hall am I reading about?
+          Only shown when the venue actually models more than one space — a
+          single-hall vendor is not asked a question with one answer. */}
+      {venueSpaces.length > 1 && (
+        <div className="mb-6 space-y-2">
+          <p className="font-bridal text-[11px] uppercase tracking-[0.18em] text-bridal-text-label">
+            Showing prices for
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {[{ id: null as number | null, name: "Whole venue" }, ...venueSpaces].map((sp) => {
+              const on = spaceFilter === sp.id;
+              return (
+                <button
+                  key={String(sp.id ?? "all")}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setSpaceFilter(sp.id)}
+                  className={`rounded-full border px-3 py-1.5 font-bridal text-[12px] transition-colors ${
+                    on
+                      ? "border-bridal-gold bg-bridal-blush text-bridal-charcoal"
+                      : "border-bridal-beige bg-bridal-cream text-bridal-text-soft hover:border-bridal-gold/55"
+                  }`}
+                >
+                  {sp.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {pkgs.length > 0 && (
         <section className="mb-12">
           <h2 className="font-display italic text-[24px] text-bridal-charcoal mb-5">Packages</h2>

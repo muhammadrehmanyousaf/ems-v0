@@ -61,7 +61,29 @@ export default function MenuSelectionStep({
     })
   }
 
-  const menus = venue?.menus
+  /**
+   * Only the menus served in the space the customer picked.
+   *
+   * A menu now records which hall serves it (`subVenueId`, NULL = venue-wide),
+   * the same column packages already had. Without this filter a couple booking
+   * the Terrace Lawn was offered — and could buy — the Main Hall kitchen's
+   * menu, which is not food the venue can put on the table in the room they
+   * are paying for.
+   *
+   * Venue-wide menus are always shown, so nothing disappears for a venue that
+   * has not split its menus up. And if narrowing would leave the customer with
+   * NOTHING, the full list stands: an empty menu step is a dead end, and a
+   * slightly wide list beats no list at all on a live booking flow. Identical
+   * rule to package-step, deliberately.
+   */
+  const allMenus = venue?.menus
+  const chosenSpaceId = Number((formData as any).selectedSubVenueId) || null
+  const scopedMenus = chosenSpaceId
+    ? (allMenus || []).filter(
+        (m: any) => m?.subVenueId == null || Number(m.subVenueId) === chosenSpaceId,
+      )
+    : allMenus
+  const menus = scopedMenus && scopedMenus.length > 0 ? scopedMenus : allMenus
 
   const categoryLabels: Record<string, string> = {
     starters: "Starters",
