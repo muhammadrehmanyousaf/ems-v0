@@ -1527,6 +1527,13 @@ export interface ApiMenu {
   price: number;
   data: Record<string, unknown> | null;
   businessId: number;
+  /**
+   * The space this menu is served in. NULL = served across the whole venue,
+   * which is what every menu meant before the column existed — the same rule
+   * `Package.subVenueId` follows, deliberately. A hall with its own kitchen
+   * was offering its menu to a couple booking the lawn it cannot serve.
+   */
+  subVenueId?: number | null;
   /** WW-053. null = legacy per_event (flat price). */
   pricingUnit?: "per_event" | "per_head" | null;
   /**
@@ -1554,6 +1561,8 @@ export class MenusAPI {
     price: number;
     businessId: number;
     data?: Record<string, unknown>;
+    /** Null on purpose = venue-wide. Omitting it would mean "leave it alone". */
+    subVenueId?: number | null;
     pricingUnit?: "per_event" | "per_head" | null;
     minGuaranteeCount?: number | null;
   }): Promise<ApiMenu> {
@@ -1568,6 +1577,8 @@ export class MenusAPI {
       price?: number;
       businessId?: number;
       data?: Record<string, unknown>;
+      /** Sent even as null, so a menu can be moved back to venue-wide. */
+      subVenueId?: number | null;
       pricingUnit?: "per_event" | "per_head" | null;
       minGuaranteeCount?: number | null;
     },
