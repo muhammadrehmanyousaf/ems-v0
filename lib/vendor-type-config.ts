@@ -1,4 +1,5 @@
 import { VENDOR_TYPES } from "./vendor-types";
+import { EVENT_OPTIONS } from "./event-options";
 import {
   Building2,
   Camera,
@@ -197,7 +198,9 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     extraNavItems: ["Staff & payroll", "Suppliers", "Brokers", "Generator fuel", "Kitchen prep"],
     typeSpecificFields: [
       { key: "subBusinessType", label: "Venue Type", type: "select", options: ["Marquee", "Hall", "Outdoor", "Others"] },
-      { key: "expertise", label: "Expertise", type: "multi-select", options: ["Engagement", "Wedding", "Parties", "Fashion Show", "Dinner"] },
+      // Same list the registration picker and the booking flow use — see
+      // lib/event-options.ts for why the labels must track the backend's.
+      { key: "expertise", label: "Expertise", type: "multi-select", options: EVENT_OPTIONS },
       { key: "maxCapacity", label: "Maximum Capacity", type: "number", placeholder: "500" },
       { key: "minCapacity", label: "Minimum Capacity", type: "number", placeholder: "50" },
       { key: "catering", label: "In-house Catering", type: "boolean", description: "Does the venue provide catering?" },

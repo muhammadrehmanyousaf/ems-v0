@@ -137,7 +137,14 @@ export const venueSpacesApi = {
     businessId: number,
     body: { name: string; kind?: string; genderMode?: string; parentSubVenueId?: number | null; fireRatedCapacity?: number; comfortCapacity?: number; basePricePkr?: number; bookingMode?: BookingMode; displayOrder?: number },
   ): Promise<SubVenueNode> => unwrap<SubVenueNode>(api.post(`${BASE}/business/${businessId}/sub-venues`, body)),
-  updateSubVenue: (id: number, patch: Partial<{ name: string; kind: string; genderMode: string; fireRatedCapacity: number; comfortCapacity: number; basePricePkr: number; bookingMode: BookingMode; displayOrder: number; active: boolean; backupSubVenueId: number | null }>): Promise<SubVenueNode> =>
+  /**
+   * The three numeric fields are `| null` because clearing one is a real edit
+   * the server supports: `assertNonNegative` skips nulls and `node.update`
+   * writes them straight through to nullable columns. Typed as bare `number`,
+   * a vendor who set a wrong hard maximum — which REFUSES otherwise-good
+   * bookings — had no way to take it off again.
+   */
+  updateSubVenue: (id: number, patch: Partial<{ name: string; kind: string; genderMode: string; fireRatedCapacity: number | null; comfortCapacity: number | null; basePricePkr: number | null; bookingMode: BookingMode; displayOrder: number; active: boolean; backupSubVenueId: number | null }>): Promise<SubVenueNode> =>
     unwrap<SubVenueNode>(api.patch(`${BASE}/sub-venues/${id}`, patch)),
   moveSubVenue: (id: number, newParentSubVenueId: number | null): Promise<SubVenueNode> => unwrap<SubVenueNode>(api.post(`${BASE}/sub-venues/${id}/move`, { newParentSubVenueId })),
   deleteSubVenue: (id: number): Promise<{ deleted: number; ids: number[] }> => unwrap(api.delete(`${BASE}/sub-venues/${id}`)),

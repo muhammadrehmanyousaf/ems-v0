@@ -1,8 +1,9 @@
 "use client"
 
 import { BookingFormData, EventVenue, Vendor } from "@/lib/types"
-import { Palette, Music, Heart, Cake, Gift, Calendar, Check } from "lucide-react"
+import { Palette, Music, Heart, Cake, Gift, Calendar, Check, Utensils, Briefcase, Baby, GraduationCap, Moon } from "lucide-react"
 import { motion } from "framer-motion"
+import { EVENT_OPTIONS } from "@/lib/event-options"
 
 interface EventSelectionStepProps {
   selectedEvents?: string[]
@@ -22,12 +23,24 @@ const item = {
   visible: { opacity: 1, scale: 1, transition: { duration: 0.25 } },
 }
 
+// Anything unlisted falls back to Calendar, so a new event type never renders
+// without an icon.
 const iconMap: Record<string, any> = {
+  Mehndi: Palette,
+  Baraat: Heart,
+  Walima: Utensils,
+  Nikah: Heart,
+  Mayoun: Palette,
+  Dholki: Music,
+  Reception: Music,
   Engagement: Gift,
-  Wedding: Heart,
-  Parties: Music,
-  "Fashion Show": Palette,
-  Dinner: Cake,
+  Birthday: Cake,
+  Corporate: Briefcase,
+  Aqiqa: Baby,
+  Graduation: GraduationCap,
+  Milaad: Moon,
+  Soyem: Moon,
+  Other: Calendar,
 }
 
 export default function EventSelectionStep({ selectedEvents = [], onEventToggle, setFormData, formData, venue }: EventSelectionStepProps) {
@@ -50,7 +63,7 @@ export default function EventSelectionStep({ selectedEvents = [], onEventToggle,
         return v.services
       }
     }
-    return ["Wedding", "Engagement", "Parties", "Fashion Show", "Dinner"]
+    return EVENT_OPTIONS
   }
 
   const availableEvents = getAvailableEvents()

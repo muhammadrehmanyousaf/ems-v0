@@ -55,9 +55,22 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
    */
   const allPackages = venue?.packages || []
   const chosenSpaceId = Number((formData as any).selectedSubVenueId) || null
-  const scoped = chosenSpaceId
-    ? allPackages.filter((p: any) => p?.subVenueId == null || Number(p.subVenueId) === chosenSpaceId)
-    : allPackages
+  /*
+   * No space chosen means the WHOLE VENUE, and that is its own answer — not
+   * "no filter".
+   *
+   * This used to fall through to the unfiltered list, so booking the entire
+   * venue showed every hall's private package: the 120-seat Terrace Lawn
+   * mehndi package offered to someone taking the whole property. Whole-venue
+   * is served by the venue-wide packages — the ones the vendor set up at
+   * onboarding with no hall attached — so that is what it shows.
+   *
+   * Same rule, stated once, for both branches: a package is offered here if it
+   * is venue-wide, or if it belongs to the space being booked.
+   */
+  const scoped = allPackages.filter(
+    (p: any) => p?.subVenueId == null || (chosenSpaceId != null && Number(p.subVenueId) === chosenSpaceId),
+  )
   const venuePackages = scoped.length > 0 ? scoped : allPackages
   const isCarRental = venue?.vendor?.vendorType === "Car rental"
   const isBridalWear = venue?.vendor?.vendorType === "Bridal wearing"

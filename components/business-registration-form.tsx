@@ -766,6 +766,17 @@ export function BusinessRegistrationForm() {
           }
         : undefined;
 
+      // The venue step now stores catering as a list (internal / external /
+      // both). Older saved drafts still hold the single string, and "both" was
+      // never storable before, so normalise all three shapes here.
+      const cateringChoices: string[] = Array.isArray(formData.catering)
+        ? formData.catering
+        : formData.catering === "both"
+          ? ["internal", "external"]
+          : formData.catering
+            ? [formData.catering]
+            : [];
+
       const formatedData = {
         fullName: formData.fullName,
         email: formData.email,
@@ -796,7 +807,15 @@ export function BusinessRegistrationForm() {
         cancelationPolicy: formData.cancelationPolicy,
         covidComplaint: formData.covidComplaint,
         parking: formData.parking,
-        catering: formData.catering === "internal",
+        // Catering is two INDEPENDENT policies, so it needs two flags. Squeezing
+        // it into the single `catering` boolean is what made "both" impossible to
+        // register: true meant internal, false meant external, and a venue that
+        // does both had to under-declare itself. `outsideVendorsAllowed` already
+        // exists on Business for exactly this ("customer free to bring external
+        // vendors") — it simply was never set at signup.
+        // Legacy single-string drafts ("internal" / "external") still map.
+        catering: cateringChoices.includes("internal"),
+        outsideVendorsAllowed: cateringChoices.includes("external"),
         // Bridal wear specific fields
         travelToClientHome: formData.travelToClientHome,
         sellMehndi: formData.sellMehndi,

@@ -344,12 +344,28 @@ export function TypeSpecificManager({ business, config, onSaved }: Props) {
         }
 
         // Default flat rendering for other multi-select fields.
+        //
+        // Stored values that are no longer offered still get a chip. This used
+        // to render `field.options` alone, so when a list changes under a
+        // vendor — as the event list just did, dropping "Wedding" / "Parties" /
+        // "Fashion Show" / "Dinner" for the real functions — anything they had
+        // saved became invisible here while staying in the array and being
+        // written straight back on the next save. The vendor could not see it
+        // and could not remove it, and for `expertise` the booking flow kept
+        // offering those dead options to couples. Showing them makes them
+        // removable, which is the only way a vendor migrates onto a new list.
+        const retired = selected.filter((v) => !(field.options ?? []).includes(v))
         return (
           <div key={field.key} className="space-y-1.5 sm:col-span-2">
             <label className={labelCls}>{field.label}</label>
             {field.description && <p className="text-xs text-muted-foreground">{field.description}</p>}
+            {retired.length > 0 && (
+              <p className="text-xs text-amber-600">
+                No longer offered: {retired.join(", ")} — tap to remove.
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
-              {field.options?.map((opt) => {
+              {[...(field.options ?? []), ...retired].map((opt) => {
                 const isSelected = selected.includes(opt)
                 return (
                   <button
