@@ -1,0 +1,56 @@
+/**
+ * Styles for the root 404 page — and ONLY the root 404 page.
+ *
+ * ── Why this file exists rather than an import of globals.css ────────────
+ *
+ * `app/not-found.tsx` is the ROOT not-found: an unmatched URL renders it
+ * inside `app/layout.tsx` and inside no route group. Every group layout
+ * imports `app/globals.css` — (main), staff, and each auth page — so every
+ * real page is styled and nothing pointed at a gap. The 404 was not.
+ *
+ * Measured on production: `/` loaded 7 stylesheets, any 404 loaded 2. On the
+ * 404, `grid` computed to `display: block`, `aspect-square` to `auto`,
+ * `overflow-hidden` to `visible`, and the body fell back to Times New Roman.
+ * The consequence was worse than ugly: the vendor-card images are absolutely
+ * positioned inside `aspect-square` boxes, so with no aspect-ratio those boxes
+ * collapsed to 0px tall and, with nothing clipping them, each image rendered
+ * 1265x800 across the page. 17 of 18 visible links measured as intercepted —
+ * every one would have navigated to whichever venue image was on top. A 404
+ * is where someone is already lost; it is the worst page to send them
+ * somewhere they did not ask for.
+ *
+ * The obvious fix — adding `import "./globals.css"` to the root layout — was
+ * tried, built, and REVERTED, because it makes things much worse. webpack
+ * treats a global stylesheet as one module: importing the same file at the
+ * root deduplicated it AWAY from the auth pages without adding it to the root
+ * chunk (measured: root chunk 29KB, no Tailwind). On that build `/login`
+ * dropped from 3 stylesheets to 2, `hidden lg:flex` computed to `block`, the
+ * hero aside grew from 632px to the full 1249px, and it covered the Sign In
+ * button. Nobody could have logged in.
+ *
+ * A separate file at a distinct path is therefore not a workaround, it is the
+ * mechanism: it is its own module, so it is emitted for this route and
+ * deduplicated against nothing. The cost is that a 404 loads its own copy of
+ * the utility layer — paid only on 404s, and no other route's CSS changes by
+ * a single byte.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* The one base rule the 404 actually needs: the site typeface, which would
+   otherwise fall back to the browser's serif default.
+
+   Deliberately NOT `@apply bg-background` on the body. That utility resolves
+   through the `--background` token defined in globals.css's `:root`, which
+   this file does not carry, so it would silently compute to transparent. It
+   is also unnecessary: not-found.tsx's own root element is
+   `min-h-screen bg-gradient-to-br …`, so the page paints the full viewport
+   itself and the body is never visible behind it. */
+@layer base {
+  html,
+  body {
+    font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+  }
+}

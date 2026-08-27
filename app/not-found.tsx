@@ -1,3 +1,9 @@
+// This page renders inside the root layout and inside NO route group, so it
+// does not inherit the stylesheet the group layouts import. Without this it
+// was served unstyled — see the note in not-found.css for the measurements
+// and for why importing globals.css at the root is not the fix.
+import "./not-found.css"
+
 import Link from "next/link"
 import Image from "next/image"
 import type { Metadata } from "next"
