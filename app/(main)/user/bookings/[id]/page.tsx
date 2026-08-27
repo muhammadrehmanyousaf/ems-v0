@@ -176,6 +176,12 @@ const PAYMENT_CONFIG: Record<string, { label: string; tone: string }> = {
     label: "Partial",
     tone: "border-bridal-rose/45 bg-bridal-blush text-bridal-mauve",
   },
+  // WW-PARTIALREFUND — see the note on the same entry in ../page.tsx. Without
+  // it the fallback names a partly-refunded booking "Unpaid".
+  "partially refunded": {
+    label: "Partly refunded",
+    tone: "border-bridal-mauve/45 bg-muted text-bridal-charcoal",
+  },
   refunded: {
     label: "Refunded",
     tone: "border-border bg-muted text-muted-foreground",

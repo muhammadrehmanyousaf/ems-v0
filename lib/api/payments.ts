@@ -1,11 +1,12 @@
 import axiosInstance from '../axiosConfig';
 import { BACKEND_URL } from '../backend-url';
-import type { 
-  PaymentResponse, 
-  PaymentProcessingResponse, 
-  PaymentHistory, 
-  PendingPayment 
+import type {
+  PaymentResponse,
+  PaymentProcessingResponse,
+  PaymentHistory,
+  PendingPayment
 } from '../types';
+import { isSettled } from '../payment-status';
 
 export class PaymentAPI {
   // Get Stripe publishable key from backend
@@ -333,7 +334,11 @@ export class PaymentAPI {
     const status  = (bookingStatus  || '').toLowerCase();
     const payment = (paymentStatus || '').toLowerCase();
 
-    if (status === 'completed' || payment === 'paid') return 'full_payment';
+    // isSettled covers Partially Refunded too — see lib/payment-status.ts.
+    // Without it a partly refunded booking falls through to the down_payment
+    // default below and reappears in the couple's Pending Payments, asking
+    // for a deposit they already paid.
+    if (status === 'completed' || isSettled(payment)) return 'full_payment';
     if ((status === 'confirmed') && payment === 'partial') return 'remaining_payment';
     // "awaiting payment" or "pending" with pending payment → down payment
     return 'down_payment';
@@ -344,7 +349,7 @@ export class PaymentAPI {
     const status  = (bookingStatus  || '').toLowerCase();
     const payment = (paymentStatus || '').toLowerCase();
 
-    if (payment === 'paid' || status === 'completed') return Number(totalAmount) || 0;
+    if (isSettled(payment) || status === 'completed') return Number(totalAmount) || 0;
     if (status === 'confirmed' && payment === 'partial') {
       return Number(totalAmount) - Number(downPayment || 0);
     }

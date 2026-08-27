@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import axiosInstance from "@/lib/axiosConfig";
 import { BACKEND_URL } from "@/lib/backend-url";
+import { isSettled } from "@/lib/payment-status";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
@@ -70,7 +71,11 @@ export default function PayBookingPage() {
     const down = Number(booking.downPayment || 0);
     const ps = String(booking.paymentStatus || "").toLowerCase();
 
-    if (ps === "paid") return { type: "paid" as const };
+    // isSettled, not `ps === "paid"`. A booking that was paid in full and then
+    // partially refunded owes nothing, and the else-branch below is a DOWN
+    // PAYMENT request — so getting this wrong asks the couple to pay their
+    // deposit again days after we sent them money back.
+    if (isSettled(ps)) return { type: "paid" as const };
     if (ps === "partial") {
       return {
         type: "remaining_payment" as const,
