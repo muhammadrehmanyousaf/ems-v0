@@ -82,7 +82,11 @@ export type FormType = {
   amenities: string[];
   maxCapacity: string;
   minCapacity: number;
-  catering: string;
+  // A venue can offer in-house catering, allow outside caterers, or BOTH, so
+  // this is a list. `string` is kept in the union because drafts saved before
+  // this change still hold the old single value ("internal" / "external") and
+  // must keep loading — every reader normalises the two shapes.
+  catering: string | string[];
   parking: boolean;
   // Bridal Wear specific service fields (reuse existing DB boolean columns)
   travelToClientHome: boolean;

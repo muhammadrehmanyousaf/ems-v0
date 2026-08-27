@@ -539,9 +539,21 @@ const Preview = () => {
                     {!isBridalWear && !isWeddingStationery && (
                         <Field label="Max Capacity" value={formData.maxCapacity} />
                     )}
-                    {!isBridalWear && !isWeddingStationery && formData.catering && (
-                        <Field label="Catering" value={formData.catering} />
-                    )}
+                    {/* Catering is now a list (a venue can do in-house AND allow
+                        outside caterers). An empty array is truthy, so test the
+                        rendered text rather than the raw value or the review
+                        step shows a "Catering" row with nothing next to it. */}
+                    {!isBridalWear && !isWeddingStationery && (() => {
+                        const chosen = Array.isArray(formData.catering)
+                            ? formData.catering
+                            : formData.catering
+                              ? [formData.catering]
+                              : [];
+                        const text = chosen
+                            .map((c) => c.charAt(0).toUpperCase() + c.slice(1))
+                            .join(" & ");
+                        return text ? <Field label="Catering" value={text} /> : null;
+                    })()}
                     {!isBridalWear &&
                         !isWeddingStationery &&
                         (formData.parking === true || formData.parking === false) &&

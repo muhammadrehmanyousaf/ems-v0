@@ -29,7 +29,16 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
     const [selectedAmenities, setSelectedAmenities] = useState<string[]>(formData.amenities || []);
     const [selectedstaff, setSelectedstaff] = useState<string[]>([]);
     const [selectedStaffIndexes, setSelectedStaffIndexes] = useState<number[]>([]);
-    const [selectedCatering, setSelectedCatering] = useState<string>(formData.catering || 'external');
+    // A venue can offer in-house catering, allow outside caterers, or BOTH, so
+    // this is a list. Existing drafts hold the old single string ("internal" /
+    // "external") — widen it rather than dropping what the vendor already
+    // picked, and treat "both" as the pair it stands for.
+    const [selectedCatering, setSelectedCatering] = useState<string[]>(() => {
+        const saved = formData.catering;
+        if (Array.isArray(saved)) return saved;
+        if (saved === 'both') return ['internal', 'external'];
+        return saved ? [saved] : [];
+    });
     const [parking, setParking] = useState<string>(formData.parking ? 'yes' : 'no');
     const [covid, setCovid] = useState<string>(formData.covidComplaint ? 'yes' : 'no');
     const [cancellation, setCancellation] = useState<string>(formData.cancelationPolicy || '');
@@ -113,9 +122,21 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
         { value: "Wifi", label: "Wifi" },
     ];
 
+    /*
+     * Catering is MULTI-select, not either/or.
+     *
+     * A Pakistani marquee routinely runs its own kitchen AND lets the couple
+     * bring a caterer for a fee — the two are independent policies, not two
+     * halves of one switch. This was a <RadioButton>, so a venue that does both
+     * had to under-declare itself and lose every search that filtered the other
+     * way. MultipleRadio is the same control the Staff picker on this step
+     * already uses, so the chips look and behave identically.
+     *
+     * `value` (not `id`) — MultipleRadio reads `type.value`.
+     */
     const catering = [
-        { id: "external", label: "External" },
-        { id: "internal", label: "Internal" },
+        { value: "internal", label: "Internal" },
+        { value: "external", label: "External" },
     ];
 
     const parkingData = [
@@ -276,14 +297,23 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                 </section>
                 <section>
                     <Label>Catering</Label>
-                    <RadioButton
+                    <MultipleRadio
+                        label=""
                         data={catering}
-                        selectedOption={selectedCatering}
-                        setSelectedOption={(value: string) => {
-                            setSelectedCatering(value);
+                        selectedIndexes={catering
+                            .map((c, i) => (selectedCatering.includes(c.value) ? i : -1))
+                            .filter((i) => i !== -1)}
+                        handleSelect={(value: string) => {
+                            setSelectedCatering((prev) =>
+                                prev.includes(value)
+                                    ? prev.filter((v) => v !== value)
+                                    : [...prev, value],
+                            );
+                            // Was clearing `parking` — a copy-paste from the block
+                            // below that left a real catering error stuck on screen.
                             setErrors((prevErrors) => ({
                                 ...prevErrors,
-                                parking: "",
+                                catering: "",
                             }));
                         }}
                     />
