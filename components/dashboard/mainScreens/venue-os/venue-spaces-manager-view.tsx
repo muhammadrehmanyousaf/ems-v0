@@ -59,6 +59,28 @@ export function VenueSpacesManagerView(): React.ReactElement | null {
   const [name, setName] = React.useState<string>("");
   const [kind, setKind] = React.useState<string>("HALL");
   const [cap, setCap] = React.useState<string>("");
+  /**
+   * WW-SPACECAP — the capacity the booking engine actually enforces.
+   *
+   * This form had ONE capacity box, labelled "Capacity", and it wrote
+   * `comfortCapacity`. But `bookingCreateService` enforces `fireRatedCapacity`
+   * and explicitly skips a space that has none:
+   *
+   *     if (!space?.fireRatedCapacity) continue;
+   *
+   * comfortCapacity is advisory by design — the booking form shows it, and
+   * refusing a booking on a comfort preference would be wrong. The problem was
+   * that NO screen could set the hard limit, so the guard was unreachable:
+   * 3,324 spaces on production, 53 with a comfort figure, and only 11 with the
+   * fire-rated one the engine reads.
+   *
+   * A vendor therefore typed "Capacity: 200", watched it save, saw it echoed
+   * back as "cap 200" in the tree, and the hall stayed bookable for 2,000. The
+   * comment in bookingCreateService describes exactly this failure — a
+   * 300-person side hall sold to 1,200 guests, "and the first anyone found out
+   * was on the day".
+   */
+  const [maxCap, setMaxCap] = React.useState<string>("");
   const [price, setPrice] = React.useState<string>("");
   const [wholeDay, setWholeDay] = React.useState<boolean>(false);
 
@@ -129,7 +151,20 @@ export function VenueSpacesManagerView(): React.ReactElement | null {
               <div key={n.id} className="flex flex-wrap items-center gap-2 border-b py-1 last:border-0" style={{ paddingLeft: `${n.depth * 16}px` }}>
                 <Badge variant="secondary">{n.kind}</Badge>
                 <span className="font-medium">{n.name}</span>
-                <span className="text-xs text-muted-foreground">cap {n.comfortCapacity ?? n.fireRatedCapacity ?? "—"} · {PKR(n.basePricePkr)} · {n.bookingMode === "WHOLE_DAY" ? "whole-day" : "session"}</span>
+                {/* The two capacities are shown separately because they mean
+                    different things and only one of them refuses a booking.
+                    This used to print `comfortCapacity ?? fireRatedCapacity`
+                    under a single "cap" label, which told a vendor their
+                    comfort figure was the limit — it is not, and a space with
+                    no enforced max takes any guest count at all. Say so. */}
+                <span className="text-xs text-muted-foreground">
+                  {n.comfortCapacity != null ? `${n.comfortCapacity} seats` : "no seat count"}
+                  {" · "}
+                  {n.fireRatedCapacity != null
+                    ? `max ${n.fireRatedCapacity}`
+                    : <span className="text-amber-600">no max — any guest count accepted</span>}
+                  {" · "}{PKR(n.basePricePkr)} · {n.bookingMode === "WHOLE_DAY" ? "whole-day" : "session"}
+                </span>
 
                 {/* 10.13 — what this space can host.
 
@@ -203,14 +238,15 @@ export function VenueSpacesManagerView(): React.ReactElement | null {
           <select value={kind} onChange={(e) => setKind(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
             {KINDS.map((k) => <option key={k} value={k}>{k}</option>)}
           </select>
-          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Capacity<input min={0} type="number" placeholder="capacity" value={cap} onChange={(e) => setCap(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+          <label title="Seated comfort figure. Shown to couples; does not refuse a booking." className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Comfort<input min={0} type="number" placeholder="seats" value={cap} onChange={(e) => setCap(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+          <label title="Hard limit. A booking above this number is refused. Leave blank for no limit." className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Max (enforced)<input min={0} type="number" placeholder="max" value={maxCap} onChange={(e) => setMaxCap(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
           <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Price<input min={0} type="number" placeholder="price" value={price} onChange={(e) => setPrice(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
           <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={wholeDay} onChange={(e) => setWholeDay(e.target.checked)} /> whole-day</label>
           <Button
             size="sm"
             onClick={() => void guard(async () => {
-              await venueSpacesApi.createSubVenue(bid, { name, kind, parentSubVenueId: parentId, comfortCapacity: cap ? Number(cap) : undefined, basePricePkr: price ? Number(price) : undefined, bookingMode: wholeDay ? "WHOLE_DAY" : "SESSION" });
-              setName(""); setCap(""); setPrice(""); setWholeDay(false);
+              await venueSpacesApi.createSubVenue(bid, { name, kind, parentSubVenueId: parentId, comfortCapacity: cap ? Number(cap) : undefined, fireRatedCapacity: maxCap ? Number(maxCap) : undefined, basePricePkr: price ? Number(price) : undefined, bookingMode: wholeDay ? "WHOLE_DAY" : "SESSION" });
+              setName(""); setCap(""); setMaxCap(""); setPrice(""); setWholeDay(false);
               await reload();
             })}
             disabled={!businessId || !name || busy}
