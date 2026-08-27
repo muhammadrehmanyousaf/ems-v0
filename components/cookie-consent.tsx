@@ -11,8 +11,11 @@
  *   - SEO playbook anti-pattern §6 item 293 (don't block content on first scroll)
  *
  * Design notes:
- *   - The banner is fixed-bottom and dismissable — never blocks content
- *     (Google "intrusive interstitial" penalty avoided).
+ *   - The banner is fixed-bottom and dismissable, and RESERVES ITS OWN SPACE
+ *     at the foot of the document so it never covers the page's controls.
+ *     See the note on useReservedSpace below — "fixed-bottom and dismissable"
+ *     was not, on its own, enough to keep it from blocking content.
+ *   - Google "intrusive interstitial" penalty avoided.
  *   - Three categories: essential (always on, can't opt out), analytics,
  *     marketing. Each has a clear toggle.
  *   - Choice persists for 12 months. Re-prompt only after that.
@@ -20,7 +23,7 @@
  *     and to avoid layout shift before localStorage read.
  */
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { Cookie, X } from "lucide-react"
 
@@ -78,17 +81,91 @@ const ALL_REJECTED: ConsentState = {
   decidedAt: new Date().toISOString(),
 }
 
+/**
+ * Reserve room at the foot of the document for the banner, so it cannot sit
+ * on top of the page's own controls.
+ *
+ * ── The defect this exists to stop coming back ───────────────────────────
+ *
+ * The banner is `position: fixed` at the bottom of the viewport, so it is out
+ * of flow: the page lays out as though it were not there, and the banner then
+ * paints over whatever happens to be underneath. Measured on production at
+ * 360x640 — an ordinary Android size here — the banner occupied y 318..628,
+ * half the screen, and the LOGIN page's "Sign In" button sat at y 399..447,
+ * entirely inside it. `document.elementFromPoint` at the button's centre
+ * returned the banner's paragraph, and Playwright reported the banner's
+ * "subtree intercepts pointer events".
+ *
+ * The login page does not scroll (scrollHeight === innerHeight), so there was
+ * no way to move the button out from under it. A visitor on that phone taps
+ * Sign In, nothing happens, and the site looks broken. The same overlap made
+ * "Cancel" 100% unclickable on the pay screen at 390x844, and covered the pay
+ * button once scrolled to on a laptop.
+ *
+ * Padding the document rather than restyling the banner is deliberate: it is
+ * the one change that is correct for every page, whether that page scrolls or
+ * not. On a page that already scrolls it adds harmless space after the last
+ * element. On a page that does not, it makes the page scrollable by exactly
+ * the banner's height, which is the difference between "unreachable" and
+ * "reachable". The reservation lasts only while the banner is up — that is,
+ * until the visitor's first decision — and is removed on unmount.
+ *
+ * The height is measured rather than hard-coded because the banner grows when
+ * "Customize" expands the category list, and the copy wraps differently at
+ * every width.
+ */
+function useReservedSpace(open: boolean, el: HTMLElement | null) {
+  useEffect(() => {
+    if (!open || !el || typeof document === "undefined") return
+
+    const previous = document.body.style.paddingBottom
+
+    const apply = () => {
+      const h = el.getBoundingClientRect().height
+      if (!h) return
+      // + 12px to match the banner's own `bottom-3` inset, so the last
+      // element on the page clears it rather than touching it.
+      document.body.style.paddingBottom = `${Math.ceil(h) + 12}px`
+    }
+
+    apply()
+
+    // The banner changes height when Customize expands, on rotation, and on
+    // any width change that rewraps the copy.
+    let ro: ResizeObserver | null = null
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(apply)
+      ro.observe(el)
+    }
+    window.addEventListener("resize", apply)
+    window.addEventListener("orientationchange", apply)
+
+    return () => {
+      ro?.disconnect()
+      window.removeEventListener("resize", apply)
+      window.removeEventListener("orientationchange", apply)
+      // Restore rather than blank it, in case anything else set it.
+      document.body.style.paddingBottom = previous
+    }
+  }, [open, el])
+}
+
 export function CookieConsent() {
   const [open, setOpen] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
   const [analytics, setAnalytics] = useState(true)
   const [marketing, setMarketing] = useState(false)
+  // Callback ref: the node arrives after the first paint, and a plain ref
+  // would not re-run the effect when it does.
+  const [bannerEl, setBannerEl] = useState<HTMLDivElement | null>(null)
 
   useEffect(() => {
     // Defer the read to client-only to avoid hydration mismatch.
     const existing = getConsent()
     if (!existing) setOpen(true)
   }, [])
+
+  useReservedSpace(open, bannerEl)
 
   if (!open) return null
 
@@ -114,23 +191,46 @@ export function CookieConsent() {
 
   return (
     <div
+      ref={setBannerEl}
       role="dialog"
       aria-label="Cookie preferences"
       aria-modal="false"
       className="fixed inset-x-3 bottom-3 sm:left-auto sm:right-4 sm:bottom-4 sm:max-w-md z-[60] rounded-lg border border-bridal-beige bg-bridal-cream shadow-xl"
     >
-      <div className="p-4 sm:p-5">
+      {/*
+        The category list can be taller than a small phone. Cap it and let it
+        scroll inside the banner, so expanding Customize can never grow the
+        banner past the screen and bury its own Save button.
+      */}
+      {/*
+        Sized down hard on phones. Reserving space stopped anything being
+        permanently unreachable, but a 310px banner on a 640px screen still
+        covered the login button on first paint, and a visitor who does not
+        think to scroll still sees a dead button. Everything below that is
+        responsive exists to buy vertical pixels back on small screens:
+        the icon and the long copy are desktop-only, and the actions sit on
+        one row instead of wrapping onto three.
+      */}
+      <div className="p-3.5 sm:p-5 max-h-[70svh] overflow-y-auto overscroll-contain">
         <div className="flex items-start gap-3">
-          <span className="flex-shrink-0 w-9 h-9 rounded-full bg-bridal-gold/15 border border-bridal-gold/45 flex items-center justify-center">
+          {/* Decorative only — it costs 48px of text width on a 360px screen,
+              which is a whole extra line of wrapped copy. */}
+          <span className="hidden sm:flex flex-shrink-0 w-9 h-9 rounded-full bg-bridal-gold/15 border border-bridal-gold/45 items-center justify-center">
             <Cookie className="w-4 h-4 text-bridal-gold-dark" />
           </span>
-          <div className="flex-1">
-            <p className="font-display italic text-[18px] text-bridal-charcoal">
+          <div className="flex-1 min-w-0">
+            <p className="font-display italic text-[16px] sm:text-[18px] text-bridal-charcoal">
               Cookies on Wedding Wala
             </p>
-            <p className="mt-1 font-bridal text-[13px] text-bridal-text leading-relaxed">
-              We use essential cookies to keep you signed in and the booking flow
-              working. Analytics and marketing cookies are optional. Read our{" "}
+            <p className="mt-1 font-bridal text-[12.5px] sm:text-[13px] text-bridal-text leading-snug sm:leading-relaxed">
+              <span className="sm:hidden">
+                Essential cookies keep you signed in. Analytics and marketing are
+                optional.{" "}
+              </span>
+              <span className="hidden sm:inline">
+                We use essential cookies to keep you signed in and the booking flow
+                working. Analytics and marketing cookies are optional. Read our{" "}
+              </span>
               <Link href="/cookie-policy" className="text-bridal-gold hover:underline">
                 Cookie Policy
               </Link>
@@ -179,20 +279,26 @@ export function CookieConsent() {
               </fieldset>
             )}
 
-            <div className="mt-4 flex flex-wrap items-center gap-2">
+            {/*
+              One row, not three. `flex-wrap` with three pill buttons wrapped
+              onto three lines at 360px and cost ~80px of height on its own.
+              min-w-0 + truncate lets the labels shrink instead of forcing a
+              wrap, and the tap targets stay at 36px.
+            */}
+            <div className="mt-3 sm:mt-4 flex items-center gap-1.5 sm:gap-2">
               {showOptions ? (
                 <>
                   <button
                     type="button"
                     onClick={saveCustom}
-                    className="inline-flex items-center justify-center px-4 h-9 rounded-full bg-bridal-gold text-white font-bridal text-[12.5px] font-medium hover:bg-bridal-gold-dark transition-colors"
+                    className="min-w-0 flex-1 sm:flex-none inline-flex items-center justify-center px-3 sm:px-4 h-9 rounded-full bg-bridal-gold text-white font-bridal text-[12.5px] font-medium hover:bg-bridal-gold-dark transition-colors"
                   >
-                    Save preferences
+                    <span className="truncate">Save preferences</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowOptions(false)}
-                    className="inline-flex items-center justify-center px-3 h-9 rounded-full font-bridal text-[12.5px] text-bridal-text-soft hover:text-bridal-charcoal transition-colors"
+                    className="flex-shrink-0 inline-flex items-center justify-center px-3 h-9 rounded-full font-bridal text-[12.5px] text-bridal-text-soft hover:text-bridal-charcoal transition-colors"
                   >
                     Cancel
                   </button>
@@ -202,21 +308,21 @@ export function CookieConsent() {
                   <button
                     type="button"
                     onClick={acceptAll}
-                    className="inline-flex items-center justify-center px-4 h-9 rounded-full bg-bridal-gold text-white font-bridal text-[12.5px] font-medium hover:bg-bridal-gold-dark transition-colors"
+                    className="min-w-0 flex-1 sm:flex-none inline-flex items-center justify-center px-3 sm:px-4 h-9 rounded-full bg-bridal-gold text-white font-bridal text-[12.5px] font-medium hover:bg-bridal-gold-dark transition-colors"
                   >
-                    Accept all
+                    <span className="truncate">Accept all</span>
                   </button>
                   <button
                     type="button"
                     onClick={rejectAll}
-                    className="inline-flex items-center justify-center px-4 h-9 rounded-full border border-bridal-beige hover:border-bridal-gold font-bridal text-[12.5px] text-bridal-charcoal transition-colors"
+                    className="min-w-0 flex-1 sm:flex-none inline-flex items-center justify-center px-3 sm:px-4 h-9 rounded-full border border-bridal-beige hover:border-bridal-gold font-bridal text-[12.5px] text-bridal-charcoal transition-colors"
                   >
-                    Essential only
+                    <span className="truncate">Essential only</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowOptions(true)}
-                    className="inline-flex items-center justify-center px-3 h-9 rounded-full font-bridal text-[12.5px] text-bridal-text-soft hover:text-bridal-charcoal transition-colors"
+                    className="flex-shrink-0 inline-flex items-center justify-center px-2.5 sm:px-3 h-9 rounded-full font-bridal text-[12.5px] text-bridal-text-soft hover:text-bridal-charcoal transition-colors"
                   >
                     Customize
                   </button>
