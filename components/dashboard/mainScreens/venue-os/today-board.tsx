@@ -206,7 +206,15 @@ function ListFooter({
   );
 }
 
-export function TodayBoard({ hideKpis = false }: { hideKpis?: boolean } = {}): React.ReactElement {
+/**
+ * `listCap` — how many rows each list shows before the footer takes over.
+ *
+ * Defaults to the standalone screen's 12. The dashboard passes 5: on Home this
+ * board is one section among several rather than the whole page, and the
+ * ListFooter below already names what is hidden and links to the rest, so a
+ * lower cap loses nothing.
+ */
+export function TodayBoard({ hideKpis = false, listCap = LIST_CAP }: { hideKpis?: boolean; listCap?: number } = {}): React.ReactElement {
   const { data, isLoading } = useVendorBookings();
   const { user } = useUser();
   const activeBusinessId = useActiveBusinessId();
@@ -263,9 +271,9 @@ export function TodayBoard({ hideKpis = false }: { hideKpis?: boolean } = {}): R
   const next7Committed = next7.filter((r) => isCommitted(r.status)).length;
   const next7Provisional = next7.length - next7Committed;
   const upcomingAll = rows.filter((r) => r.days != null && r.days >= 0).sort((a, b) => (a.days as number) - (b.days as number));
-  const upcoming = upcomingAll.slice(0, LIST_CAP);
+  const upcoming = upcomingAll.slice(0, listCap);
   const chaseAll = rows.filter((r) => r.outstanding > 0).sort((a, b) => (a.days ?? 99999) - (b.days ?? 99999));
-  const toChase = chaseAll.slice(0, LIST_CAP);
+  const toChase = chaseAll.slice(0, listCap);
   const totalOutstanding = rows.reduce((s, r) => s + r.outstanding, 0);
   const overdue = rows.filter((r) => r.outstanding > 0 && r.days != null && r.days < 0).length;
 

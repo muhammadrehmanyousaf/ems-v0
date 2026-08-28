@@ -110,7 +110,11 @@ const TABS: TabDef[] = [
   { key: "packages", label: "Packages", icon: "Package", wired: false, hint: "Pricing packages & bundles." },
   { key: "menus", label: "Menus", icon: "ClipboardList", wired: false, hint: "Catering menus & per-head pricing." },
   { key: "bank", label: "Bank details", icon: "CreditCard", wired: false, hint: "Payout accounts for receivables." },
-  { key: "team", label: "Team members", icon: "Users2", wired: false, href: "/dashboard/staff", hint: "Staff & roles." },
+  // "Team members" hidden at the founder's direction (2026-08-29). It was the
+  // one row here that left the page entirely - `href: "/dashboard/staff"` - so
+  // it was a door out of Settings dressed as a section of it. /dashboard/staff
+  // is untouched and still reachable from Khata > Staff & payroll.
+  // { key: "team", label: "Team members", icon: "Users2", wired: false, href: "/dashboard/staff", hint: "Staff & roles." },
   { key: "availability", label: "Availability", icon: "CalendarCheck", wired: false, hint: "Blocked dates & lead time." },
 ]
 
@@ -132,7 +136,12 @@ const PARAM_TO_TAB: Record<string, TabKey> = {
   amenities: "amenities",
   listing: "listing",
   bank: "bank",
-  team: "team",
+  // `?tab=team` now lands on Profile, NOT on "team". The Team members entry is
+  // commented out of TABS above, and `active` is seeded straight from this map
+  // with no validation against TABS - so leaving `team: "team"` here would give
+  // an old link a tab key that no longer has a button or a body, and the hub
+  // would render an empty right-hand pane. Restore both together.
+  team: "profile",
   availability: "availability",
 }
 
@@ -792,7 +801,13 @@ export function BusinessSettingsHubView() {
 
       {/* Label-style switch (Aasaan Roman-Urdu ⇄ Professional English). Sits at
           the top so a vendor who wants plainer words can find it immediately. */}
-      <PersonaPreference />
+      {/* "Naam kaise dikhayein? - Label style" (Aasaan / Professional) hidden
+          at the founder's direction (2026-08-29). Commented, not deleted -
+          components/dashboard/layout/persona-preference.tsx is untouched and
+          the stored preference still drives every nav label, so whatever a
+          vendor picked before stays in force. This only removes the chooser.
+          The same component still renders on /dashboard/cancellation-policy. */}
+      {/* <PersonaPreference /> */}
 
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">

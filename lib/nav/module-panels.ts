@@ -431,7 +431,12 @@ export const NAV_MODULES: NavModule[] = [
           { label: "Business Settings", href: "/dashboard/settings", icon: Settings, i18nKey: "nav.business_settings" },
           { label: "Setup checklist", href: "/dashboard/onboarding", icon: ListChecks, i18nKey: "nav.onboarding" },
           { label: "Automation", href: "/dashboard/automation", icon: Zap, i18nKey: "nav.automation" },
-          { label: "Field capture", href: "/dashboard/field", icon: Zap, i18nKey: "nav.field_capture" },
+          // MOVED to the Home dashboard, not hidden (founder, 2026-08-29).
+          // It is not a setting — it is what a vendor does standing at a bridal
+          // expo with dead signal, so it now renders as a section of the screen
+          // they open. /dashboard/field still exists and Set up still `owns`
+          // "field", so the old link keeps working with the right rail lit.
+          // { label: "Field capture", href: "/dashboard/field", icon: Zap, i18nKey: "nav.field_capture" },
         ],
       },
       {
