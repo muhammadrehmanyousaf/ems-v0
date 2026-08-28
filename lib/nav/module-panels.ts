@@ -38,16 +38,16 @@ import {
   Wallet,
   SquareUser,
   Settings,
-  FileText,
   CalendarClock,
   Handshake,
   Receipt,
   BarChart3,
-  // Workflow and ChefHat are imported but only referenced from the
-  // commented-out Bookings panel rows below; kept so restoring them is a
-  // one-line change rather than an import hunt.
+  // Referenced only from commented-out panel rows below (Bookings' Paperwork
+  // and On-the-day groups, Calendar's Rules group). Kept so restoring a row is
+  // a one-line change rather than an import hunt.
   Workflow,
   ChefHat,
+  FileText,
   ListChecks,
   Bell,
   Smile,
@@ -267,13 +267,22 @@ export const NAV_MODULES: NavModule[] = [
           { label: "Date holds", href: "/dashboard/holds", icon: CalendarClock, i18nKey: "nav.holds" },
         ],
       },
-      {
-        label: "Rules",
-        items: [
-          { label: "Availability", href: "/dashboard/availability", icon: CalendarClock, i18nKey: "nav.availability" },
-          { label: "Cancellation policy", href: "/dashboard/cancellation-policy", icon: FileText, i18nKey: "nav.cancellation_policy" },
-        ],
-      },
+      // The "Rules" group — Availability and Cancellation policy — commented
+      // out at the founder's direction (2026-08-28). Restore by deleting these
+      // markers.
+      //
+      // Availability was the weakest row in the panel regardless: the page it
+      // opened is a signpost, not a screen. Its entire body reads "Venue
+      // availability is managed from the Calendar — block or free dates there"
+      // with a button back to the Calendar the vendor had just left.
+      //
+      // {
+      //   label: "Rules",
+      //   items: [
+      //     { label: "Availability", href: "/dashboard/availability", icon: CalendarClock, i18nKey: "nav.availability" },
+      //     { label: "Cancellation policy", href: "/dashboard/cancellation-policy", icon: FileText, i18nKey: "nav.cancellation_policy" },
+      //   ],
+      // },
     ],
   },
 
