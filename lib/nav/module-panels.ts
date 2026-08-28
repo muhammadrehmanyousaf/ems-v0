@@ -162,7 +162,11 @@ export const NAV_MODULES: NavModule[] = [
     label: "Enquiries",
     icon: Inbox,
     href: "/dashboard/leads",
-    owns: ["quotes", "holds"],
+    // `holds` deliberately NOT here — it belongs to Calendar. See the note on
+    // that module. A path can only be owned once, and whichever module is
+    // declared first in this array wins, so listing it in both silently made
+    // Enquiries the owner.
+    owns: ["quotes"],
     panelTitle: "Enquiries",
     groups: [
       {
@@ -174,7 +178,11 @@ export const NAV_MODULES: NavModule[] = [
         label: "Before the booking",
         items: [
           { label: "Quote requests", href: "/dashboard/quotes", icon: Handshake, i18nKey: "nav.quotes" },
-          { label: "Date holds", href: "/dashboard/holds", icon: CalendarClock, i18nKey: "nav.holds" },
+          // "Date holds" lived here too. Removed at the founder's direction
+          // (2026-08-28): "hold date should be in the calender module only and
+          // should open there not travel to the inquiry module". A date hold IS
+          // a calendar act, and offering the same destination from two modules
+          // is what made it look like it teleported.
         ],
       },
     ],
@@ -239,7 +247,18 @@ export const NAV_MODULES: NavModule[] = [
     label: "Calendar",
     icon: CalendarDays,
     href: "/dashboard/calendar",
-    owns: ["availability", "cancellation-policy"],
+    /**
+     * `holds` is owned HERE, and only here.
+     *
+     * Date holds was reachable from both the Enquiries panel and this one, but
+     * `moduleForPath` matches `owns` in array order and Enquiries is declared
+     * first — so clicking "Date holds" in the CALENDAR panel navigated to
+     * /dashboard/holds and the whole left column swapped to Enquiries. The
+     * vendor clicked a row in one module and was dropped into another, with the
+     * rail lit on a module they had not chosen. Measured on production:
+     * /dashboard/holds, rail lit "Enquiries", panel titled "Enquiries".
+     */
+    owns: ["availability", "cancellation-policy", "holds"],
     panelTitle: "Calendar",
     groups: [
       {
@@ -432,6 +451,27 @@ export const NAV_MODULES: NavModule[] = [
     ],
   },
 ];
+
+/**
+ * Does this route render a contextual panel at all?
+ *
+ * The single source of truth for that question, because TWO components need
+ * the answer and they must not drift: AppSidebar decides whether to render the
+ * panel, and PanelToggle decides whether to render the button that collapses
+ * it. When only the first knew, the header kept a toggle on rail-only screens
+ * that opened nothing — a control that does nothing when clicked, which reads
+ * as a broken build rather than a design.
+ *
+ * Admins are always true: they get the flat section list rather than the
+ * module panel, and `railOnly` is a vendor-shell concept that does not apply.
+ */
+export function hasPanel(
+  pathname: string | null | undefined,
+  adminLike: boolean,
+): boolean {
+  if (adminLike) return true;
+  return moduleForPath(pathname).railOnly !== true;
+}
 
 /** Which module owns this path? Falls back to Home. */
 export function moduleForPath(pathname: string | null | undefined): NavModule {

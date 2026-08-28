@@ -7,7 +7,7 @@ import { Wallet } from "lucide-react"
 
 import { NavSections, type SettingsSubItem, type NavSection } from "./nav-projects"
 import { ModulePanel } from "./module-panel"
-import { moduleForPath } from "@/lib/nav/module-panels"
+import { hasPanel } from "@/lib/nav/module-panels"
 import { NavUser } from "./nav-user"
 import { TeamSwitcher } from "./team-switcher"
 import {
@@ -304,9 +304,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // and a second column of links beside it competes with the numbers it exists
   // to show. Every one of those links is one rail icon away. Rendering nothing
   // here (rather than an empty panel) also lets the content take the full width.
-  const activeModule = moduleForPath(pathname)
-  const hidePanel = !isAdminLike(role) && activeModule.railOnly === true
-  if (hidePanel) return null
+  // `hasPanel` rather than reading `railOnly` here: the header's PanelToggle
+  // asks the same question, and two copies of this condition would drift into
+  // a toggle that collapses a panel that is not there (or hides on a screen
+  // that has one).
+  if (!hasPanel(pathname, isAdminLike(role))) return null
 
   return (
     <Sidebar collapsible="icon" className={railOffset} {...props}>

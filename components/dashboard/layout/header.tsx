@@ -1,5 +1,4 @@
 import { Separator } from "@/components/ui/separator"
-import { SidebarTrigger } from "@/components/ui/sidebar"
 import React from "react"
 import { UserNav } from "./user-nav"
 import { ThemePicker } from "./ThemeToggle/ThemePicker"
@@ -7,6 +6,7 @@ import NotificationsPopover from "./notifications-popover"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { LanguageToggle } from "@/components/dashboard/language-toggle"
 import { CommandTrigger } from "./command-trigger"
+import { PanelToggle } from "./panel-toggle"
 
 const Header = () => {
   return (
@@ -31,8 +31,9 @@ const Header = () => {
           phone. Measured: viewport 345px, avatar at 315–347px, so a vendor could
           not open their account menu or sign out. */}
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden px-3">
-        <SidebarTrigger className="-ml-1 size-7 shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent" />
-        <Separator orientation="vertical" className="mx-1 h-4 shrink-0" />
+        {/* Renders nothing on rail-only modules (Home, Bookings) — there is no
+            panel there for it to collapse. Carries its own separator. */}
+        <PanelToggle />
         <Breadcrumbs />
       </div>
 
