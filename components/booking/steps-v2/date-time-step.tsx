@@ -161,12 +161,37 @@ export default function DateTimeStep({
   // resourceId rides the booking payload → pins the booking to that space and
   // shows in the vendor's Bookings "Space" column. Venues with 0 spaces are
   // completely unaffected (the picker doesn't render).
-  const [spaces, setSpaces] = useState<Array<{ id: number; label: string; kind?: string }>>([])
+  const [spaces, setSpaces] = useState<Array<{ id: number; label: string; kind?: string; capacityUnit: number | null }>>([])
   useEffect(() => {
     if (!venue?.id) return
     let cancelled = false
     api.get(`/api/v1/businesses/${venue.id}/resources`)
-      .then((r) => { if (!cancelled) setSpaces((r?.data?.data || []).filter((x: any) => x && x.isActive !== false).map((x: any) => ({ id: x.id, label: x.label, kind: x.kind }))) })
+      .then((r) => {
+        if (cancelled) return
+        setSpaces(
+          (r?.data?.data || [])
+            .filter((x: any) => x && x.isActive !== false)
+            .map((x: any) => ({
+              id: x.id,
+              label: x.label,
+              kind: x.kind,
+              /**
+               * 10.16 — how many guests this space holds.
+               *
+               * `BusinessResource.capacityUnit` was on the API all along and
+               * this mapper dropped it, so on venues that model their halls as
+               * RESOURCES rather than as a sub-venue tree the guest stepper had
+               * nothing to clamp to and fell back to `business.maxCapacity` —
+               * the whole venue. A customer could put 1,200 guests into the
+               * 300-person side hall, which is the same defect the sub-venue
+               * path fixed and this path never got.
+               */
+              capacityUnit: Number.isFinite(Number(x.capacityUnit)) && Number(x.capacityUnit) > 0
+                ? Number(x.capacityUnit)
+                : null,
+            })),
+        )
+      })
       .catch(() => { if (!cancelled) setSpaces([]) })
     return () => { cancelled = true }
   }, [venue?.id])
@@ -217,13 +242,36 @@ export default function DateTimeStep({
   }, [venue?.id])
 
   const [availability, setAvailability] = useState<Record<string, DayAvailability>>({})
+  /**
+   * WW-CAL-CLOSED — whether we have actually HEARD about a month yet.
+   *
+   * The calendar used to treat "no data for this day" as "bookable", so a day
+   * the venue never opens, a day outside the fetched range, and a day whose
+   * request had not come back yet were all offered as free. A customer could
+   * pick a date the venue does not work, get through six steps and be refused
+   * at submit.
+   *
+   * Flipping that polarity needs three states, not two, or a slow network
+   * would render an entire month as closed. `loading` shows the day as
+   * pending; `ready` means the answer is authoritative and an absent day is
+   * genuinely unavailable; `error` falls back to the old permissive behaviour,
+   * because refusing every date because a fetch failed would break booking
+   * outright for a problem the customer cannot fix.
+   */
+  type MonthState = "loading" | "ready" | "error"
+  const [monthState, setMonthState] = useState<Record<string, MonthState>>({})
+  const ymOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
   const fetchMonth = useCallback(async (d: Date) => {
     if (!venue?.id) return
-    const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    const m = ymOf(d)
+    setMonthState((prev) => (prev[m] === "ready" ? prev : { ...prev, [m]: "loading" }))
     try {
       const data = await VendorAPI.getMonthAvailability([venue.id], m)
       setAvailability((prev) => ({ ...prev, ...(data[venue.id] || {}) }))
-    } catch { /* silent */ }
+      setMonthState((prev) => ({ ...prev, [m]: "ready" }))
+    } catch {
+      setMonthState((prev) => ({ ...prev, [m]: "error" }))
+    }
   }, [venue?.id])
 
   // Prefetch the visible month + the next month (so leading days from next
@@ -252,8 +300,11 @@ export default function DateTimeStep({
    */
   const selectedSubVenueId = Number((formData as any).selectedSubVenueId) || null
 
+  const [templateMonthState, setTemplateMonthState] = useState<Record<string, "loading" | "ready" | "error">>({})
   const fetchTemplateMonth = useCallback(async (d: Date) => {
     if (!SLOT_TEMPLATES_ENABLED || !venue?.id) return
+    const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    setTemplateMonthState((prev) => (prev[m] === "ready" ? prev : { ...prev, [m]: "loading" }))
     try {
       const res = await BusinessAvailabilityAPI.getBulkAvailability(
         venue.id as number, toKey(startOfMonth(d)), toKey(endOfMonth(d)), selectedSubVenueId,
@@ -261,7 +312,12 @@ export default function DateTimeStep({
       const days = res?.days || {}
       setTemplateDays((prev) => ({ ...prev, ...days }))
       if (Object.values(days).some((rows) => rows && rows.length > 0)) setHasTemplates(true)
-    } catch { /* silent → fall back to fixed periods */ }
+      setTemplateMonthState((prev) => ({ ...prev, [m]: "ready" }))
+    } catch {
+      // Falls back to the fixed periods, and to the permissive calendar — a
+      // failed lookup must not present every date as closed.
+      setTemplateMonthState((prev) => ({ ...prev, [m]: "error" }))
+    }
   }, [venue?.id, selectedSubVenueId])
   useEffect(() => {
     if (!SLOT_TEMPLATES_ENABLED) return
@@ -280,6 +336,7 @@ export default function DateTimeStep({
     if (lastSpace.current === selectedSubVenueId) return
     lastSpace.current = selectedSubVenueId
     setTemplateDays({})
+    setTemplateMonthState({})
     setHasTemplates(false)
     updateFormData((prev) => ({
       ...(prev as any),
@@ -309,6 +366,34 @@ export default function DateTimeStep({
     [useTemplates, templateDayAvail, availability],
   )
 
+  /**
+   * WW-CAL-CLOSED — how much we actually know about a given day.
+   *
+   *   free        the venue has a bookable slot on it
+   *   partial     bookable, but something on it is already taken
+   *   unavailable the venue answered and there is nothing to book
+   *   pending     we have not heard back yet
+   *   unknown     the lookup failed; fall back to permissive rather than
+   *               refusing every date over a network problem
+   *
+   * The whole point is that `unavailable` and `pending` used to be
+   * indistinguishable from `free`, because both produced `undefined`.
+   */
+  type DayKnowledge = "free" | "partial" | "unavailable" | "pending" | "unknown"
+  const dayKnowledge = useCallback((d: Date): DayKnowledge => {
+    const key = toKey(d)
+    const a = dayAvail(key)
+    if (a) {
+      if (a.isBlocked || a.availableSlots.length === 0) return "unavailable"
+      return a.bookedSlots.length > 0 ? "partial" : "free"
+    }
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    const state = useTemplates ? templateMonthState[ym] : monthState[ym]
+    if (state === "ready") return "unavailable"
+    if (state === "error") return "unknown"
+    return "pending"
+  }, [dayAvail, useTemplates, templateMonthState, monthState])
+
   // The 6×7 grid of dates for the visible month (Airbnb / Booking.com pattern).
   const monthGrid = useMemo(() => buildMonthGrid(viewMonth), [viewMonth])
   const isSameMonth = useCallback(
@@ -329,9 +414,11 @@ export default function DateTimeStep({
 
   const handlePickDay = (d: Date) => {
     if (d < today) return
-    const key = toKey(d)
-    const a = dayAvail(key)
-    if (a && (a.isBlocked || a.availableSlots.length === 0)) return
+    // WW-CAL-CLOSED — this used to be `if (a && ...)`, so a day with no data
+    // fell straight through and was accepted. It now refuses anything the grid
+    // itself would not offer, which is the same rule in one place.
+    const k = dayKnowledge(d)
+    if (k === "unavailable" || k === "pending") return
     updateFormData((prev) => ({
       ...prev,
       bookingDate: prev.timeSlot ? formatBookingDate(d, prev.timeSlot) : (d.toISOString() as any),
@@ -347,6 +434,8 @@ export default function DateTimeStep({
     const a = selectedAvail
     if (a?.bookedSlots?.includes(period)) return
     if (a?.heldSlots?.includes(period)) return
+    // Same rule as the card's `notOffered`, so the two cannot disagree.
+    if (Array.isArray(a?.availableSlots) && !a.availableSlots.includes(period)) return
     updateFormData((prev) => ({
       ...prev,
       timeSlot: period,
@@ -499,8 +588,20 @@ export default function DateTimeStep({
     return rows.find((r) => r.slotTemplateId === Number(formData.slotTemplateId)) ?? null
   }, [selectedDate, formData.slotTemplateId, templateDays])
 
+  /**
+   * 10.16 — the resource-model twin of `chosenSpace`.
+   *
+   * A venue models its halls EITHER as a sub-venue tree ("Which hall?") OR as
+   * BusinessResources ("Which space?") — the two pickers are mutually
+   * exclusive. Capacity was only ever read off the first, so every venue on
+   * the second had no per-hall ceiling at all.
+   */
+  const selectedResourceId = Number((formData as any).selectedResourceId) || null
+  const chosenResource = spaces.find((sp) => sp.id === selectedResourceId) ?? null
+
   const guestLimits: { max: number; source: string }[] = []
   if (chosenSpace?.fireRatedCapacity) guestLimits.push({ max: chosenSpace.fireRatedCapacity, source: `${chosenSpace.name} holds` })
+  if (chosenResource?.capacityUnit) guestLimits.push({ max: chosenResource.capacityUnit, source: `${chosenResource.label} holds` })
   if (chosenSlotRow?.unitGuestCapacity) guestLimits.push({ max: chosenSlotRow.unitGuestCapacity, source: `${chosenSlotRow.label} takes` })
   if (venue?.maxCapacity) guestLimits.push({ max: venue.maxCapacity, source: "This venue holds" })
   const activeLimit = guestLimits.length
@@ -556,14 +657,18 @@ export default function DateTimeStep({
    *  numeral, dot indicator for partial availability. */
   const renderDayCell = (d: Date) => {
     const key = toKey(d)
-    const a = dayAvail(key)
     const isPast = d < today
-    const isBlocked = !!a?.isBlocked || (a && a.availableSlots.length === 0)
-    const isPartial = !!a && a.bookedSlots.length > 0 && !isBlocked
+    /* WW-CAL-CLOSED — a day is offered only when the venue has SAID it is
+       free. Previously `isBlocked` was false whenever we had no data, so
+       closed days, unfetched days and in-flight days were all bookable. */
+    const knowledge = dayKnowledge(d)
+    const isBlocked = knowledge === "unavailable"
+    const isPending = knowledge === "pending"
+    const isPartial = knowledge === "partial"
     const isSelected = sameDay(d, selectedDate)
     const isToday = sameDay(d, today)
     const inMonth = isSameMonth(d)
-    const disabled = isPast || isBlocked
+    const disabled = isPast || isBlocked || isPending
 
     return (
       <button
@@ -571,7 +676,9 @@ export default function DateTimeStep({
         type="button"
         onClick={() => handlePickDay(d)}
         disabled={disabled}
-        aria-label={`${WEEKDAY_FULL[d.getDay()]}, ${MONTHS_FULL[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}${disabled ? " (unavailable)" : ""}`}
+        aria-label={`${WEEKDAY_FULL[d.getDay()]}, ${MONTHS_FULL[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}${
+          isPast ? " (in the past)" : isBlocked ? " (not available)" : isPending ? " (checking availability)" : ""
+        }`}
         aria-pressed={isSelected}
         className={`
           relative h-11 sm:h-12 w-full flex flex-col items-center justify-center
@@ -579,7 +686,12 @@ export default function DateTimeStep({
           font-display text-[14px] sm:text-[15px] tabular-nums leading-none
           ${!inMonth ? "opacity-30" : ""}
           ${
-            disabled
+            /* Pending is greyed but NOT struck through: a day we have not
+               heard about yet is not a day the venue has refused, and
+               striking it out would state something untrue for a second. */
+            isPending && !isPast
+              ? "text-bridal-text-soft/40 cursor-wait"
+              : disabled
               ? "text-bridal-text-soft/50 cursor-not-allowed line-through decoration-1"
               : isSelected
                 ? "bg-bridal-charcoal text-bridal-ivory shadow-[0_8px_22px_-10px_rgba(44,24,16,0.55)] hover:bg-bridal-charcoal"
@@ -608,7 +720,8 @@ export default function DateTimeStep({
           When is your event?
         </h2>
         <p className="mt-1 font-bridal text-[12.5px] text-bridal-text-soft">
-          Pick a date and a time of day. We&apos;ll hold the slot for 15 minutes while you finish.
+          Pick a date and a time of day. We&apos;ll hold it while you finish, and keep it held
+          until the venue answers your request.
         </p>
       </div>
 
@@ -684,6 +797,136 @@ export default function DateTimeStep({
          calendar instead of leaving a tall empty gap. On mobile this whole
          column drops below the calendar. */}
       <div className="w-full lg:flex-1 space-y-5">
+        {/* WW-SPACE-FIRST — the space is chosen BEFORE the date and the
+           guest count, because it decides both.
+           It used to sit at the BOTTOM of this column, under the time picker,
+           the service-location card and the arrangement question. So a family
+           set 800 guests against the whole venue's ceiling, picked a slot, and
+           only then met the hall selector — at which point the guest count had
+           to be clamped down and the slots they had already been offered were
+           re-fetched and could disappear. Every one of those corrections is
+           the form taking something back that it had just given.
+           Asking first means the ceiling, the slots, the packages and the
+           menus are all the chosen hall's from the outset. */}
+        {/* F-2 — canonical sub-venue picker (venue-hierarchy). Shown when the
+           venue built ANY space(s); sends subVenueId (the per-hall path). Was
+           gated `> 1`, which silently hid a venue's only hall (QA #19) — now
+           `>= 1` so a single configured space is selectable. */}
+        {subVenueSpaces.length >= 1 && (
+          <section className="space-y-2">
+            <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
+              Which hall?
+            </p>
+            <select
+              value={(formData as any).selectedSubVenueId || ""}
+              onChange={(e) => {
+                const id = e.target.value
+                // Carry the hall's NAME forward too. Later steps only ever had
+                // the id, so the Packages step could not say "Terrace Lawn
+                // package" and the Review step could not name the room the
+                // customer is actually booking.
+                const picked = subVenueSpaces.find((sp) => String(sp.id) === String(id))
+                updateFormData((prev) => ({
+                  ...(prev as any),
+                  selectedSubVenueId: id,
+                  selectedSubVenueName: picked?.name || null,
+                }))
+              }}
+              className="w-full rounded-md border border-bridal-beige bg-bridal-ivory px-3 py-2.5 font-bridal text-[13px] text-bridal-charcoal outline-none focus:border-bridal-gold-dark"
+            >
+              <option value="">Whole venue / any hall</option>
+              {/* The capacity is on the OPTION, not only in the warning that
+                  fires once a guest count is already too high. A family
+                  picking between halls chooses by how many people it seats;
+                  making them pick first and be corrected second is the wrong
+                  order. */}
+              {subVenueSpaces.map((sp) => (
+                <option key={sp.id} value={sp.id}>
+                  {" ".repeat(sp.depth * 2)}{sp.name}{sp.kind ? ` — ${sp.kind}` : ""}
+                  {sp.fireRatedCapacity ? ` (up to ${sp.fireRatedCapacity} guests)` : ""}
+                </option>
+              ))}
+            </select>
+            <p className="font-bridal text-[10.5px] text-bridal-text-soft">
+              Pick a specific hall, floor or partition, or leave as the whole venue.
+            </p>
+
+            {/* 10.13 — the answer, while it can still change the decision.
+
+               Reported, never refused. A MIXED hall is not an error, it is a
+               fact the family needs BEFORE the night, while there is still
+               time to pick another hall or ask for a partition. Blocking here
+               would refuse a booking the venue may well be able to
+               accommodate, over a question only the venue can answer. */}
+            {genderFit.status === "mismatch" && genderFit.reason && (
+              <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-300 px-3 py-2 font-bridal text-[12px] text-amber-800">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <p>{genderFit.reason}</p>
+              </div>
+            )}
+            {genderFit.status === "fits" && (
+              <p className="font-bridal text-[11px] text-[#3F6B43]">
+                This hall can be arranged the way you&apos;ve asked.
+              </p>
+            )}
+            {/* The venue has not recorded what it can do — said as a question
+               for the venue, not a defect of it. */}
+            {genderFit.status === "unknown" && genderFit.reason && (
+              <p className="font-bridal text-[11px] text-bridal-text-soft">{genderFit.reason}</p>
+            )}
+
+            {/* 10.16 (UC-22) — rain on an open lawn. A December wedding on an
+               open lawn in Lahore is a normal thing to book and an abnormal
+               thing to have no plan for. */}
+            {backupPlan?.exposed && backupPlan.message && (
+              <div
+                className={
+                  backupPlan.hasPlan
+                    ? "flex items-start gap-2 rounded-md bg-bridal-sage/15 border border-bridal-sage/40 px-3 py-2 font-bridal text-[12px] text-[#3F6B43]"
+                    : "flex items-start gap-2 rounded-md bg-amber-50 border border-amber-300 px-3 py-2 font-bridal text-[12px] text-amber-800"
+                }
+              >
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <p>{backupPlan.message}</p>
+              </div>
+            )}
+          </section>
+        )}
+        {/* Which hall / lawn / partition? (BusinessResource model.) Only shown
+           when the venue configured bookable resources AND is NOT using the
+           canonical sub-venue tree (below). Optional — "whole venue" unpins. */}
+        {spaces.length > 0 && subVenueSpaces.length === 0 && (
+          <section className="space-y-2">
+            <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
+              Which space?
+            </p>
+            <select
+              value={(formData as any).selectedResourceId || ""}
+              onChange={(e) => {
+                const id = e.target.value
+                const picked = spaces.find((sp) => String(sp.id) === String(id))
+                updateFormData((prev) => ({
+                  ...(prev as any),
+                  selectedResourceId: id,
+                  selectedResourceName: picked?.label || null,
+                }))
+              }}
+              className="w-full rounded-md border border-bridal-beige bg-bridal-ivory px-3 py-2.5 font-bridal text-[13px] text-bridal-charcoal outline-none focus:border-bridal-gold-dark"
+            >
+              <option value="">Whole venue / any space</option>
+              {spaces.map((sp) => (
+                <option key={sp.id} value={sp.id}>
+                  {sp.label}{sp.kind ? ` — ${sp.kind}` : ""}
+                  {sp.capacityUnit ? ` (up to ${sp.capacityUnit} guests)` : ""}
+                </option>
+              ))}
+            </select>
+            <p className="font-bridal text-[10.5px] text-bridal-text-soft">
+              Pick a specific hall, lawn or partition, or leave as the whole venue.
+            </p>
+          </section>
+        )}
+
         <section className="space-y-2.5">
         <div className="flex items-center justify-between">
           <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
@@ -747,7 +990,20 @@ export default function DateTimeStep({
             const isSelected = formData.timeSlot === p.value
             const isBooked = selectedAvail?.bookedSlots?.includes(p.value) ?? false
             const isHeld = selectedAvail?.heldSlots?.includes(p.value) ?? false
-            const disabled = !selectedDate || isBooked || isHeld
+            /**
+             * WW-CAL-CLOSED — a period the venue does not run is not the same
+             * as one that is already taken, and only the second was disabled.
+             * A venue that opens for dinner only had its Morning and Afternoon
+             * cards fully selectable — not booked, not held, just never on
+             * offer — and the customer found out at submit.
+             *
+             * `availableSlots` is the venue's own list of what it runs that
+             * day. When it is missing entirely we stay permissive, because
+             * that means the lookup failed rather than that nothing runs.
+             */
+            const offered = selectedAvail?.availableSlots
+            const notOffered = Array.isArray(offered) && !offered.includes(p.value)
+            const disabled = !selectedDate || isBooked || isHeld || notOffered
             const Icon = p.icon
             return (
               <button
@@ -788,6 +1044,13 @@ export default function DateTimeStep({
                     On hold
                   </span>
                 )}
+                {/* Says WHY it cannot be picked. "Not available" reads as a
+                    bug on a card that looks identical to the bookable ones. */}
+                {notOffered && !isBooked && !isHeld && (
+                  <span className="shrink-0 px-1.5 py-0.5 rounded font-bridal text-[8.5px] uppercase tracking-[0.1em] font-medium bg-bridal-beige/60 text-bridal-text-soft border border-bridal-beige">
+                    Not offered
+                  </span>
+                )}
               </button>
             )
           })}
@@ -814,34 +1077,6 @@ export default function DateTimeStep({
             }))
           }
         />
-
-        {/* Which hall / lawn / partition? (BusinessResource model.) Only shown
-           when the venue configured bookable resources AND is NOT using the
-           canonical sub-venue tree (below). Optional — "whole venue" unpins. */}
-        {spaces.length > 0 && subVenueSpaces.length === 0 && (
-          <section className="space-y-2">
-            <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
-              Which space?
-            </p>
-            <select
-              value={(formData as any).selectedResourceId || ""}
-              onChange={(e) =>
-                updateFormData((prev) => ({ ...(prev as any), selectedResourceId: e.target.value }))
-              }
-              className="w-full rounded-md border border-bridal-beige bg-bridal-ivory px-3 py-2.5 font-bridal text-[13px] text-bridal-charcoal outline-none focus:border-bridal-gold-dark"
-            >
-              <option value="">Whole venue / any space</option>
-              {spaces.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}{s.kind ? ` — ${s.kind}` : ""}
-                </option>
-              ))}
-            </select>
-            <p className="font-bridal text-[10.5px] text-bridal-text-soft">
-              Pick a specific hall, lawn or partition, or leave as the whole venue.
-            </p>
-          </section>
-        )}
 
         {/* 10.13 (UC-15) — how the function is arranged.
 
@@ -883,74 +1118,6 @@ export default function DateTimeStep({
           </section>
         )}
 
-        {/* F-2 — canonical sub-venue picker (venue-hierarchy). Shown when the
-           venue built ANY space(s); sends subVenueId (the per-hall path). Was
-           gated `> 1`, which silently hid a venue's only hall (QA #19) — now
-           `>= 1` so a single configured space is selectable. */}
-        {subVenueSpaces.length >= 1 && (
-          <section className="space-y-2">
-            <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
-              Which hall?
-            </p>
-            <select
-              value={(formData as any).selectedSubVenueId || ""}
-              onChange={(e) =>
-                updateFormData((prev) => ({ ...(prev as any), selectedSubVenueId: e.target.value }))
-              }
-              className="w-full rounded-md border border-bridal-beige bg-bridal-ivory px-3 py-2.5 font-bridal text-[13px] text-bridal-charcoal outline-none focus:border-bridal-gold-dark"
-            >
-              <option value="">Whole venue / any hall</option>
-              {subVenueSpaces.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {" ".repeat(s.depth * 2)}{s.name}{s.kind ? ` — ${s.kind}` : ""}
-                </option>
-              ))}
-            </select>
-            <p className="font-bridal text-[10.5px] text-bridal-text-soft">
-              Pick a specific hall, floor or partition, or leave as the whole venue.
-            </p>
-
-            {/* 10.13 — the answer, while it can still change the decision.
-
-               Reported, never refused. A MIXED hall is not an error, it is a
-               fact the family needs BEFORE the night, while there is still
-               time to pick another hall or ask for a partition. Blocking here
-               would refuse a booking the venue may well be able to
-               accommodate, over a question only the venue can answer. */}
-            {genderFit.status === "mismatch" && genderFit.reason && (
-              <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-300 px-3 py-2 font-bridal text-[12px] text-amber-800">
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                <p>{genderFit.reason}</p>
-              </div>
-            )}
-            {genderFit.status === "fits" && (
-              <p className="font-bridal text-[11px] text-[#3F6B43]">
-                This hall can be arranged the way you&apos;ve asked.
-              </p>
-            )}
-            {/* The venue has not recorded what it can do — said as a question
-               for the venue, not a defect of it. */}
-            {genderFit.status === "unknown" && genderFit.reason && (
-              <p className="font-bridal text-[11px] text-bridal-text-soft">{genderFit.reason}</p>
-            )}
-
-            {/* 10.16 (UC-22) — rain on an open lawn. A December wedding on an
-               open lawn in Lahore is a normal thing to book and an abnormal
-               thing to have no plan for. */}
-            {backupPlan?.exposed && backupPlan.message && (
-              <div
-                className={
-                  backupPlan.hasPlan
-                    ? "flex items-start gap-2 rounded-md bg-bridal-sage/15 border border-bridal-sage/40 px-3 py-2 font-bridal text-[12px] text-[#3F6B43]"
-                    : "flex items-start gap-2 rounded-md bg-amber-50 border border-amber-300 px-3 py-2 font-bridal text-[12px] text-amber-800"
-                }
-              >
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                <p>{backupPlan.message}</p>
-              </div>
-            )}
-          </section>
-        )}
       </div>{/* end right column */}
 
       </div>{/* end calendar+slots row */}

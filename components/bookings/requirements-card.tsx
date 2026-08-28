@@ -52,6 +52,37 @@ function dietarySummary(d: BookingRequirement["dietaryJson"]): string[] {
   return out;
 }
 
+/**
+ * WW-SETUP-COUNTS — the furniture and equipment the family asked for.
+ *
+ * These are what the venue's setup crew works from on the day, so unlike the
+ * dietary line they are rendered as their own block rather than folded into a
+ * dot-separated sentence: "40 round tables" buried between "12 children under
+ * 5" and "no beef" is a number that gets missed.
+ */
+const SETUP_LABELS: Record<string, string> = {
+  roundTables: "round tables",
+  vipSofas: "VIP sofa sets",
+  foodStalls: "food stalls",
+  chairs: "chairs",
+  rectTables: "long tables",
+  stageSize: "ft stage",
+  heaters: "patio heaters",
+  acUnits: "extra cooling units",
+  generators: "backup generators",
+  parkingSlots: "reserved parking slots",
+};
+
+function setupSummary(sJson: BookingRequirement["setupJson"]): string[] {
+  if (!sJson) return [];
+  const out: string[] = [];
+  for (const [k, label] of Object.entries(SETUP_LABELS)) {
+    const v = (sJson as Record<string, unknown>)[k];
+    if (typeof v === "number" && v > 0) out.push(`${v} ${label}`);
+  }
+  return out;
+}
+
 export function RequirementsCard({
   bookingId,
   role,
@@ -129,6 +160,7 @@ export function RequirementsCard({
       <div className="space-y-3 p-4">
         {rows.map((r) => {
           const diet = dietarySummary(r.dietaryJson);
+          const setup = setupSummary(r.setupJson);
           const isOpen = r.status === "open";
           return (
             <div
@@ -152,6 +184,31 @@ export function RequirementsCard({
 
               {diet.length > 0 && (
                 <p className="mb-2 text-sm text-muted-foreground">{diet.join(" · ")}</p>
+              )}
+
+              {/* Given its own block, and chips rather than prose: this is the
+                  list the setup crew reads off on the morning. */}
+              {(setup.length > 0 || r.setupJson?.notes) && (
+                <div className="mb-2 rounded-md border border-border/70 bg-muted/40 p-2">
+                  <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Setup requested
+                  </p>
+                  {setup.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {setup.map((line) => (
+                        <span
+                          key={line}
+                          className="rounded-full border border-border bg-background px-2 py-0.5 text-xs tabular-nums"
+                        >
+                          {line}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {r.setupJson?.notes && (
+                    <p className="mt-1.5 text-sm leading-relaxed">{r.setupJson.notes}</p>
+                  )}
+                </div>
               )}
 
               {/* The customer's own words, exactly as typed. Never translated,

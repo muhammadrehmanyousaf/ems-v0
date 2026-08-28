@@ -85,12 +85,29 @@ try {
   check("a client for the quote endpoint exists", /\/api\/v1\/fx-rates/.test(client) && /quote:/.test(client));
   check("the component asks the server for the figure", /fxApi\s*\n?\s*\.quote\(|fxApi\.quote\(/.test(component));
 
-  // Matches the RENDER, not the import. A guard that only checked the import
-  // would pass while the component was rendered as {null} — the exact way the
-  // first deposit wiring guard failed.
-  check("the desktop venue page renders it", /<IndicativePrice\s/.test(desktop));
-  check("the mobile venue page renders it", /<IndicativePrice\s/.test(mobile));
-  check("both import it", /@\/components\/pricing\/indicative-price/.test(desktop) && /@\/components\/pricing\/indicative-price/.test(mobile));
+  /**
+   * WW-PK-ONLY — these three checks INVERTED.
+   *
+   * They asserted that the venue pages RENDER the indicative figure, and were
+   * right to: a guard that only checked the import would pass while the
+   * component was rendered as {null}, which is how the first deposit wiring
+   * guard failed.
+   *
+   * The product decision changed underneath them. Wedding Wala serves Pakistan
+   * only and the venue is paid in rupees, so a second currency under the price
+   * invited a family to reason in a number nobody can honour — and the gap
+   * landed on the venue, who had agreed a PKR total. The figure was removed
+   * from both venue pages.
+   *
+   * The guard is kept and reversed rather than deleted, because "it must not
+   * come back by accident" is worth exactly what "it must be wired" was. The
+   * component and its API client stay in place and are still covered above:
+   * the admin FX screen uses them, so restoring the render is a one-line
+   * change if the platform ever sells outside Pakistan.
+   */
+  check("the desktop venue page does NOT show a converted price", !/<IndicativePrice\s/.test(desktop));
+  check("the mobile venue page does NOT show a converted price", !/<IndicativePrice\s/.test(mobile));
+  check("neither venue page imports it", !/pricing\/indicative-price/.test(desktop) && !/pricing\/indicative-price/.test(mobile));
 
   /**
    * THE VENUE IS PAID IN RUPEES. The converted figure sits BELOW the rupee

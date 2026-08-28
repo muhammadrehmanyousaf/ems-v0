@@ -32,11 +32,14 @@ import {
   REQUIREMENT_TAG_LABELS,
   type RequirementTag,
   type RequirementDietary,
+  type RequirementSetup,
 } from "@/lib/api/requirements"
 
 export interface RequirementsDraft {
   tags: RequirementTag[]
   dietary: RequirementDietary
+  /** WW-SETUP-COUNTS — how many sofas, tables, stalls. All optional. */
+  setup: RequirementSetup
   freeText: string
 }
 
@@ -47,6 +50,12 @@ interface Props {
   venueName?: string
   /** Hidden for vendor types that don't serve food. */
   showDietary?: boolean
+  /**
+   * WW-SETUP-COUNTS — only venues set up a room. A photographer has no round
+   * tables to count, and asking them for some is how an optional section
+   * starts reading as noise.
+   */
+  showSetup?: boolean
 }
 
 const container = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.06 } } }
@@ -55,7 +64,30 @@ const item = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0, trans
 const numFieldCls =
   "h-10 w-full rounded-[3px] border border-bridal-beige bg-bridal-ivory px-3 font-bridal text-[13.5px] text-bridal-charcoal focus:border-bridal-gold outline-none tabular-nums"
 
-export default function RequirementsStep({ value, onChange, venueName, showDietary = true }: Props) {
+/**
+ * WW-SETUP-COUNTS — what a family actually asks a hall for, as numbers.
+ *
+ * These went into the free-text box, when they went anywhere: "6 sofa sets for
+ * the stage, 40 round tables, 5 food stalls". A number written in a sentence
+ * is a number nobody can total, filter or price, so the setup sheet, the floor
+ * plan and the vendor's checklist were all reading prose and counting by hand.
+ *
+ * Ordered by how often a Pakistani venue booking actually names them.
+ */
+const SETUP_FIELDS: { key: keyof RequirementSetup; label: string; hint?: string }[] = [
+  { key: "roundTables", label: "Round tables" },
+  { key: "vipSofas", label: "VIP sofa sets", hint: "for the stage" },
+  { key: "foodStalls", label: "Food stalls", hint: "live counters" },
+  { key: "chairs", label: "Chairs" },
+  { key: "rectTables", label: "Long tables" },
+  { key: "stageSize", label: "Stage width", hint: "in feet" },
+  { key: "heaters", label: "Patio heaters" },
+  { key: "acUnits", label: "Extra cooling" },
+  { key: "generators", label: "Backup generators" },
+  { key: "parkingSlots", label: "Reserved parking" },
+]
+
+export default function RequirementsStep({ value, onChange, venueName, showDietary = true, showSetup = true }: Props) {
   const [allergyText, setAllergyText] = useState((value.dietary.allergies || []).join(", "))
 
   const toggleTag = (t: RequirementTag) =>
@@ -63,6 +95,21 @@ export default function RequirementsStep({ value, onChange, venueName, showDieta
       ...value,
       tags: value.tags.includes(t) ? value.tags.filter((x) => x !== t) : [...value.tags, t],
     })
+
+  /**
+   * Blank CLEARS the key rather than storing 0.
+   *
+   * "0 round tables" and "they didn't say" are different statements, and only
+   * one of them should reach a venue's setup sheet. Same rule as the dietary
+   * counts below, for the same reason.
+   */
+  const setSetupCount = (k: keyof RequirementSetup, raw: string) => {
+    const n = parseInt(raw, 10)
+    const next = { ...(value.setup || {}) }
+    if (raw.trim() === "" || !Number.isFinite(n) || n < 0) delete next[k]
+    else (next as Record<string, number>)[k as string] = n
+    onChange({ ...value, setup: next })
+  }
 
   const setCount = (k: keyof RequirementDietary, raw: string) => {
     const n = parseInt(raw, 10)
@@ -183,6 +230,68 @@ export default function RequirementsStep({ value, onChange, venueName, showDieta
                 })
               }}
               placeholder="e.g. peanuts, shellfish"
+            />
+          </div>
+        </motion.div>
+      )}
+
+      {showSetup && (
+        <motion.div variants={item} className="space-y-3">
+          <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">
+            Setup &amp; furniture
+          </p>
+          <p className="font-bridal text-[11.5px] text-bridal-text-soft -mt-1">
+            All optional. Anything you put here goes on the venue&apos;s setup sheet as a
+            number they can plan against, instead of a line in a message.
+          </p>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {SETUP_FIELDS.map(({ key, label, hint }) => (
+              <div key={String(key)}>
+                <label
+                  className="block font-bridal text-[11.5px] text-bridal-text-soft mb-1"
+                  htmlFor={`setup-${String(key)}`}
+                >
+                  {label}
+                  {hint && (
+                    <span className="text-bridal-text-soft/70"> · {hint}</span>
+                  )}
+                </label>
+                <input
+                  id={`setup-${String(key)}`}
+                  type="number"
+                  min={0}
+                  max={10000}
+                  inputMode="numeric"
+                  className={numFieldCls}
+                  value={(value.setup?.[key] as number | undefined) ?? ""}
+                  onChange={(e) => setSetupCount(key, e.target.value)}
+                  placeholder="—"
+                />
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <label
+              htmlFor="setup-notes"
+              className="block font-bridal text-[11.5px] text-bridal-text-soft mb-1"
+            >
+              Anything about the layout
+            </label>
+            <input
+              id="setup-notes"
+              type="text"
+              maxLength={500}
+              className={numFieldCls + " tabular-nums-none"}
+              value={value.setup?.notes ?? ""}
+              onChange={(e) => {
+                const next = { ...(value.setup || {}) }
+                if (e.target.value.trim()) next.notes = e.target.value
+                else delete next.notes
+                onChange({ ...value, setup: next })
+              }}
+              placeholder="e.g. stage on the garden side, ladies seating to the left"
             />
           </div>
         </motion.div>

@@ -65,7 +65,6 @@ import { useFavorites } from "@/hooks/use-favorites";
 import { ChatDrawer } from "@/components/chat/chat-drawer";
 import VendorInquiryDialog from "@/components/VendorInquiryDialog";
 import { isUnpricedVendor, priceLabelFor } from "@/lib/pricing/unpriced";
-import { IndicativePrice } from "@/components/pricing/indicative-price";
 import { toast as sonnerToast } from "sonner";
 import { VendorAPI } from "@/lib/api/vendors";
 // BK-100.52 Layer 2 — customer-facing bundled-services display.
@@ -1169,11 +1168,13 @@ export default function VendorDetailsMobile({
                   <p className="font-display italic text-[28px] sm:text-[32px] text-bridal-ivory leading-none mt-1">
                     {priceLabel}
                   </p>
-                  {/* 7.13 — the same courtesy as the desktop hero, on the dark
-                     ground. Below the rupee figure, never instead of it.
-                     Silent until an admin sets a rate, and silent again if
-                     nobody refreshes it within a week. */}
-                  <IndicativePrice amountPkr={Number(startingPrice)} tone="onDark" className="mt-2" />
+                  {/* WW-PK-ONLY — the indicative foreign-currency figure was removed here.
+                           Wedding Wala serves Pakistan and the venue is paid in
+                           rupees; a second currency under the price invited a
+                           family to reason in a number nobody on either side
+                           can honour, and the gap landed on the venue. The
+                           rupee figure is the price, on its own. */}
+
                 </div>
                 {/* WW-PRICE0 — an unpriced vendor cannot be booked (the server
                     rejects it 400), so ask rather than dead-end the customer. */}
