@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { OfflineBookingDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog"
 import { BookingRowActions } from "./booking-row-actions"
-import { OwnerLedgerCard } from "@/components/bookings/owner-ledger-card"
+// import { OwnerLedgerCard } from "@/components/bookings/owner-ledger-card"
 import { AssignSpaceDialog } from "@/components/dashboard/shared/assign-space-dialog"
 
 const statusTone = (s: BookingStatus): StatusTone =>
@@ -412,11 +412,20 @@ export function BookingsRedesignedView() {
         </nav>
       )}
 
-      {/* Phase-1 SPINE — owner money ledger. Moved BELOW the table: it repeats
-          the money the stat strip already shows (booked / received / baqaya),
-          and sitting above the table it pushed the first booking row 1,307px
-          down a 900px window. A summary belongs after the thing it summarises. */}
-      <OwnerLedgerCard />
+      {/* The "Receivables" ledger — hidden at the founder's direction
+          (2026-08-29): "we will do something else for that but for now remove
+          it too". Commented, not deleted; components/bookings/owner-ledger-card
+          .tsx and its /booking-order ledger endpoint are untouched.
+
+          Worth knowing when the replacement is designed: this card was already
+          the second telling of the same money. The stat strip at the top of
+          this page shows Total bookings / Collected / Due; the card repeated
+          booked / received / baqaya underneath, then listed 40 rows of balance
+          due. It also sat ABOVE the table once, where it pushed the first
+          booking row 1,307px down a 900px window — a summary belongs after the
+          thing it summarises, and that constraint still applies to whatever
+          replaces it. */}
+      {/* <OwnerLedgerCard /> */}
 
       <OfflineBookingDialog open={createOpen} onOpenChange={setCreateOpen} onSuccess={() => refetch()} />
 
