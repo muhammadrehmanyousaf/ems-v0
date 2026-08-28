@@ -15,14 +15,23 @@ export const metadata: Metadata = {
  * a vendor who clicked "Halls & spaces" in the sidebar landed on a page headed
  * "Venue-OS". The heading now names the tab, matching the sidebar exactly.
  */
+/**
+ * Headings for the tabs that are still switched on.
+ *
+ * The five hidden ones are commented out with their tabs (see PRIMARY_TABS in
+ * venue-os-hub-view.tsx). They have to go together: the heading is keyed off
+ * the RAW ?tab= value while the hub validates that value against its tab list,
+ * so leaving `cash` here would title the page "Cash & cheques" above whatever
+ * the hub actually fell back to rendering.
+ */
 const TAB_HEADINGS: Record<string, { title: string; description: string }> = {
-  today: { title: 'Tonight', description: "What is happening tonight — arrivals, headcount, unpaid balances and who to chase." },
+  // today: { title: 'Tonight', description: "What is happening tonight — arrivals, headcount, unpaid balances and who to chase." },
   profit: { title: 'Event profit', description: 'Did each shaadi make money — booked, received and what you spent on it, per function.' },
-  money: { title: 'Venue money', description: 'Fixed overheads, utilities, leases and the spending that is not tied to one event.' },
+  // money: { title: 'Venue money', description: 'Fixed overheads, utilities, leases and the spending that is not tied to one event.' },
   spaces: { title: 'Halls & spaces', description: 'Your halls, floors and partitions — availability, per-space P&L and slot templates.' },
-  cash: { title: 'Cash & cheques', description: 'The galla and the cheque book — float reconciliation, PDC clearing and bounce risk.' },
-  kitchen: { title: 'Kitchen', description: 'Recipes, prep sheets, procurement and the supplier side of the kitchen.' },
-  advanced: { title: 'Accounting', description: 'The ledger, period close, depreciation, compliance and the deeper finance tools.' },
+  // cash: { title: 'Cash & cheques', description: 'The galla and the cheque book — float reconciliation, PDC clearing and bounce risk.' },
+  // kitchen: { title: 'Kitchen', description: 'Recipes, prep sheets, procurement and the supplier side of the kitchen.' },
+  // advanced: { title: 'Accounting', description: 'The ledger, period close, depreciation, compliance and the deeper finance tools.' },
 };
 
 const DEFAULT_HEADING = {

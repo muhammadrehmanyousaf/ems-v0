@@ -375,13 +375,48 @@ export const NAV_MODULES: NavModule[] = [
     ],
   },
 
+  /**
+   * Plan & billing — promoted out of Set up to a rail module of its own
+   * (founder, 2026-08-29).
+   *
+   * `railOnly` because it is a single page: a 250px column holding one link
+   * next to the page that link opens is worse than no column at all. Same
+   * treatment as Home and Bookings.
+   *
+   * `id` MUST stay "billing" — `moduleForPath` matches the first path segment
+   * against `id` before it consults any `owns` list, and that is what makes
+   * /dashboard/billing light this icon instead of Set up.
+   */
+  {
+    id: "billing",
+    label: "Billing",
+    icon: CreditCard,
+    href: "/dashboard/billing",
+    panelTitle: "Billing",
+    railOnly: true,
+    groups: [
+      {
+        items: [
+          { label: "Plan & billing", href: "/dashboard/billing", icon: CreditCard, i18nKey: "nav.billing" },
+        ],
+      },
+    ],
+  },
+
   {
     id: "setup",
     label: "Set up",
     icon: Settings,
     href: "/dashboard/settings",
+    // `billing` deliberately NOT here any more — it is its own rail module now
+    // (see below). Leaving it would make Set up win the `owns` match and light
+    // the wrong rail icon on /dashboard/billing.
+    //
+    // The rest are kept even where the panel row is commented out, so a vendor
+    // arriving on one of those pages from an old link still sees Set up lit
+    // rather than falling back to Home.
     owns: [
-      "settings", "onboarding", "promote", "billing", "collaborations",
+      "settings", "onboarding", "promote", "collaborations",
       "inventory", "generator-fuel", "halal-certs", "drone-noc",
       "automation", "venue-os", "field",
     ],
@@ -403,7 +438,11 @@ export const NAV_MODULES: NavModule[] = [
         label: "Grow",
         items: [
           { label: "Promote", href: "/dashboard/promote", icon: Megaphone, i18nKey: "nav.promote" },
-          { label: "Plan & billing", href: "/dashboard/billing", icon: CreditCard, i18nKey: "nav.billing" },
+          // MOVED, not hidden — "Plan & billing" is now a rail module of its
+          // own (2026-08-29). It is the one row in this panel that is about the
+          // vendor's account with Wedding Wala rather than about their venue,
+          // so it never belonged under a venue setup heading.
+          // { label: "Plan & billing", href: "/dashboard/billing", icon: CreditCard, i18nKey: "nav.billing" },
           { label: "Collaborations", href: "/dashboard/collaborations", icon: Handshake, i18nKey: "nav.collaborations" },
         ],
       },
@@ -415,48 +454,67 @@ export const NAV_MODULES: NavModule[] = [
         // which is what most of it is.
         label: "Venue",
         items: [
-          // Tonight and Kitchen had NO nav entry at all — two of the hub's
-          // seven tabs were reachable only by landing on the hub and noticing
-          // the tab strip. Tonight is the live event console: headcount against
-          // safe capacity, valet, incidents. For a hall owner that is the most
-          // used screen in the product, and nothing in the sidebar named it.
-          // The hub renders Tonight when no ?tab is present, so Tonight is what
-          // should be lit on a bare /dashboard/venue-os — otherwise the panel
-          // highlights nothing while the page clearly shows a section.
-          { label: "Tonight", href: "/dashboard/venue-os?tab=today", icon: CalendarCheck, isDefaultView: true },
+          // Tonight, Venue money, Cash & cheques and Kitchen & suppliers hidden
+          // at the founder's direction (2026-08-29). These are SWITCHED OFF,
+          // not merely unlisted: the matching tabs are commented out of
+          // PRIMARY_TABS in venue-os-hub-view.tsx, so the hub no longer renders
+          // them either. Restoring a row here without restoring its tab there
+          // produces a link to a tab that does not exist.
+          //
+          // { label: "Tonight", href: "/dashboard/venue-os?tab=today", icon: CalendarCheck, isDefaultView: true },
+          //
+          // `isDefaultView` moved to Event profit with Tonight: the hub falls
+          // back to the FIRST surviving tab when no ?tab is present, and that
+          // is now profit. Leaving the marker on a hidden row would light
+          // nothing on a bare /dashboard/venue-os.
           { label: "Halls & spaces", href: "/dashboard/venue-os?tab=spaces", icon: Building2 },
-          { label: "Venue money", href: "/dashboard/venue-os?tab=money", icon: Wallet },
-          { label: "Event profit", href: "/dashboard/venue-os?tab=profit", icon: CircleDollarSign },
-          { label: "Cash & cheques", href: "/dashboard/venue-os?tab=cash", icon: CreditCard },
-          { label: "Kitchen & suppliers", href: "/dashboard/venue-os?tab=kitchen", icon: Utensils },
+          // { label: "Venue money", href: "/dashboard/venue-os?tab=money", icon: Wallet },
+          { label: "Event profit", href: "/dashboard/venue-os?tab=profit", icon: CircleDollarSign, isDefaultView: true },
+          // { label: "Cash & cheques", href: "/dashboard/venue-os?tab=cash", icon: CreditCard },
+          // { label: "Kitchen & suppliers", href: "/dashboard/venue-os?tab=kitchen", icon: Utensils },
         ],
       },
-      {
-        // The Advanced tab held 28 views behind a single "Accounting" link and
-        // seven un-addressable accordions. Each group now has its own address
-        // (`?tab=advanced&group=`), so the accountant tools are navigable
-        // instead of discoverable-by-accident. Kept as a separate group so a
-        // plain hall owner reads it as "not for me" and skips the whole block.
-        label: "Venue accounting",
-        items: [
-          { label: "Costing & margins", href: "/dashboard/venue-os?tab=advanced&group=costing", icon: TrendingUp },
-          { label: "Accounting & tax", href: "/dashboard/venue-os?tab=advanced&group=accounting", icon: Receipt },
-          { label: "Group & partners", href: "/dashboard/venue-os?tab=advanced&group=group", icon: Building2 },
-          { label: "Working capital", href: "/dashboard/venue-os?tab=advanced&group=working-capital", icon: CircleDollarSign },
-          { label: "AML & KYC", href: "/dashboard/venue-os?tab=advanced&group=compliance", icon: ShieldCheck },
-          { label: "Legal & insurance", href: "/dashboard/venue-os?tab=advanced&group=legal", icon: ClipboardList },
-          { label: "Venue setup & tools", href: "/dashboard/venue-os?tab=advanced&group=setup", icon: Settings2 },
-        ],
-      },
-      {
-        label: "Stock & compliance",
-        items: [
-          { label: "Inventory", href: "/dashboard/inventory", icon: Boxes, i18nKey: "nav.inventory" },
-          { label: "Generator fuel", href: "/dashboard/generator-fuel", icon: Fuel, i18nKey: "nav.generator_fuel" },
-          { label: "Halal certs", href: "/dashboard/halal-certs", icon: ShieldCheck, i18nKey: "nav.halal_certs" },
-          { label: "Drone NOC", href: "/dashboard/drone-noc", icon: Plane, i18nKey: "nav.drone_noc" },
-        ],
-      },
+      // ── "Venue accounting" — hidden in full (founder, 2026-08-29) ──────────
+      //
+      // Switched off at the source too: the `advanced` tab these all point into
+      // is commented out of PRIMARY_TABS, so every ?tab=advanced&group=... link
+      // below is inert until both come back together.
+      //
+      // Why it existed: the Advanced tab held 28 views behind a single
+      // "Accounting" link and seven un-addressable accordions. Each group was
+      // given its own address (`?tab=advanced&group=`) so the accountant tools
+      // were navigable instead of discoverable-by-accident, and kept as a
+      // separate group so a plain hall owner read it as "not for me".
+      //
+      // {
+      //   label: "Venue accounting",
+      //   items: [
+      //     { label: "Costing & margins", href: "/dashboard/venue-os?tab=advanced&group=costing", icon: TrendingUp },
+      //     { label: "Accounting & tax", href: "/dashboard/venue-os?tab=advanced&group=accounting", icon: Receipt },
+      //     { label: "Group & partners", href: "/dashboard/venue-os?tab=advanced&group=group", icon: Building2 },
+      //     { label: "Working capital", href: "/dashboard/venue-os?tab=advanced&group=working-capital", icon: CircleDollarSign },
+      //     { label: "AML & KYC", href: "/dashboard/venue-os?tab=advanced&group=compliance", icon: ShieldCheck },
+      //     { label: "Legal & insurance", href: "/dashboard/venue-os?tab=advanced&group=legal", icon: ClipboardList },
+      //     { label: "Venue setup & tools", href: "/dashboard/venue-os?tab=advanced&group=setup", icon: Settings2 },
+      //   ],
+      // },
+      //
+      // ── "Stock & compliance" — hidden in full (founder, 2026-08-29) ───────
+      //
+      // These four ARE standalone pages, unlike the venue-os rows above, so
+      // hiding the group is all it takes — /dashboard/inventory and friends
+      // still exist and still render if reached directly, and Set up still
+      // `owns` them so the rail stays lit.
+      //
+      // {
+      //   label: "Stock & compliance",
+      //   items: [
+      //     { label: "Inventory", href: "/dashboard/inventory", icon: Boxes, i18nKey: "nav.inventory" },
+      //     { label: "Generator fuel", href: "/dashboard/generator-fuel", icon: Fuel, i18nKey: "nav.generator_fuel" },
+      //     { label: "Halal certs", href: "/dashboard/halal-certs", icon: ShieldCheck, i18nKey: "nav.halal_certs" },
+      //     { label: "Drone NOC", href: "/dashboard/drone-noc", icon: Plane, i18nKey: "nav.drone_noc" },
+      //   ],
+      // },
     ],
   },
 ];
