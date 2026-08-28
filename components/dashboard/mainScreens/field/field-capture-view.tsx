@@ -37,7 +37,17 @@ const ACTIONS: Action[] = [
   { kind: "hold", icon: "CalendarCheck", title: "Hold a date", subtitle: "Tentative reservation", tone: "text-blue-600 bg-blue-50 border-blue-200" },
 ]
 
-export function FieldCaptureView() {
+/**
+ * `embedded` — render as a SECTION inside another page rather than as the whole
+ * screen (the dashboard Home uses this).
+ *
+ * It drops the PageHeader and the page chrome. Without it, embedding produced a
+ * second "Field capture" title and a `max-w-2xl mx-auto` column floating in the
+ * middle of a full-width dashboard. The OutboxStatus that lived in the header's
+ * actions moves inline, because "is my capture saved?" is the one thing on this
+ * component a vendor must never lose sight of.
+ */
+export function FieldCaptureView({ embedded = false }: { embedded?: boolean } = {}) {
   const qc = useQueryClient()
   // WWL-608 (S3) — this read `useActiveBusinessId() ?? undefined`, and the
   // dashboard header's persisted default is "All venues", under which that is
@@ -64,13 +74,28 @@ export function FieldCaptureView() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6 max-w-2xl mx-auto">
-      <PageHeader
-        eyebrow="On the floor"
-        title="Field capture"
-        description="Capture everything on-site — it saves instantly and syncs when you're back online."
-        actions={<OutboxStatus />}
-      />
+    <div className={embedded ? "space-y-4" : "space-y-6 p-4 md:p-6 max-w-2xl mx-auto"}>
+      {embedded ? (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Field capture{" "}
+              <span className="font-normal normal-case tracking-normal text-xs">· works offline</span>
+            </h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              Capture everything on-site — it saves instantly and syncs when you&apos;re back online.
+            </p>
+          </div>
+          <OutboxStatus />
+        </div>
+      ) : (
+        <PageHeader
+          eyebrow="On the floor"
+          title="Field capture"
+          description="Capture everything on-site — it saves instantly and syncs when you're back online."
+          actions={<OutboxStatus />}
+        />
+      )}
 
       {/* Offline-first status banner */}
       <div className={cn(

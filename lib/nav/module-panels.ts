@@ -38,13 +38,16 @@ import {
   Wallet,
   SquareUser,
   Settings,
-  FileText,
   CalendarClock,
   Handshake,
   Receipt,
   BarChart3,
+  // Referenced only from commented-out panel rows below (Bookings' Paperwork
+  // and On-the-day groups, Calendar's Rules group). Kept so restoring a row is
+  // a one-line change rather than an import hunt.
   Workflow,
   ChefHat,
+  FileText,
   ListChecks,
   Bell,
   Smile,
@@ -159,7 +162,11 @@ export const NAV_MODULES: NavModule[] = [
     label: "Enquiries",
     icon: Inbox,
     href: "/dashboard/leads",
-    owns: ["quotes", "holds"],
+    // `holds` deliberately NOT here — it belongs to Calendar. See the note on
+    // that module. A path can only be owned once, and whichever module is
+    // declared first in this array wins, so listing it in both silently made
+    // Enquiries the owner.
+    owns: ["quotes"],
     panelTitle: "Enquiries",
     groups: [
       {
@@ -171,7 +178,11 @@ export const NAV_MODULES: NavModule[] = [
         label: "Before the booking",
         items: [
           { label: "Quote requests", href: "/dashboard/quotes", icon: Handshake, i18nKey: "nav.quotes" },
-          { label: "Date holds", href: "/dashboard/holds", icon: CalendarClock, i18nKey: "nav.holds" },
+          // "Date holds" lived here too. Removed at the founder's direction
+          // (2026-08-28): "hold date should be in the calender module only and
+          // should open there not travel to the inquiry module". A date hold IS
+          // a calendar act, and offering the same destination from two modules
+          // is what made it look like it teleported.
         ],
       },
     ],
@@ -182,35 +193,52 @@ export const NAV_MODULES: NavModule[] = [
     label: "Bookings",
     icon: ClipboardList,
     href: "/dashboard/bookings",
+    // Kept, even though the panel is off: these paths still RESOLVE to this
+    // module, so a vendor who reaches /dashboard/function-sheets from a booking
+    // row still sees Bookings lit in the rail rather than falling back to Home.
     owns: ["function-sheets", "trade-ops", "function-sheet-operations", "function-sheet-sign", "kitchen-prep"],
     panelTitle: "Bookings",
+    /**
+     * Bookings is rail-only — no second column. (Founder, 2026-08-28: "i dont
+     * need the secondry sidebar in the bookings module".)
+     *
+     * The bookings list is the widest screen in the product: eight columns plus
+     * a four-card KPI strip. A 250px panel of links beside it was taking width
+     * from the table it sat next to, to offer six destinations the vendor had
+     * not asked for. Same reasoning as Home above.
+     *
+     * The routes below still exist and still render; they are simply not
+     * advertised here. Deleting the pages was NOT asked for and would break the
+     * links that booking rows and function-sheet emails already carry.
+     */
+    railOnly: true,
     groups: [
       {
-        // These two are real: the list already sends `bucket` to the API, and
-        // now seeds it from the URL, so each row lands on a genuinely
-        // different set of bookings and survives a refresh. Compare with the
-        // "Upcoming / Awaiting payment" rows I did NOT add — the API has no
-        // such filter, so those links would look like they work and do nothing.
+        // `groups` is required by the type and read by nothing while
+        // `railOnly` is set. Active bookings stays as the module's own
+        // destination so restoring the panel is a one-line change.
         items: [
           { label: "Active bookings", href: "/dashboard/bookings", icon: ClipboardList, i18nKey: "nav.bookings" },
-          { label: "Completed", href: "/dashboard/bookings?bucket=completed", icon: ListChecks },
+          // Commented out at the founder's direction (2026-08-28) — not needed
+          // for now. Restore by deleting these comment markers.
+          // { label: "Completed", href: "/dashboard/bookings?bucket=completed", icon: ListChecks },
         ],
       },
-      {
-        label: "Paperwork",
-        items: [
-          { label: "Quotes & Invoices", href: "/dashboard/function-sheets", icon: FileText, i18nKey: "nav.function_sheets" },
-          { label: "Sign contract", href: "/dashboard/function-sheet-sign", icon: FileText },
-        ],
-      },
-      {
-        label: "On the day",
-        items: [
-          { label: "Trade operations", href: "/dashboard/trade-ops", icon: Workflow, i18nKey: "nav.trade_ops" },
-          { label: "Night-of operations", href: "/dashboard/function-sheet-operations", icon: ListChecks },
-          { label: "Kitchen prep", href: "/dashboard/kitchen-prep", icon: ChefHat, i18nKey: "nav.kitchen_prep" },
-        ],
-      },
+      // {
+      //   label: "Paperwork",
+      //   items: [
+      //     { label: "Quotes & Invoices", href: "/dashboard/function-sheets", icon: FileText, i18nKey: "nav.function_sheets" },
+      //     { label: "Sign contract", href: "/dashboard/function-sheet-sign", icon: FileText },
+      //   ],
+      // },
+      // {
+      //   label: "On the day",
+      //   items: [
+      //     { label: "Trade operations", href: "/dashboard/trade-ops", icon: Workflow, i18nKey: "nav.trade_ops" },
+      //     { label: "Night-of operations", href: "/dashboard/function-sheet-operations", icon: ListChecks },
+      //     { label: "Kitchen prep", href: "/dashboard/kitchen-prep", icon: ChefHat, i18nKey: "nav.kitchen_prep" },
+      //   ],
+      // },
     ],
   },
 
@@ -219,22 +247,48 @@ export const NAV_MODULES: NavModule[] = [
     label: "Calendar",
     icon: CalendarDays,
     href: "/dashboard/calendar",
-    owns: ["availability", "cancellation-policy"],
+    /**
+     * `holds` is owned HERE, and only here.
+     *
+     * Date holds was reachable from both the Enquiries panel and this one, but
+     * `moduleForPath` matches `owns` in array order and Enquiries is declared
+     * first — so clicking "Date holds" in the CALENDAR panel navigated to
+     * /dashboard/holds and the whole left column swapped to Enquiries. The
+     * vendor clicked a row in one module and was dropped into another, with the
+     * rail lit on a module they had not chosen. Measured on production:
+     * /dashboard/holds, rail lit "Enquiries", panel titled "Enquiries".
+     */
+    owns: ["availability", "cancellation-policy", "holds", "blocked-dates"],
     panelTitle: "Calendar",
     groups: [
       {
         items: [
           { label: "Calendar", href: "/dashboard/calendar", icon: CalendarDays, i18nKey: "nav.calendar" },
           { label: "Date holds", href: "/dashboard/holds", icon: CalendarClock, i18nKey: "nav.holds" },
+          // Moved here out of Business Settings and renamed (founder,
+          // 2026-08-29). Points at /dashboard/blocked-dates, NOT at
+          // /dashboard/availability — that is a different screen (the
+          // availability PRIMITIVE setup for non-venue vendor types), and for a
+          // venue it renders one sentence telling you to go to the Calendar.
+          { label: "Blocked dates", href: "/dashboard/blocked-dates", icon: CalendarCheck },
         ],
       },
-      {
-        label: "Rules",
-        items: [
-          { label: "Availability", href: "/dashboard/availability", icon: CalendarClock, i18nKey: "nav.availability" },
-          { label: "Cancellation policy", href: "/dashboard/cancellation-policy", icon: FileText, i18nKey: "nav.cancellation_policy" },
-        ],
-      },
+      // The "Rules" group — Availability and Cancellation policy — commented
+      // out at the founder's direction (2026-08-28). Restore by deleting these
+      // markers.
+      //
+      // Availability was the weakest row in the panel regardless: the page it
+      // opened is a signpost, not a screen. Its entire body reads "Venue
+      // availability is managed from the Calendar — block or free dates there"
+      // with a button back to the Calendar the vendor had just left.
+      //
+      // {
+      //   label: "Rules",
+      //   items: [
+      //     { label: "Availability", href: "/dashboard/availability", icon: CalendarClock, i18nKey: "nav.availability" },
+      //     { label: "Cancellation policy", href: "/dashboard/cancellation-policy", icon: FileText, i18nKey: "nav.cancellation_policy" },
+      //   ],
+      // },
     ],
   },
 
@@ -327,13 +381,48 @@ export const NAV_MODULES: NavModule[] = [
     ],
   },
 
+  /**
+   * Plan & billing — promoted out of Set up to a rail module of its own
+   * (founder, 2026-08-29).
+   *
+   * `railOnly` because it is a single page: a 250px column holding one link
+   * next to the page that link opens is worse than no column at all. Same
+   * treatment as Home and Bookings.
+   *
+   * `id` MUST stay "billing" — `moduleForPath` matches the first path segment
+   * against `id` before it consults any `owns` list, and that is what makes
+   * /dashboard/billing light this icon instead of Set up.
+   */
+  {
+    id: "billing",
+    label: "Billing",
+    icon: CreditCard,
+    href: "/dashboard/billing",
+    panelTitle: "Billing",
+    railOnly: true,
+    groups: [
+      {
+        items: [
+          { label: "Plan & billing", href: "/dashboard/billing", icon: CreditCard, i18nKey: "nav.billing" },
+        ],
+      },
+    ],
+  },
+
   {
     id: "setup",
     label: "Set up",
     icon: Settings,
     href: "/dashboard/settings",
+    // `billing` deliberately NOT here any more — it is its own rail module now
+    // (see below). Leaving it would make Set up win the `owns` match and light
+    // the wrong rail icon on /dashboard/billing.
+    //
+    // The rest are kept even where the panel row is commented out, so a vendor
+    // arriving on one of those pages from an old link still sees Set up lit
+    // rather than falling back to Home.
     owns: [
-      "settings", "onboarding", "promote", "billing", "collaborations",
+      "settings", "onboarding", "promote", "collaborations",
       "inventory", "generator-fuel", "halal-certs", "drone-noc",
       "automation", "venue-os", "field",
     ],
@@ -348,14 +437,23 @@ export const NAV_MODULES: NavModule[] = [
           { label: "Business Settings", href: "/dashboard/settings", icon: Settings, i18nKey: "nav.business_settings" },
           { label: "Setup checklist", href: "/dashboard/onboarding", icon: ListChecks, i18nKey: "nav.onboarding" },
           { label: "Automation", href: "/dashboard/automation", icon: Zap, i18nKey: "nav.automation" },
-          { label: "Field capture", href: "/dashboard/field", icon: Zap, i18nKey: "nav.field_capture" },
+          // MOVED to the Home dashboard, not hidden (founder, 2026-08-29).
+          // It is not a setting — it is what a vendor does standing at a bridal
+          // expo with dead signal, so it now renders as a section of the screen
+          // they open. /dashboard/field still exists and Set up still `owns`
+          // "field", so the old link keeps working with the right rail lit.
+          // { label: "Field capture", href: "/dashboard/field", icon: Zap, i18nKey: "nav.field_capture" },
         ],
       },
       {
         label: "Grow",
         items: [
           { label: "Promote", href: "/dashboard/promote", icon: Megaphone, i18nKey: "nav.promote" },
-          { label: "Plan & billing", href: "/dashboard/billing", icon: CreditCard, i18nKey: "nav.billing" },
+          // MOVED, not hidden — "Plan & billing" is now a rail module of its
+          // own (2026-08-29). It is the one row in this panel that is about the
+          // vendor's account with Wedding Wala rather than about their venue,
+          // so it never belonged under a venue setup heading.
+          // { label: "Plan & billing", href: "/dashboard/billing", icon: CreditCard, i18nKey: "nav.billing" },
           { label: "Collaborations", href: "/dashboard/collaborations", icon: Handshake, i18nKey: "nav.collaborations" },
         ],
       },
@@ -367,51 +465,91 @@ export const NAV_MODULES: NavModule[] = [
         // which is what most of it is.
         label: "Venue",
         items: [
-          // Tonight and Kitchen had NO nav entry at all — two of the hub's
-          // seven tabs were reachable only by landing on the hub and noticing
-          // the tab strip. Tonight is the live event console: headcount against
-          // safe capacity, valet, incidents. For a hall owner that is the most
-          // used screen in the product, and nothing in the sidebar named it.
-          // The hub renders Tonight when no ?tab is present, so Tonight is what
-          // should be lit on a bare /dashboard/venue-os — otherwise the panel
-          // highlights nothing while the page clearly shows a section.
-          { label: "Tonight", href: "/dashboard/venue-os?tab=today", icon: CalendarCheck, isDefaultView: true },
+          // Tonight, Venue money, Cash & cheques and Kitchen & suppliers hidden
+          // at the founder's direction (2026-08-29). These are SWITCHED OFF,
+          // not merely unlisted: the matching tabs are commented out of
+          // PRIMARY_TABS in venue-os-hub-view.tsx, so the hub no longer renders
+          // them either. Restoring a row here without restoring its tab there
+          // produces a link to a tab that does not exist.
+          //
+          // { label: "Tonight", href: "/dashboard/venue-os?tab=today", icon: CalendarCheck, isDefaultView: true },
+          //
+          // `isDefaultView` moved to Event profit with Tonight: the hub falls
+          // back to the FIRST surviving tab when no ?tab is present, and that
+          // is now profit. Leaving the marker on a hidden row would light
+          // nothing on a bare /dashboard/venue-os.
           { label: "Halls & spaces", href: "/dashboard/venue-os?tab=spaces", icon: Building2 },
-          { label: "Venue money", href: "/dashboard/venue-os?tab=money", icon: Wallet },
-          { label: "Event profit", href: "/dashboard/venue-os?tab=profit", icon: CircleDollarSign },
-          { label: "Cash & cheques", href: "/dashboard/venue-os?tab=cash", icon: CreditCard },
-          { label: "Kitchen & suppliers", href: "/dashboard/venue-os?tab=kitchen", icon: Utensils },
+          // { label: "Venue money", href: "/dashboard/venue-os?tab=money", icon: Wallet },
+          { label: "Event profit", href: "/dashboard/venue-os?tab=profit", icon: CircleDollarSign, isDefaultView: true },
+          // { label: "Cash & cheques", href: "/dashboard/venue-os?tab=cash", icon: CreditCard },
+          // { label: "Kitchen & suppliers", href: "/dashboard/venue-os?tab=kitchen", icon: Utensils },
         ],
       },
-      {
-        // The Advanced tab held 28 views behind a single "Accounting" link and
-        // seven un-addressable accordions. Each group now has its own address
-        // (`?tab=advanced&group=`), so the accountant tools are navigable
-        // instead of discoverable-by-accident. Kept as a separate group so a
-        // plain hall owner reads it as "not for me" and skips the whole block.
-        label: "Venue accounting",
-        items: [
-          { label: "Costing & margins", href: "/dashboard/venue-os?tab=advanced&group=costing", icon: TrendingUp },
-          { label: "Accounting & tax", href: "/dashboard/venue-os?tab=advanced&group=accounting", icon: Receipt },
-          { label: "Group & partners", href: "/dashboard/venue-os?tab=advanced&group=group", icon: Building2 },
-          { label: "Working capital", href: "/dashboard/venue-os?tab=advanced&group=working-capital", icon: CircleDollarSign },
-          { label: "AML & KYC", href: "/dashboard/venue-os?tab=advanced&group=compliance", icon: ShieldCheck },
-          { label: "Legal & insurance", href: "/dashboard/venue-os?tab=advanced&group=legal", icon: ClipboardList },
-          { label: "Venue setup & tools", href: "/dashboard/venue-os?tab=advanced&group=setup", icon: Settings2 },
-        ],
-      },
-      {
-        label: "Stock & compliance",
-        items: [
-          { label: "Inventory", href: "/dashboard/inventory", icon: Boxes, i18nKey: "nav.inventory" },
-          { label: "Generator fuel", href: "/dashboard/generator-fuel", icon: Fuel, i18nKey: "nav.generator_fuel" },
-          { label: "Halal certs", href: "/dashboard/halal-certs", icon: ShieldCheck, i18nKey: "nav.halal_certs" },
-          { label: "Drone NOC", href: "/dashboard/drone-noc", icon: Plane, i18nKey: "nav.drone_noc" },
-        ],
-      },
+      // ── "Venue accounting" — hidden in full (founder, 2026-08-29) ──────────
+      //
+      // Switched off at the source too: the `advanced` tab these all point into
+      // is commented out of PRIMARY_TABS, so every ?tab=advanced&group=... link
+      // below is inert until both come back together.
+      //
+      // Why it existed: the Advanced tab held 28 views behind a single
+      // "Accounting" link and seven un-addressable accordions. Each group was
+      // given its own address (`?tab=advanced&group=`) so the accountant tools
+      // were navigable instead of discoverable-by-accident, and kept as a
+      // separate group so a plain hall owner read it as "not for me".
+      //
+      // {
+      //   label: "Venue accounting",
+      //   items: [
+      //     { label: "Costing & margins", href: "/dashboard/venue-os?tab=advanced&group=costing", icon: TrendingUp },
+      //     { label: "Accounting & tax", href: "/dashboard/venue-os?tab=advanced&group=accounting", icon: Receipt },
+      //     { label: "Group & partners", href: "/dashboard/venue-os?tab=advanced&group=group", icon: Building2 },
+      //     { label: "Working capital", href: "/dashboard/venue-os?tab=advanced&group=working-capital", icon: CircleDollarSign },
+      //     { label: "AML & KYC", href: "/dashboard/venue-os?tab=advanced&group=compliance", icon: ShieldCheck },
+      //     { label: "Legal & insurance", href: "/dashboard/venue-os?tab=advanced&group=legal", icon: ClipboardList },
+      //     { label: "Venue setup & tools", href: "/dashboard/venue-os?tab=advanced&group=setup", icon: Settings2 },
+      //   ],
+      // },
+      //
+      // ── "Stock & compliance" — hidden in full (founder, 2026-08-29) ───────
+      //
+      // These four ARE standalone pages, unlike the venue-os rows above, so
+      // hiding the group is all it takes — /dashboard/inventory and friends
+      // still exist and still render if reached directly, and Set up still
+      // `owns` them so the rail stays lit.
+      //
+      // {
+      //   label: "Stock & compliance",
+      //   items: [
+      //     { label: "Inventory", href: "/dashboard/inventory", icon: Boxes, i18nKey: "nav.inventory" },
+      //     { label: "Generator fuel", href: "/dashboard/generator-fuel", icon: Fuel, i18nKey: "nav.generator_fuel" },
+      //     { label: "Halal certs", href: "/dashboard/halal-certs", icon: ShieldCheck, i18nKey: "nav.halal_certs" },
+      //     { label: "Drone NOC", href: "/dashboard/drone-noc", icon: Plane, i18nKey: "nav.drone_noc" },
+      //   ],
+      // },
     ],
   },
 ];
+
+/**
+ * Does this route render a contextual panel at all?
+ *
+ * The single source of truth for that question, because TWO components need
+ * the answer and they must not drift: AppSidebar decides whether to render the
+ * panel, and PanelToggle decides whether to render the button that collapses
+ * it. When only the first knew, the header kept a toggle on rail-only screens
+ * that opened nothing — a control that does nothing when clicked, which reads
+ * as a broken build rather than a design.
+ *
+ * Admins are always true: they get the flat section list rather than the
+ * module panel, and `railOnly` is a vendor-shell concept that does not apply.
+ */
+export function hasPanel(
+  pathname: string | null | undefined,
+  adminLike: boolean,
+): boolean {
+  if (adminLike) return true;
+  return moduleForPath(pathname).railOnly !== true;
+}
 
 /** Which module owns this path? Falls back to Home. */
 export function moduleForPath(pathname: string | null | undefined): NavModule {

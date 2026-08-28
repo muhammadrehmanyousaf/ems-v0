@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button"
 import { FamiliarityPrompt } from "@/components/dashboard/layout/familiarity-prompt"
 import { ActionOverviewView } from "@/components/dashboard/mainScreens/dashboard/v2/action-overview-view"
 import { TodayBoard } from "@/components/dashboard/mainScreens/venue-os/today-board"
+import { FieldCaptureView } from "@/components/dashboard/mainScreens/field/field-capture-view"
 import { EventProfitBoard } from "@/components/dashboard/mainScreens/venue-os/event-profit-board"
 import dynamic from "next/dynamic"
 import { getDashboardRole, isAdminLike } from "@/lib/dashboard-role"
@@ -106,7 +107,7 @@ function VendorOverviewRedesignedView() {
   })
   const recentQ = useQuery({
     queryKey: ["overview-recent-redesigned", activeBusinessId],
-    queryFn: () => AnalyticsAPI.getRecentBookings(8, undefined, undefined, undefined, activeBusinessId),
+    queryFn: () => AnalyticsAPI.getRecentBookings(5, undefined, undefined, undefined, activeBusinessId),
   })
   // Owner cockpit: which hall earns the most? Always across ALL the owner's
   // venues (independent of the switcher) so a multi-hall owner can compare.
@@ -137,12 +138,18 @@ function VendorOverviewRedesignedView() {
     if (breakdownsQ.isError) breakdownsQ.refetch()
   }
 
-  const halls = React.useMemo(
+  // Five per list on this screen (founder, 2026-08-29). Sorted first, so the
+  // five shown are the top five by revenue rather than an arbitrary five.
+  const HOME_LIST_CAP = 5
+  const hallsAll = React.useMemo(
     () => [...(breakdownsQ.data?.byBusiness ?? [])].sort((a, b) => (b.totalRevenue || 0) - (a.totalRevenue || 0)),
     [breakdownsQ.data],
   )
-  const maxHallRev = halls.reduce((m, h) => Math.max(m, h.totalRevenue || 0), 0)
-  const showHallLeague = halls.length > 1
+  const halls = hallsAll.slice(0, HOME_LIST_CAP)
+  // Measured across ALL halls, not the visible five — otherwise the bars
+  // re-scale to whatever survived the cap and the top hall always reads 100%.
+  const maxHallRev = hallsAll.reduce((m, h) => Math.max(m, h.totalRevenue || 0), 0)
+  const showHallLeague = hallsAll.length > 1
 
   const columns: Column<RecentRow>[] = [
     { key: "customer", header: "Customer", render: (b) => <span className="font-medium">{b.customerName || "—"}</span> },
@@ -173,38 +180,17 @@ function VendorOverviewRedesignedView() {
 
       {hasNoBusiness && <NoBusinessFirstRun />}
 
-      {/* Stays until the profile is complete, then removes itself. Only once a
-          business exists — asking someone to complete a listing they have not
-          created yet is the wrong order, and NoBusinessFirstRun above owns that
-          moment. */}
-      {/* Order matters. The first booking is what earns money; the listing is
-          what attracts it. A vendor who has never taken a booking should be
-          looking at the chain that gets them one, not at a photo count. Both
-          remove themselves once done. */}
-      {/* Setup health. Scores what the vendor CONTROLS — replies, published
-          dates, listing, bookkeeping — and never booking volume, so a quiet
-          Muharram does not read as a failing grade.
+      {/* -- 1. The numbers ---------------------------------------------------
+          Moved to the very top (founder, 2026-08-29). They used to sit fourth,
+          under the setup-health ring and the profile-completion ring, so the
+          five figures the screen exists to show started ~760px down - below the
+          fold on a laptop. A dashboard's first answer should be "how am I
+          doing", not "here is what you have not finished".
 
-          NOTE: its "listing" factor overlaps ProfileCompletionCard below, which
-          self-hides once the listing is done. While a listing is incomplete
-          both will say so. Left in deliberately rather than deleting an
-          existing card as a side effect of adding this one — worth a decision
-          about which survives. */}
-      {!hasNoBusiness && <VendorHealthPanel businessId={activeBusinessId} />}
-
-      {!hasNoBusiness && <FirstBookingJourney />}
-      {!hasNoBusiness && <ProfileCompletionCard />}
-
-      {/* One-time "are you familiar with software like this?" register chooser.
-          Self-hides once answered; default is Professional, so most vendors
-          never see it. */}
-      <FamiliarityPrompt />
-
-      {/* WWL-018 — with the money endpoints failing, this page rendered
-          "Rs 0 collected · Rs 0 owed · 0 events" with full confidence: no error
-          message anywhere, no retry affordance, and Rs 0 collected even carried
-          a green upward trend arrow. Nothing distinguished it from a truthful
-          zero. The tiles show "—" now; this says why, and offers the way back. */}
+          The failure banner rides directly above them because it is the only
+          thing that explains a row of "-". WWL-018: with the money endpoints
+          failing this page rendered "Rs 0 collected" with full confidence, no
+          error and a green upward arrow. The tiles show "-" now; this says why. */}
       {moneyFailed && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3">
           <div className="text-sm">
@@ -219,7 +205,6 @@ function VendorOverviewRedesignedView() {
         </div>
       )}
 
-      {/* KPI row */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard label="Total bookings" value={kpisQ.isLoading ? "…" : kpisQ.isError ? "—" :num(k?.totalBookings?.value)} icon="Calendar" />
         <StatCard label="Revenue collected" value={kpisQ.isLoading ? "…" : kpisQ.isError ? "—" :formatPkr(num(k?.totalRevenue?.value))} icon="Wallet" trend={kpisQ.isError ? undefined : "up"} delta={kpisQ.isError ? "couldn't load" : "received"} />
@@ -228,9 +213,37 @@ function VendorOverviewRedesignedView() {
         <StatCard label="Upcoming (7d)" value={kpisQ.isLoading ? "…" : kpisQ.isError ? "—" :num(k?.upcomingBookings?.value)} icon="TrendingUp" />
       </div>
 
+      {/* -- 2. Onboarding ----------------------------------------------------
+          Both of these remove themselves once done, so a settled vendor sees
+          neither and the numbers above sit straight on top of the lists below.
+
+          The setup-health ring that used to LEAD this page is commented out
+          below at the founder's direction. It and ProfileCompletionCard both
+          scored the listing, so a vendor with an incomplete listing was told so
+          twice, by two different rings, within 300px of each other. The
+          VendorHealthPanel function itself is left intact further down the
+          file - restore by uncommenting this one line. */}
+      {/* {!hasNoBusiness && <VendorHealthPanel businessId={activeBusinessId} />} */}
+      {!hasNoBusiness && <FirstBookingJourney />}
+      {!hasNoBusiness && <ProfileCompletionCard />}
+
+      {/* One-time "are you familiar with software like this?" register chooser.
+          Self-hides once answered; default is Professional, so most vendors
+          never see it. */}
+      <FamiliarityPrompt />
+
+      {/* -- 3. Field capture -------------------------------------------------
+          Moved here out of the Set up panel (founder, 2026-08-29). It is not a
+          setting - it is what a vendor does standing at a bridal expo with dead
+          signal, so it belongs on the screen they open rather than three clicks
+          into configuration. `embedded` drops its page header and column width.
+
+          Guarded on hasNoBusiness: every capture attaches to a business. */}
+      {!hasNoBusiness && <FieldCaptureView embedded />}
+
       {/* What needs you today — upcoming events + who to chase (flag-free, off
           the booking list). KPI row hidden here; the tiles above already cover it. */}
-      <TodayBoard hideKpis />
+      <TodayBoard hideKpis listCap={HOME_LIST_CAP} />
 
       {/* The "Ghar" action panel used to sit ABOVE the KPI tiles.
           

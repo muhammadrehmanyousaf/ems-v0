@@ -208,8 +208,13 @@ export function EventProfitBoard(): React.ReactElement {
             </li>
           )}
           <li>
-            It does not include fixed overheads — rent, salaries, utilities. Those are on the{" "}
-            <strong>Money</strong> tab.
+            {/* Named the "Money" tab until 2026-08-29, when that tab was
+                switched off (PRIMARY_TABS in venue-os-hub-view.tsx). Pointing a
+                vendor at a tab that is no longer on screen is worse than not
+                explaining where the number comes from, so the caveat now stands
+                on its own. Put the tab name back if Venue money returns. */}
+            It does not include fixed overheads — rent, salaries and utilities are not
+            counted here.
           </li>
         </ul>
       </div>

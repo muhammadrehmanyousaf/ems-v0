@@ -85,14 +85,25 @@ import { Icon, type IconName } from "@/components/dashboard/shared/icon";
  * These labels are now the sidebar's, verbatim. Keep them in step with
  * `vendorVenueOs` in components/dashboard/layout/nav-data.ts.
  */
+/**
+ * Tonight, Venue money, Cash & cheques, Kitchen and Accounting are commented
+ * out at the founder's direction (2026-08-29) — switched OFF, not just dropped
+ * from the sidebar. Their `TabsContent` blocks are left in place below and are
+ * simply unreachable: `active` is validated against this list, so ?tab=cash can
+ * no longer select one.
+ *
+ * Restore a tab HERE and in the Set up panel (lib/nav/module-panels.ts)
+ * together — a sidebar row pointing at a tab that is not in this list would
+ * navigate to a hub that silently shows something else.
+ */
 const PRIMARY_TABS: { value: string; label: string; icon: IconName }[] = [
-  { value: "today", label: "Tonight", icon: "CalendarCheck" },
+  // { value: "today", label: "Tonight", icon: "CalendarCheck" },
   { value: "profit", label: "Event profit", icon: "TrendingUp" },
-  { value: "money", label: "Venue money", icon: "Wallet" },
+  // { value: "money", label: "Venue money", icon: "Wallet" },
   { value: "spaces", label: "Halls & spaces", icon: "LayoutGrid" },
-  { value: "cash", label: "Cash & cheques", icon: "CreditCard" },
-  { value: "kitchen", label: "Kitchen", icon: "Utensils" },
-  { value: "advanced", label: "Accounting", icon: "Settings2" },
+  // { value: "cash", label: "Cash & cheques", icon: "CreditCard" },
+  // { value: "kitchen", label: "Kitchen", icon: "Utensils" },
+  // { value: "advanced", label: "Accounting", icon: "Settings2" },
 ];
 
 /**
@@ -164,7 +175,12 @@ export function VenueOsHubView(): React.ReactElement {
   const router = useRouter();
   const pathname = usePathname();
   const raw = search?.get("tab");
-  const active = PRIMARY_TABS.some((t) => t.value === raw) ? (raw as string) : "today";
+  // Fallback derived from the list, NOT the hardcoded "today" this used to be.
+  // Tonight is commented out above, and a literal fallback naming a tab that no
+  // longer exists would render a Tabs with no matching trigger and no matching
+  // content — a blank hub on a bare /dashboard/venue-os, and on every stale
+  // ?tab= link. Derived, it cannot go stale again.
+  const active = PRIMARY_TABS.some((t) => t.value === raw) ? (raw as string) : PRIMARY_TABS[0]!.value;
   const setTab = (value: string) => {
     const params = new URLSearchParams(search?.toString() ?? "");
     params.set("tab", value);

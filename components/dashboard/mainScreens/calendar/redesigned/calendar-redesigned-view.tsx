@@ -21,7 +21,7 @@ import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { OfflineBookingDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog"
-import { CalendarFeedCard } from "@/components/dashboard/calendar-feed-card"
+// import { CalendarFeedCard } from "@/components/dashboard/calendar-feed-card"
 import { BlockDateDialog } from "./block-date-dialog"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
@@ -369,11 +369,20 @@ export function CalendarRedesignedView() {
         </div>
       </div>
 
-      {/* Subscribe this calendar into Google / Apple / Outlook. Built in Phase 4
-          and reachable only from the old calendar screen, so it disappeared at
-          the redesign cutover — a vendor who runs their day out of Google
-          Calendar had no way to get Wedding Wala bookings into it. */}
-      <CalendarFeedCard />
+      {/* Calendar subscription card — hidden for now at the founder's direction
+          (2026-08-29), alongside the Availability grid below it.
+
+          Commented, not deleted: components/dashboard/calendar-feed-card.tsx is
+          untouched and the feed endpoint still works, so any subscription a
+          vendor has ALREADY generated keeps updating in their Google/Apple/
+          Outlook calendar. Only the way to generate a new one is hidden.
+          Restore by uncommenting the import above and the line below.
+
+          Why it was here: built in Phase 4 and reachable only from the old
+          calendar screen, so it disappeared at the redesign cutover — a vendor
+          who runs their day out of Google Calendar had no way to get Wedding
+          Wala bookings into it. */}
+      {/* <CalendarFeedCard /> */}
 
       <OfflineBookingDialog
         open={createOpen}
