@@ -43,6 +43,9 @@ import {
   Handshake,
   Receipt,
   BarChart3,
+  // Workflow and ChefHat are imported but only referenced from the
+  // commented-out Bookings panel rows below; kept so restoring them is a
+  // one-line change rather than an import hunt.
   Workflow,
   ChefHat,
   ListChecks,
@@ -182,35 +185,52 @@ export const NAV_MODULES: NavModule[] = [
     label: "Bookings",
     icon: ClipboardList,
     href: "/dashboard/bookings",
+    // Kept, even though the panel is off: these paths still RESOLVE to this
+    // module, so a vendor who reaches /dashboard/function-sheets from a booking
+    // row still sees Bookings lit in the rail rather than falling back to Home.
     owns: ["function-sheets", "trade-ops", "function-sheet-operations", "function-sheet-sign", "kitchen-prep"],
     panelTitle: "Bookings",
+    /**
+     * Bookings is rail-only — no second column. (Founder, 2026-08-28: "i dont
+     * need the secondry sidebar in the bookings module".)
+     *
+     * The bookings list is the widest screen in the product: eight columns plus
+     * a four-card KPI strip. A 250px panel of links beside it was taking width
+     * from the table it sat next to, to offer six destinations the vendor had
+     * not asked for. Same reasoning as Home above.
+     *
+     * The routes below still exist and still render; they are simply not
+     * advertised here. Deleting the pages was NOT asked for and would break the
+     * links that booking rows and function-sheet emails already carry.
+     */
+    railOnly: true,
     groups: [
       {
-        // These two are real: the list already sends `bucket` to the API, and
-        // now seeds it from the URL, so each row lands on a genuinely
-        // different set of bookings and survives a refresh. Compare with the
-        // "Upcoming / Awaiting payment" rows I did NOT add — the API has no
-        // such filter, so those links would look like they work and do nothing.
+        // `groups` is required by the type and read by nothing while
+        // `railOnly` is set. Active bookings stays as the module's own
+        // destination so restoring the panel is a one-line change.
         items: [
           { label: "Active bookings", href: "/dashboard/bookings", icon: ClipboardList, i18nKey: "nav.bookings" },
-          { label: "Completed", href: "/dashboard/bookings?bucket=completed", icon: ListChecks },
+          // Commented out at the founder's direction (2026-08-28) — not needed
+          // for now. Restore by deleting these comment markers.
+          // { label: "Completed", href: "/dashboard/bookings?bucket=completed", icon: ListChecks },
         ],
       },
-      {
-        label: "Paperwork",
-        items: [
-          { label: "Quotes & Invoices", href: "/dashboard/function-sheets", icon: FileText, i18nKey: "nav.function_sheets" },
-          { label: "Sign contract", href: "/dashboard/function-sheet-sign", icon: FileText },
-        ],
-      },
-      {
-        label: "On the day",
-        items: [
-          { label: "Trade operations", href: "/dashboard/trade-ops", icon: Workflow, i18nKey: "nav.trade_ops" },
-          { label: "Night-of operations", href: "/dashboard/function-sheet-operations", icon: ListChecks },
-          { label: "Kitchen prep", href: "/dashboard/kitchen-prep", icon: ChefHat, i18nKey: "nav.kitchen_prep" },
-        ],
-      },
+      // {
+      //   label: "Paperwork",
+      //   items: [
+      //     { label: "Quotes & Invoices", href: "/dashboard/function-sheets", icon: FileText, i18nKey: "nav.function_sheets" },
+      //     { label: "Sign contract", href: "/dashboard/function-sheet-sign", icon: FileText },
+      //   ],
+      // },
+      // {
+      //   label: "On the day",
+      //   items: [
+      //     { label: "Trade operations", href: "/dashboard/trade-ops", icon: Workflow, i18nKey: "nav.trade_ops" },
+      //     { label: "Night-of operations", href: "/dashboard/function-sheet-operations", icon: ListChecks },
+      //     { label: "Kitchen prep", href: "/dashboard/kitchen-prep", icon: ChefHat, i18nKey: "nav.kitchen_prep" },
+      //   ],
+      // },
     ],
   },
 
