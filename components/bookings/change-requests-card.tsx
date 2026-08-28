@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Loader2,
   CheckCircle2,
@@ -24,7 +25,6 @@ import {
   type ChangeRequestStatus,
   type ChangeRequestType,
 } from "@/lib/api/bookings";
-import { TopUpPaymentModal } from "./topup-payment-modal";
 
 const STATUS_LABEL: Record<ChangeRequestStatus, string> = {
   pending: "Pending vendor",
@@ -86,12 +86,8 @@ interface ChangeRequestRowProps {
 }
 
 function ChangeRequestRow({ cr, bookingId, onChanged }: ChangeRequestRowProps) {
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
-  // BK-054 top-up — modal state. Only relevant when this row needs top-up.
-  const [topUpOpen, setTopUpOpen] = useState(false);
-  const [topUpData, setTopUpData] = useState<
-    { clientSecret: string; amount: number } | null
-  >(null);
 
   const Icon =
     cr.status === "approved"
@@ -119,33 +115,21 @@ function ChangeRequestRow({ cr, bookingId, onChanged }: ChangeRequestRowProps) {
     }
   };
 
-  const startTopUp = async () => {
-    setBusy(true);
-    try {
-      const data = await BookingAPI.initiateTopUp(bookingId, cr.id);
-      if (!data?.clientSecret) {
-        throw new Error("No client secret returned from server");
-      }
-      setTopUpData({ clientSecret: data.clientSecret, amount: data.amount });
-      setTopUpOpen(true);
-    } catch (e: any) {
-      const code = e?.response?.data?.message;
-      const friendly =
-        code === "top_up_already_paid"
-          ? "This top-up has already been paid."
-          : code === "request_not_pending"
-          ? "This change is no longer pending."
-          : code === "top_up_not_required"
-          ? "No top-up is required for this change."
-          : e?.response?.data?.message ?? "Couldn't start the payment";
-      toast({
-        title: "Couldn't start top-up",
-        description: friendly,
-        variant: "destructive",
-      });
-    } finally {
-      setBusy(false);
-    }
+  /**
+   * WW-DIRECT-PAY — the top-up is paid to the venue, like every other rupee.
+   *
+   * This called `initiateTopUp` for a Stripe PaymentIntent client secret and
+   * opened a card modal. There is no gateway now, so that endpoint has nothing
+   * to mint and the modal had nothing to confirm against.
+   *
+   * An approved change request raises the booking's `totalAmount`, which raises
+   * its outstanding balance — so the difference is already payable through the
+   * one pay surface, with the venue's own accounts and the same BK- reference.
+   * Sending them there beats a second collection path that would have to
+   * duplicate the account lookup and the claim form.
+   */
+  const goToPay = () => {
+    router.push(`/user/bookings/${bookingId}/pay`);
   };
 
   const requiresTopUp = cr.priceImpactJson?.requiresTopUp;
@@ -218,15 +202,11 @@ function ChangeRequestRow({ cr, bookingId, onChanged }: ChangeRequestRowProps) {
               <Button
                 size="sm"
                 disabled={busy}
-                onClick={startTopUp}
+                onClick={goToPay}
                 className="gap-1.5"
               >
-                {busy ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <CreditCard className="h-3.5 w-3.5" />
-                )}
-                Pay top-up
+                <CreditCard className="h-3.5 w-3.5" />
+                Pay the difference
               </Button>
             ) : null}
             <Button
@@ -244,23 +224,6 @@ function ChangeRequestRow({ cr, bookingId, onChanged }: ChangeRequestRowProps) {
           </div>
         ) : null}
       </div>
-      {topUpData && topUpOpen ? (
-        <TopUpPaymentModal
-          open={topUpOpen}
-          onClose={() => setTopUpOpen(false)}
-          clientSecret={topUpData.clientSecret}
-          amount={topUpData.amount}
-          bookingId={bookingId}
-          requestId={cr.id}
-          onSuccess={() => {
-            setTopUpOpen(false);
-            // Brief delay so the webhook has time to flip the row before
-            // we refetch — the API is fast but not synchronous with the
-            // Stripe success callback.
-            setTimeout(onChanged, 1500);
-          }}
-        />
-      ) : null}
     </div>
   );
 }

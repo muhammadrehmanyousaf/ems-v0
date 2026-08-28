@@ -49,6 +49,22 @@ import {
   serviceStyleLabel,
 } from "@/lib/pricing/package"
 
+import { REQUIREMENT_TAG_LABELS, type RequirementTag, type RequirementSetup } from "@/lib/api/requirements"
+
+/** Mirrors SETUP_LABELS on the vendor's card, so both name the same thing. */
+const SETUP_REVIEW_LABELS: Record<string, string> = {
+  roundTables: "round tables",
+  vipSofas: "VIP sofa sets",
+  foodStalls: "food stalls",
+  chairs: "chairs",
+  rectTables: "long tables",
+  stageSize: "ft stage",
+  heaters: "patio heaters",
+  acUnits: "extra cooling units",
+  generators: "backup generators",
+  parkingSlots: "reserved parking slots",
+}
+
 interface Props {
   formData: BookingFormData
   selectedPackageObj?: any
@@ -59,6 +75,19 @@ interface Props {
   // renders an interactive select; otherwise it's hidden entirely.
   updateFormData?: (data: Partial<BookingFormData>) => void
   isAuthenticated?: boolean
+  /**
+   * WW-SETUP-COUNTS — what the customer asked for on the previous step.
+   *
+   * Review is the last screen before the request is sent, and it listed the
+   * date, the package and the menu but nothing the customer had written or
+   * counted. So the one step where they typed in their own words vanished
+   * before the confirmation, and they had no way to check it registered.
+   */
+  requirements?: {
+    tags: RequirementTag[]
+    setup?: RequirementSetup
+    freeText: string
+  }
 }
 
 // SLOTS step 10 — one vocabulary, shared with the picker the customer just
@@ -86,6 +115,7 @@ export default function ReviewStep({
   venue,
   updateFormData,
   isAuthenticated,
+  requirements,
 }: Props) {
   const formatPKR = (n: number) =>
     new Intl.NumberFormat("en-PK", { style: "currency", currency: "PKR", maximumFractionDigits: 0 }).format(n)
@@ -365,6 +395,19 @@ export default function ReviewStep({
     { icon: Calendar, label: "Event date",  value: dateLabel },
     { icon: Clock,    label: "Time of day", value: timeLabel },
   ]
+  /**
+   * WW-SPACE-FIRST — the hall, named.
+   *
+   * The customer picks a specific hall on step 2, and that choice drives the
+   * slots they were offered, the guest ceiling they were clamped to, the
+   * packages they were shown and the menus they could order. It then did not
+   * appear on Review at all — so the one screen for checking the booking is
+   * right omitted the room it is in. Shown for both models: the sub-venue tree
+   * and the BusinessResource picker.
+   */
+  const spaceName =
+    (formData as any).selectedSubVenueName || (formData as any).selectedResourceName || null
+  if (spaceName) bookingRows.push({ icon: MapPin, label: "Hall / space", value: String(spaceName) })
   if (showGuests) bookingRows.push({ icon: Users, label: "Guests", value: formData.guestCount ? `${formData.guestCount} ${formData.guestCount === 1 ? "guest" : "guests"}` : "—" })
   if (unitLine) {
     // WW-RATECARD 10.7 — the arithmetic, not just the answer, for the same
@@ -469,6 +512,51 @@ export default function ReviewStep({
           </div>
         </section>
       </div>
+
+      {/* WW-SETUP-COUNTS — what the customer asked for, echoed back before they
+          send it. This step is the last chance to catch "I meant 40 tables, not
+          4", and the requirements they had just typed were nowhere on it. */}
+      {requirements && (requirements.tags.length > 0 || requirements.freeText.trim() || Object.keys(requirements.setup || {}).length > 0) && (
+        <section className="rounded-md border border-bridal-beige bg-bridal-ivory overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-bridal-beige bg-bridal-cream/60">
+            <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
+              What you&apos;ve asked for
+            </p>
+          </div>
+          <div className="px-4 py-3 space-y-2.5">
+            {requirements.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {requirements.tags.map((t) => (
+                  <span key={t} className="rounded-full border border-bridal-beige bg-bridal-cream px-2 py-0.5 font-bridal text-[11px] text-bridal-charcoal">
+                    {REQUIREMENT_TAG_LABELS[t as RequirementTag] ?? t}
+                  </span>
+                ))}
+              </div>
+            )}
+            {Object.keys(requirements.setup || {}).length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {(Object.entries(requirements.setup || {}) as [string, unknown][])
+                  .filter(([k, v]) => k !== "notes" && typeof v === "number" && v > 0)
+                  .map(([k, v]) => (
+                    <span key={k} className="rounded-full border border-bridal-sage/45 bg-bridal-sage/15 px-2 py-0.5 font-bridal text-[11px] tabular-nums text-[#3F6B43]">
+                      {String(v)} {SETUP_REVIEW_LABELS[k] ?? k}
+                    </span>
+                  ))}
+              </div>
+            )}
+            {typeof requirements.setup?.notes === "string" && requirements.setup.notes && (
+              <p className="font-bridal text-[12.5px] text-bridal-text-soft">{requirements.setup.notes}</p>
+            )}
+            {/* Their own words, exactly as typed — never trimmed to a preview
+                on the screen whose job is to let them check it. */}
+            {requirements.freeText.trim() && (
+              <p className="whitespace-pre-wrap font-bridal text-[13px] leading-relaxed text-bridal-charcoal">
+                {requirements.freeText}
+              </p>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Issue #5 — pickup / drop-off addresses for car rental bookings.
           Two optional free-text fields; the dynamic rent surcharge by

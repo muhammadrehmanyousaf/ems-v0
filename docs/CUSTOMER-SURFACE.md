@@ -83,8 +83,12 @@ Entry `app/(main)/(booking)/[id]/booking/page.tsx` (24 lines) → **[components/
 date-time-step.tsx   956   date + slot + space + guest count
 package-step.tsx     276   package / menu / bundled add-ons
 review-step.tsx      655   final review
-booking-payment-screen.tsx  509   pay
 ```
+
+Payment is NOT a step in this flow. The customer submits a request, the vendor
+accepts, and only then are they shown where to pay — on
+`steps/bank-transfer-screen.tsx`, reached inline after submit or later from
+`/user/bookings/[id]/pay`. `booking-payment-screen.tsx` (Stripe) was deleted.
 
 `steps/` (11 files) is the **older** flow. `steps-v2/` is current — check which is wired before editing.
 

@@ -6,6 +6,10 @@ import type { BookingFormData, EventVenue } from "@/lib/types"
 import { Check } from "lucide-react"
 import { motion } from "framer-motion"
 import { menuChargeFor, menuIsPerHead } from "@/lib/pricing/menu"
+// WW-MENU-READ — reads every shape `Menus.data` has been written in. The step
+// used to read only the sectioned one, so portal-written menus showed a title
+// and no dishes at all.
+import { menuSections } from "@/lib/menu/menu-items"
 
 interface MenuSelectionStepProps {
   formData: BookingFormData
@@ -85,12 +89,6 @@ export default function MenuSelectionStep({
     : allMenus
   const menus = scopedMenus && scopedMenus.length > 0 ? scopedMenus : allMenus
 
-  const categoryLabels: Record<string, string> = {
-    starters: "Starters",
-    mainCourse: "Main Course",
-    drinks: "Beverages",
-    desserts: "Desserts",
-  }
 
   return (
     <motion.div className="space-y-7" variants={container} initial="hidden" animate="visible">
@@ -126,15 +124,15 @@ export default function MenuSelectionStep({
       <div className="space-y-3">
         <RadioGroup value={formData.selectedMenu} onValueChange={handleMenuSelect}>
           {menus?.map((menu) => {
-            const items = menu.data
             const isSelected = formData.selectedMenu === menu.id
 
-            const categories = [
-              { key: "starters", data: items.starters?.items || [] },
-              { key: "mainCourse", data: items.mainCourse?.items || [] },
-              { key: "drinks", data: items.drinks?.items || [] },
-              { key: "desserts", data: items.desserts?.items || [] },
-            ].filter(c => c.data.length > 0)
+            /* WW-MENU-READ — was four hardcoded section lookups
+               (`items.starters?.items` …), which returned nothing for a menu
+               written in the portal's flat `{ items: [...] }` shape and dropped
+               any section outside those four even in the sectioned shape. The
+               vendor's own section order is preserved. */
+            const sections = menuSections(menu.data)
+            const dishCount = sections.reduce((n, sec) => n + sec.dishes.length, 0)
 
             return (
               <motion.div
@@ -177,23 +175,64 @@ export default function MenuSelectionStep({
                       )}
                     </div>
 
-                    <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {categories.map(({ key, data }) => (
-                        <div key={key} className="rounded-md bg-bridal-ivory border border-bridal-beige/70 p-4">
-                          <h4 className="font-bridal text-[10px] uppercase tracking-[0.3em] font-medium text-bridal-gold-dark mb-2">
-                            {categoryLabels[key] || key}
-                          </h4>
-                          <ul className="space-y-1">
-                            {data.map((menuItem: string, j: number) => (
-                              <li key={j} className="font-bridal text-[12.5px] text-bridal-charcoal/85 flex items-center gap-2">
-                                <span className="w-1 h-1 rounded-full bg-bridal-gold flex-shrink-0" />
-                                {menuItem}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
+                    {/* How much food this actually is, stated before the list.
+                        A customer comparing three menus needs the shape of each
+                        at a glance, and it also makes an EMPTY menu obviously
+                        empty rather than looking like a broken card. */}
+                    {dishCount > 0 && (
+                      <p className="mt-2 font-bridal text-[11.5px] text-bridal-text-soft">
+                        {dishCount} {dishCount === 1 ? "dish" : "dishes"}
+                        {sections.length > 1 ? ` across ${sections.length} courses` : ""}
+                      </p>
+                    )}
+
+                    {sections.length > 0 ? (
+                      <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {sections.map((sec) => (
+                          <div key={sec.key} className="rounded-md bg-bridal-ivory border border-bridal-beige/70 p-4">
+                            {/* A flat menu has no section name; showing an
+                                invented one ("Other") would be worse than
+                                showing the dishes plainly. */}
+                            {sec.label && (
+                              <h4 className="font-bridal text-[10px] uppercase tracking-[0.3em] font-medium text-bridal-gold-dark mb-2">
+                                {sec.label}
+                              </h4>
+                            )}
+                            <ul className="space-y-1">
+                              {sec.dishes.map((dish, j) => (
+                                <li key={`${dish.name}-${j}`} className="font-bridal text-[12.5px] text-bridal-charcoal/85 flex items-start gap-2">
+                                  <span className="w-1 h-1 mt-[7px] rounded-full bg-bridal-gold flex-shrink-0" />
+                                  <span>
+                                    {dish.name}
+                                    {/* Both of these change what the family
+                                        gets or pays, so they belong next to the
+                                        dish and not in a footnote. */}
+                                    {dish.isLive && (
+                                      <span className="ml-1.5 font-bridal text-[10px] uppercase tracking-[0.16em] text-bridal-sage">
+                                        live
+                                      </span>
+                                    )}
+                                    {dish.supplementPerHead > 0 && !includedInPackage && (
+                                      <span className="ml-1.5 font-bridal text-[11px] text-bridal-gold-dark tabular-nums">
+                                        +Rs. {dish.supplementPerHead.toLocaleString()}/plate
+                                      </span>
+                                    )}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      /* Said plainly instead of rendering an empty card. The
+                         venue has priced this menu but not listed its dishes;
+                         the customer can still choose it and ask. */
+                      <p className="mt-4 font-bridal text-[12.5px] text-bridal-text-soft italic">
+                        This menu&apos;s dishes aren&apos;t listed yet — choose it and the venue
+                        will confirm what&apos;s served.
+                      </p>
+                    )}
                   </div>
                 </div>
               </motion.div>

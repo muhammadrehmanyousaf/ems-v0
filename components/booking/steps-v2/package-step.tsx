@@ -71,7 +71,35 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
   const scoped = allPackages.filter(
     (p: any) => p?.subVenueId == null || (chosenSpaceId != null && Number(p.subVenueId) === chosenSpaceId),
   )
-  const venuePackages = scoped.length > 0 ? scoped : allPackages
+  const scopedOrAll = scoped.length > 0 ? scoped : allPackages
+
+  /**
+   * The chosen hall's OWN package comes first, and says so.
+   *
+   * Filtering was already right — a Terrace Lawn booking no longer sees the
+   * Main Hall's package — but the result was left in whatever order the API
+   * returned. So the package written specifically FOR the hall the customer
+   * just picked could sit third, below two generic venue-wide ones, with
+   * nothing on it to say it was the one meant for their room. The customer had
+   * chosen a hall and the screen did not visibly react to that choice.
+   *
+   * A stable sort: space-specific before venue-wide, everything else in the
+   * order the vendor arranged it. Nothing is hidden and nothing is renamed —
+   * the one package that IS the answer is simply first, and badged.
+   */
+  const venuePackages = [...scopedOrAll].sort((a: any, b: any) => {
+    const aOwn = chosenSpaceId != null && Number(a?.subVenueId) === chosenSpaceId ? 0 : 1
+    const bOwn = chosenSpaceId != null && Number(b?.subVenueId) === chosenSpaceId ? 0 : 1
+    return aOwn - bOwn
+  })
+
+  /** The name of the hall being booked, for the badge on its own package. */
+  const chosenSpaceName: string | null =
+    (formData as any).selectedSubVenueName || null
+
+  /** TRUE when this package was written for the hall the customer picked. */
+  const isSpaceOwnPackage = (p: any) =>
+    chosenSpaceId != null && Number(p?.subVenueId) === chosenSpaceId
   const isCarRental = venue?.vendor?.vendorType === "Car rental"
   const isBridalWear = venue?.vendor?.vendorType === "Bridal wearing"
   const isWeddingStationery = venue?.vendor?.vendorType === "Wedding Invitations and Stationery"
@@ -154,6 +182,10 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
           const features = flattenFeatures((pkg as any).features)
           const preview = isExpanded ? features : features.slice(0, 4)
           const isPopular = idx === 1 && venuePackages.length > 1 && !isCarRental && !isBridalWear
+          /* Written for the hall the customer picked, rather than for the
+             venue generally. Sorted to the front above; badged here so the
+             reason it is first is visible and not just felt. */
+          const isForChosenSpace = isSpaceOwnPackage(pkg)
 
           return (
             <li key={id}>
@@ -173,11 +205,19 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
                       <h3 className="font-display italic text-[19px] text-bridal-charcoal leading-tight">
                         {pkg.name}
                       </h3>
-                      {isPopular && (
+                      {/* The hall's own package wins the badge slot. Showing
+                          "Popular" next to "This hall's package" would put two
+                          competing reasons to pick it on one line, and only one
+                          of them is a fact about this customer's choice. */}
+                      {isForChosenSpace ? (
+                        <span className="px-2 py-0.5 rounded-full font-bridal text-[9.5px] uppercase tracking-[0.18em] font-medium bg-bridal-sage/20 text-[#3F6B43] border border-bridal-sage/50">
+                          {chosenSpaceName ? `${chosenSpaceName} package` : "This hall's package"}
+                        </span>
+                      ) : isPopular ? (
                         <span className="px-2 py-0.5 rounded-full font-bridal text-[9.5px] uppercase tracking-[0.18em] font-medium bg-bridal-gold text-bridal-charcoal border border-bridal-gold-dark">
                           Popular
                         </span>
-                      )}
+                      ) : null}
                     </div>
                     {pkg.description && (
                       <p className="mt-1 font-bridal text-[12.5px] text-bridal-text-soft line-clamp-2">{pkg.description}</p>

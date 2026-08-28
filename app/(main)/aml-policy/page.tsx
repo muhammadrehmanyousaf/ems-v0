@@ -68,10 +68,12 @@ export default function AmlPolicyPage() {
 
       <h2>7. Limitations</h2>
       <p>
-        {SITE_NAME} is a marketplace, not a financial institution. We rely on
-        licensed payment processors (PayFast Pakistan, Stripe) for the
-        money-handling itself, who maintain their own AML/CFT controls in
-        addition to ours.
+        {SITE_NAME} is a marketplace, not a financial institution, and does not
+        hold, transmit or take custody of customer funds. Payments are made
+        directly by the customer to the vendor through the vendor&apos;s own bank
+        account or mobile wallet; we record what the vendor confirms receiving
+        so the booking has an auditable trail, and the regulated institutions
+        carrying those transfers maintain their own AML/CFT controls.
       </p>
     </LegalPageShell>
   )

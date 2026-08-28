@@ -247,9 +247,9 @@ A PSP may not hold consumer money (PEFTA 2007 / SBP PSO-PSP). The platform
 | 7.3 | Reference shown | `BK-<id>` | AUTO |
 | 7.4 | Custody statement true | "we don't hold the money" | AUTO |
 | 7.5 | **No Stripe claim in the venue flow** | Stripe does not onboard PK businesses | AUTO |
-| 7.6 | Stripe badge kept where real | `booking-payment-screen.tsx` genuinely mounts `PaymentElement` | MANUAL |
+| 7.6 | **No Stripe anywhere** | Components, deps and copy all removed; `grep -i stripe` finds only historical comments | AUTO |
 | 7.7 | UC-07 — customer reports a transfer | Claim recorded; vendor confirms/rejects | MANUAL |
-| 7.8 | Only verified accounts shown | `showToCustomers && isActive && isVerified` | UNIT |
+| 7.8 | Only published accounts shown | `showToCustomers && isActive`; `isVerified` is REPORTED on screen, not a filter (set `REQUIRE_VERIFIED_COLLECTION_ACCOUNT=1` to re-gate) | UNIT |
 | 7.9 | Methods offered | Bank transfer · Raast · IBFT · JazzCash · Easypaisa · Cash | AUTO |
 | 7.10 | Chargeback warning | "keep your receipt" | AUTO |
 | 7.11 | A17 — security deposit ≠ advance | Separate refundable line, own ledger | UNIT · 30 — snapshotted, never in the quoted total (asserted) |

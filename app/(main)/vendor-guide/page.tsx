@@ -53,7 +53,7 @@ const steps = [
 const benefits = [
   "Free listing on Pakistan's premier event platform",
   "Reach thousands of couples actively planning weddings",
-  "Secure payment processing through Stripe",
+  "Customers pay you directly, into your own bank account or wallet",
   "Dedicated vendor dashboard with analytics",
   "Booking management and calendar tools",
   "Real-time chat with potential customers",

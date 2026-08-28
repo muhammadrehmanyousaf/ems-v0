@@ -201,8 +201,13 @@ export default function LivePricingPanel({
             </div>
 
             <div className="pt-3 mt-1 border-t border-zinc-100 flex items-center gap-1.5 text-[11.5px] text-zinc-500">
+              {/* WW-DIRECT-PAY — said "Secured payments via Stripe", inside the
+                  booking flow, next to the price. There is no Stripe and no
+                  card: the customer pays the venue directly and reports it.
+                  A security claim about a processor that never touches the
+                  money is the one piece of copy that must not be left stale. */}
               <Lock className="h-3 w-3" />
-              <span>Secured payments via Stripe</span>
+              <span>You pay the venue directly — we hold your date</span>
             </div>
           </div>
         </div>

@@ -53,6 +53,32 @@ export interface RequirementDietary {
   allergies?: string[];
 }
 
+/**
+ * WW-SETUP-COUNTS — quantities of physical setup the family is asking for.
+ *
+ * Kept apart from `RequirementDietary` on purpose: dietary counts are billed
+ * per head, and "40 round tables" must never be one careless spread away from
+ * 40 covers. Mirrors SETUP_KEYS in bookingRequirementController.
+ *
+ * Every field optional. Most families fill in none of it.
+ */
+export interface RequirementSetup {
+  /** Sofa sets for the stage / VIP area. */
+  vipSofas?: number;
+  roundTables?: number;
+  rectTables?: number;
+  chairs?: number;
+  /** Live counters and food stalls. */
+  foodStalls?: number;
+  acUnits?: number;
+  heaters?: number;
+  generators?: number;
+  parkingSlots?: number;
+  /** Stage width, in feet. */
+  stageSize?: number;
+  notes?: string;
+}
+
 export type RequirementStatus = "open" | "acknowledged" | "agreed" | "declined" | "quoted";
 
 export interface BookingRequirement {
@@ -61,6 +87,7 @@ export interface BookingRequirement {
   source: "inquiry" | "booking_flow" | "post_booking";
   tags: string[] | null;
   dietaryJson: RequirementDietary | null;
+  setupJson: RequirementSetup | null;
   freeText: string | null;
   language: string | null;
   status: RequirementStatus;
@@ -80,6 +107,7 @@ export class RequirementsAPI {
     body: {
       tags?: string[];
       dietary?: RequirementDietary;
+      setup?: RequirementSetup;
       freeText?: string;
       source?: "inquiry" | "booking_flow" | "post_booking";
       language?: string;

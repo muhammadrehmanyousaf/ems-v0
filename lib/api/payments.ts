@@ -9,11 +9,20 @@ import type {
 import { isSettled } from '../payment-status';
 
 export class PaymentAPI {
-  // Get Stripe publishable key from backend
-  static async getStripeConfig(): Promise<{ publishableKey: string }> {
-    const response = await axiosInstance.get(`${BACKEND_URL}api/v1/payments/config`);
-    return response.data.data;
-  }
+  /**
+   * WW-DIRECT-PAY — the Stripe surface of this client is gone.
+   *
+   * `getStripeConfig` (the publishable key), `createCheckoutSession` and
+   * `verifyCheckoutSession` were removed with the last components that called
+   * them. Stripe cannot onboard Pakistani businesses, so none of it could ever
+   * have moved money to a venue on this platform; customers pay each venue
+   * directly and report the transfer, and the vendor confirming that claim is
+   * what records the payment.
+   *
+   * The endpoints may still exist server-side. They are simply not reachable
+   * from the product, and no new caller should reintroduce one — the record
+   * path in paymentInstructions.ts is the only collection surface.
+   */
 
   // Check for existing payment intent
   static async checkExistingPaymentIntent(
@@ -219,43 +228,6 @@ export class PaymentAPI {
     } catch (error: any) {
       console.error('Booking verification unexpected error:', error);
       return false;
-    }
-  }
-
-  // Create a Stripe Checkout Session (redirects user to Stripe-hosted page)
-  static async createCheckoutSession(
-    bookingId: number,
-    customerEmail: string,
-    paymentType: 'down_payment' | 'remaining_payment' | 'full_payment'
-  ): Promise<{ sessionId: string; url: string; amount: number; paymentType: string }> {
-    try {
-      const response = await axiosInstance.post(`${BACKEND_URL}api/v1/payments/create-checkout-session`, {
-        bookingId: Number(bookingId),
-        customerEmail,
-        paymentType,
-      });
-      return response.data.data;
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to create checkout session';
-      throw new Error(errorMessage);
-    }
-  }
-
-  // Verify a completed Checkout Session after Stripe redirects back
-  static async verifyCheckoutSession(
-    sessionId: string,
-    bookingId?: number,
-    paymentType?: string
-  ): Promise<{ bookingId: number; paymentType: string; amount: number; status: string; alreadyProcessed?: boolean }> {
-    try {
-      const params = new URLSearchParams({ sessionId });
-      if (bookingId) params.append('bookingId', bookingId.toString());
-      if (paymentType) params.append('paymentType', paymentType);
-      const response = await axiosInstance.get(`${BACKEND_URL}api/v1/payments/verify-checkout-session?${params.toString()}`);
-      return response.data.data;
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to verify checkout session';
-      throw new Error(errorMessage);
     }
   }
 
