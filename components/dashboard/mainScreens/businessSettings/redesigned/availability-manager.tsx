@@ -1,9 +1,15 @@
 "use client"
 
 /**
- * Availability manager. Blocked-dates editor for ONE business, used inside the
- * business-settings hub's Availability tab. Owns its mutations (not the hub's
- * save bar).
+ * Blocked-dates editor for ONE business. Owns its mutations (not a hub save
+ * bar), so it drops into any screen.
+ *
+ * Lived in the business-settings hub's "Availability" tab until 2026-08-29,
+ * when the founder moved it to the Calendar module as "Blocked dates". The file
+ * name and the exported symbol are unchanged deliberately — renaming a
+ * 351-line component to match a label is churn, and the settings tab that
+ * referenced it is commented out rather than deleted. Its own heading now says
+ * "Blocked dates" so the page title and the card agree.
  */
 
 import * as React from "react"
@@ -172,7 +178,7 @@ export function AvailabilityManager({ businessId }: { businessId?: number | null
     <div className="rounded-xl border border-border bg-card shadow-sm">
       <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
         <span className="grid h-8 w-8 place-items-center rounded-lg bg-muted text-muted-foreground"><Icon name="CalendarCheck" size={16} /></span>
-        <div className="mr-auto"><h2 className="text-sm font-semibold">Availability</h2><p className="text-xs text-muted-foreground">Block dates you&apos;re unavailable so couples can&apos;t book them.</p></div>
+        <div className="mr-auto"><h2 className="text-sm font-semibold">Blocked dates</h2><p className="text-xs text-muted-foreground">Block dates you&apos;re unavailable so couples can&apos;t book them.</p></div>
         <Button
           size="sm"
           variant="ghost"

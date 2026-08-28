@@ -258,13 +258,19 @@ export const NAV_MODULES: NavModule[] = [
      * rail lit on a module they had not chosen. Measured on production:
      * /dashboard/holds, rail lit "Enquiries", panel titled "Enquiries".
      */
-    owns: ["availability", "cancellation-policy", "holds"],
+    owns: ["availability", "cancellation-policy", "holds", "blocked-dates"],
     panelTitle: "Calendar",
     groups: [
       {
         items: [
           { label: "Calendar", href: "/dashboard/calendar", icon: CalendarDays, i18nKey: "nav.calendar" },
           { label: "Date holds", href: "/dashboard/holds", icon: CalendarClock, i18nKey: "nav.holds" },
+          // Moved here out of Business Settings and renamed (founder,
+          // 2026-08-29). Points at /dashboard/blocked-dates, NOT at
+          // /dashboard/availability — that is a different screen (the
+          // availability PRIMITIVE setup for non-venue vendor types), and for a
+          // venue it renders one sentence telling you to go to the Calendar.
+          { label: "Blocked dates", href: "/dashboard/blocked-dates", icon: CalendarCheck },
         ],
       },
       // The "Rules" group — Availability and Cancellation policy — commented

@@ -115,7 +115,11 @@ const TABS: TabDef[] = [
   // it was a door out of Settings dressed as a section of it. /dashboard/staff
   // is untouched and still reachable from Khata > Staff & payroll.
   // { key: "team", label: "Team members", icon: "Users2", wired: false, href: "/dashboard/staff", hint: "Staff & roles." },
-  { key: "availability", label: "Availability", icon: "CalendarCheck", wired: false, hint: "Blocked dates & lead time." },
+  // MOVED to the Calendar module as "Blocked dates" (founder, 2026-08-29).
+  // The same AvailabilityManager renders there; nothing was duplicated. It read
+  // as a settings switch sitting beside NTN numbers and payout accounts, which
+  // is not where a vendor looks when a hall is unavailable next Saturday.
+  // { key: "availability", label: "Availability", icon: "CalendarCheck", wired: false, hint: "Blocked dates & lead time." },
 ]
 
 // The sidebar sub-items link to /dashboard/settings?tab=<id> using the vendor
@@ -142,7 +146,10 @@ const PARAM_TO_TAB: Record<string, TabKey> = {
   // an old link a tab key that no longer has a button or a body, and the hub
   // would render an empty right-hand pane. Restore both together.
   team: "profile",
-  availability: "availability",
+  // Same trap as `team` above: the tab is gone from TABS, and `active` is
+  // seeded from this map with no validation, so an old ?tab=availability link
+  // would give the hub a key with no button and no body. Land it on Profile.
+  availability: "profile",
 }
 
 /**
