@@ -56,7 +56,15 @@ export function bookedOn(row: MoneyRow | null | undefined): number {
   return Math.max(0, fromLines > 0 ? fromLines : amount(row.totalAmount));
 }
 
-/** Money actually received. The amount column, never the flag. */
+/**
+ * Money actually received. The amount column, never the flag.
+ *
+ * A `paymentStatus === 'Pending'` guard was tried here and removed: live data
+ * has a Confirmed/Pending booking with Rs 35,000 genuinely received, so the
+ * flag cannot stand in for "nothing arrived". The ambiguity was upstream —
+ * `downPayment` used to hold the REQUIRED advance until receipts overwrote it.
+ * `advanceDuePkr` now carries the requirement; this column carries receipts.
+ */
 export function receivedOn(row: MoneyRow | null | undefined): number {
   if (!row) return 0;
   const lines = row.bookingDetails || [];

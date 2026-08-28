@@ -34,7 +34,6 @@ import UnitQuantityStep from "./steps/unit-quantity-step"
 import VendorInquiryDialog from "@/components/VendorInquiryDialog"
 import { useDateHold } from "@/hooks/use-date-hold"
 import { useBookingDraft } from "@/hooks/use-booking-draft"
-import PaymentSuccessScreen from "./steps/payment-success-screen"
 import BankTransferScreen from "./steps/bank-transfer-screen"
 // WW-BOOKING-MODE — venues that accept a booking before asking for payment.
 import RequestSentScreen from "./steps/request-sent-screen"
@@ -104,8 +103,6 @@ export default function BookingForm() {
    * was never offered.
    */
   const [submitError, setSubmitError] = useState<{ message: string; hint?: string } | null>(null)
-  const [paymentReturnBookingId, setPaymentReturnBookingId] = useState<number | null>(null)
-  const [paymentReturnType, setPaymentReturnType] = useState<string>("down_payment")
   const [bankTransferData, setBankTransferData] = useState<{ bookingId: number; amount: number; paymentType: string; customerEmail?: string; bookingDate?: string } | null>(null)
   // WW-BOOKING-MODE — set instead of bankTransferData when the venue accepts
   // bookings before payment. Nothing is charged until they do.
@@ -124,7 +121,7 @@ export default function BookingForm() {
    * here must never lose the booking.
    */
   const [requirements, setRequirements] = useState<RequirementsDraft>({
-    tags: [], dietary: {}, freeText: "",
+    tags: [], dietary: {}, setup: {}, freeText: "",
   })
   const { timeRemaining, isHolding, holdFailed, holdFailedUntil, createHold, releaseHold } = useDateHold()
   const { user, loading: userLoading } = getUser();
@@ -203,66 +200,23 @@ export default function BookingForm() {
     }
   }, [user])
 
-  // Detect return from Stripe Checkout / Elements redirect.
-  // Stripe appends `redirect_status` and `payment_intent` to the return URL —
-  // honour them. Without this guard a failed 3DS / failed Stripe Link signup
-  // still landed on `?ps=1&bid=…&redirect_status=failed` and we naively
-  // rendered the success screen even though the card was never charged.
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    const sp = new URLSearchParams(window.location.search)
-    const ps = sp.get("ps")
-    const pc = sp.get("pc")
-    const bid = sp.get("bid")
-    const sid = sp.get("sid")
-    const pt = sp.get("pt") || "down_payment"
-    const redirectStatus = sp.get("redirect_status") // succeeded | processing | requires_action | requires_payment_method | canceled | failed
+  /**
+   * WW-DIRECT-PAY — the Stripe-return handler is gone.
+   *
+   * It read `?ps=1&bid=…&redirect_status=…` off the URL to tell a completed
+   * 3DS redirect from a failed one, and a `?pc=1` cancel to delete the unpaid
+   * booking. Every one of those parameters was written by Stripe on its way
+   * back to this page. With no gateway anywhere in the product nothing can
+   * produce them, so the branches were unreachable — and an unreachable branch
+   * that deletes a booking is worth removing rather than leaving for someone
+   * to trust later.
+   *
+   * The cancel branch has no replacement and needs none: a customer who does
+   * not pay no longer leaves a booking to clean up on the spot. The stale-
+   * booking sweeper handles genuine abandonment, and its `awaitingVendorDecision`
+   * guard keeps it away from bookings that are merely waiting on the venue.
+   */
 
-    const isPaymentSuccess =
-      ps === "1" &&
-      bid &&
-      // If redirect_status is present (post-redirect), require it to be
-      // succeeded/processing. If absent (Checkout flow with custom return
-      // URL where Stripe doesn't append it), trust ps=1.
-      (redirectStatus == null || redirectStatus === "succeeded" || redirectStatus === "processing")
-
-    const isPaymentFailure =
-      ps === "1" &&
-      bid &&
-      redirectStatus &&
-      redirectStatus !== "succeeded" &&
-      redirectStatus !== "processing"
-
-    if (isPaymentSuccess) {
-      setPaymentReturnBookingId(Number(bid))
-      setPaymentReturnType(pt)
-      window.history.replaceState({}, "", window.location.pathname)
-      // Best-effort verify session (non-blocking)
-      if (sid) {
-        axiosInstance
-          .get(`${BACKEND_URL}api/v1/payments/verify-checkout-session`, { params: { sessionId: sid, bookingId: bid, paymentType: pt } })
-          .catch(() => {})
-      }
-    } else if (isPaymentFailure) {
-      window.history.replaceState({}, "", window.location.pathname)
-      toast({
-        title: "Payment not completed",
-        description: `Payment status: ${redirectStatus}. Your card was not charged. Click Pay again to retry.`,
-        variant: "destructive",
-      })
-    } else if (pc === "1" && bid) {
-      window.history.replaceState({}, "", window.location.pathname)
-      // Delete the unpaid booking silently, then inform the user
-      axiosInstance
-        .delete(`${BACKEND_URL}api/v1/bookings/${bid}/cancel-pending`)
-        .catch(() => {})
-      toast({
-        title: "Payment Cancelled",
-        description: "Your booking has been removed. Start a new booking whenever you're ready.",
-        variant: "destructive",
-      })
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-save draft on form state changes
   useEffect(() => {
@@ -655,12 +609,17 @@ export default function BookingForm() {
         const hasRequirements =
           requirements.tags.length > 0 ||
           requirements.freeText.trim().length > 0 ||
-          Object.keys(requirements.dietary).length > 0
+          Object.keys(requirements.dietary).length > 0 ||
+          // WW-SETUP-COUNTS — "40 round tables" on its own is a complete
+          // requirement. Omitting it here would silently drop a booking whose
+          // ONLY stated need was the furniture.
+          Object.keys(requirements.setup || {}).length > 0
         if (hasRequirements) {
           try {
             await RequirementsAPI.create(realBookingId, {
               tags: requirements.tags,
               dietary: requirements.dietary,
+              setup: requirements.setup,
               freeText: requirements.freeText.trim() || undefined,
               source: "booking_flow",
             })
@@ -1032,6 +991,10 @@ export default function BookingForm() {
             // The dietary counts only make sense where food is served. A
             // photographer has no use for "how many children under 5".
             showDietary={isVenueBooking || hasMenus}
+            // WW-SETUP-COUNTS — only a venue lays out a room. A photographer
+            // has no round tables to count, and asking for some is how an
+            // optional section starts reading as noise.
+            showSetup={isVenueBooking}
           />
         )
         break
@@ -1048,6 +1011,9 @@ export default function BookingForm() {
             // can't own umbrellas) AND a setter for the form data.
             updateFormData={updateFormDataPartial}
             isAuthenticated={!!user}
+            // WW-SETUP-COUNTS — echo the previous step back, so the last
+            // screen before sending shows what was actually asked for.
+            requirements={requirements}
           />
         )
         break
@@ -1202,31 +1168,16 @@ export default function BookingForm() {
     )
   }
 
-  // Show payment success screen when returning from Stripe
-  if (paymentReturnBookingId) {
-    return (
-      <div className="w-full">
-        <div className="rounded-md bg-bridal-cream border border-bridal-beige overflow-hidden p-6 sm:p-8 lg:p-10 shadow-[0_18px_44px_-32px_rgba(176,125,84,0.4)]">
-          <PaymentSuccessScreen
-            bookingId={paymentReturnBookingId}
-            venue={venue}
-            paymentType={paymentReturnType}
-          />
-        </div>
-      </div>
-    )
-  }
-
-  // WW-RECORD-MODE — the inline Stripe payment screen that used to render here
-  // is gone. Nothing could set its state once the new-booking flow stopped
-  // routing to Stripe, and Stripe cannot onboard Pakistani businesses, so the
-  // path could never have completed for a venue on this platform.
-  //
-  // The `paymentReturnBookingId` block ABOVE deliberately stays: it is reached
-  // from the URL (`?ps=1&bid=…&redirect_status=…`, line ~222), not from here,
-  // so it still serves anyone returning from a card payment made on
-  // /user/bookings/[id]/pay. `BookingPaymentScreen` itself is untouched and
-  // still serves that page and /user/plan/[id]/pay.
+  /**
+   * WW-DIRECT-PAY — both the inline Stripe screen and the post-Stripe success
+   * screen that used to render here are gone.
+   *
+   * The success screen was kept last time on the grounds that it was reached
+   * from the URL rather than from this component, so it still served someone
+   * returning from a card payment on /user/bookings/[id]/pay. That page no
+   * longer takes card payments — it shows the venue's own accounts and a
+   * "I've transferred" form — so there is no redirect left to return from.
+   */
 
   // WW-PRICE0 — the booking funnel's choke point.
   //
@@ -1343,39 +1294,55 @@ export default function BookingForm() {
         </div>
       ) : (
         <>
-          {/* Slot Hold Timer Bar — minimal, semantic colors */}
-          {isHolding && timeRemaining > 0 && (
-            <div className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border transition-colors ${
-              timeRemaining <= 120
-                ? 'bg-red-50 border-red-200 text-red-700'
-                : timeRemaining <= 300
-                  ? 'bg-amber-50 border-amber-200 text-amber-700'
-                  : 'bg-emerald-50 border-emerald-200 text-emerald-700'
-            }`}>
-              <div className="flex items-center gap-2 text-[12.5px] font-medium">
-                {timeRemaining <= 120
-                  ? <AlertTriangle className="w-4 h-4 shrink-0 animate-pulse" />
-                  : <Timer className="w-4 h-4 shrink-0" />
-                }
-                <span>
-                  {timeRemaining <= 120
-                    ? 'Slot expiring soon — complete your booking'
-                    : 'Your slot is reserved'}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="w-20 h-1 rounded-full bg-current/10 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-current transition-all duration-1000"
-                    style={{ width: `${Math.min(100, (timeRemaining / (15 * 60)) * 100)}%` }}
-                  />
+          {/* WW-DIRECT-PAY — the hold bar, rewritten for a 48-hour hold.
+              A ticking MM:SS countdown was right for a 15-minute checkout. It
+              is wrong now, in two ways: 48h renders as "2880:00", and a clock
+              running down next to a wedding date manufactures urgency the
+              product no longer has any reason to apply. Nobody is being asked
+              to pay on this screen.
+              So the default state is a plain statement that the date is held,
+              and the countdown appears only in the last hour, when it is a
+              real warning rather than a pressure tactic. */}
+          {isHolding && timeRemaining > 0 && (() => {
+            const HOUR = 3600
+            const urgent = timeRemaining <= 15 * 60
+            const soon = timeRemaining <= HOUR
+            const hours = Math.floor(timeRemaining / HOUR)
+            const mins = Math.floor((timeRemaining % HOUR) / 60)
+            return (
+              <div className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border transition-colors ${
+                urgent
+                  ? 'bg-red-50 border-red-200 text-red-700'
+                  : soon
+                    ? 'bg-amber-50 border-amber-200 text-amber-700'
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+              }`}>
+                <div className="flex items-center gap-2 text-[12.5px] font-medium">
+                  {urgent
+                    ? <AlertTriangle className="w-4 h-4 shrink-0 animate-pulse" />
+                    : <Timer className="w-4 h-4 shrink-0" />
+                  }
+                  <span>
+                    {urgent
+                      ? 'Your date is about to be released — send your request now'
+                      : soon
+                        ? 'Your date is held for a little under an hour'
+                        : 'Your date is held while you finish'}
+                  </span>
                 </div>
-                <span className="text-[14px] font-semibold tabular-nums leading-none">
-                  {String(Math.floor(timeRemaining / 60)).padStart(2, '0')}:{String(timeRemaining % 60).padStart(2, '0')}
-                </span>
+                {soon && (
+                  <span className="shrink-0 text-[14px] font-semibold tabular-nums leading-none">
+                    {String(Math.floor(timeRemaining / 60)).padStart(2, '0')}:{String(timeRemaining % 60).padStart(2, '0')}
+                  </span>
+                )}
+                {!soon && (
+                  <span className="shrink-0 text-[12px] font-medium tabular-nums leading-none opacity-80">
+                    {hours > 0 ? `${hours}h ${mins}m left` : `${mins}m left`}
+                  </span>
+                )}
               </div>
-            </div>
-          )}
+            )
+          })()}
 
           {/* Stacked layout: horizontal top bar on top, step body below at
               full width. The top bar carries vendor identity + step list +

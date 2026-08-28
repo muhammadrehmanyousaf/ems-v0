@@ -12,16 +12,26 @@ export type BookingMode = "instant" | "request" | "inquiry_only";
 export const BOOKING_MODES: BookingMode[] = ["instant", "request", "inquiry_only"];
 
 /**
- * NULL / absent / unrecognised reads as `instant` — which is what every venue
- * on the platform does today. That polarity is load-bearing: defaulting the
- * other way would put every existing venue behind an approval step their staff
- * have never been asked to perform, and every booking would stall.
+ * WW-DIRECT-PAY — NULL / absent / unrecognised reads as `request`.
+ *
+ * This was `instant`, and that polarity was load-bearing while the PLATFORM
+ * took the advance: approval was the last gate, so confirming on the vendor's
+ * click was correct and defaulting the other way would have stalled every
+ * booking behind an approval step nobody had been asked to perform.
+ *
+ * The platform no longer takes any money — the customer pays the venue
+ * directly and files the evidence afterwards. There is nothing for an
+ * `instant` venue to confirm on, so acceptance becomes the FIRST gate for
+ * everyone. Mirrors `Business.effectiveBookingMode` on the server, which
+ * changed in the same commit; migration
+ * 20260828120000-ww-direct-pay-request-mode moves the stored rows so the
+ * column and this fallback agree.
  */
 export function effectiveBookingMode(
   biz: { bookingMode?: string | null } | null | undefined,
 ): BookingMode {
   const m = String(biz?.bookingMode || "").toLowerCase();
-  return (BOOKING_MODES as string[]).includes(m) ? (m as BookingMode) : "instant";
+  return (BOOKING_MODES as string[]).includes(m) ? (m as BookingMode) : "request";
 }
 
 /** True when the vendor must accept before the customer is asked to pay. */
@@ -51,9 +61,9 @@ export const BOOKING_MODE_LABELS: Record<BookingMode, string> = {
 
 export const BOOKING_MODE_HINTS: Record<BookingMode, string> = {
   instant:
-    "Customers are asked for the advance straight away. Fastest, but you find out about a booking after it's made.",
+    "Legacy. The platform no longer takes payments, so there is no advance to ask for up front — this behaves as \"I accept bookings first\".",
   request:
-    "You see the request first and accept or decline it. We only ask for the advance once you've accepted.",
+    "You see the request first and accept or decline it. Once you accept, the customer is shown your account details and pays you directly.",
   inquiry_only:
     "No online booking. Customers send an enquiry and you contact them.",
 };

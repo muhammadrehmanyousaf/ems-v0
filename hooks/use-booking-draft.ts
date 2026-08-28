@@ -3,7 +3,13 @@
 import { useCallback, useRef } from "react"
 import type { BookingFormData, EventBooking } from "@/lib/types"
 
-const DRAFT_EXPIRY_MS = 15 * 60 * 1000 // 15 minutes — matches slot hold timer
+/**
+ * WW-DIRECT-PAY — matches the slot hold, which is now 48h rather than 15
+ * minutes (see HOLD_TTL_MS). These two have to agree: a draft that expired
+ * first threw away the customer's six steps of work while the server was
+ * still holding their date for them, which is the worst possible pairing.
+ */
+const DRAFT_EXPIRY_MS = 48 * 60 * 60 * 1000
 
 interface DraftData {
   formData: BookingFormData

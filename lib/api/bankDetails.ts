@@ -22,6 +22,8 @@ export interface BankDetail {
   bankName: string;
   accountHolderName: string;
   /** Backend returns masked (last 4 visible) on read. */
+  /** WW-DIRECT-PAY — bank | jazzcash | easypaisa. Absent reads as bank. */
+  accountType?: VendorAccountType;
   accountNumber: string;
   iban: string | null;
   branchCode: string | null;
@@ -40,16 +42,29 @@ export interface BankDetail {
    * account as a published collection account without asking would be a silent
    * change to live financial data. Opt-in, default false.
    *
-   * A customer only ever sees an account that is `showToCustomers` AND
-   * `isActive` AND `isVerified`. An unverified IBAN published to customers
-   * routes money to an unchecked account, and a misdirected transfer has no undo.
+   * A customer sees an account that is `showToCustomers` AND `isActive`.
+   * `isVerified` is REPORTED to them rather than used to hide the account:
+   * once the customer pays the venue directly, hiding an unchecked account
+   * does not protect them, it just moves the number into a WhatsApp message
+   * where it carries no status at all. Set
+   * REQUIRE_VERIFIED_COLLECTION_ACCOUNT=1 on the API to restore the hard gate.
    */
   showToCustomers?: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
+/**
+ * WW-DIRECT-PAY — the rails a vendor can publish for customers to pay into.
+ *
+ * A wallet row reuses `accountNumber` for the MOBILE number and
+ * `accountHolderName` for the registered name; `iban` and `branchCode` are not
+ * sent, because a wallet has neither.
+ */
+export type VendorAccountType = "bank" | "jazzcash" | "easypaisa";
+
 export interface UpsertBankDetailInput {
+  accountType?: VendorAccountType;
   bankName?: string;
   accountHolderName?: string;
   accountNumber?: string;

@@ -3,6 +3,14 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import axiosInstance from "@/lib/axiosConfig"
 
+/**
+ * Used only when the server's response carries no `expiresAt`. Mirrors
+ * HOLD_TTL_MS in bookingController — the hold now has to outlive a VENDOR
+ * checking their phone, not a customer typing a card number, because nobody
+ * pays until the vendor has accepted.
+ */
+const DEFAULT_HOLD_MS = 48 * 60 * 60 * 1000
+
 interface UseDateHoldReturn {
   holdId: number | null
   timeRemaining: number // seconds
@@ -71,10 +79,22 @@ export function useDateHold(): UseDateHoldReturn {
         setHoldId(data.holdId)
         setHoldFailed(false)
         setHoldFailedUntil(null)
-        // Enforce 15-minute hold regardless of backend expiry
-        const fifteenMins = Date.now() + 15 * 60 * 1000
-        const backendExpiry = data.expiresAt ? new Date(data.expiresAt).getTime() : fifteenMins
-        setExpiresAt(Math.min(backendExpiry, fifteenMins))
+        /**
+         * WW-DIRECT-PAY — trust the server's expiry instead of re-clamping it.
+         *
+         * This took `Math.min(serverExpiry, now + 15min)`, so the hold could
+         * only ever be SHORTER than the server said, never longer. Raising the
+         * TTL on the backend therefore changed nothing at all here — the client
+         * quietly enforced the old 15 minutes on top of it, and a customer
+         * would watch the timer run out while the server still held their slot.
+         *
+         * The server is the only thing that actually reserves the date, so its
+         * `expiresAt` is the fact and this is a display of it. The fallback is
+         * used only when the response omits the field.
+         */
+        const fallback = Date.now() + DEFAULT_HOLD_MS
+        const backendExpiry = data.expiresAt ? new Date(data.expiresAt).getTime() : fallback
+        setExpiresAt(Number.isFinite(backendExpiry) ? backendExpiry : fallback)
         setIsHolding(true)
       }
     } catch (error: any) {

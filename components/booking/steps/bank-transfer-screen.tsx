@@ -229,15 +229,49 @@ export default function BankTransferScreen({
               Transfer to {vendor.businessName || "the venue"}
             </p>
           </div>
-          {vendor.accounts.map((acc) => (
+          {vendor.accounts.map((acc) => {
+            /**
+             * WW-DIRECT-PAY — a JazzCash or Easypaisa account is not a bank
+             * account with blanks in it.
+             *
+             * This rendered five fixed rows — Bank / Account title / Account
+             * number / IBAN / Branch code — because a vendor could only ever
+             * publish a bank account. A wallet has no IBAN and no branch code,
+             * and its "account number" is a mobile number, so the same five
+             * rows would have printed two empty ones and mislabelled a third.
+             */
+            const isWallet = acc.accountType === "jazzcash" || acc.accountType === "easypaisa"
+            const rail = acc.railLabel || acc.bankName
+            const rows = isWallet
+              ? [
+                  { label: "Send to", value: rail },
+                  { label: "Registered name", value: acc.accountHolderName },
+                  { label: "Mobile number", value: acc.accountNumber },
+                ]
+              : [
+                  { label: "Bank", value: acc.bankName },
+                  { label: "Account title", value: acc.accountHolderName },
+                  { label: "Account number", value: acc.accountNumber },
+                  ...(acc.iban ? [{ label: "IBAN", value: acc.iban }] : []),
+                  ...(acc.branchCode ? [{ label: "Branch code", value: acc.branchCode }] : []),
+                ]
+            return (
             <div key={acc.id} className="divide-y divide-bridal-beige/70">
-              {[
-                { label: "Bank", value: acc.bankName },
-                { label: "Account title", value: acc.accountHolderName },
-                { label: "Account number", value: acc.accountNumber },
-                { label: "IBAN", value: acc.iban },
-                ...(acc.branchCode ? [{ label: "Branch code", value: acc.branchCode }] : []),
-              ].map(({ label, value }) => (
+              {/* Which rail this block is, and whether we have checked it.
+                  Both matter BEFORE the customer transfers, so both sit above
+                  the number rather than in a footnote under it. */}
+              <div className="flex items-center justify-between gap-2 px-5 py-2.5 bg-bridal-ivory/60">
+                <span className="font-bridal text-[11px] uppercase tracking-[0.2em] font-medium text-bridal-charcoal">
+                  {rail}
+                </span>
+                {acc.isVerified === false && (
+                  <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 font-bridal text-[10px] uppercase tracking-[0.14em] font-medium text-amber-800">
+                    <AlertTriangle className="w-3 h-3" />
+                    Not yet checked by us
+                  </span>
+                )}
+              </div>
+              {rows.map(({ label, value }) => (
                 <div key={label} className="flex items-center justify-between px-5 py-3.5">
                   <div className="text-left min-w-0">
                     <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">{label}</p>
@@ -256,7 +290,8 @@ export default function BankTransferScreen({
                 </div>
               ))}
             </div>
-          ))}
+            )
+          })}
         </div>
       ))}
 

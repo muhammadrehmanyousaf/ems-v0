@@ -13,13 +13,29 @@
 
 import axiosInstance from "@/lib/axiosConfig";
 
+/** What kind of account this is. Wallets carry no IBAN and no branch code. */
+export type PublishedAccountType = "bank" | "jazzcash" | "easypaisa";
+
 export interface PublishedBankAccount {
   id: number;
+  /** WW-DIRECT-PAY — absent on older payloads, which are all bank accounts. */
+  accountType?: PublishedAccountType;
+  /** "JazzCash" / "Easypaisa" / the bank's own name. */
+  railLabel?: string;
   bankName: string;
   accountHolderName: string;
+  /** For a wallet this is the mobile number the money is sent to. */
   accountNumber: string;
-  iban: string;
+  /** NULL for a wallet — it has no IBAN, and showing a stale one misdirects. */
+  iban: string | null;
   branchCode: string | null;
+  /**
+   * Whether an admin has checked this account. REPORTED, not enforced: hiding
+   * an unverified account does not protect a customer who now pays the venue
+   * directly, it just moves the account number into a WhatsApp message where
+   * it carries no status at all. The screen marks it instead.
+   */
+  isVerified?: boolean;
 }
 
 export interface PaymentVendor {
@@ -29,9 +45,9 @@ export interface PaymentVendor {
   acceptsBankTransfer: boolean;
   whatsappNumber: string | null;
   /**
-   * Only accounts the vendor has PUBLISHED — opted in, active, and verified by
-   * an admin. Empty is a normal, safe state: the UI offers cash or asks the
-   * customer to contact the venue, and never invents an account.
+   * Only accounts the vendor has PUBLISHED — opted in and active. Bank first,
+   * then JazzCash / Easypaisa. Empty is a normal, safe state: the UI offers
+   * cash or asks the customer to contact the venue, and never invents one.
    */
   accounts: PublishedBankAccount[];
 }
@@ -46,10 +62,22 @@ export interface PaymentInstructions {
   paymentStatus: string;
   bookingStatus: string;
   totalAmount: number;
+  /** The advance the booking REQUIRES — what to transfer. */
+  advanceDue?: number;
+  /** What has actually been received so far. */
+  amountReceived?: number;
+  /** Legacy alias for `advanceDue`; kept so older callers keep working. */
   downPayment: number;
   vendors: PaymentVendor[];
   /** FALSE ⇒ no vendor has published an account; do not show a transfer form. */
   bankTransferAvailable: boolean;
+  /**
+   * TRUE ⇒ a vendor on this booking has not accepted yet, so the customer must
+   * NOT be asked to transfer. The server has always sent this and the client
+   * type omitted it, so every caller was free to ignore it — and the pay page
+   * did, asking for money against bookings the venue could still decline.
+   */
+  awaitingVendorApproval: boolean;
   /** Always "vendor_direct" — the venue collects, the platform records. */
   collectionModel: string;
 }
