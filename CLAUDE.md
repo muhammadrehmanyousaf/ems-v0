@@ -8,6 +8,11 @@ The backend is **`../ems-v0-backend`** (Express/Sequelize/Postgres) — read [..
 
 > Earlier revisions of this file referenced `../CLAUDE.md` and `../event-planner-api`. Neither exists — the workspace has no root CLAUDE.md, and the backend directory is `ems-v0-backend`. Paths below have been corrected; treat any surviving `event-planner-api` reference in older docs as meaning `ems-v0-backend`.
 
+**Before committing or opening a PR, read [REGRESSION.md](REGRESSION.md)** — the
+green baselines for every gate in both repos, which gate catches what, and the
+manual checks nothing automated covers. It is the shortest path to knowing
+whether a change broke something.
+
 ## Commands
 
 ```bash
@@ -26,7 +31,30 @@ npm run typecheck:ratchet    # gate: fails only on NEW errors. Runs automaticall
 npm run typecheck:baseline   # re-record typecheck-baseline.json after fixing errors
 ```
 
+Current baseline: **121 known errors, 0 new**. `npx tsc --noEmit` on the default
+tsconfig reports ~172 — a different, wider file set. Compare like with like:
+the ratchet is the gate, and `npx next build` run directly **skips it**, because
+the gate is the `prebuild` hook on `npm run build`.
+
 The baseline keys errors by `file|TScode`, never by line number. Adding an error to a clean file — or exceeding a file's recorded budget — stops the build. Do not flip `ignoreBuildErrors` to `false` until the baseline reaches 0; that would block every deploy.
+
+### Parity guards — cheap, fast, and they catch real regressions
+
+```bash
+npm run guards               # all five
+npm run guard:deposit        # deposit terms mirror the server
+npm run guard:space-fit      # space-fit rules mirror src/utils/spaceRequirements.js
+npm run guard:fx             # the indicative-price wiring
+npm run guard:amenities      # what the vendor ticked is what the couple reads
+# (plan-events-shape has no individual alias — run it via `npm run guards`)
+```
+
+These are Node scripts, not Jest — they read the actual source files and assert
+that a client mirror still matches its server original. Run them after touching
+anything they name; they finish in seconds and each failure prints the rule it
+broke. `guard:fx` is INVERTED as of the Pakistan-only change: it now asserts the
+venue pages do **not** render a converted price.
+
 
 ### Tests — three harnesses, all pointed at production
 
@@ -132,15 +160,70 @@ Type: Playfair Display (display) · DM Sans (body) · Inter (dense UI/numbers) �
 
 Adding or changing a vendor type usually means touching all of these together: [lib/vendor-type-config.ts](lib/vendor-type-config.ts), [lib/vendor-types.ts](lib/vendor-types.ts), [lib/vendor-steps-data.tsx](lib/vendor-steps-data.tsx), [components/VendorStepForms/](components/VendorStepForms/), plus the matching `(vendorListings)` route pair. Vendor types are a Postgres enum on `User.vendorType` — new values need a backend migration, and the string must match the enum exactly.
 
+### The booking flow — read before editing any step
+
+`components/booking/booking-form.tsx` drives it; the venue order is
+**Event selection -> Date & time -> Additional vendors -> Packages -> Menu ->
+Your requirements -> Review**. Steps are keyed, not indexed (`eventStepOrder`),
+and the list is derived — a venue with no menus never renders a Menu step.
+`steps-v2/` is current; `steps/` holds the older components still in use
+(menu, requirements, vendor selection, bank transfer). Check which is wired.
+
+Four traps that cost real time here:
+
+- **A venue models its halls in ONE OF TWO ways, and they are mutually
+  exclusive.** `subVenueSpaces` (the canonical venue-hierarchy tree, renders
+  "Which hall?") carries `fireRatedCapacity` / `comfortCapacity`.
+  `spaces` (`BusinessResource`, renders "Which space?") carries `capacityUnit`.
+  Anything you add for one — capacity, scoping, package/menu filtering — must be
+  added for the other, or it silently does nothing on half the venues. This is
+  exactly how 1,200 guests once fitted into a 300-person side hall.
+- **`Menus.data` is free-form JSON and has held three shapes:** flat
+  `{items:[...]}` (portal), classified `{items:[{name,countsAs}]}` (portal), and
+  sectioned `{mainCourse:{items:[…]}}` (booking flow). Read it ONLY through
+  `lib/menu/menu-items.ts`, which mirrors the server's `flattenMenuItems` in
+  `oneDishRule.js`. Hardcoding section names is what made every portal-written
+  menu render a title and price with no dishes at all.
+- **Calendar availability has THREE states, not two.** `dayAvail` returning
+  `undefined` means "unfetched, in flight, or the lookup failed" — it does NOT
+  mean free. `dayKnowledge()` separates `free` / `partial` / `unavailable` /
+  `pending` / `unknown`. A day is offered only when the venue has SAID it is
+  free; a failed lookup deliberately stays permissive, because refusing every
+  date over a network blip breaks booking for a problem the customer cannot fix.
+- **The hold is 48h and the server owns the expiry.** `use-date-hold` used to
+  re-clamp it with `Math.min(serverExpiry, now + 15min)`, so raising the TTL
+  server-side changed nothing while the client quietly enforced the old value.
+  Render the server's `expiresAt`; do not recompute it.
+
 ## Conventions and traps
 
 - **Live production.** Every change ships to a system with real vendors and real money. Additive, backward-compatible, zero-downtime. Migrations run on prod *before* the frontend that depends on them.
 - **Feature flags.** The `FEAT_*` gates remaining in `lib/` (`FEAT_PK_PAYMENTS`, `FEAT_PHONE_OTP`, `FEAT_CASH_BOOKING`, `FEAT_WEDDING_PLAN`, `FEAT_QUOTE_NEGOTIATION`, `FEAT_OFFLINE_OUTBOX`, `FEAT_PRIMITIVE_ROUTING`) are the survivors of a deliberate sweep — a portal full of flags defaulting OFF is why it "felt empty". Do not add new ones; ship the feature on.
 - **A flag's frontend state is not what's live.** `FeatureFlagOverrides` in the DB is not authoritative for prod behaviour. Probe the route: 200 = feature absent/open, 401 = present and gated.
-- **Money is already `NUMERIC`** in Postgres. Do not write a money-type migration. Stripe amounts are integer minor units; convert at the API boundary, not deep in components.
+- **Money is already `NUMERIC`** in Postgres. Do not write a money-type migration.
+- **There is no Stripe on the frontend.** The whole client was deleted
+  (2026-08-28): `stripe-payment`, `payment-method-chooser`,
+  `payment-selection-modal`, `booking-payment-screen`, `payment-success-screen`,
+  `topup-payment-modal`, the three `@stripe/*` packages, and the
+  `create/verify-checkout-session` client methods. Stripe does not onboard
+  Pakistani businesses, so none of it could ever reach a venue. The backend
+  still HAS Stripe (webhook + six services) — it is simply unreachable from the
+  product. **Do not reintroduce a gateway call.** The only collection surface is
+  `lib/api/paymentInstructions.ts` + `components/booking/steps/bank-transfer-screen.tsx`.
+- **`downPayment` on a booking is money RECEIVED, not the advance owed.** They
+  were one column until the server split them; `advanceDuePkr` now carries the
+  requirement and `downPayment` starts at **0** on a new online booking. Never
+  compute what a customer owes in the browser — ask
+  `GET /bookings/:id/payment-instructions` and render `amountDue`. The pay page
+  used to derive it locally, which after the split would have quoted Rs 0 or,
+  through a `down > 0 ? down : total` fallback, the ENTIRE booking total to
+  someone owing a 10% deposit. `cypress/e2e/02-regression/payment-amount.cy.ts`
+  pins this.
+- **Never ask for money while `awaitingVendorApproval` is true.** The venue can
+  still decline, and a transfer taken then has to be refunded by hand.
 - **`typeof navigator` is NOT an SSR guard.** Node has defined `navigator` as a global since v21 and it has no `onLine`, so `typeof navigator !== "undefined" ? navigator.onLine : true` passes the guard on the server and evaluates to `undefined` — falsy. That one line rendered an "Offline" badge into the server HTML for every visitor, the client rendered nothing, and React discarded the whole root (#418 → #423). A root re-render remounts the subtree and resets every `useState` — which is how a vendor who completed all 8 steps of `/business-registration` landed back on a blank step 1 with their account already created. `typeof window === "undefined"` *is* a real guard. **Never seed state from `navigator` / `localStorage` / `sessionStorage` in a `useState` initialiser** — initialise to the value the server can also produce, then read the real one in an effect.
 - **Never assert "no hydration errors" off a `waitForTimeout`.** A fixed sleep produced a *false clean run* on a page that deterministically failed 9/9/9 — the JS chunk had not executed yet, and "no error yet" is not "no error". Poll for React's `__reactFiber$…` / `__reactProps$…` key on a DOM node first, then read the console. A route where React never attached is UNMEASURED, not clean. Production ships minified React (#418/#423/#425, no names) — reproduce on a dev build to get the component stack.
 - **A `position: fixed` element is out of flow and will cover controls.** The cookie banner occupied half a 360×640 viewport and sat directly on the login page's Sign In button; that page doesn't scroll, so the button was simply unreachable and the site looked broken. Same overlap made "Cancel" 100% unclickable on the pay screen at 390×844. Fixed overlays must reserve their own space at the foot of the document rather than being restyled — that is the one fix correct for both scrolling and non-scrolling pages. Check any new fixed element at **360px**.
 - **Dialogs have no max-height.** The shared shadcn `DialogContent` sets no `max-h`, so a tall dialog's actions become unreachable on a 360px viewport. Any new dialog needs its own height cap + internal scroll, and must be checked at 360px.
 - **Images.** `next/image` refuses hosts not listed in `next.config.mjs` `images.remotePatterns`. Vendor media is on Cloudinary (`res.cloudinary.com`) so it survives Railway redeploys — an unlisted host renders every vendor image broken.
-- **`README-*.md` at the repo root** (PAYMENT-SYSTEM, DUPLICATE-PAYMENT-FIX, VendorSystem, OPTIMIZATION, …) plus `database-schema.sql` and `backend-payment-endpoints*.js` are historical design notes, some MySQL-flavoured, describing code that may never have merged. The Sequelize migrations in `../ems-v0-backend/src/migrations/` are the schema's only source of truth. Verify against current source before trusting any snippet from them.
+- **`README-*.md` at the repo root** (PAYMENT-SYSTEM, DUPLICATE-PAYMENT-FIX, VendorSystem, OPTIMIZATION, …) plus `database-schema.sql` are historical design notes, some MySQL-flavoured, describing code that may never have merged. **They document the Stripe era and are now actively misleading about payments.** The Sequelize migrations in `../ems-v0-backend/src/migrations/` are the schema's only source of truth. (`backend-payment-endpoints*.js` and `cleanup-duplicate-payments.js` were deleted with Stripe — they were unreferenced Express snippets sitting in a Next.js repo.)
