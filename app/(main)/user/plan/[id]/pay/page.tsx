@@ -7,19 +7,26 @@
  * Historically the customer had to open each booking's own pay page and settle
  * its down-payment separately. This screen gives them ONE experience: the whole
  * wedding's total due + a per-function breakdown, then it walks them through
- * paying each function in sequence by REUSING the exact same Stripe Elements pay
- * component a single booking uses (PaymentMethodChooser).
+ * paying each function in sequence by REUSING the exact same pay screen a
+ * single booking uses.
  *
- * Correctness note — there is NO combined charge. Each function is paid through
- * its own PaymentIntent and settles via the UNCHANGED per-booking webhook (keyed
- * on bookingId), so every booking ends up correctly Partial/Paid via the proven
- * path. We only render ONE pay form at a time (the active function) so exactly
- * one intent is ever in flight. Outcomes are honest per function: paid ✓,
- * reserved (cash) or, on a decline, the form surfaces the error and the customer
- * retries in place before we advance.
+ * WW-DIRECT-PAY — that screen is no longer Stripe Elements. It was, and the
+ * paragraph here used to describe PaymentIntents and a settlement webhook;
+ * none of that exists now. Stripe cannot onboard Pakistani businesses, so a
+ * card payment could never reach the venue, and the platform has stopped
+ * taking money entirely. The customer transfers to each venue directly — bank,
+ * JazzCash or Easypaisa — and reports the reference and a screenshot for that
+ * venue to confirm.
  *
- * Flag-gated (mount effect) + hidden when off; the legacy single-booking pay
- * page is untouched.
+ * Correctness note — there is still NO combined charge, and it matters more
+ * than before: each function is a separate venue with its own account and its
+ * own BK- reference. One screen is rendered at a time (the active function) so
+ * a customer can never transfer against one venue's account while another
+ * venue's reference is on screen.
+ *
+ * Outcomes are honest per function: a reported transfer is REPORTED, not paid.
+ * Nothing here marks a function settled — the venue does that when the money
+ * shows up in their account.
  */
 
 import * as React from "react";
@@ -51,12 +58,17 @@ import {
   type PlanPayableBooking,
 } from "@/lib/api/weddingPlans";
 import { eventTypeLabel, fmtPlanDate, fmtPKR } from "@/lib/wedding-plan-events";
-// Reuse the EXACT per-booking pay machinery — the Stripe Elements card screen,
-// plus the cash / JazzCash chooser when those flags are on (same selection the
-// single-booking pay page makes). Never fakes success.
-import PaymentMethodChooser, {
-  type PaymentOutcome,
-} from "@/components/booking/payment-method-chooser";
+/**
+ * WW-DIRECT-PAY — the same record-mode screen a single booking uses.
+ *
+ * This reused `PaymentMethodChooser`, which fronted Stripe Elements. Stripe
+ * does not onboard Pakistani businesses, so a card payment could never reach
+ * the venue; the platform now takes no money at all and the customer pays each
+ * venue directly, filing a reference and a screenshot for that venue to
+ * confirm. Reusing the per-booking screen keeps that identical whether a
+ * customer pays one function or five.
+ */
+import BankTransferScreen from "@/components/booking/steps/bank-transfer-screen";
 
 type Resolved = "paid" | "reserved";
 
@@ -69,7 +81,8 @@ function bookingLabel(b: PlanPayableBooking): string {
 export default function PlanPayPage() {
   const params = useParams();
   const router = useRouter();
-  const { user, isAuthenticated, isLoading } = useUser();  const [mounted, setMounted] = React.useState(false);
+  const { user, isAuthenticated, isLoading } = useUser();
+  const [mounted, setMounted] = React.useState(false);
   const planId = Number(params?.id);
 
   const [summary, setSummary] = React.useState<PlanPaymentSummary | null>(null);
@@ -146,22 +159,25 @@ export default function PlanPayPage() {
     [payables, outcomeById],
   );
 
-  const onFunctionResolved = React.useCallback(
-    (b: PlanPayableBooking, outcome?: PaymentOutcome) => {
-      const resolved: Resolved = outcome === "cash_reserved" ? "reserved" : "paid";
-      setOutcomeById((prev) => ({ ...prev, [b.bookingId]: resolved }));
-      if (resolved === "reserved") {
-        toast({
-          title: "Function reserved",
-          description:
-            "Pay in cash with your vendor — this function stays pending until they record it.",
-        });
-      } else {
-        toast({
-          title: "Payment received",
-          description: `${eventTypeLabel(b.eventType)} is settled.`,
-        });
-      }
+  /**
+   * WW-DIRECT-PAY — marking a function "reported" rather than "paid".
+   *
+   * This was `onFunctionResolved`, fired by the card screen's `onSuccess` with
+   * a Stripe outcome. There is no such callback now, and there could not be an
+   * honest one: reporting a transfer moves no money and settles nothing — the
+   * venue confirms it later, out of band. Saying "Payment received" here would
+   * have been the same untruth the old cash path was careful to avoid.
+   *
+   * Kept as an explicit action instead, so the list still tracks which
+   * functions the customer has dealt with in this sitting.
+   */
+  const markReported = React.useCallback(
+    (b: PlanPayableBooking) => {
+      setOutcomeById((prev) => ({ ...prev, [b.bookingId]: "reserved" }));
+      toast({
+        title: "Transfer reported",
+        description: `${eventTypeLabel(b.eventType)} stays pending until the venue confirms it.`,
+      });
       advance(b.bookingId);
     },
     [advance],
@@ -301,28 +317,34 @@ export default function PlanPayPage() {
                     : "down payment to confirm"
                 }`}
               >
-                {(() => {
-                  const paymentProps = {
-                    // key by bookingId (below) so switching function remounts the
-                    // form → exactly one PaymentIntent is ever in flight.
-                    bookingId: activeBooking.bookingId,
-                    amount: activeBooking.dueNow,
-                    paymentType: activeBooking.paymentType ?? "down_payment",
-                    customerEmail: activeBooking.customerEmail ?? undefined,
-                    customerName: activeBooking.customerName ?? undefined,
-                    vendorName: activeBooking.vendorName ?? undefined,
-                    bookingDate: activeBooking.bookingDate ?? undefined,
-                    onSuccess: (outcome?: PaymentOutcome) =>
-                      onFunctionResolved(activeBooking, outcome),
-                    // Skip to the next function without paying this one.
-                    onCancel:
-                      remaining.length > 1
-                        ? () => advance(activeBooking.bookingId)
-                        : () => router.push(planHref),
-                  };
-                  // Cash is always offered now, so the chooser always renders.
-                  return <PaymentMethodChooser key={activeBooking.bookingId} {...paymentProps} />;
-                })()}
+                {/* Keyed by bookingId so switching function remounts the
+                    screen — it fetches that booking's own instructions, and a
+                    stale account or reference from the previous function must
+                    never linger on screen while someone transfers money. */}
+                <BankTransferScreen
+                  key={activeBooking.bookingId}
+                  bookingId={activeBooking.bookingId}
+                  amount={activeBooking.dueNow}
+                  paymentType={activeBooking.paymentType ?? "down_payment"}
+                  customerEmail={activeBooking.customerEmail ?? undefined}
+                  bookingDate={activeBooking.bookingDate ?? undefined}
+                />
+
+                {/* Moving on is an explicit act now, not a payment callback.
+                    Reporting a transfer settles nothing on the spot — the venue
+                    confirms it later — so there is no success event to advance
+                    the list for us, and inventing one would tell the customer
+                    a function was paid when it is only reported. */}
+                <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => markReported(activeBooking)}>
+                    I&apos;ve reported this one — next function
+                  </Button>
+                  {remaining.length > 1 && (
+                    <Button variant="ghost" size="sm" onClick={() => advance(activeBooking.bookingId)}>
+                      Skip for now
+                    </Button>
+                  )}
+                </div>
               </SectionCard>
             ) : (
               <SectionCard title="Choose a function to pay">
@@ -424,7 +446,7 @@ export default function PlanPayPage() {
             </SectionCard>
 
             <p className="text-[10.5px] text-bridal-text-soft italic leading-relaxed px-1">
-              Payments are handled by Stripe, the same as a single booking. If a
+              You pay each venue directly, the same as a single booking. If a
               card is declined, you can retry that function right here; the others
               are unaffected.
             </p>

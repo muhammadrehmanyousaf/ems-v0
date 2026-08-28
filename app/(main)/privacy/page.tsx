@@ -37,7 +37,7 @@ export default function PrivacyPolicyPage() {
       <ul>
         <li><strong>Account data</strong> — name, email, phone number, password (hashed).</li>
         <li><strong>Booking data</strong> — event date, vendor selections, guest count, message threads with vendors.</li>
-        <li><strong>Payment metadata</strong> — payment status, amount, last-4 of card, payment processor reference. <strong>We never store your full card number, CVV, or expiry date.</strong> All card data is handled by our PCI-DSS-compliant payment processor (PayFast / Stripe).</li>
+        <li><strong>Payment records</strong> — the amount, the date, the method you tell us you used, the transaction reference you enter and any payment screenshot you upload for the vendor to check. <strong>We do not process card payments and never see or store card numbers, CVV or expiry dates</strong> — you pay the vendor directly, into their own bank account or mobile wallet, and we record what they confirm receiving.</li>
         <li><strong>Reviews and photos</strong> — content you publish about vendors after a completed booking.</li>
         <li><strong>Device and usage data</strong> — IP address, browser type, pages visited, timestamps. Used for fraud prevention, analytics, and service improvement.</li>
       </ul>
@@ -61,7 +61,7 @@ export default function PrivacyPolicyPage() {
       <p>{SITE_NAME} does not sell your data. We share data only with:</p>
       <ul>
         <li><strong>Vendors you book</strong> — we share the minimum needed to fulfil the booking (name, contact, event date).</li>
-        <li><strong>Payment processors</strong> — PayFast Pakistan, Stripe (legacy USD bookings) — to take payments and issue refunds.</li>
+        <li><strong>Payment processors</strong> — none. Money moves directly between you and the vendor through your own banks or wallet providers; we are not in that path and take no custody of your funds.</li>
         <li><strong>Infrastructure providers</strong> — Railway (database & hosting), Vercel / Cloudflare (hosting), AWS (file storage), email delivery (e.g. Postmark or AWS SES), SMS providers (e.g. JazzCash SMS gateway).</li>
         <li><strong>Analytics providers</strong> — Google Analytics, Microsoft Clarity. We use anonymized / pseudonymized data where possible.</li>
         <li><strong>Law enforcement and regulators</strong> — when required by valid Pakistani legal process.</li>

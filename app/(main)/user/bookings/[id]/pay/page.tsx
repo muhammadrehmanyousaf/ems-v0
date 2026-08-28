@@ -1,39 +1,54 @@
 "use client";
 
+/**
+ * WW-DIRECT-PAY — where a customer pays, after the vendor has accepted.
+ *
+ * ── What this page was, and why it could not stay ─────────────────────────
+ *
+ * It rendered `PaymentMethodChooser`, which fronted Stripe. That could never
+ * complete for a Pakistani venue — Stripe does not onboard Pakistani
+ * businesses, so there was no account for the money to land in — and the
+ * platform has since stopped taking payments at all. The customer pays the
+ * venue directly and files the reference and a screenshot afterwards.
+ *
+ * ── Why the page is not simply deleted ────────────────────────────────────
+ *
+ * This is the ONLY place a customer can pay after leaving the booking flow,
+ * and under the request-mode flow that is the normal path: they submit, the
+ * vendor accepts hours later, and they come back here. Deleting it would
+ * strand every accepted booking with nowhere to pay.
+ *
+ * ── Why it no longer computes the amount itself ───────────────────────────
+ *
+ * It derived the amount from `booking.downPayment`, which used to hold the
+ * REQUIRED advance. That column now holds money RECEIVED and starts at zero,
+ * so the old arithmetic would have quoted Rs 0 — or, through its
+ * `down > 0 ? down : total` fallback, the entire booking total to someone who
+ * owed a 10% deposit. The server's `payment-instructions` endpoint is the one
+ * authority on what is owed and to whom; this page asks it and renders the
+ * answer.
+ */
+
 import React, { useEffect, useState } from "react";
-import { errorMessage } from "@/lib/utils/api-error"
+import { errorMessage } from "@/lib/utils/api-error";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import axiosInstance from "@/lib/axiosConfig";
-import { BACKEND_URL } from "@/lib/backend-url";
-import { isSettled } from "@/lib/payment-status";
+import { ArrowLeft, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "@/hooks/use-toast";
 import { useUser } from "@/context/UserContext";
-// FEAT_CASH_BOOKING / FEAT_PK_PAYMENTS — when either is on, offer a method
-// chooser (card + cash + JazzCash/Easypaisa). When both are off the card-only
-// screen renders exactly as before.
-import PaymentMethodChooser, { type PaymentOutcome } from "@/components/booking/payment-method-chooser";
-
-interface Booking {
-  id: number;
-  customerName: string;
-  customerEmail: string;
-  bookingDate: string;
-  totalAmount: number;
-  downPayment: number;
-  paymentStatus: string;
-  bookingDetails?: Array<{ business?: { name?: string } | null }>;
-}
+import {
+  PaymentInstructionsAPI,
+  type PaymentInstructions,
+} from "@/lib/api/paymentInstructions";
+import BankTransferScreen from "@/components/booking/steps/bank-transfer-screen";
 
 export default function PayBookingPage() {
   const router = useRouter();
   const params = useParams();
   const bookingId = Number((params?.id as string) || 0);
-  const { user, isAuthenticated, isLoading } = useUser();
+  const { isAuthenticated, isLoading } = useUser();
 
-  const [booking, setBooking] = useState<Booking | null>(null);
+  const [instructions, setInstructions] = useState<PaymentInstructions | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,46 +64,33 @@ export default function PayBookingPage() {
       return;
     }
 
+    let cancelled = false;
     (async () => {
       try {
-        const r = await axiosInstance.get(`${BACKEND_URL}api/v1/bookings/simple-user-bookings`);
-        const list: Booking[] = r?.data?.data || [];
-        const b = list.find((row) => String(row.id) === String(bookingId));
-        if (!b) throw new Error("Booking not found or not yours");
-        setBooking(b);
+        const data = await PaymentInstructionsAPI.get(bookingId);
+        if (!cancelled) setInstructions(data);
       } catch (e: any) {
-        setError(errorMessage(e, "Failed to load booking"));
+        if (!cancelled) setError(errorMessage(e, "Failed to load this booking"));
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [isLoading, isAuthenticated, bookingId, router]);
 
-  // Resolve which payment is owed and how much.
-  const paymentInfo = (() => {
-    if (!booking) return null;
-    const total = Number(booking.totalAmount || 0);
-    const down = Number(booking.downPayment || 0);
-    const ps = String(booking.paymentStatus || "").toLowerCase();
-
-    // isSettled, not `ps === "paid"`. A booking that was paid in full and then
-    // partially refunded owes nothing, and the else-branch below is a DOWN
-    // PAYMENT request — so getting this wrong asks the couple to pay their
-    // deposit again days after we sent them money back.
-    if (isSettled(ps)) return { type: "paid" as const };
-    if (ps === "partial") {
-      return {
-        type: "remaining_payment" as const,
-        amount: Math.max(total - down, 0),
-        label: "remaining balance",
-      };
-    }
-    return {
-      type: "down_payment" as const,
-      amount: down > 0 ? down : total,
-      label: down > 0 && down < total ? "down payment" : "full payment",
-    };
-  })();
+  const back = (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => router.push(`/user/bookings/${bookingId}`)}
+      className="gap-1.5 mb-4"
+    >
+      <ArrowLeft className="size-3.5" />
+      Back to booking
+    </Button>
+  );
 
   if (loading || isLoading) {
     return (
@@ -99,31 +101,57 @@ export default function PayBookingPage() {
     );
   }
 
-  if (error || !booking) {
+  if (error || !instructions) {
     return (
       <div className="mx-auto w-full max-w-[1100px] px-4 sm:px-6 lg:px-8 py-10">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push(`/user/bookings/${bookingId}`)}
-          className="gap-1.5 mb-4"
-        >
-          <ArrowLeft className="size-3.5" />
-          Back to booking
-        </Button>
+        {back}
         <div className="rounded-md border border-bridal-coral/40 bg-bridal-coral/15 p-6 text-center">
-          <p className="font-bridal text-[13px] text-bridal-coral">{error || "Booking unavailable."}</p>
+          <p className="font-bridal text-[13px] text-bridal-coral">
+            {error || "Booking unavailable."}
+          </p>
         </div>
       </div>
     );
   }
 
-  if (paymentInfo?.type === "paid") {
+  /**
+   * The vendor has not answered yet, so nothing is owed.
+   *
+   * The server refuses a claim in this state, and asking for money against a
+   * booking the venue may still decline is the failure that flag exists to
+   * prevent — it would then have to be refunded by hand.
+   */
+  if (instructions.awaitingVendorApproval) {
     return (
       <div className="mx-auto w-full max-w-[1100px] px-4 sm:px-6 lg:px-8 py-10">
+        {back}
+        <div className="rounded-md border border-bridal-beige bg-bridal-cream p-6 text-center">
+          <Clock className="mx-auto mb-3 h-6 w-6 text-bridal-gold-dark" />
+          <p className="font-display italic text-[20px] text-bridal-charcoal mb-1.5">
+            The venue is reviewing your request
+          </p>
+          <p className="font-bridal text-[13px] text-bridal-text-soft">
+            We&apos;ll ask you for the advance once they&apos;ve accepted — there&apos;s nothing to
+            pay yet, and your date is held in the meantime.
+          </p>
+          <Button onClick={() => router.push(`/user/bookings/${bookingId}`)} size="sm" className="mt-4">
+            View booking
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // `paymentType: null` is the server saying this booking is settled. Trusted
+  // over any local re-derivation from the amount columns, which is how the old
+  // page came to re-request a deposit on a refunded booking.
+  if (!instructions.paymentType || !(instructions.amountDue > 0)) {
+    return (
+      <div className="mx-auto w-full max-w-[1100px] px-4 sm:px-6 lg:px-8 py-10">
+        {back}
         <div className="rounded-md border border-bridal-sage/45 bg-bridal-sage/15 p-6 text-center">
           <p className="font-display italic text-[20px] text-bridal-charcoal mb-2">
-            This booking is already fully paid.
+            There&apos;s nothing left to pay on this booking.
           </p>
           <Button onClick={() => router.push(`/user/bookings/${bookingId}`)} size="sm" className="mt-3">
             View booking
@@ -133,58 +161,20 @@ export default function PayBookingPage() {
     );
   }
 
-  const vendorName = booking.bookingDetails?.[0]?.business?.name || "your vendor";
-
   return (
     <main className="min-h-screen bg-bridal-ivory pb-24 lg:pb-12">
       <div className="mx-auto w-full max-w-[1200px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push(`/user/bookings/${bookingId}`)}
-          className="gap-1.5 mb-4"
-        >
-          <ArrowLeft className="size-3.5" />
-          Back to booking
-        </Button>
-
-        <div className="rounded-md bg-bridal-cream border border-bridal-beige overflow-hidden p-5 sm:p-6 lg:p-8 shadow-[0_18px_44px_-32px_rgba(176,125,84,0.4)]">
-          {(() => {
-            const paymentProps = {
-              bookingId: booking.id,
-              amount: paymentInfo!.amount,
-              paymentType: paymentInfo!.type,
-              customerEmail: booking.customerEmail,
-              customerName: booking.customerName,
-              vendorName,
-              bookingDate: booking.bookingDate,
-              onSuccess: (outcome?: PaymentOutcome) => {
-                // Message HONESTLY per outcome. The cash path moved NO money —
-                // the booking is only reserved and stays pending until the
-                // vendor records the cash — so we must never say "payment
-                // received" there. Card/gateway success (outcome undefined or
-                // "paid") keeps the original confirmation, byte-identical.
-                if (outcome === "cash_reserved") {
-                  toast({
-                    title: "Booking reserved",
-                    description:
-                      "Pay in cash at the venue — your vendor will confirm the booking once they receive payment.",
-                  });
-                } else {
-                  toast({
-                    title: "Payment received",
-                    description: `Your ${paymentInfo!.label} has been recorded.`,
-                  });
-                }
-                router.push(`/user/bookings/${booking.id}`);
-              },
-              onCancel: () => router.push(`/user/bookings/${bookingId}`),
-            };
-            // Cash is always offered now (FEAT_CASH_BOOKING is on and needs no
-            // third-party credentials), so the chooser always renders.
-            return <PaymentMethodChooser {...paymentProps} />;
-          })()}
-        </div>
+        {back}
+        {/* The same screen the booking flow ends on, so a customer who pays
+            later sees exactly what they would have seen at the time — the
+            venue's own accounts, the reference, and the "I've transferred"
+            form. It fetches its own instructions, so the figures here can
+            never drift from the ones it submits against. */}
+        <BankTransferScreen
+          bookingId={bookingId}
+          amount={instructions.amountDue}
+          paymentType={instructions.paymentType}
+        />
       </div>
     </main>
   );

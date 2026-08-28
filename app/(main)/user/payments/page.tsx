@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense, useMemo } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState, useEffect, Suspense, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   Clock,
   CheckCircle2,
@@ -21,8 +21,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { PaymentAPI } from "@/lib/api/payments";
-import type { PendingPayment } from "@/lib/types";
-import dynamic from "next/dynamic";
 import { toast } from "@/components/ui/use-toast";
 import { getUser } from "@/hooks/getLoggedinUser";
 import { slotText, slotFromBooking } from "@/lib/booking/slot-vocabulary";
@@ -33,11 +31,6 @@ import {
   KpiCard,
   EmptyState,
 } from "@/components/user-dashboard";
-
-const StripePayment = dynamic(
-  () => import("@/components/booking/stripe-payment"),
-  { ssr: false },
-);
 
 const fmt = (n: number | string | null | undefined) =>
   `Rs. ${Number(n || 0).toLocaleString()}`;
@@ -109,88 +102,25 @@ export default function PaymentsPage() {
 function PaymentsPageContent() {
   const { user } = getUser();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const sessionVerifiedRef = useRef(false);
 
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
-  const [selectedPayment, setSelectedPayment] = useState<PendingPayment | null>(null);
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
-  useEffect(() => {
-    const sessionId = searchParams?.get("session_id");
-    const bookingId = searchParams?.get("bookingId");
-    const paymentType = searchParams?.get("paymentType");
-    const cancelled = searchParams?.get("cancelled");
-
-    if (cancelled) {
-      toast({
-        title: "Payment cancelled",
-        description: "You cancelled the payment. You can try again anytime.",
-        variant: "destructive",
-      });
-      router.replace("/user/payments");
-      return;
-    }
-    if (sessionId && !sessionVerifiedRef.current) {
-      sessionVerifiedRef.current = true;
-      verifyStripeSession(
-        sessionId,
-        bookingId ? Number(bookingId) : undefined,
-        paymentType || undefined,
-      );
-    }
-  }, [searchParams]);
-
-  const verifyStripeSession = async (
-    sessionId: string,
-    bookingId?: number,
-    paymentType?: string,
-  ) => {
-    try {
-      toast({
-        title: "Verifying payment",
-        description: "Please wait while we confirm your payment…",
-      });
-      const result = await PaymentAPI.verifyCheckoutSession(
-        sessionId,
-        bookingId,
-        paymentType,
-      );
-      if (!result.alreadyProcessed) {
-        const pType = result.paymentType || paymentType || "down_payment";
-        try {
-          if (pType === "down_payment")
-            await PaymentAPI.processDownPayment(result.bookingId);
-          else if (pType === "remaining_payment")
-            await PaymentAPI.processRemainingPayment(result.bookingId);
-          else if (pType === "full_payment")
-            await PaymentAPI.processFullPayment(result.bookingId);
-        } catch {
-          /* non-critical */
-        }
-        toast({
-          title: "Payment successful",
-          description: `Your payment of ${fmt(result.amount)} has been processed.`,
-        });
-      } else {
-        toast({
-          title: "Already processed",
-          description: "This payment was already recorded.",
-        });
-      }
-      await fetchBookings();
-    } catch (err: any) {
-      toast({
-        title: "Verification failed",
-        description: err.message || "Could not verify payment. Please contact support.",
-        variant: "destructive",
-      });
-    } finally {
-      router.replace("/user/payments");
-    }
-  };
+  /**
+   * WW-DIRECT-PAY — the Stripe Checkout return handler is gone.
+   *
+   * It read `?session_id` / `?cancelled` off the URL, called
+   * `verifyCheckoutSession`, then poked processDownPayment /
+   * processRemainingPayment / processFullPayment to record what Stripe had
+   * taken. Every one of those parameters was written by Stripe redirecting
+   * back here, and there is no Checkout Session to return from any more.
+   *
+   * Nothing replaces it because nothing needs to: a customer now transfers to
+   * the venue and reports it on /user/bookings/[id]/pay, and the VENDOR
+   * confirming that claim is what records the payment. There is no moment when
+   * this page has to reconcile a third party's result.
+   */
 
   useEffect(() => {
     fetchBookings();
@@ -237,27 +167,24 @@ function PaymentsPageContent() {
   const totalDue = pending.reduce((s, b) => s + (b._resolved?.amount || 0), 0);
   const totalPaid = history.reduce((s, b) => s + Number(b.totalAmount || 0), 0);
 
+  /**
+   * WW-DIRECT-PAY — send them to the one pay surface instead of a modal.
+   *
+   * This opened a Stripe Elements modal, with `currency: "usd"` — which is on
+   * its own the whole story: Stripe does not onboard Pakistani businesses, so
+   * that modal could never move money to a venue, and it quoted a currency no
+   * venue on the platform is paid in.
+   *
+   * The platform now takes no payments. `/user/bookings/[id]/pay` is the single
+   * screen that knows what is owed, which of the venue's accounts to show, and
+   * whether the vendor has even accepted yet — none of which this page has. So
+   * it routes there rather than growing a second, thinner copy of that logic
+   * which would drift out of step with it.
+   */
   const handlePay = (booking: any) => {
-    const action = booking._resolved;
-    if (!action || !action.amount) return;
-    const paymentType: "down_payment" | "remaining_payment" | "full_payment" =
-      action.type === "remaining" ? "remaining_payment" : "down_payment";
-
-    setSelectedPayment({
-      id: booking.id || booking.bookingId,
-      bookingId: booking.bookingId || booking.id,
-      customerName: booking.customerName,
-      bookingDate: booking.bookingDate,
-      businesses: booking.businesses || [],
-      paymentType,
-      amount: action.amount,
-      currency: "usd",
-      status: booking.status,
-      paymentStatus: booking.paymentStatus,
-      createdAt: booking.createdAt,
-      totalAmount: booking.totalAmount,
-    });
-    setPaymentModalOpen(true);
+    const id = booking.bookingId || booking.id;
+    if (!id) return;
+    router.push(`/user/bookings/${id}/pay`);
   };
 
   const eyebrow = (
@@ -593,34 +520,6 @@ function PaymentsPageContent() {
           </div>
         ))}
 
-      {selectedPayment ? (
-        <StripePayment
-          isOpen={paymentModalOpen}
-          onClose={() => {
-            setPaymentModalOpen(false);
-            setSelectedPayment(null);
-          }}
-          bookingId={selectedPayment.bookingId}
-          customerEmail={user?.email || ""}
-          paymentType={selectedPayment.paymentType}
-          amount={selectedPayment.amount}
-          currency={selectedPayment.currency}
-          businessName={selectedPayment.businesses[0]?.name || "Business"}
-          onPaymentSuccess={() => {
-            setPaymentModalOpen(false);
-            setSelectedPayment(null);
-            fetchBookings();
-            toast({
-              title: "Success",
-              description: "Payment processed successfully.",
-            });
-          }}
-          onPaymentFailure={() => {
-            setPaymentModalOpen(false);
-            setSelectedPayment(null);
-          }}
-        />
-      ) : null}
     </PageContainer>
   );
 }

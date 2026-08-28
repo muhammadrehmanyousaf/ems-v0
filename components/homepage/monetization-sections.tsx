@@ -671,7 +671,12 @@ export function PromotedDeals() {
 export function TrustStrip() {
   const items = [
     { icon: Verified,    title: "Verified Vendors",    desc: "Every vendor manually vetted by our editorial team" },
-    { icon: Lock,        title: "Secure Payments",     desc: "Encrypted Stripe checkout, never share card details" },
+    // WW-DIRECT-PAY — this said "Encrypted Stripe checkout, never share card
+    // details". There is no checkout and no card: the platform takes no money,
+    // the customer pays the venue directly and reports the transfer for the
+    // venue to confirm. Leaving the old line up would have been a security
+    // claim about a system that does not exist.
+    { icon: Lock,        title: "Payments You Control", desc: "Pay the venue directly — we record it and hold your date" },
     { icon: Shield,      title: "Money-Back Guarantee", desc: "Full refund if your vendor cancels last-minute" },
     { icon: Quote,       title: "Real Reviews",        desc: "Reviews only from couples who actually booked" },
   ]
