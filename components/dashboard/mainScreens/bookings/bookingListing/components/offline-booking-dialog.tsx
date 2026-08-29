@@ -1,6 +1,7 @@
 'use client';
 
 import { validatePkPhone, validateEmail, normalizePkPhone, normalizeEmail } from "@/lib/validation/pk-fields";
+import { scopeToSpace, isOwnedBySpace } from "@/lib/booking/scope-to-space";
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -167,13 +168,20 @@ function getFeaturePreview(features: ApiPackage['features']): string[] {
     return [];
 }
 
-function MenuOption({ menu }: { menu: ApiMenu }) {
+/** `own` — this item belongs to the hall the vendor picked, so it is badged
+    and sorted first (see lib/booking/scope-to-space.ts). */
+function MenuOption({ menu, own = false }: { menu: ApiMenu; own?: boolean }) {
     const items = (menu.data as Record<string, unknown>)?.items;
     const itemList = Array.isArray(items) ? (items as string[]).slice(0, 4) : [];
     return (
         <div className="flex flex-col gap-0.5 py-0.5 w-full">
             <div className="flex items-center justify-between gap-3">
                 <span className="font-medium text-sm truncate">{menu.title}</span>
+                {own && (
+                    <span className="ml-1.5 shrink-0 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                        this hall
+                    </span>
+                )}
                 <span className="text-xs font-semibold text-green-600 shrink-0">
                     {formatPKR(menu.price)}<span className="font-normal text-muted-foreground">/head</span>
                 </span>
@@ -196,12 +204,17 @@ function MenuOption({ menu }: { menu: ApiMenu }) {
     );
 }
 
-function PackageOption({ pkg }: { pkg: ApiPackage }) {
+function PackageOption({ pkg, own = false }: { pkg: ApiPackage; own?: boolean }) {
     const preview = getFeaturePreview(pkg.features);
     return (
         <div className="flex flex-col gap-0.5 py-0.5 w-full">
             <div className="flex items-center justify-between gap-3">
                 <span className="font-medium text-sm truncate">{pkg.name}</span>
+                {own && (
+                    <span className="ml-auto mr-1 shrink-0 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                        this hall
+                    </span>
+                )}
                 <span className="text-xs font-semibold text-bridal-gold-dark shrink-0">{formatPKR(pkg.price)}</span>
             </div>
             {pkg.description && (
@@ -489,12 +502,23 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
     const showResourcePicker =
         vendorType === 'Wedding venue' && venueResources.length > 0 && !spaceHasChoice;
 
+    /* Scope both lists to the hall the vendor picked, exactly as the customer
+       booking flow does — same helper, so the two cannot drift. Without this the
+       vendor's own form offered every package and every menu on the business no
+       matter which hall was selected, while the customer flow was already
+       narrowing them: the two halves of the product disagreed about what was on
+       sale. Founder, 2026-08-29: the form "should be according to our actual
+       booking format ... package and menu of that selected venue and also
+       selected space". */
+    const chosenSpaceId = Number(selectedSubVenueId) || null;
+
     // For car rental: filter packages by mode
     const filteredPackages = isCarRental
         ? carMode === 'single'
             ? packages.filter(p => isCarFleetFeatures(p.features))
             : packages.filter(p => isCarPackageFeatures(p.features))
-        : packages;
+        : scopeToSpace(packages, chosenSpaceId);
+    const scopedMenus = scopeToSpace(menus, chosenSpaceId);
 
     // WW-PRICE0b — this business never published a price and has nothing priced
     // to select, so the server refuses to derive an amount (`vendor_not_priced`).
@@ -1120,7 +1144,7 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                                             <SelectContent className="max-w-sm">
                                                 {filteredPackages.map((p) => (
                                                     <SelectItem key={p.id} value={String(p.id)} textValue={`${p.name} — ${formatPKR(p.price)}`}>
-                                                        <PackageOption pkg={p} />
+                                                        <PackageOption pkg={p} own={isOwnedBySpace(p, chosenSpaceId)} />
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -1139,13 +1163,13 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                                                 <SelectTrigger>
                                                     <SelectValue placeholder={
                                                         loadingOptions ? 'Loading...' :
-                                                        menus.length === 0 ? 'No menus' : 'Select menu'
+                                                        scopedMenus.length === 0 ? 'No menus' : 'Select menu'
                                                     } />
                                                 </SelectTrigger>
                                                 <SelectContent className="max-w-sm">
-                                                    {menus.map((m) => (
+                                                    {scopedMenus.map((m) => (
                                                         <SelectItem key={m.id} value={String(m.id)} textValue={`${m.title} — ${formatPKR(m.price)}/head`}>
-                                                            <MenuOption menu={m} />
+                                                            <MenuOption menu={m} own={isOwnedBySpace(m, chosenSpaceId)} />
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
