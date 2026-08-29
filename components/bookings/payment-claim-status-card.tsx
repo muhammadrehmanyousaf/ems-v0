@@ -73,8 +73,8 @@ export function PaymentClaimStatusCard({ bookingId }: { bookingId: number }) {
               <p className="mt-2 inline-flex items-start gap-1.5 text-sm text-amber-700 dark:text-amber-400">
                 <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <span>
-                  Waiting for the venue to find it in their account. Your date is held
-                  meanwhile — transfers can take a few hours to show.
+                  Waiting for the venue to find it in their account — transfers can
+                  take a few hours to show.
                 </span>
               </p>
             )}

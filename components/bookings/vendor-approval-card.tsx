@@ -105,8 +105,11 @@ export function VendorApprovalCard({
 
       <p className="mt-1.5 text-sm text-muted-foreground">
         {customerName ? `${customerName} has ` : "A customer has "}
-        requested{eventDate ? ` ${eventDate}` : " this date"}. Their date is held and
-        nothing has been charged. Accepting asks them for the advance.
+        {/* Said "Their date is held" until 2026-08-29, when the booking flow
+            stopped creating holds. The date is NOT reserved, which is a reason
+            to answer sooner rather than later — so the card now says so. */}
+        requested{eventDate ? ` ${eventDate}` : " this date"}. The date is not held,
+        so answer soon. Nothing has been charged; accepting asks them for the advance.
       </p>
 
       {!declining && (

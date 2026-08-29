@@ -782,7 +782,21 @@ export default function BookingForm() {
 
     if (isVenueBooking) {
       // VENUE flow: Date → Add Vendors → Packages → Menu → Review → Success
-      steps.push({ key: "vendors", title: "Additional Vendors" })
+      //
+      /* "Additional Vendors" only when the venue actually takes outside
+         vendors. `Business.outsideVendorsAllowed` has been on the model and in
+         the payload all along and nothing in the booking flow read it, so a
+         venue that answered NO still invited couples to bring a photographer
+         it would turn away at the gate — a promise made on the booking screen
+         and broken on the day. Verified live: business 3358 has
+         outsideVendorsAllowed=false and was still showing the step.
+
+         Explicit `false` only. Null means the venue never answered, and
+         silently removing a step from every venue that has not filled this in
+         would be a far bigger change than the one asked for. */
+      if ((venue as any)?.outsideVendorsAllowed !== false) {
+        steps.push({ key: "vendors", title: "Additional Vendors" })
+      }
       if (hasPackages) steps.push({ key: "packages", title: "Packages" })
       // WW-PKG-UNIT — the Menu step is now derived, not hardcoded.
       //
@@ -1294,55 +1308,13 @@ export default function BookingForm() {
         </div>
       ) : (
         <>
-          {/* WW-DIRECT-PAY — the hold bar, rewritten for a 48-hour hold.
-              A ticking MM:SS countdown was right for a 15-minute checkout. It
-              is wrong now, in two ways: 48h renders as "2880:00", and a clock
-              running down next to a wedding date manufactures urgency the
-              product no longer has any reason to apply. Nobody is being asked
-              to pay on this screen.
-              So the default state is a plain statement that the date is held,
-              and the countdown appears only in the last hour, when it is a
-              real warning rather than a pressure tactic. */}
-          {isHolding && timeRemaining > 0 && (() => {
-            const HOUR = 3600
-            const urgent = timeRemaining <= 15 * 60
-            const soon = timeRemaining <= HOUR
-            const hours = Math.floor(timeRemaining / HOUR)
-            const mins = Math.floor((timeRemaining % HOUR) / 60)
-            return (
-              <div className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border transition-colors ${
-                urgent
-                  ? 'bg-red-50 border-red-200 text-red-700'
-                  : soon
-                    ? 'bg-amber-50 border-amber-200 text-amber-700'
-                    : 'bg-emerald-50 border-emerald-200 text-emerald-700'
-              }`}>
-                <div className="flex items-center gap-2 text-[12.5px] font-medium">
-                  {urgent
-                    ? <AlertTriangle className="w-4 h-4 shrink-0 animate-pulse" />
-                    : <Timer className="w-4 h-4 shrink-0" />
-                  }
-                  <span>
-                    {urgent
-                      ? 'Your date is about to be released — send your request now'
-                      : soon
-                        ? 'Your date is held for a little under an hour'
-                        : 'Your date is held while you finish'}
-                  </span>
-                </div>
-                {soon && (
-                  <span className="shrink-0 text-[14px] font-semibold tabular-nums leading-none">
-                    {String(Math.floor(timeRemaining / 60)).padStart(2, '0')}:{String(timeRemaining % 60).padStart(2, '0')}
-                  </span>
-                )}
-                {!soon && (
-                  <span className="shrink-0 text-[12px] font-medium tabular-nums leading-none opacity-80">
-                    {hours > 0 ? `${hours}h ${mins}m left` : `${mins}m left`}
-                  </span>
-                )}
-              </div>
-            )
-          })()}
+          {/* The "Your date is held — 47h 59m left" banner lived here.
+              Removed with the hold itself (founder, 2026-08-29). With no hold
+              being created there is no countdown to show, and a banner
+              promising a reservation the server is not making would be worse
+              than none. The block is gone rather than left dark because
+              `isHolding` is now permanently false; see the note on the
+              commented-out createHold in the date step. */}
 
           {/* Stacked layout: horizontal top bar on top, step body below at
               full width. The top bar carries vendor identity + step list +

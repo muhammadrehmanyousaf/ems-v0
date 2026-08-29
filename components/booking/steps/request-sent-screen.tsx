@@ -9,9 +9,10 @@
  * scarcest asset.
  *
  * When a venue has set `bookingMode: request`, this replaces the payment screen.
- * The date is held, nothing is charged, and the customer is told plainly what
- * happens next and when. The one thing this screen must never do is imply the
- * booking is secured — it isn't until the venue says so.
+ * Nothing is charged, and the customer is told plainly what happens next and
+ * when. The one thing this screen must never do is imply the booking is
+ * secured — it isn't until the venue says so, and since 2026-08-29 the date is
+ * not held for them either.
  */
 
 import { CalendarCheck, Clock, FileText, Home, MessageCircle } from "lucide-react"
@@ -59,8 +60,10 @@ export default function RequestSentScreen({
       <p className="font-bridal text-[10.5px] uppercase tracking-[0.4em] font-medium text-bridal-gold-dark mb-3">
         Request sent
       </p>
+      {/* Said "Your date is held" until 2026-08-29. The booking flow no
+          longer creates a hold, so that was a promise nothing was keeping. */}
       <h2 className="font-display italic text-[34px] sm:text-[40px] text-bridal-charcoal mb-2 leading-[1.05]">
-        Your date is held
+        Request sent to the venue
       </h2>
       <div className="mx-auto mt-1 mb-5 h-[1px] w-20 bg-gradient-to-r from-transparent via-bridal-gold to-transparent" />
       <p className="font-bridal text-[14px] text-bridal-text-soft mb-8 max-w-sm">
