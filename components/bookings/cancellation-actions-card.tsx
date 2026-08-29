@@ -12,11 +12,12 @@
  */
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Shield, ShieldAlert, ShieldCheck, Loader2, Check, X, ArrowRight } from "lucide-react";
+import { Shield, ShieldAlert, ShieldCheck, Loader2, Check, X, ArrowRight, HandCoins, Clock } from "lucide-react";
 import {
   getPolicyAcceptance, recordPolicyAcceptance, listRefundRequests, raiseRefundRequest,
   decideRefundRequest, applyRefundRequest, getDisputeEvidence,
-  type RefundRequestRow, type RefundState,
+  markRefundPaid, outstandingRefund,
+  type RefundRequestRow, type RefundState, type VendorPaymentMethod,
 } from "@/lib/api/bookingOrder";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,16 +30,52 @@ const REASONS: { value: string; label: string }[] = [
   { value: "force_majeure", label: "Force majeure (govt / aafat)" },
   { value: "dispute_resolution", label: "Dispute resolution" },
 ];
+/**
+ * WW-SETTLE - the colours carry the meaning, so read them as a sequence.
+ *
+ * APPLIED is no longer the finish line: on direct-pay it means "you owe this",
+ * which is why it is warm now rather than the green it used to be. Only
+ * ACKNOWLEDGED - the customer confirming they got the money - is green.
+ */
 const STATE_STYLE: Record<RefundState, string> = {
   RAISED: "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
   APPROVED: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
-  APPLIED: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
+  APPLIED: "bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300",
+  PAID_BY_VENDOR: "bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300",
+  ACKNOWLEDGED: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
+  DISPUTED: "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300",
   REJECTED: "bg-muted text-muted-foreground",
+  WITHDRAWN: "bg-muted text-muted-foreground",
 };
+
+/** Plain words for a venue, in place of the wire value. */
+const STATE_LABEL: Record<RefundState, string> = {
+  RAISED: "Nayi request",
+  APPROVED: "Approved",
+  APPLIED: "Aap ko dena hai",
+  PAID_BY_VENDOR: "Customer ke jawab ka intezar",
+  ACKNOWLEDGED: "Customer ne tasdeeq kar di",
+  DISPUTED: "Customer kehta hai nahi mila",
+  REJECTED: "Reject kiya",
+  WITHDRAWN: "Customer ne wapas le li",
+};
+
+const PAY_METHODS: { value: VendorPaymentMethod; label: string }[] = [
+  { value: "cash", label: "Cash" },
+  { value: "bank_transfer", label: "Bank transfer" },
+  { value: "jazzcash", label: "JazzCash" },
+  { value: "easypaisa", label: "Easypaisa" },
+  { value: "cheque", label: "Cheque" },
+  { value: "other", label: "Doosra tareeqa" },
+];
 
 export function CancellationActionsCard({ bookingId }: { bookingId: number }) {
   const qc = useQueryClient();
   const [reason, setReason] = useState("customer_cancel");
+  // Which request's "I have paid this" form is open, and what was typed into it.
+  const [payingId, setPayingId] = useState<number | null>(null);
+  const [payMethod, setPayMethod] = useState<VendorPaymentMethod>("cash");
+  const [payRef, setPayRef] = useState("");
 
   const acc = useQuery({ queryKey: ["policy-acceptance", bookingId], queryFn: () => getPolicyAcceptance(bookingId) });
   const reqs = useQuery({ queryKey: ["refund-requests", bookingId], queryFn: () => listRefundRequests(bookingId) });
@@ -53,7 +90,15 @@ export function CancellationActionsCard({ bookingId }: { bookingId: number }) {
   const raise = useMutation({ mutationFn: () => raiseRefundRequest(bookingId, { reason }), onSuccess: invalidate });
   const decide = useMutation({ mutationFn: (v: { id: number; approve: boolean }) => decideRefundRequest(bookingId, v.id, v.approve), onSuccess: invalidate });
   const applyReq = useMutation({ mutationFn: (id: number) => applyRefundRequest(bookingId, id), onSuccess: invalidate });
-  const busy = accept.isPending || raise.isPending || decide.isPending || applyReq.isPending;
+  // WW-SETTLE - the venue's half of the handshake. Recording a payment is a
+  // CLAIM: it moves the row to PAID_BY_VENDOR and stops there until the customer
+  // answers. Nothing on this card can reach ACKNOWLEDGED.
+  const markPaid = useMutation({
+    mutationFn: (v: { id: number; method: VendorPaymentMethod; reference: string }) =>
+      markRefundPaid(bookingId, v.id, { method: v.method, reference: v.reference || undefined }),
+    onSuccess: () => { setPayingId(null); setPayRef(""); invalidate(); },
+  });
+  const busy = accept.isPending || raise.isPending || decide.isPending || applyReq.isPending || markPaid.isPending;
 
   if (acc.isLoading) {
     return <Card><CardContent className="p-4 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" /> Cancellation…</CardContent></Card>;
@@ -138,7 +183,7 @@ export function CancellationActionsCard({ bookingId }: { bookingId: number }) {
             {requests.map((r) => (
               <div key={r.id} className="rounded-lg border p-3 space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full", STATE_STYLE[r.state])}>{r.state}</span>
+                  <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full", STATE_STYLE[r.state])}>{STATE_LABEL[r.state] ?? r.state}</span>
                   <span className="text-muted-foreground">
                     Wapas <span className="font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">{rs(r.computed.refund)}</span>
                     {r.computed.carryForward ? <> · Credit <span className="tabular-nums">{rs(r.computed.carryForward)}</span></> : null}
@@ -162,6 +207,77 @@ export function CancellationActionsCard({ bookingId }: { bookingId: number }) {
                 )}
                 {r.state === "APPLIED" && r.resolvedVia && (
                   <p className="text-xs text-muted-foreground">Applied via {r.resolvedVia === "force_majeure_credit" ? "carry-forward credit" : r.resolvedVia === "negative_receipt" ? "cash refund receipt" : r.resolvedVia}.</p>
+                )}
+
+                {/* WW-SETTLE - the venue's side of the settlement. A request that
+                    still owes money by hand, or one the customer says never
+                    arrived, both land here. */}
+                {(r.state === "APPLIED" || r.state === "DISPUTED") && outstandingRefund(r) > 0 && (
+                  payingId === r.id ? (
+                    <div className="space-y-2 rounded-md border bg-muted/40 p-2.5">
+                      <p className="text-xs text-muted-foreground">
+                        Aap {rs(outstandingRefund(r))} customer ko de rahe hain. Yeh sirf aap ka bayan hai —
+                        settle tab hoga jab customer khud tasdeeq karega.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          value={payMethod}
+                          onChange={(e) => setPayMethod(e.target.value as VendorPaymentMethod)}
+                          className="rounded-md border bg-transparent px-2 py-1.5 text-sm"
+                        >
+                          {PAY_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                        </select>
+                        <input
+                          value={payRef}
+                          onChange={(e) => setPayRef(e.target.value)}
+                          maxLength={120}
+                          placeholder="Reference (transfer id, cheque no…)"
+                          className="min-w-[12rem] flex-1 rounded-md border bg-transparent px-2 py-1.5 text-sm"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" disabled={busy}
+                          onClick={() => markPaid.mutate({ id: r.id, method: payMethod, reference: payRef })}>
+                          {markPaid.isPending ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <HandCoins className="size-3.5 mr-1" />}
+                          Record karein
+                        </Button>
+                        <Button size="sm" variant="ghost" disabled={busy} onClick={() => { setPayingId(null); setPayRef(""); }}>
+                          Rehne dein
+                        </Button>
+                      </div>
+                      {markPaid.isError && (
+                        <p className="text-xs text-rose-600 dark:text-rose-400">
+                          Record nahi hua — dobara koshish karein.
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button size="sm" variant="outline" disabled={busy} onClick={() => { setPayingId(r.id); setPayMethod("cash"); setPayRef(""); }}>
+                        <HandCoins className="size-3.5 mr-1" /> Maine {rs(outstandingRefund(r))} de diye
+                      </Button>
+                      {r.state === "DISPUTED" && r.disputeNote && (
+                        <span className="text-xs text-rose-600 dark:text-rose-400">&ldquo;{r.disputeNote}&rdquo;</span>
+                      )}
+                    </div>
+                  )
+                )}
+
+                {r.state === "PAID_BY_VENDOR" && (
+                  <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                    <Clock className="mt-0.5 size-3.5 shrink-0" />
+                    Aap ne {rs(outstandingRefund(r))} dena record kiya
+                    {r.vendorPaymentMethod ? ` (${PAY_METHODS.find((m) => m.value === r.vendorPaymentMethod)?.label ?? r.vendorPaymentMethod})` : ""}
+                    {r.vendorPaymentRef ? ` — ${r.vendorPaymentRef}` : ""}.
+                    Ab customer ki tasdeeq ka intezar hai; unki tasdeeq ke baghair yeh settle nahi hoga.
+                  </p>
+                )}
+
+                {r.state === "ACKNOWLEDGED" && (
+                  <p className="flex items-start gap-1.5 text-xs text-emerald-700 dark:text-emerald-400">
+                    <Check className="mt-0.5 size-3.5 shrink-0" />
+                    Customer ne tasdeeq kar di ke paisay mil gaye. Yeh refund mukammal hai.
+                  </p>
                 )}
               </div>
             ))}

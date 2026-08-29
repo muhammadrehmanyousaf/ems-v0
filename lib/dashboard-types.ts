@@ -250,6 +250,15 @@ export interface BookingData {
     | null;
   serviceLocationAddress?: string | null;
   serviceLocationNotes?: string | null;
+  /**
+   * WW-APPROVE-VS-CONFIRM — when the vendor accepted this booking.
+   *
+   * `getVendorBookings` has selected this column all along; the type simply
+   * never declared it, so the bookings list could not tell an unapproved
+   * request from one the vendor had already accepted — both sit on the stored
+   * status "Awaiting Payment". See lib/booking-status-label.ts.
+   */
+  vendorApprovedAt?: string | null;
 }
 
 export interface BookingListResponse {

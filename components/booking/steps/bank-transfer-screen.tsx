@@ -303,7 +303,7 @@ export default function BankTransferScreen({
             This venue hasn&apos;t published bank details yet. Contact them to arrange
             payment{instructions?.vendors?.[0]?.whatsappNumber
               ? <> — WhatsApp <strong className="text-bridal-charcoal">{instructions.vendors[0].whatsappNumber}</strong></>
-              : null}. Your date is held while you sort it out.
+              : null}.
           </p>
         </div>
       )}
@@ -400,7 +400,7 @@ export default function BankTransferScreen({
             <CheckCircle className="w-4 h-4 mt-0.5 text-bridal-sage shrink-0" />
             <span>
               Thanks — we&apos;ve told the venue. They&apos;ll confirm once it shows in their
-              account, and you&apos;ll see the booking update. Your date is held meanwhile.
+              account, and you&apos;ll see the booking update.
             </span>
           </p>
           {proofWarning && (

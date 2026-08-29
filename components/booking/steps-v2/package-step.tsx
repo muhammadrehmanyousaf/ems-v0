@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { scopeToSpace, isOwnedBySpace } from "@/lib/booking/scope-to-space"
 import type { BookingFormData, EventVenue, Vendor } from "@/lib/types"
 import { Check, ChevronDown, ChevronUp, Minus, Plus } from "lucide-react"
 // WW-PKG-UNIT — a package can be priced per head; the card must say so and show
@@ -68,10 +69,12 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
    * Same rule, stated once, for both branches: a package is offered here if it
    * is venue-wide, or if it belongs to the space being booked.
    */
-  const scoped = allPackages.filter(
-    (p: any) => p?.subVenueId == null || (chosenSpaceId != null && Number(p.subVenueId) === chosenSpaceId),
-  )
-  const scopedOrAll = scoped.length > 0 ? scoped : allPackages
+  /* The rule now lives in lib/booking/scope-to-space.ts, because the VENDOR's
+     offline-booking form needs the identical behaviour and two copies of it
+     drifted into the two halves of the product disagreeing about what was on
+     sale. `scopeToSpace` filters AND sorts (space-own first), which is what the
+     hand-rolled filter plus the sort below did between them. */
+  const scopedOrAll = scopeToSpace(allPackages as any[], chosenSpaceId)
 
   /**
    * The chosen hall's OWN package comes first, and says so.
@@ -87,19 +90,14 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
    * order the vendor arranged it. Nothing is hidden and nothing is renamed —
    * the one package that IS the answer is simply first, and badged.
    */
-  const venuePackages = [...scopedOrAll].sort((a: any, b: any) => {
-    const aOwn = chosenSpaceId != null && Number(a?.subVenueId) === chosenSpaceId ? 0 : 1
-    const bOwn = chosenSpaceId != null && Number(b?.subVenueId) === chosenSpaceId ? 0 : 1
-    return aOwn - bOwn
-  })
+  const venuePackages = scopedOrAll
 
   /** The name of the hall being booked, for the badge on its own package. */
   const chosenSpaceName: string | null =
     (formData as any).selectedSubVenueName || null
 
   /** TRUE when this package was written for the hall the customer picked. */
-  const isSpaceOwnPackage = (p: any) =>
-    chosenSpaceId != null && Number(p?.subVenueId) === chosenSpaceId
+  const isSpaceOwnPackage = (p: any) => isOwnedBySpace(p, chosenSpaceId)
   const isCarRental = venue?.vendor?.vendorType === "Car rental"
   const isBridalWear = venue?.vendor?.vendorType === "Bridal wearing"
   const isWeddingStationery = venue?.vendor?.vendorType === "Wedding Invitations and Stationery"

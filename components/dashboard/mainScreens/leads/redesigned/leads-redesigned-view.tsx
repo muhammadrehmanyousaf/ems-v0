@@ -301,7 +301,20 @@ export function LeadsRedesignedView() {
         )}
       />
 
-      <LeadFormDialog open={dialogOpen} onOpenChange={setDialogOpen} lead={editing} prefill={prefill} businessId={businessId} onSaved={invalidate} />
+      {/* `onConvertRequested` — the vendor set this lead to "Booked" with no
+          booking linked. Rather than let the save 4xx on
+          `booking_required_for_booked`, the form saves their other edits and
+          hands the lead to the convert dialog below, which creates the booking
+          and links it (setting status="booked") in one call. */}
+      <LeadFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        lead={editing}
+        prefill={prefill}
+        businessId={businessId}
+        onSaved={invalidate}
+        onConvertRequested={(l) => setConvertLead(l)}
+      />
 
       {/* Phase 5 — only ever mounted once a lead's Sparkles action is clicked. */}
       <LeadReplyDialog lead={replyLead} onOpenChange={(o) => !o && setReplyLead(null)} />

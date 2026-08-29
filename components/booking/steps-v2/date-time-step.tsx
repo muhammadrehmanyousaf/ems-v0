@@ -477,11 +477,24 @@ export default function DateTimeStep({
   // → isHolding=false + timeRemaining=0 → booking-form's expiration watcher
   // misfired). Holds expire naturally on the server (15-min TTL) or when
   // the user picks a different date/time (the next createHold overwrites).
-  useEffect(() => {
-    if (!venue?.id || !selectedDate || !formData.timeSlot) return
-    createHold(venue.id as any, toKey(selectedDate), formData.timeSlot).catch(() => {})
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [venue?.id, selectedKey, formData.timeSlot])
+  /* Date holds removed from the booking flow (founder, 2026-08-29: "the date
+     held thing should not be there, i dont want the date held for the booking
+     thing").
+
+     Only the CREATE call is gone. The DateHold feature itself is untouched —
+     the vendor's own Calendar > Date holds screen still works, and any hold
+     already on the server still expires on its own. Nothing was deleted, so
+     restoring this is uncommenting one call.
+
+     Consequence, recorded deliberately: two customers can now reach the end of
+     the flow for the same date and slot, and the vendor will receive both
+     requests and have to decline one. That is the trade the founder asked for
+     — no date is taken out of circulation before the vendor has agreed to it. */
+  // useEffect(() => {
+  //   if (!venue?.id || !selectedDate || !formData.timeSlot) return
+  //   createHold(venue.id as any, toKey(selectedDate), formData.timeSlot).catch(() => {})
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [venue?.id, selectedKey, formData.timeSlot])
 
   // Clear time slot if hold failed
   useEffect(() => {
@@ -719,9 +732,12 @@ export default function DateTimeStep({
         <h2 className="font-display italic text-[22px] sm:text-[24px] text-bridal-charcoal leading-tight">
           When is your event?
         </h2>
+        {/* Promised a hold until 2026-08-29, when holds were removed from the
+            booking flow. The date is not reserved by choosing it here, and the
+            customer is better served knowing that than being told otherwise. */}
         <p className="mt-1 font-bridal text-[12.5px] text-bridal-text-soft">
-          Pick a date and a time of day. We&apos;ll hold it while you finish, and keep it held
-          until the venue answers your request.
+          Pick a date and a time of day. The date isn&apos;t reserved until the venue
+          accepts your request, so send it as soon as you&apos;re ready.
         </p>
       </div>
 

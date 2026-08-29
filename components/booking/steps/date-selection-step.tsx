@@ -152,16 +152,26 @@ export default function DateSelectionStep({
     }
   }, [holdFailed]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-create hold when date + time are both selected
-  useEffect(() => {
-    if (venue?.id && date && formData.timeSlot) {
-      const dateKey = toDateKey(date);
-      createHold(venue.id, dateKey, formData.timeSlot);
-    }
-    return () => {
-      // Release hold when component unmounts or selections change
-    };
-  }, [date, formData.timeSlot, venue?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* Date holds removed from the booking flow (founder, 2026-08-29: "the date
+     held thing should not be there, i dont want the date held for the booking
+     thing").
+
+     Only the CREATE call is gone. The DateHold feature itself is untouched —
+     the vendor's own Calendar > Date holds screen still works, and any hold
+     already on the server still expires on its own. Nothing was deleted, so
+     restoring this is uncommenting one call.
+
+     Consequence, recorded deliberately: two customers can now reach the end of
+     the flow for the same date and slot, and the vendor will receive both
+     requests and have to decline one. That is the trade the founder asked for
+     — no date is taken out of circulation before the vendor has agreed to it. */
+  // useEffect(() => {
+  //   if (venue?.id && date && formData.timeSlot) {
+  //     const dateKey = toDateKey(date);
+  //     createHold(venue.id, dateKey, formData.timeSlot);
+  //   }
+  //   return () => {};
+  // }, [date, formData.timeSlot, venue?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const vendorType = venue?.vendor?.vendorType ?? ""
   const enforceCapacity = ["Wedding venue", "Catering", "Decorator"].includes(vendorType)

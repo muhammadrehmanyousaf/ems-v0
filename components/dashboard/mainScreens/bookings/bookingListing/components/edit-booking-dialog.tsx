@@ -224,7 +224,18 @@ export function EditBookingDialog({ open, onOpenChange, booking, onSuccess }: Ed
 
     const vendorType     = business?.vendor?.vendorType ?? '';
     const showGuestCount = GUEST_COUNT_TYPES.includes(vendorType);
-    const showMenu       = MENU_TYPES.includes(vendorType);
+    /* Menus were gated on MENU_TYPES = ['Catering'] alone, so a WEDDING VENUE
+       never saw the picker — even one that sells catering, which most marquees
+       in Pakistan do. Measured on live business 3358 (Rehman Grand Marquee, a
+       Wedding venue): 3 real menus on file — Platinum Rs3,900/head, Gold
+       Rs2,650, Standard Desi Rs1,850 — none of them offerable on an offline
+       booking. The vendor's report was "I can see packages but not the menus".
+
+       Now: the list still forces the picker on for the types that always need
+       it, and ANY business that actually has menus gets it too. Nothing that
+       showed before stops showing, and a vendor with no menus still sees no
+       empty dropdown. */
+    const showMenu       = MENU_TYPES.includes(vendorType) || menus.length > 0;
     const isCarRental    = vendorType === 'Car rental';
     const showQuantity   = isCarRental ? carMode === 'single' : QUANTITY_TYPES.includes(vendorType);
     const qtyLabel       = getQuantityLabel(vendorType);

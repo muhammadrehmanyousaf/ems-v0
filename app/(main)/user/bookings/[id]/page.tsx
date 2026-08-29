@@ -67,8 +67,9 @@ import { PostponeBookingDialog } from "@/components/bookings/postpone-booking-di
 import { RescheduleBookingDialog } from "@/components/bookings/reschedule-booking-dialog";
 // EPIC 5 · §3 — customer "Request a refund".
 import { RefundRequestCard } from "@/components/bookings/refund-request-card";
+import { RefundSettlementCard } from "@/components/bookings/refund-settlement-card";
 // QA #4 — show the refund the customer would get back inside the cancel dialog.
-import { getRefundPreview, type RefundPreview } from "@/lib/api/bookingOrder";
+import { getRefundPreview, requestCancellation, type RefundPreview } from "@/lib/api/bookingOrder";
 import { slotText, slotFromBooking } from "@/lib/booking/slot-vocabulary";
 
 interface BookingDetail {
@@ -217,6 +218,18 @@ function sk(s: string) {
   return (s || "").toLowerCase();
 }
 
+/**
+ * Hours the vendor stored, said the way a person would say it. A venue that set
+ * 72 means "three days" to the couple reading it, and 36 means "a day and a
+ * half" -- rounding either to "1 day" would misstate a deadline.
+ */
+function noticeText(hours: number): string {
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"}`;
+  const days = hours / 24;
+  if (Number.isInteger(days)) return `${days} day${days === 1 ? "" : "s"}`;
+  return `${Math.floor(days)} day${Math.floor(days) === 1 ? "" : "s"} ${hours % 24} hour${hours % 24 === 1 ? "" : "s"}`;
+}
+
 export default function BookingDetailPage() {
   const { user, isAuthenticated, isLoading } = useUser();
   const router = useRouter();
@@ -236,12 +249,32 @@ export default function BookingDetailPage() {
   // paid — the dialog then shows the generic policy line instead.
   const [refundPreview, setRefundPreview] = useState<RefundPreview | null>(null);
   const [refundPreviewLoading, setRefundPreviewLoading] = useState(false);
+  /**
+   * WW-CANCELWINDOW — the venue's notice period has closed for this booking.
+   *
+   * The server is the authority and refuses with 409 CANCEL_WINDOW_CLOSED
+   * regardless; this only decides what the dialog OFFERS, so the customer is
+   * told the rule up front instead of pressing a button that fails. Both paths
+   * end in the same place, which is why the 409 is handled too.
+   */
+  const [windowClosed, setWindowClosed] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [requestSent, setRequestSent] = useState(false);
   useEffect(() => {
     if (!cancelDialogOpen || !booking) { setRefundPreview(null); return; }
     let cancelled = false;
     setRefundPreviewLoading(true);
     getRefundPreview(booking.id)
-      .then((p) => { if (!cancelled) setRefundPreview(p); })
+      .then((p) => {
+        if (cancelled) return;
+        setRefundPreview(p);
+        const notice = p?.minNoticeHours ?? null;
+        const left = p?.hoursUntilEvent ?? null;
+        // Mirrors the server rule exactly: the window binds only a booking the
+        // customer has committed to, so an unpaid one is never trapped by it.
+        const committed = sk(booking.status) === "confirmed" || (p?.totalPaid ?? 0) > 0;
+        setWindowClosed(!!notice && notice > 0 && left != null && left < notice && committed);
+      })
       .catch(() => { if (!cancelled) setRefundPreview(null); })
       .finally(() => { if (!cancelled) setRefundPreviewLoading(false); });
     return () => { cancelled = true; };
@@ -331,7 +364,18 @@ export default function BookingDetailPage() {
         });
         fetchBooking();
       }
-    } catch {
+    } catch (e: any) {
+      /**
+       * The venue's notice period closed between the dialog opening and this
+       * click — or the preview never loaded and we offered the wrong thing.
+       * Switch the dialog to the request route instead of reporting a failure
+       * the customer can do nothing about.
+       */
+      if (e?.response?.status === 409 && e?.response?.data?.data?.code === "CANCEL_WINDOW_CLOSED") {
+        setWindowClosed(true);
+        setIsCancelling(false);
+        return; // keep the dialog open, now in "ask the venue" mode
+      }
       toast({
         title: "Error",
         description: "Failed to cancel booking.",
@@ -340,6 +384,36 @@ export default function BookingDetailPage() {
     } finally {
       setIsCancelling(false);
       setCancelDialogOpen(false);
+    }
+  };
+
+  /**
+   * Ask the venue to cancel. Records the ask against the booking and puts it in
+   * front of the vendor; only they can grant it, and granting returns the money
+   * in full through the vendor-cancellation path.
+   */
+  const handleRequestCancellation = async () => {
+    if (!booking) return;
+    setIsCancelling(true);
+    try {
+      const out = await requestCancellation(booking.id, cancelReason.trim() || undefined);
+      setRequestSent(true);
+      toast({
+        title: out?.alreadyOpen ? "Already with the venue" : "Request sent",
+        description: out?.alreadyOpen
+          ? "You've already asked to cancel this booking. The venue will reply here."
+          : "The venue has been asked to cancel this booking.",
+      });
+      setCancelDialogOpen(false);
+      fetchBooking();
+    } catch {
+      toast({
+        title: "Couldn't send the request",
+        description: "Please try again, or contact the venue directly.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -906,6 +980,13 @@ export default function BookingDetailPage() {
             }
           />
 
+          {/* WW-SETTLE — the other half. RefundRequestCard above only ASKS for a
+              refund; this is where the family sees whether the venue has paid it
+              and says so. It matters most on a cancelled booking, which is
+              exactly where the card above stops rendering — so it is placed
+              outside that gate and self-hides when there is nothing to show. */}
+          <RefundSettlementCard bookingId={booking.id} />
+
           {/* BK-100.7 — inline review prompt. Renders only when the
               booking is Completed. Backend re-enforces the gate so
               this is purely a UX hint. Auto-scrolls into view when
@@ -998,14 +1079,41 @@ export default function BookingDetailPage() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="size-5 text-bridal-coral" />
-              Cancel booking #{booking.id}?
+              {windowClosed ? `Ask the venue to cancel #${booking.id}?` : `Cancel booking #${booking.id}?`}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
-                <p>
-                  This action cannot be undone. Any payments made may be
-                  subject to the vendor&apos;s refund policy.
-                </p>
+                {windowClosed ? (
+                  <>
+                    <p>
+                      This booking is too close to the event date to cancel
+                      online. {refundPreview?.minNoticeHours ? (
+                        <>
+                          {refundPreview.policyName || "The venue"} needs at least{" "}
+                          <strong className="text-bridal-charcoal">{noticeText(refundPreview.minNoticeHours)}</strong>{" "}
+                          notice.
+                        </>
+                      ) : null}
+                    </p>
+                    <p>
+                      You can ask the venue to cancel it for you. They decide,
+                      and you&apos;ll see their answer here.
+                    </p>
+                    <textarea
+                      value={cancelReason}
+                      onChange={(e) => setCancelReason(e.target.value)}
+                      rows={3}
+                      maxLength={500}
+                      placeholder="Why do you need to cancel? (optional, but it helps)"
+                      className="w-full rounded-md border border-bridal-gold/45 bg-bridal-ivory p-2 text-sm text-bridal-charcoal placeholder:text-bridal-text-soft focus:outline-none focus:ring-2 focus:ring-bridal-gold/50"
+                    />
+                  </>
+                ) : (
+                  <p>
+                    This action cannot be undone. Any payments made may be
+                    subject to the vendor&apos;s refund policy.
+                  </p>
+                )}
                 {/* QA #4 — show the actual refund per the vendor's policy so the
                     customer decides with the real number, not a vague warning.
                     Hidden when the refund engine is off or nothing was paid. */}
@@ -1020,7 +1128,16 @@ export default function BookingDetailPage() {
                     </div>
                     {refundPreview.preview.forfeit > 0 && (
                       <div className="mt-1 flex items-center justify-between text-xs text-bridal-text-soft">
-                        <span>Forfeited (per {refundPreview.policy.labelEn} policy)</span>
+                        {/*
+                          `policy.labelEn` is the ENGINE's label for the tier
+                          shape, which for a vendor's own saved schedule is the
+                          generic "Policy" — rendering "per Policy policy".
+                          `policyName` is what the policy is actually called
+                          ("Default", "Aam", whatever the vendor named theirs),
+                          which is the only version of this sentence a customer
+                          could act on.
+                        */}
+                        <span>Forfeited (per {refundPreview.policyName || refundPreview.policy.labelEn} policy)</span>
                         <span>{fmt(refundPreview.preview.forfeit)}</span>
                       </div>
                     )}
@@ -1028,6 +1145,13 @@ export default function BookingDetailPage() {
                       Cancelling {refundPreview.daysBefore} day{refundPreview.daysBefore === 1 ? "" : "s"} before the
                       event. The refund is processed per the vendor&apos;s policy.
                     </p>
+                    {/* Say the deadline while it can still be acted on, rather
+                        than only once it has passed and the answer is no. */}
+                    {!windowClosed && !!refundPreview.minNoticeHours && (
+                      <p className="mt-1 text-[11px] text-bridal-text-soft leading-relaxed">
+                        You can cancel online up to {noticeText(refundPreview.minNoticeHours)} before the event.
+                      </p>
+                    )}
                   </div>
                 )}
                 {/* BK-100.2 Layer 2c — surface umbrella context when
@@ -1064,11 +1188,16 @@ export default function BookingDetailPage() {
               Keep booking
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleCancel}
-              disabled={isCancelling}
+              onClick={(e) => {
+                if (windowClosed) { e.preventDefault(); void handleRequestCancellation(); return; }
+                void handleCancel();
+              }}
+              disabled={isCancelling || requestSent}
               className="bg-bridal-coral hover:bg-bridal-coral/90 text-bridal-ivory"
             >
-              {isCancelling ? "Cancelling…" : "Yes, cancel"}
+              {isCancelling
+                ? (windowClosed ? "Sending…" : "Cancelling…")
+                : (windowClosed ? "Ask the venue" : "Yes, cancel")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

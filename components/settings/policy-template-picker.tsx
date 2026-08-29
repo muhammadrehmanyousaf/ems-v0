@@ -74,12 +74,50 @@ export function PolicyTemplatePicker() {
    */
   const [custom, setCustom] = useState<DraftSlab[] | null>(null);
 
+  /**
+   * WW-CANCELWINDOW — the notice period, in DAYS in the UI and hours on the
+   * wire. Vendors say "ek hafta pehle", not "168 hours"; the column stores the
+   * precise unit so a venue that means 48 hours is not forced to say 2 days.
+   *
+   * Empty means no cutoff, which is the platform default and what every vendor
+   * has today. Seeded from the policy in force — the vendor's own if they have
+   * one, otherwise the one they have inherited without choosing it.
+   */
+  const governing = data?.active ?? data?.effective ?? null;
+  const [noticeDays, setNoticeDays] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState<string | null>(null);
+  const savedNoticeHours = governing?.minNoticeHours ?? null;
+  const noticeValue = noticeDays ?? (savedNoticeHours != null ? String(savedNoticeHours / 24) : "");
+  const noteValue = noteDraft ?? governing?.refundPolicyNote ?? "";
+
+  /** The draft as hours, or a reason it is not saveable. */
+  const noticeParsed = useMemo((): { hours: number | null } | { error: string } => {
+    const raw = noticeValue.trim();
+    if (raw === "") return { hours: null }; // cleared -> no cutoff
+    const days = Number(raw);
+    if (!Number.isFinite(days) || days < 0) return { error: "Notice must be 0 days or more." };
+    if (days > 365) return { error: "Notice cannot be more than a year." };
+    const hours = Math.round(days * 24);
+    return { hours: hours === 0 ? null : hours };
+  }, [noticeValue]);
+
   const save = useMutation({
-    mutationFn: (p: { name: string; slabs: PolicySlab[]; forceMajeureRule?: string }) =>
+    mutationFn: (p: {
+      name: string; slabs: PolicySlab[]; forceMajeureRule?: string;
+      minNoticeHours?: number | null; refundPolicyNote?: string | null;
+    }) =>
       saveCancellationPolicy({
         name: p.name,
         slabs: p.slabs,
         forceMajeureRule: p.forceMajeureRule,
+        /**
+         * WW-CANCELWINDOW — saving VERSIONS the policy: every save inserts a
+         * new active row rather than updating one. So each call has to carry
+         * the whole policy. Omitting these would silently drop the vendor's
+         * notice period the next time they touched their refund schedule.
+         */
+        minNoticeHours: p.minNoticeHours,
+        refundPolicyNote: p.refundPolicyNote,
         businessId: activeBizId,
       }),
     /**
@@ -173,6 +211,105 @@ export function PolicyTemplatePicker() {
       />
 
       <PersonaPreference />
+
+      {/*
+        WW-CANCELWINDOW — the notice period.
+
+        Until this existed a customer could cancel a confirmed wedding on the
+        morning of the wedding: the cancel endpoint checked status and
+        authorisation and never looked at the event date. Vendors had been
+        asking for it in the only box they were given -- one of the free-text
+        policy fields in production reads, verbatim, "After booking customer
+        will be able to cancel his/her booking in only 3 days".
+
+        Kept visually separate from the refund cards because it answers a
+        DIFFERENT question. "Can they cancel" and "what do they get back" are
+        independent: a booking is routinely cancellable at 0% refund. Merging
+        them into one ladder is how a vendor ends up unable to say "you may
+        cancel, but you lose the deposit".
+      */}
+      <Card>
+        <CardContent className="space-y-4 p-4 md:p-5">
+          <div>
+            <h3 className="text-sm font-semibold">Kitna pehle cancel kar sakte hain</h3>
+            <p className="mt-1 text-sm text-muted-foreground" lang="ur-Latn">
+              Is se qareeb customer khud cancel nahi kar sakega — woh aap se
+              cancel karne ki darkhwast kar sakta hai, aur faisla aap ka hoga.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="text-sm" htmlFor="notice-days">
+              <span className="mb-1 block text-muted-foreground" lang="ur-Latn">Kam az kam notice</span>
+              <span className="flex items-center gap-2">
+                <input
+                  id="notice-days"
+                  type="number"
+                  min={0}
+                  max={365}
+                  step="any"
+                  value={noticeValue}
+                  onChange={(e) => setNoticeDays(e.target.value)}
+                  placeholder="koi limit nahi"
+                  className="w-36 rounded-md border bg-transparent px-2 py-1.5 text-sm tabular-nums"
+                />
+                <span className="text-sm text-muted-foreground">din pehle</span>
+              </span>
+            </label>
+
+            <Button
+              size="sm"
+              disabled={save.isPending || "error" in noticeParsed || !governing}
+              onClick={() => {
+                if ("error" in noticeParsed || !governing) return;
+                save.mutate({
+                  name: governing.name || "Custom",
+                  slabs: governing.slabs,
+                  forceMajeureRule: governing.forceMajeureRule,
+                  minNoticeHours: noticeParsed.hours,
+                  refundPolicyNote: noteValue.trim() || null,
+                });
+              }}
+            >
+              {save.isPending && <Loader2 className="mr-1.5 size-4 animate-spin" />}
+              Save
+            </Button>
+          </div>
+
+          {"error" in noticeParsed && (
+            <p className="text-sm text-destructive">{noticeParsed.error}</p>
+          )}
+          {!("error" in noticeParsed) && (
+            <p className="text-xs text-muted-foreground">
+              {noticeParsed.hours == null
+                ? "Abhi koi limit nahi — customer kisi bhi waqt cancel kar sakta hai, event wale din bhi."
+                : `Event se ${noticeParsed.hours >= 24 ? `${noticeParsed.hours / 24} din` : `${noticeParsed.hours} ghante`} pehle tak customer khud cancel kar sakta hai.`}
+            </p>
+          )}
+
+          <div>
+            <label className="text-sm" htmlFor="policy-note">
+              <span className="mb-1 block text-muted-foreground" lang="ur-Latn">
+                Apni baat (optional)
+              </span>
+              <textarea
+                id="policy-note"
+                rows={2}
+                maxLength={500}
+                value={noteValue}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                placeholder="Maslan: Eid week pe hum reschedule kar dete hain."
+                className="w-full rounded-md border bg-transparent px-2 py-1.5 text-sm"
+              />
+            </label>
+            {/* The distinction that the old free-text field never made. */}
+            <p className="mt-1 text-xs text-muted-foreground">
+              Customer ko schedule ke saath dikhega. Refund ka hisaab isse nahi,
+              upar wale schedule se hota hai.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {(businesses?.length ?? 0) > 1 && (
         <div className="rounded-lg border bg-card p-3">
@@ -389,7 +526,10 @@ export function PolicyTemplatePicker() {
               disabled={save.isPending || !customParsed || "error" in customParsed}
               onClick={() => {
                 if (!customParsed || "error" in customParsed) return;
-                save.mutate({ name: "Custom", slabs: customParsed.slabs, forceMajeureRule: "CARRY_FORWARD" });
+                save.mutate({
+                  name: "Custom", slabs: customParsed.slabs, forceMajeureRule: "CARRY_FORWARD",
+                  minNoticeHours: savedNoticeHours, refundPolicyNote: governing?.refundPolicyNote ?? null,
+                });
               }}
             >
               {save.isPending && <Loader2 className="mr-1.5 size-4 animate-spin" />}
@@ -496,7 +636,19 @@ export function PolicyTemplatePicker() {
             <AlertDialogAction
               onClick={() => {
                 const t = data.templates.find((x) => x.key === confirming);
-                if (t) save.mutate({ name: t.name, slabs: t.slabs, forceMajeureRule: t.forceMajeureRule });
+                if (t) {
+                  save.mutate({
+                    name: t.name, slabs: t.slabs, forceMajeureRule: t.forceMajeureRule,
+                    /**
+                     * A template SUGGESTS a notice period; it does not overrule
+                     * one the vendor has already set. Switching your refund
+                     * ladder should not silently change how much warning you
+                     * need, which is a separate decision you made separately.
+                     */
+                    minNoticeHours: savedNoticeHours ?? t.minNoticeHours ?? null,
+                    refundPolicyNote: governing?.refundPolicyNote ?? null,
+                  });
+                }
                 setConfirming(null);
               }}
             >

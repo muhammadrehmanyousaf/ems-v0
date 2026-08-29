@@ -24,6 +24,7 @@ import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { bookingStatusLabel } from "@/lib/booking-status-label"
 import { OfflineBookingDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog"
 import { BookingRowActions } from "./booking-row-actions"
 // import { OwnerLedgerCard } from "@/components/bookings/owner-ledger-card"
@@ -231,7 +232,7 @@ export function BookingsRedesignedView() {
     // while the two columns beside it printed the amounts. The chip now
     // describes the same arithmetic the row already shows.
     { key: "balance", header: "Balance", align: "right", render: (b) => <MoneyCell amount={outstandingOn(b)} /> },
-    { key: "status", header: "Status", render: (b) => <StatusPill tone={statusTone(b.status)}>{b.status}</StatusPill> },
+    { key: "status", header: "Status", render: (b) => <StatusPill tone={statusTone(b.status)}>{bookingStatusLabel(b)}</StatusPill> },
     { key: "payment", header: "Payment", render: (b) => { const d = derivedPaymentStatus(b); return <StatusPill tone={payTone(d)} variant="icon">{d}</StatusPill> } },
     {
       key: "actions", header: "", align: "right",
@@ -240,7 +241,14 @@ export function BookingsRedesignedView() {
   ]
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    /* `grow` + flex-col, not `space-y-6`: the shell's scroll container is a
+       flex column, so the page can claim the height it was given instead of
+       stopping at its content. With the Receivables ledger hidden, a filtered
+       list of one booking left 484px of bare white below the card (measured,
+       1680×950) — the table now ends where the screen ends, which is what the
+       card border made you expect in the first place. On a long list `grow`
+       does nothing at all: there is no free space to claim. */
+    <div className="flex grow flex-col gap-6 p-4 md:p-6">
       <PageHeader
         eyebrow="Operate"
         title="Bookings"
@@ -281,6 +289,9 @@ export function BookingsRedesignedView() {
       )}
 
       <DataTable
+        // Absorbs the slack when the list is shorter than the pane. `className`
+        // lands on DataTable's own card, so no other screen using it changes.
+        className="grow"
         filterQuery={search}
         onClearFilter={() => setSearch("")}
         caption="Bookings"
@@ -378,7 +389,7 @@ export function BookingsRedesignedView() {
             <div className="min-w-0">
               <div className="truncate font-medium">{serviceLabel(b)}</div>
               <div className="text-xs text-muted-foreground">{b.customerName} · {fmtDate(b.bookingDate)}</div>
-              <div className="mt-1"><StatusPill tone={statusTone(b.status)}>{b.status}</StatusPill></div>
+              <div className="mt-1"><StatusPill tone={statusTone(b.status)}>{bookingStatusLabel(b)}</StatusPill></div>
             </div>
             <div className="text-right">
               <MoneyCell amount={bookedOn(b)} className="block text-sm font-medium" />

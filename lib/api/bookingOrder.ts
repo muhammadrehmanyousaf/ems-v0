@@ -253,11 +253,53 @@ export async function recordPolicyAcceptance(bookingId: number, body: { accepted
   return data?.data as { bookingId: number; acceptanceId: number; policyName: string };
 }
 
-export type RefundState = "RAISED" | "APPROVED" | "APPLIED" | "REJECTED";
+/**
+ * WW-SETTLE — APPLIED is not the end.
+ *
+ * The platform holds none of the customer's money, so "applied" only means the
+ * venue has been told what it owes. PAID_BY_VENDOR is the venue's claim;
+ * ACKNOWLEDGED is the customer confirming they actually received it, and is the
+ * only state that settles a direct-pay refund. DISPUTED is the customer saying
+ * it never arrived; WITHDRAWN is them pulling the request before it was decided.
+ */
+export type RefundState =
+  | "RAISED" | "APPROVED" | "APPLIED"
+  | "PAID_BY_VENDOR" | "ACKNOWLEDGED"
+  | "REJECTED" | "WITHDRAWN" | "DISPUTED";
+
+/** How a venue says it handed the money over. */
+export type VendorPaymentMethod = "cash" | "bank_transfer" | "jazzcash" | "easypaisa" | "cheque" | "other";
+
 export interface RefundRequestRow {
   id: number; bookingId: number; reason: string; state: RefundState;
   computed: { refund: number; forfeit: number; carryForward?: number };
   resolvedVia: string | null; note: string | null;
+  createdAt?: string | null;
+  decidedAt?: string | null;
+  /** When the obligation was recorded — not when anyone was actually paid. */
+  appliedAt?: string | null;
+  /** What the venue still owes BY HAND. Null on requests raised before WW-SETTLE. */
+  settlementDue?: number | string | null;
+  paidByVendorAt?: string | null;
+  vendorPaymentMethod?: VendorPaymentMethod | null;
+  vendorPaymentRef?: string | null;
+  acknowledgedAt?: string | null;
+  disputedAt?: string | null;
+  disputeNote?: string | null;
+  withdrawnAt?: string | null;
+}
+
+/**
+ * What a request still owes by hand.
+ *
+ * Requests raised before WW-SETTLE have no `settlementDue` of their own; reading
+ * that as zero would show a family a real, unpaid obligation as already settled,
+ * so it falls back to the frozen calculation — the same rule the server uses.
+ */
+export function outstandingRefund(r: Pick<RefundRequestRow, "settlementDue" | "computed">): number {
+  const due = r.settlementDue;
+  if (due !== null && due !== undefined && due !== "") return Number(due) || 0;
+  return Number(r.computed?.refund) || 0;
 }
 export async function listRefundRequests(bookingId: number): Promise<{ bookingId: number; requests: RefundRequestRow[] } | null> {
   try {
@@ -278,14 +320,69 @@ export async function applyRefundRequest(bookingId: number, reqId: number) {
   return (data?.data as { request: RefundRequestRow }).request;
 }
 
+// ── WW-SETTLE — the two-sided settlement ───────────────────────────────────
+// Each call belongs to one party. The venue may claim it paid; only the
+// customer can confirm they received it. Nothing here confirms on their behalf.
+
+/** VENDOR: "I have paid this." A claim — the refund still waits on the customer. */
+export async function markRefundPaid(
+  bookingId: number, reqId: number,
+  body: { method?: VendorPaymentMethod; reference?: string; note?: string } = {},
+) {
+  const { data } = await axiosInstance.patch(`${v1}/${bookingId}/refund-requests/${reqId}/mark-paid`, body);
+  return (data?.data as { request: RefundRequestRow; outstanding: number });
+}
+
+/** CUSTOMER: "I received it." The only path to ACKNOWLEDGED. */
+export async function acknowledgeRefund(bookingId: number, reqId: number, note?: string) {
+  const { data } = await axiosInstance.patch(`${v1}/${bookingId}/refund-requests/${reqId}/acknowledge`, { note });
+  return (data?.data as { request: RefundRequestRow }).request;
+}
+
+/** CUSTOMER: "It has not reached me." Hands the request back to the venue, still open. */
+export async function disputeRefundSettlement(bookingId: number, reqId: number, note?: string) {
+  const { data } = await axiosInstance.patch(`${v1}/${bookingId}/refund-requests/${reqId}/dispute`, { note });
+  return (data?.data as { request: RefundRequestRow }).request;
+}
+
+/** CUSTOMER: pull a request back before the venue has decided it. */
+export async function withdrawRefundRequest(bookingId: number, reqId: number, note?: string) {
+  const { data } = await axiosInstance.patch(`${v1}/${bookingId}/refund-requests/${reqId}/withdraw`, { note });
+  return (data?.data as { request: RefundRequestRow }).request;
+}
+
+export interface RefundObligation extends RefundRequestRow { outstanding: number }
+export interface RefundObligations {
+  businessId: number | null; count: number; totalOutstanding: number; obligations: RefundObligation[];
+}
+
+/** VENDOR worklist: refunds this venue owes and has not been confirmed as paying. */
+export async function listRefundObligations(businessId?: number): Promise<RefundObligations | null> {
+  try {
+    const { data } = await axiosInstance.get(`${v1}/refund-obligations`, {
+      params: businessId ? { businessId } : undefined,
+    });
+    return (data?.data as RefundObligations) ?? null;
+  } catch (e: any) { if (e?.response?.status === 404) return null; throw e; }
+}
+
 // Cancellation-policy management (5.4)
 export interface PolicySlab { daysToEvent: number; pctForfeit: number }
 export interface PolicyTemplate {
   key: string; name: string; labelEn: string; forceMajeureRule: string; slabs: PolicySlab[];
   /** The engine's non-refundable deposit for this template, for display (WWL-501). */
   depositPct?: number;
+  /** Suggested notice period for this template. A starting point, not a rule. */
+  minNoticeHours?: number | null;
 }
-export interface ActivePolicy { id: number; name: string; slabs: PolicySlab[]; forceMajeureRule: string; partialRefundPct: number | null; isDefault: boolean; effectiveFrom: string }
+export interface ActivePolicy {
+  id: number; name: string; slabs: PolicySlab[]; forceMajeureRule: string;
+  partialRefundPct: number | null; isDefault: boolean; effectiveFrom: string;
+  /** WW-CANCELWINDOW — hours before the event inside which a customer may not self-cancel. */
+  minNoticeHours?: number | null;
+  /** Display-only prose shown beside the schedule; no engine reads it. */
+  refundPolicyNote?: string | null;
+}
 export interface CancellationPolicyState {
   businessId: number | null;
   /** The business's OWN policy. Null when they have never chosen one. */
@@ -321,9 +418,46 @@ export async function saveCancellationPolicy(body: {
   forceMajeureRule?: string;
   partialRefundPct?: number;
   businessId?: number | null;
+  /** Hours. Null or 0 clears the cutoff, which is the platform default. */
+  minNoticeHours?: number | null;
+  refundPolicyNote?: string | null;
 }) {
   const { data } = await axiosInstance.post(`${v1}/policy`, body);
-  return data?.data as { id: number; name: string; slabs: PolicySlab[]; forceMajeureRule: string };
+  return data?.data as { id: number; name: string; slabs: PolicySlab[]; forceMajeureRule: string; minNoticeHours: number | null };
+}
+
+/**
+ * WW-CANCELWINDOW — the route out of a closed cancellation window.
+ *
+ * Past the venue's notice period the customer cannot cancel themselves. They
+ * can ask, and the venue answers in the product rather than over the phone.
+ */
+export interface CancellationRequest {
+  id: number;
+  bookingId: number;
+  status: "pending" | "approved" | "declined" | "cancelled" | "expired";
+  reason: string | null;
+  decisionNotes: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+}
+
+export async function requestCancellation(bookingId: number, reason?: string) {
+  const { data } = await axiosInstance.post(`${v1}/${bookingId}/cancellation-request`, { reason });
+  return data?.data as { request: CancellationRequest; alreadyOpen?: boolean };
+}
+
+export async function decideCancellationRequest(
+  bookingId: number,
+  reqId: number,
+  approve: boolean,
+  note?: string,
+) {
+  const { data } = await axiosInstance.patch(
+    `${v1}/${bookingId}/cancellation-request/${reqId}`,
+    { approve, note },
+  );
+  return data?.data as { request: CancellationRequest };
 }
 
 export interface DisputeEvidence {
@@ -413,6 +547,19 @@ export interface RefundBreakdown {
 export interface RefundPreview {
   bookingId: number; eventDate: string | null; daysBefore: number;
   grand: number; totalPaid: number;
+  /**
+   * WW-CANCELWINDOW — the vendor's notice period, in hours, and how long is
+   * actually left. `null` means this venue has not set one, which is the
+   * platform default and means the customer may cancel at any time.
+   *
+   * `hoursUntilEvent` goes negative once the event has started.
+   */
+  minNoticeHours?: number | null;
+  hoursUntilEvent?: number | null;
+  /** Display-only prose the vendor wrote beside their schedule. */
+  refundPolicyNote?: string | null;
+  /** The name of the policy actually governing this booking. */
+  policyName?: string | null;
   policy: RefundPolicy;
   preview: { refund: number; forfeit: number; breakdown: RefundBreakdown; tier: RefundTier; trace: unknown[] };
   comparison: { key: string; labelUr: string; labelEn: string; refund: number; forfeit: number; refundPct: number }[];

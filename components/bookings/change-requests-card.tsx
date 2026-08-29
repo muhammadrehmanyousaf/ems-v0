@@ -51,6 +51,9 @@ const TYPE_LABEL: Record<ChangeRequestType, string> = {
   package_change: "Change package",
   add_extras: "Add extras",
   custom: "Other change",
+  // WW-CANCELWINDOW — worded from the customer's side: this is their own ask,
+  // sitting with the venue, and "Cancel this booking" would read as a button.
+  cancel_request: "Cancellation requested",
 };
 
 function formatDate(iso: string | null): string {

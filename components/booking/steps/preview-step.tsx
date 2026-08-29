@@ -410,8 +410,24 @@ export default function PreviewStep({
         variants={item}
         className="rounded-md border border-bridal-beige bg-bridal-ivory/60 p-4"
       >
+        {/* WW-DIRECT-PAY, corrected 2026-08-29.
+
+            Said: "Wedding Wala collects payment on the vendor's behalf and
+            holds it through a licensed Pakistani payment gateway. Your card
+            statement reads WEDDINGWALA."
+
+            NOTE: this file is currently unreferenced — nothing imports
+            PreviewStep, and the live review screen is
+            components/booking/steps-v2/review-step.tsx, which already told the
+            customer the truth ("You pay the venue directly — Wedding Wala
+            records the payment, and doesn't hold it"). Verified by walking the
+            flow to the review step: this block does not render.
+
+            Corrected anyway rather than left alone, so that reviving this file
+            cannot quietly reintroduce a claim that the platform holds a
+            couple's money. */}
         <p className="font-bridal text-[12.5px] text-bridal-text leading-relaxed">
-          Wedding Wala is a marketplace. Wedding services here are delivered by independent vendors. Wedding Wala collects payment on the vendor&apos;s behalf and holds it through a licensed Pakistani payment gateway. Your card statement reads <strong className="text-bridal-charcoal">WEDDINGWALA</strong>. We never store full card details.
+          Wedding Wala is a marketplace. Wedding services here are delivered by independent vendors. You pay the vendor <strong className="text-bridal-charcoal">directly</strong> — Wedding Wala never takes or holds your money, and adds nothing to the vendor&apos;s price. We record every payment you report, so you and the vendor share one history of what was paid and when.
         </p>
         <p className="mt-2 font-bridal text-[12px] text-bridal-text-soft leading-relaxed">
           By submitting this booking you agree to Wedding Wala&apos;s{" "}

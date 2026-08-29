@@ -353,8 +353,8 @@ export default function AboutPage() {
           */}
           <p className="mt-6 font-bridal text-[12.5px] text-bridal-text-soft max-w-2xl leading-relaxed">
             Wedding Wala is a marketplace. Wedding services on this platform
-            are delivered by independent vendors. Payments are processed
-            through licensed Pakistani payment gateways. Read{" "}
+            are delivered by independent vendors, and couples pay them
+            directly — Wedding Wala never takes or holds that money. Read{" "}
             <Link href="/how-it-works" className="text-bridal-gold hover:underline">
               How it works
             </Link>
