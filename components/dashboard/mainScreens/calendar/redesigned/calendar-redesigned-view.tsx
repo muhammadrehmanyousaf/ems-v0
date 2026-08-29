@@ -143,7 +143,14 @@ export function CalendarRedesignedView() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    /* Fills the pane it was given. With the Availability grid and the
+       subscription card hidden, the month grid ended at 765px in a 950px
+       window and the page did not scroll — a 185px band of bare white under
+       the calendar (measured, 1680×950). A month grid is the one thing on
+       this screen that is BETTER for having the extra height, so it takes it:
+       taller day cells, more events legible per day. `grow` is inert when the
+       content already overflows. */
+    <div className="flex grow flex-col gap-6 p-4 md:p-6">
       <PageHeader
         eyebrow="Operate"
         title="Calendar"
@@ -151,9 +158,12 @@ export function CalendarRedesignedView() {
         actions={<Button onClick={() => setCreateOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> Add booking</Button>}
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
+      {/* `lg:auto-rows-fr` only from lg up: below it the two panels stack, and
+          an equal-height pair of stacked rows would stretch the agenda to match
+          the month grid on a phone. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px] lg:auto-rows-fr lg:grow lg:min-h-0">
         {/* Month grid */}
-        <div className="rounded-xl border border-border bg-card shadow-sm">
+        <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           <div className="flex items-center justify-between border-b border-border p-3">
             <div className="flex items-center gap-2">
               <h2 className="text-base font-semibold">{MONTHS[cursor.getMonth()]} {cursor.getFullYear()}</h2>
@@ -183,7 +193,10 @@ export function CalendarRedesignedView() {
             ))}
           </div>
 
-          <div className="grid grid-cols-7">
+          {/* `auto-rows-fr` shares the leftover height across the week rows
+              instead of piling it under the last one. The cells keep their
+              min-h-[84px], so a short window never squashes them. */}
+          <div className="grid grow auto-rows-fr grid-cols-7">
             {grid.map((d, i) => {
               const key = ymd(d)
               const inMonth = d.getMonth() === cursor.getMonth()
@@ -292,7 +305,7 @@ export function CalendarRedesignedView() {
         </div>
 
         {/* Day agenda */}
-        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+        <div className="flex min-h-0 flex-col rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="mb-3 flex items-center gap-2">
             <Icon name="Calendar" size={16} className="text-primary" />
             <h3 className="text-sm font-semibold">
@@ -306,7 +319,10 @@ export function CalendarRedesignedView() {
           ) : selectedBookings.length === 0 ? (
             <EmptyState className="border-0 bg-transparent py-8" icon="Calendar" title="Nothing scheduled" description="No events on this day." />
           ) : (
-            <div className="space-y-2">
+            /* Scrolls inside the card. A Saturday with eight weddings on it
+               would otherwise drive the height of the whole two-column row and
+               push the month grid taller than the screen. */
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
               {/* The agenda used to be a <div>: a vendor could SEE the booking
                   that owns their evening and had no way to open it. Every row
                   is the booking's front door now — whole row is the target, so

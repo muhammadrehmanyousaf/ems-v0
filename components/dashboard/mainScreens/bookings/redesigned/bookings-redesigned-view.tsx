@@ -241,7 +241,14 @@ export function BookingsRedesignedView() {
   ]
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    /* `grow` + flex-col, not `space-y-6`: the shell's scroll container is a
+       flex column, so the page can claim the height it was given instead of
+       stopping at its content. With the Receivables ledger hidden, a filtered
+       list of one booking left 484px of bare white below the card (measured,
+       1680×950) — the table now ends where the screen ends, which is what the
+       card border made you expect in the first place. On a long list `grow`
+       does nothing at all: there is no free space to claim. */
+    <div className="flex grow flex-col gap-6 p-4 md:p-6">
       <PageHeader
         eyebrow="Operate"
         title="Bookings"
@@ -282,6 +289,9 @@ export function BookingsRedesignedView() {
       )}
 
       <DataTable
+        // Absorbs the slack when the list is shorter than the pane. `className`
+        // lands on DataTable's own card, so no other screen using it changes.
+        className="grow"
         filterQuery={search}
         onClearFilter={() => setSearch("")}
         caption="Bookings"
