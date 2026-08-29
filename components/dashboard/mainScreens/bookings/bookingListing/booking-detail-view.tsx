@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Booking detail view — dedicated working surface for a single booking.
@@ -23,10 +23,11 @@
  *   - Lead list filtered by bookingId (additive query param)
  */
 
-import * as React from 'react';
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import * as React from "react";
+import { bookingStatusLabel } from "@/lib/booking-status-label";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Loader2,
@@ -43,85 +44,91 @@ import {
   Phone,
   Mail,
   Wallet,
-} from 'lucide-react';
+} from "lucide-react";
 
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Separator } from '@/components/ui/separator';
-import WhatsAppQuickSend from '@/components/dashboard/shared/whatsapp-quick-send';
-import { cn } from '@/lib/utils';
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
+import WhatsAppQuickSend from "@/components/dashboard/shared/whatsapp-quick-send";
+import { cn } from "@/lib/utils";
 
-import { BookingAPI } from '@/lib/api/bookings';
-import { PaymentAPI } from '@/lib/api/payments';
-import { FunctionSheetAPI, type FunctionSheet } from '@/lib/api/functionSheets';
+import { BookingAPI } from "@/lib/api/bookings";
+import { PaymentAPI } from "@/lib/api/payments";
+import { FunctionSheetAPI, type FunctionSheet } from "@/lib/api/functionSheets";
 import {
   LeadAPI,
   LEAD_STATUS_LABELS,
   LEAD_SOURCE_LABELS,
   LEAD_STATUS_TONES,
   type Lead,
-} from '@/lib/api/leads';
-import { InstallmentsCard } from '@/components/bookings/installments-card';
-import { VendorApprovalCard } from '@/components/bookings/vendor-approval-card';
-import { SettlementCard } from '@/components/bookings/settlement-card';
-import { RequirementsCard } from '@/components/bookings/requirements-card';
-import { VendorCancelCard } from '@/components/bookings/vendor-cancel-card';
-import { BookingReceiptsCard, BookingDisputesCard } from '@/components/bookings/booking-related-lists';
-import { OrderBuilderCard } from '@/components/bookings/order-builder-card';
-import { BeoSheetCard } from '@/components/bookings/beo-sheet-card';
-import { EventPnlCard } from '@/components/bookings/event-pnl-card';
-import { RefundPreviewCard } from '@/components/bookings/refund-preview-card';
-import { CashRefundOwedCard, type CashRefundOwed } from '@/components/bookings/cash-refund-owed-card';
-import { CancellationActionsCard } from '@/components/bookings/cancellation-actions-card';
-import { PaisaReconcileCard } from '@/components/bookings/paisa-reconcile-card';
-import { VendorChangeRequestsCard } from '@/components/bookings/vendor-change-requests-card';
-import { VendorNoShowDialog } from '@/components/bookings/vendor-no-show-dialog';
-import EventWeatherChip from '@/components/dashboard/mainScreens/bookings/event-weather-chip';
-import type { BookingData } from '@/lib/dashboard-types';
-import { outstandingOn, derivedPaymentStatus } from '@/lib/utils/booking-money';
+} from "@/lib/api/leads";
+import { InstallmentsCard } from "@/components/bookings/installments-card";
+import { VendorApprovalCard } from "@/components/bookings/vendor-approval-card";
+import { SettlementCard } from "@/components/bookings/settlement-card";
+import { RequirementsCard } from "@/components/bookings/requirements-card";
+import { VendorCancelCard } from "@/components/bookings/vendor-cancel-card";
+import {
+  BookingReceiptsCard,
+  BookingDisputesCard,
+} from "@/components/bookings/booking-related-lists";
+import { OrderBuilderCard } from "@/components/bookings/order-builder-card";
+import { BeoSheetCard } from "@/components/bookings/beo-sheet-card";
+import { EventPnlCard } from "@/components/bookings/event-pnl-card";
+import { RefundPreviewCard } from "@/components/bookings/refund-preview-card";
+import {
+  CashRefundOwedCard,
+  type CashRefundOwed,
+} from "@/components/bookings/cash-refund-owed-card";
+import { CancellationActionsCard } from "@/components/bookings/cancellation-actions-card";
+import { PaisaReconcileCard } from "@/components/bookings/paisa-reconcile-card";
+import { VendorChangeRequestsCard } from "@/components/bookings/vendor-change-requests-card";
+import { VendorNoShowDialog } from "@/components/bookings/vendor-no-show-dialog";
+import EventWeatherChip from "@/components/dashboard/mainScreens/bookings/event-weather-chip";
+import type { BookingData } from "@/lib/dashboard-types";
+import { outstandingOn, derivedPaymentStatus } from "@/lib/utils/booking-money";
 import { EmptyState } from "@/components/dashboard/primitives/empty-state";
 
 const statusColors: Record<string, string> = {
-  'Awaiting Payment': 'bg-orange-50 text-orange-700 border-orange-200',
-  Pending: 'bg-amber-50 text-amber-800 border-amber-200',
-  Confirmed: 'bg-blue-50 text-blue-700 border-blue-200',
-  Completed: 'bg-green-50 text-green-700 border-green-200',
-  Cancelled: 'bg-red-50 text-red-700 border-red-200',
+  "Awaiting Payment": "bg-orange-50 text-orange-700 border-orange-200",
+  Pending: "bg-amber-50 text-amber-800 border-amber-200",
+  Confirmed: "bg-blue-50 text-blue-700 border-blue-200",
+  Completed: "bg-green-50 text-green-700 border-green-200",
+  Cancelled: "bg-red-50 text-red-700 border-red-200",
 };
 
 const paymentColors: Record<string, string> = {
-  Pending: 'bg-amber-50 text-amber-700 border-amber-200',
-  Partial: 'bg-blue-50 text-blue-700 border-blue-200',
-  Paid: 'bg-green-50 text-green-700 border-green-200',
+  Pending: "bg-amber-50 text-amber-700 border-amber-200",
+  Partial: "bg-blue-50 text-blue-700 border-blue-200",
+  Paid: "bg-green-50 text-green-700 border-green-200",
 };
 
 function fmtPKR(n: number | string | null | undefined): string {
   const x = Number(n);
-  if (!Number.isFinite(x)) return '—';
-  return `Rs. ${Math.round(x).toLocaleString('en-PK')}`;
+  if (!Number.isFinite(x)) return "—";
+  return `Rs. ${Math.round(x).toLocaleString("en-PK")}`;
 }
 function fmtDate(iso: string | null | undefined): string {
-  if (!iso) return '—';
+  if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString('en-PK', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return new Date(iso).toLocaleDateString("en-PK", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   } catch {
     return iso;
   }
 }
 function fmtTime(t: string | null | undefined): string {
-  if (!t) return '—';
-  const [h, m] = t.split(':').map(Number);
+  if (!t) return "—";
+  const [h, m] = t.split(":").map(Number);
   if (Number.isNaN(h)) return t;
-  const ampm = h >= 12 ? 'PM' : 'AM';
+  const ampm = h >= 12 ? "PM" : "AM";
   const hour = h % 12 || 12;
-  return `${hour}:${String(m || 0).padStart(2, '0')} ${ampm}`;
+  return `${hour}:${String(m || 0).padStart(2, "0")} ${ampm}`;
 }
 
 interface HistoryEntry {
@@ -171,7 +178,7 @@ export default function BookingDetailView({
   useEffect(() => {
     let cancelled = false;
     if (!Number.isFinite(bookingId)) {
-      setError('Invalid booking id');
+      setError("Invalid booking id");
       setLoading(false);
       return;
     }
@@ -183,7 +190,7 @@ export default function BookingDetailView({
         const main = await BookingAPI.getWithAvailability(bookingId);
         if (cancelled) return;
         if (!main?.booking) {
-          setError('Booking not found');
+          setError("Booking not found");
           setLoading(false);
           return;
         }
@@ -198,7 +205,7 @@ export default function BookingDetailView({
           LeadAPI.list({ bookingId }).catch(() => ({
             leads: [] as Lead[],
             summary: { byStatus: {}, bySource: {} },
-            provider: 'noop',
+            provider: "noop",
           })),
           BookingAPI.getHistory(bookingId).catch(() => null),
         ]);
@@ -213,7 +220,7 @@ export default function BookingDetailView({
         setHistory(histRows);
       } catch (e: any) {
         if (cancelled) return;
-        setError(e?.response?.data?.message || 'Failed to load booking');
+        setError(e?.response?.data?.message || "Failed to load booking");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -221,11 +228,11 @@ export default function BookingDetailView({
     return () => {
       cancelled = true;
     };
-  // reloadKey — a card acting on this booking bumps it, which is what re-runs
-  // the loader below. It was previously attached only to the cash-refunds
-  // effect, so `reload()` refetched refunds and left the booking itself stale:
-  // the Accept button stayed on screen after accepting, which is the exact
-  // symptom the reload was added to cure.
+    // reloadKey — a card acting on this booking bumps it, which is what re-runs
+    // the loader below. It was previously attached only to the cash-refunds
+    // effect, so `reload()` refetched refunds and left the booking itself stale:
+    // the Accept button stayed on screen after accepting, which is the exact
+    // symptom the reload was added to cure.
   }, [bookingId, reloadKey]);
 
   if (loading) {
@@ -252,7 +259,7 @@ export default function BookingDetailView({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push('/dashboard/bookings')}
+          onClick={() => router.push("/dashboard/bookings")}
           className="gap-1.5"
         >
           <ArrowLeft className="h-4 w-4" /> Back to bookings
@@ -261,8 +268,10 @@ export default function BookingDetailView({
           <div className="flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0" />
             <div>
-              <p className="font-semibold">Could not load booking #{bookingId}</p>
-              <p className="mt-1 text-red-700">{error || 'Unknown error'}</p>
+              <p className="font-semibold">
+                Could not load booking #{bookingId}
+              </p>
+              <p className="mt-1 text-red-700">{error || "Unknown error"}</p>
             </div>
           </div>
         </div>
@@ -286,7 +295,7 @@ export default function BookingDetailView({
    * code was ever right — behaving exactly as before.
    */
   const myLineId =
-    (details.find((d: any) => d?.ownedByMe)?.id ?? details[0]?.id) ?? null;
+    details.find((d: any) => d?.ownedByMe)?.id ?? details[0]?.id ?? null;
   const vendorTotal = details.reduce(
     (sum, d) => sum + (Number(d.totalAmount) || 0),
     0,
@@ -298,19 +307,22 @@ export default function BookingDetailView({
   const amount =
     vendorTotal > 0 ? vendorTotal : Number(booking.totalAmount) || 0;
   const dp =
-    vendorDownPayment > 0 ? vendorDownPayment : Number(booking.downPayment) || 0;
+    vendorDownPayment > 0
+      ? vendorDownPayment
+      : Number(booking.downPayment) || 0;
   // WWL-037 — this block printed `Remaining Rs 0` on a Rs 1,546,000 booking
   // with Rs 386,500 received, because it read the `Paid` flag instead of
   // subtracting. The order editor further down the very same page already
   // derived the correct Rs 1,159,500; both now share one rule.
   const remaining = outstandingOn(booking);
   const derivedStatus = derivedPaymentStatus(booking);
-  const isPaid = derivedStatus === 'Paid';
-  const isPartial = derivedStatus === 'Partial';
+  const isPaid = derivedStatus === "Paid";
+  const isPartial = derivedStatus === "Partial";
 
   // BK-100.4 — same gates as the side-drawer (status + within 14d post-event).
   const noShowCandidate = (() => {
-    if (!['Confirmed', 'Completed'].includes(booking.status || '')) return false;
+    if (!["Confirmed", "Completed"].includes(booking.status || ""))
+      return false;
     const bd = booking.bookingDate;
     if (!bd) return false;
     const evt = new Date(bd);
@@ -328,7 +340,7 @@ export default function BookingDetailView({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push('/dashboard/bookings')}
+            onClick={() => router.push("/dashboard/bookings")}
             className="gap-1.5 -ml-2 mb-2"
           >
             <ArrowLeft className="h-4 w-4" /> Bookings
@@ -343,25 +355,30 @@ export default function BookingDetailView({
         <div className="flex flex-wrap items-center gap-2">
           <Badge
             variant="outline"
-            className={cn('text-xs', statusColors[booking.status])}
+            className={cn("text-xs", statusColors[booking.status])}
           >
-            {booking.status}
+            {bookingStatusLabel(booking)}
           </Badge>
           <Badge
             variant="outline"
             className={cn(
-              'text-xs',
-              paymentColors[booking.paymentStatus || 'Pending'],
+              "text-xs",
+              paymentColors[booking.paymentStatus || "Pending"],
             )}
           >
-            {booking.paymentStatus || 'Pending'}
+            {booking.paymentStatus || "Pending"}
           </Badge>
           {/* Event financials — costing, expenses and P&L for THIS event.
               Without an entry point here a vendor has to leave the booking,
               open the Venue-OS hub and type the booking number in again, three
               separate times, to answer three questions about the event already
               on their screen. */}
-          <Button asChild size="sm" variant="outline" className="h-7 gap-1.5 text-xs">
+          <Button
+            asChild
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1.5 text-xs"
+          >
             <Link href={`/dashboard/bookings/${booking.id}/financials`}>
               <Wallet className="h-3.5 w-3.5" />
               Event financials
@@ -469,7 +486,11 @@ export default function BookingDetailView({
                       customerName={booking.customerName}
                       vars={{
                         date: fmtDate(booking.bookingDate),
-                        amount: String(Number(booking.totalAmount || 0).toLocaleString('en-PK')),
+                        amount: String(
+                          Number(booking.totalAmount || 0).toLocaleString(
+                            "en-PK",
+                          ),
+                        ),
                       }}
                       buttonClassName="h-8 w-full justify-center"
                       targetType="booking"
@@ -526,43 +547,58 @@ export default function BookingDetailView({
                   available + NEXT_PUBLIC_WEATHER on). */}
               <EventWeatherChip bookingId={booking.id} />
 
-              {/* BK-100.53 — off-vendor service location */}
-              {booking.serviceLocationMode &&
-                booking.serviceLocationMode !== 'at_vendor' && (
-                  <>
-                    <Separator />
-                    <div className="space-y-1.5 ml-6">
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-600">
-                        <MapPin className="h-3.5 w-3.5 text-bridal-gold" />
-                        Service location
-                      </div>
-                      <p className="text-sm font-medium text-neutral-800">
-                        {(() => {
-                          switch (booking.serviceLocationMode) {
-                            case 'at_customer_home':
-                              return "At customer's home";
-                            case 'at_customer_plot':
-                              return "At customer's plot / lawn";
-                            case 'at_third_party':
-                              return 'Third-party venue';
-                            default:
-                              return 'Vendor address';
-                          }
-                        })()}
-                      </p>
-                      {booking.serviceLocationAddress && (
-                        <p className="text-sm text-neutral-600 leading-relaxed">
-                          {booking.serviceLocationAddress}
-                        </p>
-                      )}
-                      {booking.serviceLocationNotes && (
-                        <p className="text-xs text-neutral-500 italic">
-                          {booking.serviceLocationNotes}
-                        </p>
-                      )}
+              {/* BK-100.53 — service location.
+
+                  Guarded on `!== 'at_vendor'` until 2026-08-29, which is why
+                  vendors reported it "not showing on the view detail screen":
+                  bookingCreateService.js defaults the column to "at_vendor"
+                  when the customer picks nothing, so for practically every
+                  venue booking the condition was false and the block never
+                  drew at all.
+
+                  Now it renders whenever the mode is known, or whenever the
+                  customer typed an address or a note — a note can be attached
+                  to an at-vendor booking too, and that was being swallowed by
+                  the same guard. */}
+              {(booking.serviceLocationMode ||
+                booking.serviceLocationAddress ||
+                booking.serviceLocationNotes) && (
+                <>
+                  <Separator />
+                  <div className="space-y-1.5 ml-6">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-600">
+                      <MapPin className="h-3.5 w-3.5 text-bridal-gold" />
+                      Service location
                     </div>
-                  </>
-                )}
+                    <p className="text-sm font-medium text-neutral-800">
+                      {(() => {
+                        switch (booking.serviceLocationMode) {
+                          case "at_customer_home":
+                            return "At customer's home";
+                          case "at_customer_plot":
+                            return "At customer's plot / lawn";
+                          case "at_third_party":
+                            return "Third-party venue";
+                          case "at_vendor":
+                            return "At your own venue";
+                          default:
+                            return "Not specified";
+                        }
+                      })()}
+                    </p>
+                    {booking.serviceLocationAddress && (
+                      <p className="text-sm text-neutral-600 leading-relaxed">
+                        {booking.serviceLocationAddress}
+                      </p>
+                    )}
+                    {booking.serviceLocationNotes && (
+                      <p className="text-xs text-neutral-500 italic">
+                        {booking.serviceLocationNotes}
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -584,7 +620,7 @@ export default function BookingDetailView({
                     >
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-semibold text-neutral-800">
-                          {detail.business?.name || 'Business'}
+                          {detail.business?.name || "Business"}
                         </p>
                         <p className="text-sm font-bold text-bridal-gold-dark">
                           {fmtPKR(detail.totalAmount)}
@@ -675,7 +711,9 @@ export default function BookingDetailView({
                       <span className="text-neutral-700">
                         {h.fromStatus ? (
                           <>
-                            <span className="text-neutral-400">{h.fromStatus}</span>
+                            <span className="text-neutral-400">
+                              {h.fromStatus}
+                            </span>
                             <span className="text-neutral-400"> → </span>
                           </>
                         ) : null}
@@ -738,34 +776,22 @@ export default function BookingDetailView({
 
           {/* Phase-1 SPINE — editable order builder (flag-gated; the card self-hides
               when the backend feature ORDER_BUILDER_ON is off / returns 404). */}
-          {(
-            <OrderBuilderCard bookingId={booking.id} />
-          )}
+          {<OrderBuilderCard bookingId={booking.id} />}
 
           {/* Phase-2 EPIC 1 — BEO event sheet (self-hides when BEO_SHEET_ENABLED is off / 404). */}
-          {(
-            <BeoSheetCard bookingId={booking.id} />
-          )}
+          {<BeoSheetCard bookingId={booking.id} />}
 
           {/* Phase-2 EPIC 9 — money-truth reconciliation (self-hides when PAISA_HUB_ENABLED is off / 404). */}
-          {(
-            <PaisaReconcileCard bookingId={booking.id} />
-          )}
+          {<PaisaReconcileCard bookingId={booking.id} />}
 
           {/* Phase-2 EPIC 2 — per-event P&L (Aya/Gaya/Bacha; self-hides until a cost is entered). */}
-          {(
-            <EventPnlCard bookingId={booking.id} />
-          )}
+          {<EventPnlCard bookingId={booking.id} />}
 
           {/* Phase-2 EPIC 5 — refund preview (self-hides when DISPUTE_ENGINE_ENABLED is off / 404). */}
-          {(
-            <RefundPreviewCard bookingId={booking.id} />
-          )}
+          {<RefundPreviewCard bookingId={booking.id} />}
 
           {/* EPIC 5 — cancellation/refund actions + court-exposure (self-hides on 404). */}
-          {(
-            <CancellationActionsCard bookingId={booking.id} />
-          )}
+          {<CancellationActionsCard bookingId={booking.id} />}
 
           {/* WW-CASHREFUND — money the vendor owes this customer back and has
               not yet handed over. Deliberately NOT behind ORDER_BUILDER like the
@@ -808,7 +834,7 @@ export default function BookingDetailView({
               </div>
               {sheets.length === 0 ? (
                 <p className="text-xs text-neutral-400">
-                  No function sheets linked yet. Create one from{' '}
+                  No function sheets linked yet. Create one from{" "}
                   <Link
                     href="/dashboard/function-sheets"
                     className="text-bridal-gold-dark underline-offset-2 hover:underline"
@@ -869,7 +895,7 @@ export default function BookingDetailView({
                     <Badge
                       variant="outline"
                       className={cn(
-                        'text-[10px] py-0',
+                        "text-[10px] py-0",
                         LEAD_STATUS_TONES[sourceLead.status]?.bg,
                         LEAD_STATUS_TONES[sourceLead.status]?.text,
                         LEAD_STATUS_TONES[sourceLead.status]?.border,
@@ -879,7 +905,7 @@ export default function BookingDetailView({
                     </Badge>
                   </div>
                   <div className="text-[11px] text-neutral-500 mt-0.5">
-                    {LEAD_SOURCE_LABELS[sourceLead.source]} ·{' '}
+                    {LEAD_SOURCE_LABELS[sourceLead.source]} ·{" "}
                     {fmtDate(sourceLead.createdAt)}
                   </div>
                 </Link>

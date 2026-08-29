@@ -24,6 +24,7 @@ import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { bookingStatusLabel } from "@/lib/booking-status-label"
 import { OfflineBookingDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog"
 import { BookingRowActions } from "./booking-row-actions"
 // import { OwnerLedgerCard } from "@/components/bookings/owner-ledger-card"
@@ -231,7 +232,7 @@ export function BookingsRedesignedView() {
     // while the two columns beside it printed the amounts. The chip now
     // describes the same arithmetic the row already shows.
     { key: "balance", header: "Balance", align: "right", render: (b) => <MoneyCell amount={outstandingOn(b)} /> },
-    { key: "status", header: "Status", render: (b) => <StatusPill tone={statusTone(b.status)}>{b.status}</StatusPill> },
+    { key: "status", header: "Status", render: (b) => <StatusPill tone={statusTone(b.status)}>{bookingStatusLabel(b)}</StatusPill> },
     { key: "payment", header: "Payment", render: (b) => { const d = derivedPaymentStatus(b); return <StatusPill tone={payTone(d)} variant="icon">{d}</StatusPill> } },
     {
       key: "actions", header: "", align: "right",
@@ -378,7 +379,7 @@ export function BookingsRedesignedView() {
             <div className="min-w-0">
               <div className="truncate font-medium">{serviceLabel(b)}</div>
               <div className="text-xs text-muted-foreground">{b.customerName} · {fmtDate(b.bookingDate)}</div>
-              <div className="mt-1"><StatusPill tone={statusTone(b.status)}>{b.status}</StatusPill></div>
+              <div className="mt-1"><StatusPill tone={statusTone(b.status)}>{bookingStatusLabel(b)}</StatusPill></div>
             </div>
             <div className="text-right">
               <MoneyCell amount={bookedOn(b)} className="block text-sm font-medium" />
