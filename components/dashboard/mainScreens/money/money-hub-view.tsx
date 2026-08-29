@@ -33,9 +33,10 @@ import { PaymentsRedesignedView } from "@/components/dashboard/mainScreens/payme
 import { ReceiptsRedesignedView } from "@/components/dashboard/mainScreens/receipts/redesigned/receipts-redesigned-view"
 import { PdcsRedesignedView } from "@/components/dashboard/mainScreens/pdcs/redesigned/pdcs-redesigned-view"
 import { ExpensesRedesignedView } from "@/components/dashboard/mainScreens/expenses/redesigned/expenses-redesigned-view"
+import { RefundsOwedView } from "@/components/dashboard/mainScreens/money/refunds-owed-view"
 import { useNavPersona } from "@/lib/nav/nav-persona"
 
-type TabKey = "receivables" | "payments" | "receipts" | "cheques" | "expenses"
+type TabKey = "receivables" | "payments" | "receipts" | "cheques" | "expenses" | "refunds"
 
 /**
  * Labels follow the same two registers as the sidebar: Aasaan (plain
@@ -49,6 +50,9 @@ const TABS: Array<{ key: TabKey; simple: string; pro: string; hint: string }> = 
   { key: "receipts", simple: "Raseed", pro: "Receipts", hint: "Proof of what came in" },
   { key: "cheques", simple: "Cheque", pro: "Cheques", hint: "Promised, not yet cleared" },
   { key: "expenses", simple: "Kharcha", pro: "Expenses", hint: "What went out?" },
+  // WW-SETTLE — a cancelled wedding's refund is money out too, and it was the
+  // one kind with no page: it lived inside a single booking's detail view.
+  { key: "refunds", simple: "Wapsi", pro: "Refunds owed", hint: "What do I still owe back?" },
 ]
 
 export function MoneyHubView() {
@@ -91,6 +95,7 @@ export function MoneyHubView() {
       {active === "receipts" && <ReceiptsRedesignedView />}
       {active === "cheques" && <PdcsRedesignedView />}
       {active === "expenses" && <ExpensesRedesignedView />}
+      {active === "refunds" && <RefundsOwedView />}
     </div>
   )
 }

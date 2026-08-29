@@ -253,11 +253,53 @@ export async function recordPolicyAcceptance(bookingId: number, body: { accepted
   return data?.data as { bookingId: number; acceptanceId: number; policyName: string };
 }
 
-export type RefundState = "RAISED" | "APPROVED" | "APPLIED" | "REJECTED";
+/**
+ * WW-SETTLE — APPLIED is not the end.
+ *
+ * The platform holds none of the customer's money, so "applied" only means the
+ * venue has been told what it owes. PAID_BY_VENDOR is the venue's claim;
+ * ACKNOWLEDGED is the customer confirming they actually received it, and is the
+ * only state that settles a direct-pay refund. DISPUTED is the customer saying
+ * it never arrived; WITHDRAWN is them pulling the request before it was decided.
+ */
+export type RefundState =
+  | "RAISED" | "APPROVED" | "APPLIED"
+  | "PAID_BY_VENDOR" | "ACKNOWLEDGED"
+  | "REJECTED" | "WITHDRAWN" | "DISPUTED";
+
+/** How a venue says it handed the money over. */
+export type VendorPaymentMethod = "cash" | "bank_transfer" | "jazzcash" | "easypaisa" | "cheque" | "other";
+
 export interface RefundRequestRow {
   id: number; bookingId: number; reason: string; state: RefundState;
   computed: { refund: number; forfeit: number; carryForward?: number };
   resolvedVia: string | null; note: string | null;
+  createdAt?: string | null;
+  decidedAt?: string | null;
+  /** When the obligation was recorded — not when anyone was actually paid. */
+  appliedAt?: string | null;
+  /** What the venue still owes BY HAND. Null on requests raised before WW-SETTLE. */
+  settlementDue?: number | string | null;
+  paidByVendorAt?: string | null;
+  vendorPaymentMethod?: VendorPaymentMethod | null;
+  vendorPaymentRef?: string | null;
+  acknowledgedAt?: string | null;
+  disputedAt?: string | null;
+  disputeNote?: string | null;
+  withdrawnAt?: string | null;
+}
+
+/**
+ * What a request still owes by hand.
+ *
+ * Requests raised before WW-SETTLE have no `settlementDue` of their own; reading
+ * that as zero would show a family a real, unpaid obligation as already settled,
+ * so it falls back to the frozen calculation — the same rule the server uses.
+ */
+export function outstandingRefund(r: Pick<RefundRequestRow, "settlementDue" | "computed">): number {
+  const due = r.settlementDue;
+  if (due !== null && due !== undefined && due !== "") return Number(due) || 0;
+  return Number(r.computed?.refund) || 0;
 }
 export async function listRefundRequests(bookingId: number): Promise<{ bookingId: number; requests: RefundRequestRow[] } | null> {
   try {
@@ -276,6 +318,52 @@ export async function decideRefundRequest(bookingId: number, reqId: number, appr
 export async function applyRefundRequest(bookingId: number, reqId: number) {
   const { data } = await axiosInstance.patch(`${v1}/${bookingId}/refund-requests/${reqId}/apply`, {});
   return (data?.data as { request: RefundRequestRow }).request;
+}
+
+// ── WW-SETTLE — the two-sided settlement ───────────────────────────────────
+// Each call belongs to one party. The venue may claim it paid; only the
+// customer can confirm they received it. Nothing here confirms on their behalf.
+
+/** VENDOR: "I have paid this." A claim — the refund still waits on the customer. */
+export async function markRefundPaid(
+  bookingId: number, reqId: number,
+  body: { method?: VendorPaymentMethod; reference?: string; note?: string } = {},
+) {
+  const { data } = await axiosInstance.patch(`${v1}/${bookingId}/refund-requests/${reqId}/mark-paid`, body);
+  return (data?.data as { request: RefundRequestRow; outstanding: number });
+}
+
+/** CUSTOMER: "I received it." The only path to ACKNOWLEDGED. */
+export async function acknowledgeRefund(bookingId: number, reqId: number, note?: string) {
+  const { data } = await axiosInstance.patch(`${v1}/${bookingId}/refund-requests/${reqId}/acknowledge`, { note });
+  return (data?.data as { request: RefundRequestRow }).request;
+}
+
+/** CUSTOMER: "It has not reached me." Hands the request back to the venue, still open. */
+export async function disputeRefundSettlement(bookingId: number, reqId: number, note?: string) {
+  const { data } = await axiosInstance.patch(`${v1}/${bookingId}/refund-requests/${reqId}/dispute`, { note });
+  return (data?.data as { request: RefundRequestRow }).request;
+}
+
+/** CUSTOMER: pull a request back before the venue has decided it. */
+export async function withdrawRefundRequest(bookingId: number, reqId: number, note?: string) {
+  const { data } = await axiosInstance.patch(`${v1}/${bookingId}/refund-requests/${reqId}/withdraw`, { note });
+  return (data?.data as { request: RefundRequestRow }).request;
+}
+
+export interface RefundObligation extends RefundRequestRow { outstanding: number }
+export interface RefundObligations {
+  businessId: number | null; count: number; totalOutstanding: number; obligations: RefundObligation[];
+}
+
+/** VENDOR worklist: refunds this venue owes and has not been confirmed as paying. */
+export async function listRefundObligations(businessId?: number): Promise<RefundObligations | null> {
+  try {
+    const { data } = await axiosInstance.get(`${v1}/refund-obligations`, {
+      params: businessId ? { businessId } : undefined,
+    });
+    return (data?.data as RefundObligations) ?? null;
+  } catch (e: any) { if (e?.response?.status === 404) return null; throw e; }
 }
 
 // Cancellation-policy management (5.4)

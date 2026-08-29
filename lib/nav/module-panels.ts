@@ -36,6 +36,7 @@ import {
   CalendarDays,
   MessageSquareText,
   Wallet,
+  Undo2,
   SquareUser,
   Settings,
   CalendarClock,
@@ -339,6 +340,9 @@ export const NAV_MODULES: NavModule[] = [
         label: "Money out",
         items: [
           { label: "Expenses", href: "/dashboard/money?tab=expenses", icon: Wallet, i18nKey: "nav.expenses" },
+          // WW-SETTLE — refunds a cancelled booking owes back. Money out, and
+          // until now the only kind with no page of its own.
+          { label: "Refunds owed", href: "/dashboard/money?tab=refunds", icon: Undo2, i18nKey: "nav.refunds_owed" },
           { label: "Staff & payroll", href: "/dashboard/staff", icon: HandCoins, i18nKey: "nav.staff" },
           { label: "Suppliers", href: "/dashboard/suppliers", icon: Truck, i18nKey: "nav.suppliers" },
         ],

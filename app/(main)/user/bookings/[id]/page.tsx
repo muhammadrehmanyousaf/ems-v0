@@ -67,6 +67,7 @@ import { PostponeBookingDialog } from "@/components/bookings/postpone-booking-di
 import { RescheduleBookingDialog } from "@/components/bookings/reschedule-booking-dialog";
 // EPIC 5 · §3 — customer "Request a refund".
 import { RefundRequestCard } from "@/components/bookings/refund-request-card";
+import { RefundSettlementCard } from "@/components/bookings/refund-settlement-card";
 // QA #4 — show the refund the customer would get back inside the cancel dialog.
 import { getRefundPreview, requestCancellation, type RefundPreview } from "@/lib/api/bookingOrder";
 import { slotText, slotFromBooking } from "@/lib/booking/slot-vocabulary";
@@ -978,6 +979,13 @@ export default function BookingDetailPage() {
               ["paid", "partial"].includes(paymentKey)
             }
           />
+
+          {/* WW-SETTLE — the other half. RefundRequestCard above only ASKS for a
+              refund; this is where the family sees whether the venue has paid it
+              and says so. It matters most on a cancelled booking, which is
+              exactly where the card above stops rendering — so it is placed
+              outside that gate and self-hides when there is nothing to show. */}
+          <RefundSettlementCard bookingId={booking.id} />
 
           {/* BK-100.7 — inline review prompt. Renders only when the
               booking is Completed. Backend re-enforces the gate so
