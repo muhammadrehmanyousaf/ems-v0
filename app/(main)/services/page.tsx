@@ -97,15 +97,17 @@ const STEPS = [
     title: "Check the date, ask for a quote",
     body: "See which dates a vendor still has open, message them through the platform, and get a written quote you can compare against others.",
   },
+  /* "Protected deposit" and "we release the deposit" removed 2026-08-29 —
+     the platform never holds a customer's money, so neither was true. */
   {
     Icon: Wallet,
-    title: "Book with a protected deposit",
-    body: `Confirm the booking with a deposit. ${SITE_NAME} holds it — the vendor does not receive it yet — so the date is locked without the money being gone.`,
+    title: "Pay the vendor, on the record",
+    body: `Nothing is due until the vendor accepts. You then pay them directly — ${SITE_NAME} never takes or holds your money — and record the reference so both of you have the same history.`,
   },
   {
     Icon: ShieldCheck,
-    title: "The function happens, the vendor is paid",
-    body: "After the function is delivered and the booking is marked complete, we release the deposit to the vendor in full. If a vendor cancels, you are refunded under our refund policy.",
+    title: "One record of the whole booking",
+    body: "What was agreed, what was paid and when, all on the booking rather than scattered across WhatsApp. If something goes wrong, that record is what settles it.",
   },
 ]
 
@@ -116,7 +118,7 @@ const FAQS = [
   },
   {
     question: `Does ${SITE_NAME} provide the wedding services itself?`,
-    answer: `No. ${SITE_NAME} is a marketplace. Venues, catering, photography, decor and every other service are delivered by independent Pakistani businesses. We provide the platform you find and book them on, and we hold the deposit until the function is delivered.`,
+    answer: `No. ${SITE_NAME} is a marketplace. Venues, catering, photography, decor and every other service are delivered by independent Pakistani businesses. We provide the platform you find and book them on — you pay the vendor directly, and we never take or hold that money.`,
   },
   {
     question: "What does a vendor pay?",

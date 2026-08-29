@@ -48,26 +48,35 @@ const STEPS = [
   },
 ] as const
 
+/**
+ * Rewritten 2026-08-29 for the direct-pay model.
+ *
+ * This list contradicted itself: one answer said the platform "holds the
+ * deposit", another said it "earns from the monthly subscription vendors pay,
+ * not from your booking". The second was already correct — it is the model the
+ * founder described — so the rest is now brought into line with it rather than
+ * written from scratch.
+ *
+ * Removed outright: "Why does Wedding Wala hold the deposit?" and the card-
+ * statement descriptor answer. Both described a custody arrangement and a card
+ * charge that do not exist. Answering them at all would keep the idea alive.
+ */
 const FAQS = [
   {
     question: "Is Wedding Wala the actual vendor?",
-    answer: `No. ${SITE_NAME} is a marketplace. Wedding services are delivered by independent third-party vendors. We help you find, book, and pay them — and we hold the deposit until the booking is confirmed.`,
+    answer: `No. ${SITE_NAME} is a marketplace. Wedding services are delivered by independent third-party vendors. We help you find and book them — and you pay the vendor directly.`,
   },
   {
-    question: "Why does Wedding Wala hold the deposit?",
-    answer: `Holding the deposit protects you. If a vendor cancels, declines, or fails to deliver, ${SITE_NAME} refunds you according to the Refund Policy — without you needing to chase the vendor for the money.`,
+    question: "Who do I pay, and how?",
+    answer: `You pay the vendor directly — usually by bank transfer, JazzCash or Easypaisa into the account they publish on their booking. ${SITE_NAME} never takes or holds your money. After you pay, you enter the transfer reference and a screenshot so the vendor can match it, and both of you keep one shared record of what was paid and when.`,
   },
   {
     question: "What does Wedding Wala charge?",
     answer: `Customers pay the price the vendor lists, in PKR — ${SITE_NAME} adds nothing on top of it and takes nothing out of it. We earn from the monthly subscription vendors pay for the vendor portal, not from your booking. Our pricing page sets out exactly what a vendor pays.`,
   },
   {
-    question: "How are vendor payouts handled?",
-    answer: `${SITE_NAME} pays vendors after the event is delivered and the booking is marked complete. This protects customers from vendor no-shows.`,
-  },
-  {
-    question: "What happens on the customer's card statement?",
-    answer: `The descriptor reads "WEDDINGWALA" (or our registered DBA), not the vendor's name. This is normal for marketplace transactions and is required by card-network rules.`,
+    question: "What if the vendor cancels or doesn't deliver?",
+    answer: `Because the money goes straight to the vendor, any refund is arranged with that vendor directly. ${SITE_NAME} holds nothing to refund on their behalf. We keep the record of the booking and of every payment you reported, which is what you need to settle it — and you can raise a complaint with us if the vendor will not engage.`,
   },
 ] as const
 

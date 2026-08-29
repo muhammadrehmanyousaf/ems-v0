@@ -552,11 +552,14 @@ export function Footer() {
         {/* ── Payment methods strip ── */}
         <div className="container-responsive pt-3 pb-3 border-t border-bridal-beige/60">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-3xl mx-auto">
+            {/* "We accept" was wrong in the subject: Wedding Wala accepts
+                nothing from customers. These are the rails VENDORS are paid
+                on, which is what a couple actually needs to know here. */}
             <span className="font-bridal text-[10px] uppercase tracking-[0.22em] text-bridal-text-label font-medium">
-              We accept
+              Vendors accept
             </span>
             <ul
-              aria-label="Accepted payment methods"
+              aria-label="Payment methods vendors accept"
               className="flex items-center gap-2 flex-wrap justify-center"
             >
               {/*
@@ -566,10 +569,10 @@ export function Footer() {
                 integration. Once approved, swap each <span> for the
                 official SVG.
               */}
+              {/* VISA / Mastercard / UnionPay removed: nobody can pay a card to
+                  a vendor through this platform any more, and listing them
+                  promised a checkout that does not exist. */}
               {[
-                "VISA",
-                "Mastercard",
-                "UnionPay",
                 "JazzCash",
                 "Easypaisa",
                 "Bank transfer",
@@ -587,8 +590,13 @@ export function Footer() {
 
         {/* ── Marketplace disclosure (PayFast + card-network compliance) ── */}
         <div className="container-responsive pt-2 pb-2">
+          {/* Corrected 2026-08-29. Said payments were "processed securely
+              through licensed Pakistani payment gateways" and that the card
+              statement reads WEDDINGWALA. The platform takes no customer money
+              at all — it earns from vendor subscriptions — so this appeared on
+              every page of the site claiming a card charge that never happens. */}
           <p className="font-bridal text-[12px] text-bridal-text-soft text-center max-w-3xl mx-auto leading-relaxed">
-            Wedding Wala is a marketplace. Wedding services are delivered by independent vendors. Payments are processed securely through licensed Pakistani payment gateways — your card statement reads <strong className="text-bridal-charcoal">WEDDINGWALA</strong>. We never store full card details.
+            Wedding Wala is a marketplace. Wedding services are delivered by independent vendors, and you pay them directly. Wedding Wala never takes or holds your money and adds nothing to the vendor&apos;s price — we earn from the subscription vendors pay to use the platform.
           </p>
         </div>
 

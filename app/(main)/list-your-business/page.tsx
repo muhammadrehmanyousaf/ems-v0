@@ -71,7 +71,10 @@ const STEPS = [
   {
     n: 4,
     title: "Start receiving bookings",
-    body: "Customers find you via search, save you, message you, book you. Confirm dates from your dashboard. We hold deposits, release on confirmation.",
+    // Vendor-facing: "We hold deposits, release on confirmation" promised
+    // vendors a payout flow that does not exist. They are paid directly, in
+    // full, and keep 100% — which is a better pitch than the false one.
+    body: "Customers find you via search, save you, message you, book you. Accept dates from your dashboard. Couples pay you directly — we take no commission and hold none of your money.",
   },
 ]
 

@@ -62,7 +62,9 @@ export default function CityHubPage({ params }: RouteProps) {
   const faqs = [
     {
       question: `How do I book wedding vendors in ${city.name}?`,
-      answer: `Browse the vendor categories below — venues, photographers, planners, caterers, decor — pick the vendor that fits your budget and date, and book through Wedding Wala. We hold the deposit until the vendor confirms the booking.`,
+      // "We hold the deposit" removed 2026-08-29 — untrue, and this one
+      // answer renders on every city landing page on the site.
+      answer: `Browse the vendor categories below — venues, photographers, planners, caterers, decor — pick the vendor that fits your budget and date, and send your booking request through Wedding Wala. Nothing is due until the vendor accepts, and you then pay them directly.`,
     },
     {
       question: `Are vendors in ${city.name} verified?`,

@@ -12,8 +12,8 @@
  *   - The processor is described as "a State Bank of Pakistan-licensed payment
  *     gateway" rather than named, because naming a specific gateway before its
  *     underwriting completes would claim a live integration we do not yet have.
- *   - Refund timings match /refund-policy and the card-network reality
- *     (TAT_REFUND_TO_CARD), not an optimistic number.
+ *   - Since 2026-08-29 the platform takes no customer payment at all, so
+ *     nothing here describes a charge, a gateway or a refund made by us.
  */
 
 import type { Metadata } from "next"
@@ -31,7 +31,6 @@ import {
   BUSINESS_ADDRESS_ONELINE,
   TAT_FIRST_RESPONSE,
   TAT_RESOLUTION,
-  TAT_REFUND_TO_CARD,
   faqLD,
   combineGraph,
   safeJsonLd,
@@ -44,53 +43,68 @@ export const metadata: Metadata = buildPageMetadata({
   path: "/payments",
 })
 
-/** Must stay identical to the "We accept" strip in components/footer.tsx. */
+/**
+ * Must stay identical to the "Vendors accept" strip in components/footer.tsx.
+ *
+ * Cards were removed from both on 2026-08-29: there is no platform checkout to
+ * put a card through any more. Customers pay the vendor directly, so the only
+ * rails that mean anything here are the ones a Pakistani vendor is actually
+ * paid on.
+ */
 const METHODS = [
-  {
-    Icon: CreditCard,
-    title: "Payment cards",
-    body: "Visa, Mastercard and UnionPay. Card payments are confirmed with a One-Time Password sent by your own bank.",
-  },
   {
     Icon: Wallet,
     title: "Mobile wallets",
-    body: "JazzCash and Easypaisa. You confirm the payment on your registered wallet number.",
+    body: "JazzCash and Easypaisa, sent to the number the vendor publishes on your booking. You confirm the payment on your own registered wallet number.",
   },
   {
     Icon: Landmark,
     title: "Bank transfer",
-    body: "Direct transfer from your bank account. Useful for larger balances and for vendors paying a subscription invoice.",
+    body: "Direct transfer to the vendor's own account. Their account details appear on the booking once it is accepted.",
+  },
+  {
+    Icon: CreditCard,
+    title: "Vendor subscriptions only",
+    body: `The one thing ${SITE_NAME} does charge for is the vendor's monthly subscription. Cards are never used for a customer booking.`,
   },
 ]
 
+/**
+ * Rewritten 2026-08-29 for direct pay.
+ *
+ * Four of these answered questions that cannot arise any more — card storage,
+ * the WEDDINGWALA statement descriptor, what the platform does with a deposit
+ * it holds, and how the platform refunds one. Answering them at all kept alive
+ * the idea that Wedding Wala sits between the couple and their money. It does
+ * not, so the questions are replaced rather than reworded.
+ *
+ * `TAT_REFUND_TO_CARD` is deliberately no longer referenced: there is no card
+ * to refund to.
+ */
 const FAQS = [
   {
-    question: `Does ${SITE_NAME} store my card number?`,
-    answer: `No. Card details are entered on the payment gateway's own secure page and are never stored on ${SITE_NAME}'s servers. We keep only the transaction reference, the amount, and the last four digits so you can recognise the payment in your history.`,
+    question: `Does ${SITE_NAME} take my payment?`,
+    answer: `No. You pay the vendor directly, into the account they publish on your booking. ${SITE_NAME} never takes or holds your money, adds nothing to the vendor's price, and takes no commission out of it — we earn from the monthly subscription vendors pay to use the platform.`,
   },
   {
-    question: "What will appear on my card or bank statement?",
-    answer: `Your statement will read WEDDINGWALA — not the vendor's business name. This is normal for marketplace transactions and is required by card-network rules. If you do not recognise a WEDDINGWALA charge, contact us before raising a chargeback and we will identify the booking for you.`,
+    question: "What will appear on my bank or wallet statement?",
+    answer: "The vendor's own account name — because the money goes to them, not to us. You will not see a WEDDINGWALA entry for a booking. If you are ever asked to send a booking payment to an account that is not the one shown on your booking, stop and contact us.",
   },
   {
-    question: "What currency are payments taken in?",
-    answer: "All payments are taken in Pakistani Rupees (PKR). Prices shown on the site are the prices charged — nothing is converted, and no separate service charge is added at checkout.",
+    question: "Then what is the point of recording the payment here?",
+    answer: `So there is one shared history. After you transfer, you enter the reference and a screenshot; the vendor matches it in their own account and confirms it on the booking. Both of you then see the same record of what was paid and when — which is exactly what is missing when a wedding is settled over WhatsApp.`,
   },
   {
-    question: "What happens to my deposit after I pay it?",
-    answer: `${SITE_NAME} holds it. The vendor does not receive the deposit at the moment you pay — we release it to them in full after your function has been delivered and the booking is marked complete. That is what makes a cancelled date recoverable instead of a chase.`,
+    question: "What currency are payments in?",
+    answer: "Pakistani Rupees (PKR). The price shown on the vendor's listing is the price you pay them — nothing is converted, and no service charge is added.",
   },
   {
-    question: "How long does a refund take?",
-    answer: `Once we approve and initiate a refund it goes back to the original payment method — we cannot send it to a different card or account, which is a card-network rule and a fraud protection. A card refund typically appears in ${TAT_REFUND_TO_CARD}; JazzCash and Easypaisa usually clear in 3–7 working days. The timing after we initiate is set by your bank, not by us.`,
+    question: "What if the vendor cancels, or does not deliver?",
+    answer: `Because the money went straight to the vendor, a refund is arranged with that vendor — ${SITE_NAME} is not holding anything to refund on their behalf. What we do hold is the record: the booking, its terms, and every payment you reported. If the vendor will not engage, raise a complaint with us and we will take it up with them.`,
   },
   {
-    question: "My payment failed but the money left my account. What now?",
-    answer: `A failed transaction is normally reversed automatically within 7 working days of the transaction date. If it has not returned by then, contact us at ${SUPPORT_EMAIL} with the date, amount and your account or card's last four digits and we will trace it with the payment gateway.`,
-  },
-  {
-    question: "Is it safe to pay on this site?",
-    answer: "Every page is served over HTTPS, card and wallet payments are handled by a State Bank of Pakistan-licensed payment gateway, and card transactions require a One-Time Password from your own bank before they complete. We never ask for your card PIN, your full card number, or your internet-banking password — by email, phone or WhatsApp.",
+    question: "Is it safe to use this site?",
+    answer: `Every page is served over HTTPS. We never ask for your card PIN, your internet-banking password, or an OTP — by email, phone or WhatsApp, ever. And because ${SITE_NAME} never collects a booking payment, anyone asking you to pay ${SITE_NAME} for a booking is not us.`,
   },
 ]
 
@@ -165,22 +179,26 @@ export default function PaymentsPage() {
             Where your money actually goes
           </h2>
           <ol className="mt-7 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Rewritten 2026-08-29. Step 2 was literally captioned "We hold
+                it" — "the money stays with us" — which describes a custody
+                arrangement the platform does not have and is not licensed for.
+                The money never touches Wedding Wala. */}
             {[
               [
-                "You pay a deposit",
-                `The gateway takes the payment and confirms it with an OTP from your bank. ${SITE_NAME} receives the confirmation, not your card number.`,
+                "The venue accepts",
+                "Nothing is due while your request is waiting. Once the vendor accepts, their payment details appear on your booking.",
               ],
               [
-                "We hold it",
-                "The vendor is told the date is secured, but the money stays with us. Nothing is released at this point.",
+                "You pay the vendor",
+                `Straight to their account — bank transfer, JazzCash or Easypaisa. ${SITE_NAME} never takes or holds the money, and adds nothing to the vendor's price.`,
               ],
               [
-                "Your function happens",
-                "The vendor delivers. You or the vendor marks the booking complete; if neither does, we auto-confirm from the event date once the dispute window has passed.",
+                "You record what you sent",
+                "Enter the transfer reference and a screenshot. The vendor matches it against their account and confirms it on the booking.",
               ],
               [
-                "The vendor is paid",
-                "We release the deposit to the vendor in full. We deduct no commission from it — vendors pay us a monthly subscription instead.",
+                "Both of you keep the record",
+                `Every payment stays on the booking with its reference and date, so what was paid is never one person's word against another's. ${SITE_NAME} earns from the vendor's monthly subscription, not from your wedding.`,
               ],
             ].map(([title, body], i) => (
               <li key={title}>
@@ -260,21 +278,26 @@ export default function PaymentsPage() {
           </h2>
           <dl className="mt-6 grid gap-x-10 gap-y-6 sm:grid-cols-2">
             {[
+              /* Rewritten 2026-08-29. Three of these described a card charge
+                 taken by the platform: an "unrecognised WEDDINGWALA line", a
+                 failed gateway transaction, and chargebacks. None can happen
+                 when the money never reaches us. What CAN go wrong now is
+                 different, and this says so. */
               [
                 "Talk to us first",
-                `Open the booking and raise a dispute, or write to ${SUPPORT_EMAIL}. We acknowledge ${TAT_FIRST_RESPONSE} and resolve ${TAT_RESOLUTION}. This is almost always faster than a chargeback.`,
+                `Open the booking and raise a dispute, or write to ${SUPPORT_EMAIL}. We acknowledge ${TAT_FIRST_RESPONSE} and resolve ${TAT_RESOLUTION}. We cannot move money on the vendor's behalf, but we hold the record of the booking and of what you paid, which is what settles most of these.`,
               ],
               [
-                "Unrecognised charge",
-                "A WEDDINGWALA line you do not recognise is usually a booking made by someone else in your household. Contact us with the date and amount and we will identify it.",
+                "The vendor says they never got it",
+                "Open the booking and check the reference and screenshot you recorded against the account shown on it. Bank and wallet transfers can take a few hours to appear. If it was sent to a different account from the one on the booking, tell us immediately.",
               ],
               [
-                "Failed payment, money debited",
-                "Normally reversed automatically within 7 working days of the transaction date. If it has not returned, contact us and we will trace it with the gateway.",
+                "Asked to pay somewhere else",
+                "The only account you should ever send a booking payment to is the one published on your booking. Nobody at Wedding Wala will ask you to pay us for a booking, or to send money to a personal account. Report it to us.",
               ],
               [
-                "Chargebacks",
-                "You can raise one with your bank, and you should also open a dispute with us. A chargeback is not faster than our own process and it complicates cases where a partial refund is the fair outcome.",
+                "The vendor cancelled",
+                "A refund comes from the vendor, because they hold the money. Raise a dispute on the booking so the terms and the payment record are in one place, and we will take it up with them.",
               ],
             ].map(([term, def]) => (
               <div key={term}>

@@ -76,25 +76,29 @@ const FAQ_CATEGORIES: FaqCategory[] = [
     Icon: CreditCard,
     intro: "How money moves through Wedding Wala — deposits, balances, refunds.",
     items: [
+      /* Rewritten 2026-08-29 for direct pay. The old answers described the
+         platform collecting on the vendor's behalf, a WEDDINGWALA card
+         descriptor, refunds "we initiate", and chargebacks — none of which
+         exist when the money never reaches us. */
       {
-        q: "What payment methods does Wedding Wala accept?",
-        a: "Cards (Visa, Mastercard, UnionPay) processed through licensed Pakistani payment gateways, plus JazzCash, Easypaisa, and direct bank transfer for some vendors. Every card payment is secured end-to-end — we never store your full card details.",
+        q: "Who do I pay?",
+        a: `The vendor, directly. ${SITE_NAME} never takes or holds your money and adds nothing to the vendor's price — we earn from the monthly subscription vendors pay to use the platform. Pay by bank transfer, JazzCash or Easypaisa into the account shown on your booking once the vendor accepts it.`,
       },
       {
-        q: "Why is the customer-facing card-statement descriptor 'WEDDINGWALA' rather than the vendor's name?",
-        a: `Because ${SITE_NAME} is a marketplace and the platform collects the payment on the vendor's behalf. The descriptor identifies us — the operator who handled the transaction — which is what card networks require for marketplace transactions. The vendor receives their share via payout from the platform after the event.`,
+        q: "Then why record the payment on Wedding Wala?",
+        a: "So you and the vendor share one record. You enter the transfer reference and a screenshot; the vendor matches it in their own account and confirms it on the booking. That way what was paid, and when, is never one person's word against the other's.",
       },
       {
         q: "Do I have to pay the full amount upfront?",
-        a: "No. Most vendors require a deposit (typically 20–50% of the total) at booking, with the balance due closer to the event date as set out in your booking. Some vendors allow installments — visible at booking time.",
+        a: "No. Most vendors ask for an advance (typically 20–50% of the total) once they accept, with the balance due closer to the event as set out in your booking. Some allow installments — visible at booking time.",
       },
       {
         q: "How do refunds work?",
-        a: "Refunds are credited back to your ORIGINAL payment method — that's a card-network rule, not just our preference. Card refunds reach your statement in 10–12 working days (timing set by your bank). JazzCash / Easypaisa refunds typically clear in 3–7 working days. You'll receive an email confirmation when we initiate the refund.",
+        a: `The vendor holds the money, so the vendor issues the refund — ${SITE_NAME} has nothing of yours to return. Raise a dispute on the booking so the terms and the full payment record sit in one place, and we will take it up with the vendor if they will not engage.`,
       },
       {
-        q: "What if I want to dispute a charge?",
-        a: `Open a dispute on the booking page first — that's faster than a chargeback. Our team responds within 48 hours and resolves within 14 days. If you raise a chargeback with your card issuer instead, please also open a dispute with us so we can help — chargebacks aren't faster than our refund process and complicate cases where a partial refund is appropriate.`,
+        q: "Someone asked me to pay Wedding Wala for a booking. Is that right?",
+        a: `No. ${SITE_NAME} never collects a booking payment, and the only account you should send money to is the one published on your booking. If you are asked for anything else — a personal account, a different number, a fee to us — stop and report it.`,
       },
     ],
   },
