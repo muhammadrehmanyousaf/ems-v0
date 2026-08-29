@@ -70,7 +70,7 @@ const blank = (l?: Lead, p?: LeadPrefill): FormState => ({
 })
 
 export function LeadFormDialog({
-  open, onOpenChange, lead, prefill, businessId, onSaved,
+  open, onOpenChange, lead, prefill, businessId, onSaved, onConvertRequested,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
@@ -78,6 +78,12 @@ export function LeadFormDialog({
   prefill?: LeadPrefill
   businessId?: number
   onSaved?: () => void
+  /**
+   * Asked for when the vendor sets this lead to "Booked" but no booking is
+   * linked yet. The parent opens the convert-to-booking dialog; see the note
+   * on `needsBooking` below for why the save cannot simply proceed.
+   */
+  onConvertRequested?: (lead: Lead) => void
 }) {
   const isEdit = !!lead
   const [form, setForm] = React.useState<FormState>(blank(lead, prefill))
@@ -105,6 +111,25 @@ export function LeadFormDialog({
   const effectiveBusinessId =
     lead?.businessId ?? businessId ?? (pickedBusinessId ? Number(pickedBusinessId) : undefined)
 
+  /**
+   * "Booked" is not a status the vendor can simply type on.
+   *
+   * The server runs a state machine (leadHelpers.js) that refuses
+   * `-> booked` unless the lead already has a bookingId
+   * (`booking_required_for_booked`), so choosing Booked here and pressing
+   * Save produced the vendor-reported error: "koi booking nahi hai is
+   * customer ke". The rule itself is right — a lead is "booked" because a
+   * booking exists, not the other way round — but the dialog offered the
+   * option anyway and let them walk into the wall.
+   *
+   * So the option now HANDS OFF to the convert-to-booking flow, which
+   * creates the booking (hall, package and menu included) and then calls
+   * POST /leads/:id/link-booking, which sets bookingId and status="booked"
+   * in one atomic update. Same destination, no error, and the booking is
+   * complete rather than a bare status flip.
+   */
+  const needsBooking = isEdit && form.status === "booked" && !lead?.bookingId
+
   const [touched, setTouched] = React.useState<Record<string, boolean>>({})
   const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
   const set = (k: keyof FormState, v: string) => { setForm((f) => ({ ...f, [k]: v })); touch(String(k)) }
@@ -121,7 +146,14 @@ export function LeadFormDialog({
         eventDate: form.eventDate || undefined,
         estimatedBudget: numOrU(form.estimatedBudget),
         estimatedGuests: numOrU(form.estimatedGuests),
-        status: form.status,
+        /**
+         * When the vendor has chosen Booked without a linked booking we still
+         * save everything else they typed, but leave the status where it was.
+         * Sending "booked" here is a guaranteed 4xx, and it would take the
+         * rest of their edits down with it. The convert flow sets the status
+         * a moment later via link-booking.
+         */
+        status: needsBooking ? ((lead?.status as LeadStatus) ?? "new") : form.status,
         inquiry: form.inquiry.trim() || undefined,
       }
       // PWA-02 — a lead grabbed offline (bridal expo, dead signal) queues instead
@@ -139,8 +171,11 @@ export function LeadFormDialog({
     },
     onSuccess: (r: any) => {
       if (r?.queuedOffline) toast.success("Saved offline — will sync when you reconnect")
+      else if (needsBooking) toast.success("Saved — now create the booking for this lead")
       else showSuccessToast(isEdit ? "Lead updated" : "Lead added")
       onSaved?.(); onOpenChange(false)
+      // Hand off AFTER the dialog closes, so the two never stack.
+      if (needsBooking && lead) onConvertRequested?.(lead)
     },
     /**
      * WWL-031 — the server now returns EVERY bad field in one response
@@ -285,6 +320,14 @@ export function LeadFormDialog({
             </Field>
             <Field label="Status">
               <select className={inputCls} value={form.status} onChange={(e) => set("status", e.target.value as LeadStatus)}>{STATUSES.map((s) => <option key={s} value={s}>{lbl(s)}</option>)}</select>
+              {needsBooking && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  A lead is Booked once a booking exists for it. Saving will open
+                  the booking form with this customer&apos;s details filled in —
+                  pick the hall, package and menu there, and the lead is marked
+                  Booked automatically.
+                </p>
+              )}
             </Field>
             <Field label="Event type">
               <select className={inputCls} value={form.eventType} onChange={(e) => set("eventType", e.target.value as LeadEventType)}>{EVENTS.map((s) => <option key={s} value={s}>{lbl(s)}</option>)}</select>
