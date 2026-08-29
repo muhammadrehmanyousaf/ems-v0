@@ -284,8 +284,17 @@ export interface PolicyTemplate {
   key: string; name: string; labelEn: string; forceMajeureRule: string; slabs: PolicySlab[];
   /** The engine's non-refundable deposit for this template, for display (WWL-501). */
   depositPct?: number;
+  /** Suggested notice period for this template. A starting point, not a rule. */
+  minNoticeHours?: number | null;
 }
-export interface ActivePolicy { id: number; name: string; slabs: PolicySlab[]; forceMajeureRule: string; partialRefundPct: number | null; isDefault: boolean; effectiveFrom: string }
+export interface ActivePolicy {
+  id: number; name: string; slabs: PolicySlab[]; forceMajeureRule: string;
+  partialRefundPct: number | null; isDefault: boolean; effectiveFrom: string;
+  /** WW-CANCELWINDOW — hours before the event inside which a customer may not self-cancel. */
+  minNoticeHours?: number | null;
+  /** Display-only prose shown beside the schedule; no engine reads it. */
+  refundPolicyNote?: string | null;
+}
 export interface CancellationPolicyState {
   businessId: number | null;
   /** The business's OWN policy. Null when they have never chosen one. */
@@ -321,9 +330,46 @@ export async function saveCancellationPolicy(body: {
   forceMajeureRule?: string;
   partialRefundPct?: number;
   businessId?: number | null;
+  /** Hours. Null or 0 clears the cutoff, which is the platform default. */
+  minNoticeHours?: number | null;
+  refundPolicyNote?: string | null;
 }) {
   const { data } = await axiosInstance.post(`${v1}/policy`, body);
-  return data?.data as { id: number; name: string; slabs: PolicySlab[]; forceMajeureRule: string };
+  return data?.data as { id: number; name: string; slabs: PolicySlab[]; forceMajeureRule: string; minNoticeHours: number | null };
+}
+
+/**
+ * WW-CANCELWINDOW — the route out of a closed cancellation window.
+ *
+ * Past the venue's notice period the customer cannot cancel themselves. They
+ * can ask, and the venue answers in the product rather than over the phone.
+ */
+export interface CancellationRequest {
+  id: number;
+  bookingId: number;
+  status: "pending" | "approved" | "declined" | "cancelled" | "expired";
+  reason: string | null;
+  decisionNotes: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+}
+
+export async function requestCancellation(bookingId: number, reason?: string) {
+  const { data } = await axiosInstance.post(`${v1}/${bookingId}/cancellation-request`, { reason });
+  return data?.data as { request: CancellationRequest; alreadyOpen?: boolean };
+}
+
+export async function decideCancellationRequest(
+  bookingId: number,
+  reqId: number,
+  approve: boolean,
+  note?: string,
+) {
+  const { data } = await axiosInstance.patch(
+    `${v1}/${bookingId}/cancellation-request/${reqId}`,
+    { approve, note },
+  );
+  return data?.data as { request: CancellationRequest };
 }
 
 export interface DisputeEvidence {
@@ -413,6 +459,19 @@ export interface RefundBreakdown {
 export interface RefundPreview {
   bookingId: number; eventDate: string | null; daysBefore: number;
   grand: number; totalPaid: number;
+  /**
+   * WW-CANCELWINDOW — the vendor's notice period, in hours, and how long is
+   * actually left. `null` means this venue has not set one, which is the
+   * platform default and means the customer may cancel at any time.
+   *
+   * `hoursUntilEvent` goes negative once the event has started.
+   */
+  minNoticeHours?: number | null;
+  hoursUntilEvent?: number | null;
+  /** Display-only prose the vendor wrote beside their schedule. */
+  refundPolicyNote?: string | null;
+  /** The name of the policy actually governing this booking. */
+  policyName?: string | null;
   policy: RefundPolicy;
   preview: { refund: number; forfeit: number; breakdown: RefundBreakdown; tier: RefundTier; trace: unknown[] };
   comparison: { key: string; labelUr: string; labelEn: string; refund: number; forfeit: number; refundPct: number }[];

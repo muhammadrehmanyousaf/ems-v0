@@ -51,7 +51,17 @@ export type ChangeRequestType =
   | "slot_swap"
   | "package_change"
   | "add_extras"
-  | "custom";
+  | "custom"
+  /**
+   * WW-CANCELWINDOW — a customer asking to cancel from inside the venue's
+   * notice period, where they cannot cancel themselves.
+   *
+   * It rides on the change-request table so it lands in the vendor's existing
+   * queue, but it is decided through its own endpoints: every other type
+   * reprices the booking's lines, this one ends the booking, and approving it
+   * runs the vendor-cancellation path so the money comes back in full.
+   */
+  | "cancel_request";
 
 export interface BookingChangeRequest {
   id: number;
@@ -194,6 +204,27 @@ export class BookingAPI {
     const res = await axiosInstance.patch(
       `${v1}/${bookingId}/change-requests/${requestId}/decline`,
       { decisionNotes },
+    );
+    return res.data?.data;
+  }
+
+  /**
+   * WW-CANCELWINDOW — answer a customer's cancellation request.
+   *
+   * Separate from approve/decline above because approving CANCELS the booking:
+   * it runs the same vendor-cancellation service the venue's own cancel button
+   * uses, returning the customer's money in full and recording the obligation.
+   * The generic approve endpoint refuses this type outright.
+   */
+  static async decideCancellationRequest(
+    bookingId: number,
+    requestId: number,
+    approve: boolean,
+    note?: string,
+  ) {
+    const res = await axiosInstance.patch(
+      `${v1}/${bookingId}/cancellation-request/${requestId}`,
+      { approve, note },
     );
     return res.data?.data;
   }

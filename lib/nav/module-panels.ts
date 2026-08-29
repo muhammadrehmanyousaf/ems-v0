@@ -258,7 +258,14 @@ export const NAV_MODULES: NavModule[] = [
      * rail lit on a module they had not chosen. Measured on production:
      * /dashboard/holds, rail lit "Enquiries", panel titled "Enquiries".
      */
-    owns: ["availability", "cancellation-policy", "holds", "blocked-dates"],
+    /**
+     * `cancellation-policy` deliberately NOT here any more (WW-CANCELWINDOW).
+     * The row now lives in the Set up panel, and `owns` is what decides which
+     * rail icon lights: leaving it would light Calendar while the panel showing
+     * the row said Set up — the exact "clicked a row in one module and landed
+     * in another" defect the Date-holds note below describes.
+     */
+    owns: ["availability", "holds", "blocked-dates"],
     panelTitle: "Calendar",
     groups: [
       {
@@ -425,6 +432,8 @@ export const NAV_MODULES: NavModule[] = [
       "settings", "onboarding", "promote", "collaborations",
       "inventory", "generator-fuel", "halal-certs", "drone-noc",
       "automation", "venue-os", "field",
+      // WW-CANCELWINDOW — moved here from Calendar with the row itself.
+      "cancellation-policy",
     ],
     panelTitle: "Set up",
     groups: [
@@ -437,6 +446,20 @@ export const NAV_MODULES: NavModule[] = [
           { label: "Business Settings", href: "/dashboard/settings", icon: Settings, i18nKey: "nav.business_settings" },
           { label: "Setup checklist", href: "/dashboard/onboarding", icon: ListChecks, i18nKey: "nav.onboarding" },
           { label: "Automation", href: "/dashboard/automation", icon: Zap, i18nKey: "nav.automation" },
+          /**
+           * WW-CANCELWINDOW — back in the nav, under Set up rather than Calendar.
+           *
+           * It was hidden with the Calendar "Rules" group (founder, 2026-08-29)
+           * and the page has been unreachable since — while the policy on it
+           * decides who keeps the money when a wedding is called off, and now
+           * also how much notice a customer has to give. A vendor looking for a
+           * business rule looks in Set up, not in their calendar, which is
+           * where it should have been in the first place.
+           *
+           * Availability stays hidden: that one genuinely moved, to Calendar >
+           * Blocked dates.
+           */
+          { label: "Cancellation policy", href: "/dashboard/cancellation-policy", icon: FileText, i18nKey: "nav.cancellation_policy" },
           // MOVED to the Home dashboard, not hidden (founder, 2026-08-29).
           // It is not a setting — it is what a vendor does standing at a bridal
           // expo with dead signal, so it now renders as a section of the screen

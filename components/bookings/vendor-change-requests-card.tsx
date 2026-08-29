@@ -47,7 +47,18 @@ const TYPE_LABEL: Record<ChangeRequestType, string> = {
   package_change: "Change package",
   add_extras: "Add extras",
   custom: "Other change",
+  cancel_request: "Cancel this booking",
 };
+
+/**
+ * WW-CANCELWINDOW — a cancellation request is not a change request.
+ *
+ * It rides in the same queue so the vendor has one place to look, but
+ * approving it ENDS the booking and returns the customer's money in full. The
+ * button has to say that, and it goes to its own endpoint; the generic approve
+ * route refuses this type.
+ */
+const isCancelRequest = (cr: BookingChangeRequest) => cr.changeType === "cancel_request";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -122,6 +133,15 @@ function VendorChangeRequestRow({
   const approve = async () => {
     setBusy(true);
     try {
+      if (isCancelRequest(cr)) {
+        await BookingAPI.decideCancellationRequest(bookingId, cr.id, true);
+        toast({
+          title: "Booking cancelled",
+          description: "The customer has been refunded in full per your policy.",
+        });
+        onChanged();
+        return;
+      }
       const res = await BookingAPI.approveChangeRequest(bookingId, cr.id);
       const reqTopUp =
         (res as any)?.code === "requires_top_up" ||
@@ -153,6 +173,17 @@ function VendorChangeRequestRow({
   const decline = async () => {
     setBusy(true);
     try {
+      if (isCancelRequest(cr)) {
+        await BookingAPI.decideCancellationRequest(bookingId, cr.id, false, notes.trim() || undefined);
+        toast({
+          title: "Cancellation declined",
+          description: "The booking stands. The customer can see your reply.",
+        });
+        setShowDecline(false);
+        setNotes("");
+        onChanged();
+        return;
+      }
       await BookingAPI.declineChangeRequest(bookingId, cr.id, notes.trim() || undefined);
       toast({ title: "Change declined" });
       setShowDecline(false);
@@ -258,13 +289,31 @@ function VendorChangeRequestRow({
               : ""}
           </p>
 
+          {/*
+            WW-CANCELWINDOW — a cancellation request states its consequence
+            before it is pressed. "Approve" on a row that ends a wedding and
+            moves money is the same button as "Approve" on a guest-count
+            change, and they are not the same act.
+          */}
+          {isCancelRequest(cr) && cr.status === "pending" ? (
+            <p className="text-[12px] text-amber-700 mt-2">
+              Approving cancels this booking and refunds the customer in full,
+              per your policy. Declining keeps the booking as it is.
+            </p>
+          ) : null}
+
           {cr.status === "pending" && cr.proposedByRole === "customer" ? (
             <div className="mt-3 flex flex-wrap gap-2">
-              <Button size="sm" onClick={approve} disabled={busy}>
+              <Button
+                size="sm"
+                onClick={approve}
+                disabled={busy}
+                variant={isCancelRequest(cr) ? "destructive" : "default"}
+              >
                 {busy ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
                 ) : null}
-                Approve
+                {isCancelRequest(cr) ? "Cancel the booking" : "Approve"}
               </Button>
               <Button
                 size="sm"
@@ -272,7 +321,7 @@ function VendorChangeRequestRow({
                 onClick={() => setShowDecline((v) => !v)}
                 disabled={busy}
               >
-                Decline
+                {isCancelRequest(cr) ? "Keep the booking" : "Decline"}
               </Button>
             </div>
           ) : null}
