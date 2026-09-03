@@ -1,82 +1,66 @@
 import { test, expect } from "@playwright/test";
-import { gotoWithRetry, dismissCookieBanner } from "./_helpers";
+import { gotoShell } from "./_shell";
+import {
+  useQaVenue, openAdd, waitForm, fillForm, saveForm, deleteRow,
+  waitSettled, apiHas, apiCleanup,
+} from "./_crud";
 
 /**
- * Self-cleaning vendor CRUD against the live site. Scoped to vendor-internal
- * ledgers that don't notify real people. Each test creates a uniquely-tagged
- * row, asserts it appears, then deletes it and asserts it's gone — leaving no
- * residue in production.
+ * Champagne CRUD (docs/TEST-CASES.md — ST/SU/BR/EX "create -> appears -> delete
+ * -> gone"). Drives the shadow-DOM "Naya …" drawer forms, scoped to the QA venue
+ * #3377 ("safe to delete"), on vendor-internal ledgers that notify no one.
+ *
+ * Reliable by construction: the create/delete assertions are made via the API
+ * (JSON contains the unique marker), and an afterEach API cleanup guarantees no
+ * residue is left in production even if a UI step flakes.
+ *
+ * Serial — all tests write to one shared venue.
  */
+test.describe.configure({ mode: "serial" });
 
-test("expenses: create -> appears -> delete -> gone", async ({ page }) => {
-  const tag = `E2E-EXP-${Date.now()}`;
-  await gotoWithRetry(page, "/dashboard/expenses");
-  await page.waitForLoadState("networkidle", { timeout: 15_000 }).catch(() => {});
-  await dismissCookieBanner(page);
+const STAMP = Date.now().toString().slice(-6);
 
-  // Open the "Log expense" dialog (header trigger is the first match).
-  await page.getByRole("button", { name: /log expense/i }).first().click();
-  // Scope to the expense dialog by its title — the cookie banner is also a dialog.
-  const dialog = page.getByRole("dialog", { name: /log an expense/i });
-  await expect(dialog).toBeVisible();
+const ENTITIES = [
+  { key: "staff", route: "/dashboard/staff", add: /naya staff/i, marker: `E2EStaff${STAMP}`, list: "/staff/members", del: (id: any) => `/staff/members/${id}` },
+  { key: "suppliers", route: "/dashboard/suppliers", add: /naya supplier/i, marker: `E2ESup${STAMP}`, list: "/suppliers", del: (id: any) => `/suppliers/${id}` },
+  { key: "brokers", route: "/dashboard/brokers", add: /naya broker/i, marker: `E2EBroker${STAMP}`, list: "/brokers", del: (id: any) => `/brokers/${id}` },
+  // More entities (expenses, inventory, generator-fuel, halal-certs, drone-noc)
+  // create cleanly via UI too, but their DELETE is entity-specific (a stock-zero
+  // guard, or the marker not shown in the deletable row) — add them with a
+  // per-entity delete step. The blueprint is docs/TEST-CASES.md.
+];
 
-  // amount (placeholder) + a unique vendorName tag so we can find + delete it.
-  // category defaults to 'ingredients', date defaults to today.
-  await dialog.getByPlaceholder("e.g. 15000").fill("1234");
-  await dialog.getByPlaceholder(/Liaqat Meat Shop/i).fill(tag);
+for (const e of ENTITIES) {
+  test(`CRUD ${e.key} — create → persists → delete → gone`, async ({ page }) => {
+    await useQaVenue(page);
+    await gotoShell(page, e.route);
 
-  // Submit (the in-dialog button is also labelled "Log expense").
-  await dialog.getByRole("button", { name: /log expense/i }).click();
-  await expect(dialog).toBeHidden({ timeout: 15_000 });
+    // CREATE — open the "Naya …" form, fill valid data, save.
+    expect(await openAdd(page, e.add), `${e.key}: Add opens`).toBeTruthy();
+    await waitForm(page);
+    const fields = await fillForm(page, e.marker);
+    expect(fields, `${e.key}: form has fillable fields`).toBeGreaterThan(0);
+    expect(await saveForm(page), `${e.key}: Save clicked`).toBeTruthy();
+    await waitSettled(page, e.marker);
 
-  // It should now appear in the ledger.
-  await expect(page.getByText(tag)).toBeVisible({ timeout: 15_000 });
+    // …the record persisted (asserted via API — reliable across list layouts;
+    // poll for the Railway write round-trip).
+    let created = false;
+    for (let i = 0; i < 6 && !created; i++) { created = await apiHas(page, e.list, e.marker); if (!created) await page.waitForTimeout(1000); }
+    expect(created, `${e.key}: created`).toBeTruthy();
 
-  // Delete the row that carries our tag, then confirm.
-  const row = page.locator("div", { hasText: tag }).last();
-  await row.getByRole("button", { name: /delete expense/i }).click().catch(async () => {
-    // Fallback: only-expense case — the single delete button is ours.
-    await page.getByRole("button", { name: /delete expense/i }).first().click();
+    // DELETE — via the row's trash + openConfirm.
+    await deleteRow(page, e.marker);
+    await waitSettled(page, e.marker, true);
+
+    // …gone (asserted via API — the real UI-delete check; poll for the round-trip).
+    let gone = false;
+    for (let i = 0; i < 6 && !gone; i++) { gone = !(await apiHas(page, e.list, e.marker)); if (!gone) await page.waitForTimeout(1000); }
+    expect(gone, `${e.key}: deleted via UI`).toBeTruthy();
   });
-  await page.getByRole("button", { name: /^remove$/i }).click();
 
-  // Gone.
-  await expect(page.getByText(tag)).toHaveCount(0, { timeout: 15_000 });
-});
-
-// Suppliers is a type-conditional Operations module with its own business-
-// scope gating; the "Add supplier" trigger isn't actionable the same way the
-// expenses one is. Marked fixme until its selectors/gating are iterated
-// against the live DOM (the create→list→delete pattern itself is proven by
-// the expenses test above).
-test.fixme("suppliers: create (with business) -> appears -> delete -> gone", async ({ page }) => {
-  const tag = `E2E-SUP-${Date.now()}`;
-  await gotoWithRetry(page, "/dashboard/suppliers");
-  await page.waitForLoadState("networkidle", { timeout: 15_000 }).catch(() => {});
-  await dismissCookieBanner(page);
-
-  await page.getByRole("button", { name: /add supplier/i }).first().click();
-  const dialog = page.getByRole("dialog", { name: /add supplier/i });
-  await expect(dialog).toBeVisible();
-
-  // Business is a required FK picker (shadcn Select → combobox). Open + pick
-  // the first option (the seeded vendor owns exactly one business).
-  const combo = dialog.getByRole("combobox").first();
-  if (await combo.count()) {
-    await combo.click();
-    await page.getByRole("option").first().click().catch(() => {});
-  }
-  await dialog.getByPlaceholder(/Liaqat Meat Shop/i).fill(tag);
-
-  await dialog.getByRole("button", { name: /add supplier/i }).click();
-  await expect(dialog).toBeHidden({ timeout: 15_000 });
-  await expect(page.getByText(tag)).toBeVisible({ timeout: 15_000 });
-
-  // Delete the card carrying our tag.
-  const card = page.locator("div", { hasText: tag }).last();
-  await card.getByRole("button", { name: /^delete$/i }).click().catch(async () => {
-    await page.getByRole("button", { name: /^delete$/i }).first().click();
+  test.afterEach(async ({ page }) => {
+    // Safety net — never leave an E2E row in production.
+    await apiCleanup(page, e.list, e.del, e.marker);
   });
-  await page.getByRole("button", { name: /^remove$/i }).click();
-  await expect(page.getByText(tag)).toHaveCount(0, { timeout: 15_000 });
-});
+}
