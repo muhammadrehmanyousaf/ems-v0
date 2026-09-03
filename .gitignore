@@ -61,3 +61,6 @@ next-env.d.ts
 
 # Scratch PR bodies — not part of the codebase
 PR-BODY-*.md
+
+# QA/test scratch — never commit (contains session tokens, screenshots, scripts)
+scratchpad/

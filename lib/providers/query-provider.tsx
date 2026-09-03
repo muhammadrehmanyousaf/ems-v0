@@ -70,7 +70,8 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
           totals on screen under the new venue's name. */}
       <VenueScopeSync />
       {children}
-      <ReactQueryDevtools initialIsOpen={false} />
+      {/* Dev-only — the devtools launcher must never ship to production. */}
+      {process.env.NODE_ENV === "development" && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   )
 }

@@ -65,6 +65,9 @@ export interface RecentBookingItem {
   status: string;
   bookingDate: string;
   totalAmount: number;
+  // Received money (downPayment). Optional: older backends omit it — the UI then
+  // shows no fabricated progress bar rather than guessing from paymentStatus.
+  downPayment?: number | string | null;
   paymentStatus: string;
   createdAt: string;
 }
@@ -213,11 +216,12 @@ export class AnalyticsAPI {
   static async getBookingTrends(
     range: DateRange = "this_year",
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    businessId?: number | null
   ): Promise<BookingTrendsData | null> {
     try {
       const res = await axiosInstance.get(
-        `${BACKEND_URL}api/v1/analytics/booking-trends?${buildQuery(range, startDate, endDate)}`
+        `${BACKEND_URL}api/v1/analytics/booking-trends?${buildQuery(range, startDate, endDate, businessId)}`
       );
       return res.data.data;
     } catch {
@@ -243,11 +247,12 @@ export class AnalyticsAPI {
   static async getRevenueTrends(
     range: DateRange = "this_year",
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    businessId?: number | null
   ): Promise<RevenueTrendsData | null> {
     try {
       const res = await axiosInstance.get(
-        `${BACKEND_URL}api/v1/analytics/revenue-trends?${buildQuery(range, startDate, endDate)}`
+        `${BACKEND_URL}api/v1/analytics/revenue-trends?${buildQuery(range, startDate, endDate, businessId)}`
       );
       return res.data.data;
     } catch {
@@ -386,11 +391,12 @@ export class AnalyticsAPI {
   static async getRevenueBreakdowns(
     range: DateRange = "this_year",
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    businessId?: number | null
   ): Promise<RevenueBreakdownsData | null> {
     try {
       const res = await axiosInstance.get(
-        `${BACKEND_URL}api/v1/analytics/revenue-breakdowns?${buildQuery(range, startDate, endDate)}`
+        `${BACKEND_URL}api/v1/analytics/revenue-breakdowns?${buildQuery(range, startDate, endDate, businessId)}`
       );
       return res.data.data;
     } catch {

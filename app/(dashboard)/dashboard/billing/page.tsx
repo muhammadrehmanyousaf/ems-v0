@@ -1,11 +1,10 @@
-import { BillingRedesignedView } from '@/components/dashboard/mainScreens/billing/redesigned/billing-redesigned-view';
+import { BillingArtifact } from '@/components/dashboard/mainScreens/billing/artifact/billing-artifact';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Dashboard : Plan & Billing',
-  description: 'Your Wedding Wala plan — Khata Lite, Business, or Growth.',
+  title: 'Dashboard : Plan & billing',
+  description: 'Your subscription plan, features and upgrades.',
 };
 
-export default function Page() {
-  return <BillingRedesignedView />
-}
+const page = () => <BillingArtifact />;
+export default page;

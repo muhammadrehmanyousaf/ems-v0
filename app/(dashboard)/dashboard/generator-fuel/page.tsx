@@ -1,4 +1,4 @@
-import { GeneratorFuelRedesignedView } from '@/components/dashboard/mainScreens/generator-fuel/redesigned/generator-fuel-redesigned-view';
+import { GeneratorFuelArtifact } from "@/components/dashboard/mainScreens/generator-fuel/artifact/generator-fuel-artifact";
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <GeneratorFuelRedesignedView />
+  return <GeneratorFuelArtifact />
 }

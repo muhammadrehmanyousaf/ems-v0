@@ -1,3 +1,4 @@
+import * as React from "react"
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
 
@@ -48,3 +49,23 @@ export const useThemePrefs = create<ThemePrefsState>()(
     }
   )
 )
+
+/**
+ * Resolve the light/dark mode to a concrete "light" | "dark", following the OS
+ * when mode is "system". Used to stamp `data-theme` on the champagne shell +
+ * artifact hosts so the manual light/dark toggle actually applies (the champagne
+ * CSS keys dark on `[data-theme="dark"]`). SSR-safe: defaults to "light".
+ */
+export function useResolvedThemeMode(): "light" | "dark" {
+  const mode = useThemePrefs((s) => s.mode)
+  const [sys, setSys] = React.useState<"light" | "dark">("light")
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return
+    const mq = window.matchMedia("(prefers-color-scheme: dark)")
+    const upd = () => setSys(mq.matches ? "dark" : "light")
+    upd()
+    mq.addEventListener("change", upd)
+    return () => mq.removeEventListener("change", upd)
+  }, [])
+  return mode === "system" ? sys : mode
+}

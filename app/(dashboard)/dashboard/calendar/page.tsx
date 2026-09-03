@@ -1,4 +1,4 @@
-import { CalendarRedesignedView } from "@/components/dashboard/mainScreens/calendar/redesigned/calendar-redesigned-view";
+import { CalendarArtifact } from "@/components/dashboard/mainScreens/calendar/artifact/calendar-artifact";
 // import { CalendarV2Gate } from "@/components/dashboard/mainScreens/calendar/v2/calendar-v2-gate";
 import { Metadata } from 'next';
 import React from 'react'
@@ -23,10 +23,7 @@ const page = () => {
     // the actual calendar started below the fold. Availability is a rules
     // surface you go looking for; the calendar is what the page is called.
     return (
-        <>
-            <CalendarRedesignedView />
-            {/* <CalendarV2Gate /> */}
-        </>
+        <CalendarArtifact />
     );
 }
 

@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { SearchParams } from "nuqs/parsers";
-import { BookingsRedesignedView } from "@/components/dashboard/mainScreens/bookings/redesigned/bookings-redesigned-view";
+import { BookingsArtifact } from "@/components/dashboard/mainScreens/bookings/artifact/bookings-artifact";
 
 export const metadata: Metadata = {
   title: 'Dashboard : Bookings',
@@ -12,6 +12,7 @@ type pageProps = {
 };
 
 export default function BookingsPage({ searchParams }: pageProps) {
-  return <BookingsRedesignedView />
+  void searchParams
+  return <BookingsArtifact />
 }
 

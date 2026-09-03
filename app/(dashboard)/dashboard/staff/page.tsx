@@ -1,4 +1,4 @@
-import { StaffRedesignedView } from '@/components/dashboard/mainScreens/staff/redesigned/staff-redesigned-view';
+import { StaffArtifact } from '@/components/dashboard/mainScreens/staff/artifact/staff-artifact';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <StaffRedesignedView />
+  return <StaffArtifact />
 }

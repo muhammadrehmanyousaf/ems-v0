@@ -1,4 +1,4 @@
-import { AccountSettingsRedesignedView } from "@/components/dashboard/mainScreens/settings/redesigned/account-settings-redesigned-view";
+import { ProfileArtifact } from "@/components/dashboard/mainScreens/settings/artifact/profile-artifact";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function ProfilePage() {
-  return <AccountSettingsRedesignedView />;
+  return <ProfileArtifact />;
 }

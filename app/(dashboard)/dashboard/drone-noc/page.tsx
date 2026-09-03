@@ -1,4 +1,4 @@
-import { DroneNocRedesignedView } from '@/components/dashboard/mainScreens/drone-noc/redesigned/drone-noc-redesigned-view';
+import { DroneNocArtifact } from "@/components/dashboard/mainScreens/drone-noc/artifact/drone-noc-artifact";
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <DroneNocRedesignedView />
+  return <DroneNocArtifact />
 }

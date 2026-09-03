@@ -31,7 +31,32 @@ export interface CreateRuleInput {
   enabled?: boolean;
 }
 
+/** Built-in reminder toggle (server-defined; the vendor only opts in/out). */
+export interface BuiltInReminder {
+  kind: string;
+  label: string;
+  description: string;
+  enabled: boolean;        // effective = vendorEnabled && !envDisabled
+  envFlag?: string;
+  envDisabled: boolean;    // ops kill-switch, wins over vendor pref
+  vendorEnabled: boolean;  // the per-vendor opt-out the toggle sets
+  delegated: boolean;      // handled by an external cron
+}
+export interface AutomationStatus {
+  engine: { enabled: boolean; intervalMs: number };
+  rules: BuiltInReminder[];
+}
+
 export class AutomationRulesAPI {
+  /** Built-in reminders + engine status (the toggle surface). */
+  static async getStatus(): Promise<AutomationStatus> {
+    const res = await axiosInstance.get("/api/v1/automation/status");
+    return res.data?.data ?? { engine: { enabled: false, intervalMs: 0 }, rules: [] };
+  }
+  /** Flip one built-in reminder on/off for this vendor. */
+  static async setPref(kind: string, enabled: boolean): Promise<void> {
+    await axiosInstance.patch("/api/v1/automation/prefs", { kind, enabled });
+  }
   static async list(): Promise<{ rules: AutomationRule[]; triggerTypes: TriggerType[]; actionTypes: ActionType[] }> {
     const res = await axiosInstance.get("/api/v1/automation/rules");
     return res.data?.data ?? { rules: [], triggerTypes: [], actionTypes: [] };

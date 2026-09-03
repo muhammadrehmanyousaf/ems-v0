@@ -1,12 +1,11 @@
-import { InventoryRedesignedView } from '@/components/dashboard/mainScreens/inventory/redesigned/inventory-redesigned-view';
-import type { Metadata } from 'next';
+import { InventoryArtifact } from "@/components/dashboard/mainScreens/inventory/artifact/inventory-artifact";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: 'Dashboard : Inventory',
-  description:
-    'Stock tracker for Pakistani wedding vendors — ingredients, rental fleet, equipment, consumables. Movements form an immutable audit ledger.',
+  title: "Dashboard : Inventory",
+  description: "Track your stock — items, quantities, low-stock alerts and movements.",
 };
 
 export default function Page() {
-  return <InventoryRedesignedView />
+  return <InventoryArtifact />;
 }

@@ -1,0 +1,598 @@
+<title>Khata — Rehman Grand Marquee</title>
+<style>
+/* ─────────────────────────────────────────────────────────────
+   WeddingWala — Khata / Wapsi ledger. Same locked design
+   language as docs/design-samples/vendor-dashboard.html:
+   modern-library aesthetic, one gold accent, hairline borders,
+   sans-serif, subtle status, both themes, AA, 44px targets.
+   ───────────────────────────────────────────────────────────── */
+:root{
+  --bg:#F7F6F3; --surface:#FFFFFF; --surface-2:#FAF9F6; --surface-3:#F3F1EC;
+  --ink:#1A1815; --ink-2:#605A52; --ink-3:#6E6A62; --ink-4:#8C857B;
+  --border:#EBE9E3; --border-2:#DEDBD3;
+  --accent:#B8863B; --accent-ink:#8A6220; --accent-wash:#F5EFE2; --accent-line:#E3D3AE; --on-accent:#FFFFFF;
+  --ok:#3F7A55; --ok-wash:#EEF4EF; --warn:#8A6220; --warn-wash:#F6EEDD;
+  --info:#3F6FA6; --info-wash:#EDF2F8; --bad:#A24845; --bad-wash:#F8ECEB;
+  --violet:#7A4FB0; --violet-ink:#6A3C9E; --violet-wash:#F2ECFA;
+  --shadow-xs:0 1px 2px rgba(20,18,15,.04);
+  --shadow-sm:0 1px 3px rgba(20,18,15,.06),0 1px 2px rgba(20,18,15,.04);
+  --shadow-md:0 8px 24px -12px rgba(20,18,15,.16);
+  --r:12px; --r-sm:9px; --r-xs:7px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0C0B09; --surface:#161410; --surface-2:#121009; --surface-3:#1E1B15;
+  --ink:#F5F2EC; --ink-2:#ABA498; --ink-3:#9A9184; --ink-4:#6B6558;
+  --border:#26231C; --border-2:#322E25;
+  --accent:#D8A85A; --accent-ink:#E7C079; --accent-wash:#221B10; --accent-line:#3A2F1A; --on-accent:#231A08;
+  --ok:#7FB894; --ok-wash:#16211A; --warn:#D6A94E; --warn-wash:#221B0F;
+  --info:#7FA6D6; --info-wash:#141D28; --bad:#DA9490; --bad-wash:#241614;
+  --violet:#B98FE0; --violet-ink:#C6A6E8; --violet-wash:#20172F;
+  --shadow-xs:0 1px 2px rgba(0,0,0,.4); --shadow-sm:0 1px 3px rgba(0,0,0,.5);
+  --shadow-md:0 10px 28px -12px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --bg:#0C0B09; --surface:#161410; --surface-2:#121009; --surface-3:#1E1B15;
+  --ink:#F5F2EC; --ink-2:#ABA498; --ink-3:#9A9184; --ink-4:#6B6558;
+  --border:#26231C; --border-2:#322E25;
+  --accent:#D8A85A; --accent-ink:#E7C079; --accent-wash:#221B10; --accent-line:#3A2F1A; --on-accent:#231A08;
+  --ok:#7FB894; --ok-wash:#16211A; --warn:#D6A94E; --warn-wash:#221B0F;
+  --info:#7FA6D6; --info-wash:#141D28; --bad:#DA9490; --bad-wash:#241614;
+  --violet:#B98FE0; --violet-ink:#C6A6E8; --violet-wash:#20172F;
+  --shadow-xs:0 1px 2px rgba(0,0,0,.4); --shadow-sm:0 1px 3px rgba(0,0,0,.5);
+  --shadow-md:0 10px 28px -12px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html{ -webkit-text-size-adjust:100% }
+body{ margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Geist","Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:13.5px; line-height:1.5; -webkit-font-smoothing:antialiased; letter-spacing:-.006em; }
+.tnum{ font-variant-numeric:tabular-nums; }
+h1,h2,h3{ margin:0; line-height:1.2; letter-spacing:-.02em; font-weight:600; }
+a{ color:inherit; text-decoration:none; }
+button{ font:inherit; color:inherit; cursor:pointer; }
+:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
+::selection{ background:var(--accent-wash); }
+svg{ display:block; }
+[hidden]{ display:none !important; }
+
+/* ── Shell ─────────────────────────────────────────────────── */
+.app{ display:grid; grid-template-columns:236px 1fr; min-height:100vh; }
+.side{ background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; position:sticky; top:0; height:100vh; overflow-y:auto; }
+.side-top{ display:flex; align-items:center; gap:10px; width:100%; padding:16px 16px 14px; border:0; border-bottom:1px solid var(--border); background:transparent; text-align:left; transition:background .12s; }
+.side-top:hover{ background:var(--surface-3); }
+.logo{ width:32px; height:32px; border-radius:9px; background:var(--accent); color:var(--on-accent); display:grid; place-items:center; font-weight:700; font-size:15px; flex:none; box-shadow:var(--shadow-xs); }
+.side-top .st-txt{ flex:1; min-width:0; }
+.side-top .st-name{ display:block; font-weight:600; font-size:13px; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.side-top .st-sub{ display:block; font-size:11.5px; color:var(--ink-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+.side-top .chev{ color:var(--ink-3); flex:none; }
+.nav{ padding:10px 12px 4px; }
+.side-spring{ flex:1 1 auto; min-height:14px; }
+.nav-sec{ font-size:11px; font-weight:600; letter-spacing:.04em; color:var(--ink-3); text-transform:uppercase; padding:14px 10px 6px; }
+.nav-sec:first-child{ padding-top:2px; }
+.nav a{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; min-height:36px; color:var(--ink-2); font-weight:500; font-size:13px; position:relative; transition:background .12s,color .12s; }
+.nav a svg{ width:17px; height:17px; color:var(--ink-3); flex:none; }
+.nav a:hover{ background:var(--surface-3); color:var(--ink); }
+.nav a:hover svg{ color:var(--ink-2); }
+.nav a.active{ background:var(--surface-3); color:var(--ink); font-weight:600; }
+.nav a.active svg{ color:var(--accent-ink); }
+.nav a.active::before{ content:""; position:absolute; left:0; top:9px; bottom:9px; width:2.5px; border-radius:0 3px 3px 0; background:var(--accent); }
+.nav a .badge{ margin-left:auto; font-size:11px; font-weight:600; color:var(--ink-2); background:var(--surface-3); border:1px solid var(--border); border-radius:20px; padding:0 7px; min-width:20px; text-align:center; }
+.nav a:hover .badge,.nav a.active .badge{ background:var(--surface); }
+.nav a .badge.warn{ color:var(--warn); background:var(--warn-wash); border-color:transparent; }
+.side-foot{ border-top:1px solid var(--border); padding:10px 12px; }
+.side-foot .me{ display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px; }
+.side-foot .me:hover{ background:var(--surface-3); }
+.me .m-ava{ width:30px; height:30px; border-radius:8px; background:var(--surface-3); border:1px solid var(--border-2); color:var(--ink); display:grid; place-items:center; font-weight:600; font-size:12px; flex:none; }
+.me .m-name{ font-weight:600; font-size:12.5px; }
+.me .m-sub{ font-size:11px; color:var(--ink-3); }
+.me .cog{ margin-left:auto; color:var(--ink-3); }
+.main{ min-width:0; display:flex; flex-direction:column; }
+
+/* ── Topbar ────────────────────────────────────────────────── */
+.topbar{ display:flex; align-items:center; gap:12px; padding:11px 22px; min-height:57px; border-bottom:1px solid var(--border); background:color-mix(in srgb,var(--bg) 80%,transparent); backdrop-filter:blur(10px); position:sticky; top:0; z-index:20; }
+.crumb{ font-size:13px; color:var(--ink-3); display:flex; align-items:center; gap:8px; }
+.crumb b{ color:var(--ink); font-weight:600; }
+.crumb .sep{ color:var(--border-2); }
+.tb-spring{ flex:1 }
+.search{ width:260px; display:flex; align-items:center; gap:8px; height:36px; padding:0 11px; border:1px solid var(--border); border-radius:9px; background:var(--surface); color:var(--ink-3); transition:border-color .12s; }
+.search:focus-within{ border-color:var(--border-2); }
+.search input{ border:0; background:transparent; color:var(--ink); width:100%; outline:none; font-size:13px; }
+.search input::placeholder{ color:var(--ink-3); }
+.kbd{ font-size:10.5px; color:var(--ink-3); border:1px solid var(--border); border-radius:5px; padding:1px 5px; }
+.ibtn{ width:36px; height:36px; border-radius:9px; border:1px solid var(--border); background:var(--surface); display:grid; place-items:center; color:var(--ink-2); position:relative; transition:background .12s,border-color .12s; }
+.ibtn:hover{ background:var(--surface-3); }
+.ibtn svg{ width:17px; height:17px; }
+.ibtn .dot{ position:absolute; top:7px; right:8px; width:7px; height:7px; border-radius:50%; background:var(--bad); border:1.5px solid var(--surface); }
+
+/* ── Content ──────────────────────────────────────────────── */
+.content{ padding:24px 26px 40px; max-width:1340px; width:100%; margin:0 auto; }
+.head{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px; flex-wrap:wrap; }
+.head h1{ font-size:22px; font-weight:600; letter-spacing:-.025em; }
+.head .sub{ color:var(--ink-3); font-size:13px; margin-top:5px; }
+.head .sub b{ color:var(--ink-2); font-weight:600; }
+.head-actions{ display:flex; gap:8px; }
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:7px; height:36px; padding:0 14px; border-radius:9px; font-weight:600; font-size:13px; border:1px solid transparent; white-space:nowrap; transition:background .12s,border-color .12s,box-shadow .12s; }
+.btn svg{ width:16px; height:16px; }
+.btn-primary{ background:var(--accent); color:var(--on-accent); box-shadow:var(--shadow-xs); }
+.btn-primary:hover{ filter:brightness(1.05); }
+.btn-ghost{ background:var(--surface); border-color:var(--border-2); color:var(--ink); }
+.btn-ghost:hover{ background:var(--surface-3); }
+.btn.sm{ height:32px; padding:0 11px; font-size:12.5px; }
+
+/* Summary tiles */
+.sumrow{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px; }
+.sumtile{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow-xs); padding:15px 16px 16px; position:relative; overflow:hidden; }
+.sumtile::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--tile,transparent); }
+.sumtile.in{ --tile:var(--ok); } .sumtile.due{ --tile:var(--warn); } .sumtile.out{ --tile:var(--bad); } .sumtile.mon{ --tile:var(--accent); }
+.sumtile .l{ font-size:12px; color:var(--ink-3); font-weight:600; display:flex; align-items:center; gap:7px; }
+.sumtile .l i{ width:8px; height:8px; border-radius:3px; background:var(--tile); flex:none; }
+.sumtile .v{ font-size:23px; font-weight:680; letter-spacing:-.02em; margin-top:10px; }
+.sumtile .v .rs{ font-size:12.5px; color:var(--ink-3); font-weight:600; letter-spacing:0; }
+.sumtile .d{ font-size:11.5px; margin-top:6px; color:var(--ink-3); display:flex; align-items:center; gap:5px; }
+.sumtile .d .up{ color:var(--ok); font-weight:600; } .sumtile .d .dn{ color:var(--bad); font-weight:600; }
+.sumtile .d b{ color:var(--ink-2); font-weight:600; }
+
+/* Toolbar */
+.toolbar{ display:flex; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+.tabs{ display:inline-flex; gap:2px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:3px; flex-wrap:wrap; }
+.tab{ display:inline-flex; align-items:center; gap:7px; height:30px; padding:0 11px; border-radius:7px; border:0; background:transparent; color:var(--ink-2); font-size:12.5px; font-weight:600; transition:background .12s,color .12s; }
+.tab:hover{ color:var(--ink); }
+.tab.on{ background:var(--surface); color:var(--ink); box-shadow:var(--shadow-xs); }
+.tab .dot{ width:8px; height:8px; border-radius:50%; }
+.tab .cnt{ font-size:11px; font-weight:600; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+.tab.on .cnt{ color:var(--ink-2); }
+.filters{ display:flex; align-items:center; gap:8px; margin-left:auto; }
+.f-search{ width:220px; display:flex; align-items:center; gap:8px; height:34px; padding:0 11px; border:1px solid var(--border); border-radius:9px; background:var(--surface); color:var(--ink-3); }
+.f-search input{ border:0; background:transparent; color:var(--ink); width:100%; outline:none; font-size:12.5px; }
+.f-search input::placeholder{ color:var(--ink-3); }
+.f-search svg{ width:15px; height:15px; }
+.fbtn{ display:inline-flex; align-items:center; gap:6px; height:34px; padding:0 11px; border-radius:9px; border:1px solid var(--border); background:var(--surface); color:var(--ink-2); font-size:12.5px; font-weight:600; }
+.fbtn:hover{ background:var(--surface-3); color:var(--ink); }
+.fbtn svg{ width:14px; height:14px; color:var(--ink-3); }
+
+/* Status dots + badges */
+.d-ok{ background:var(--ok); } .d-warn{ background:var(--warn); } .d-bad{ background:var(--bad); } .d-mut{ background:var(--ink-4); } .d-acc{ background:var(--accent); }
+.st{ display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:2px 8px 2px 7px; border-radius:6px; background:var(--surface-2); border:1px solid var(--border); color:var(--ink-2); white-space:nowrap; }
+.st i{ width:6px; height:6px; border-radius:50%; flex:none; }
+.st.ok{ color:var(--ok); background:var(--ok-wash); border-color:transparent; } .st.ok i{ background:var(--ok); }
+.st.warn{ color:var(--warn); background:var(--warn-wash); border-color:transparent; } .st.warn i{ background:var(--warn); }
+.st.bad{ color:var(--bad); background:var(--bad-wash); border-color:transparent; } .st.bad i{ background:var(--bad); }
+.st.mut i{ background:var(--ink-4); }
+
+/* Avatar */
+.ava{ width:34px; height:34px; border-radius:9px; flex:none; display:grid; place-items:center; font-weight:600; font-size:11px; background:var(--surface-3); border:1px solid var(--border); color:var(--ink-2); }
+
+/* Two-column layout */
+.ledlayout{ display:grid; grid-template-columns:minmax(0,1fr) 292px; gap:14px; align-items:start; }
+@media (max-width:1160px){ .ledlayout{ grid-template-columns:1fr; } }
+
+/* Ledger table */
+.card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow-xs); }
+.tbl-wrap{ overflow-x:auto; }
+table.tbl{ width:100%; border-collapse:collapse; }
+.tbl thead th{ text-align:left; font-size:11px; font-weight:600; color:var(--ink-3); text-transform:uppercase; letter-spacing:.03em; padding:11px 12px; border-bottom:1px solid var(--border); white-space:nowrap; background:var(--surface-2); }
+.tbl thead th.r{ text-align:right; }
+.tbl thead th:first-child{ border-top-left-radius:var(--r); }
+.tbl thead th:last-child{ border-top-right-radius:var(--r); }
+.tbl tbody td{ padding:12px 12px; border-bottom:1px solid var(--border); vertical-align:middle; white-space:nowrap; font-size:12.5px; }
+.tbl tbody tr:last-child td{ border-bottom:0; }
+.tbl tbody tr{ transition:background .1s; cursor:pointer; }
+.tbl tbody tr:hover{ background:var(--surface-3); }
+.td-date{ font-weight:600; color:var(--ink); } .td-date .sub{ color:var(--ink-3); font-weight:400; font-size:11px; }
+.c-who{ display:flex; align-items:center; gap:11px; }
+.cw-nm{ font-weight:600; font-size:13px; color:var(--ink); }
+.cw-ev{ font-size:11.5px; color:var(--ink-3); margin-top:1px; }
+/* purpose tag */
+.pp{ display:inline-flex; align-items:center; font-size:11px; font-weight:600; padding:2px 9px; border-radius:6px; background:var(--surface-3); border:1px solid var(--border); color:var(--ink-2); white-space:nowrap; }
+.pp.settle{ color:var(--accent-ink); background:var(--accent-wash); border-color:transparent; }
+.pp.wapsi{ color:var(--bad); background:var(--bad-wash); border-color:transparent; }
+.pp.due{ color:var(--warn); background:var(--warn-wash); border-color:transparent; }
+/* method */
+.mth{ display:inline-flex; align-items:center; gap:6px; color:var(--ink-2); font-size:12px; font-weight:500; }
+.mth svg{ width:14px; height:14px; color:var(--ink-3); }
+/* amount */
+.r{ text-align:right; }
+.amt{ font-weight:660; letter-spacing:-.01em; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.amt .rs{ font-size:11px; color:var(--ink-3); font-weight:600; }
+.amt.in{ color:var(--ok); } .amt.out{ color:var(--bad); } .amt.due{ color:var(--warn); }
+.amt .sub{ display:block; font-size:10.5px; font-weight:500; color:var(--ink-3); margin-top:1px; }
+.rec-btn{ display:inline-flex; align-items:center; gap:5px; height:28px; padding:0 10px; border-radius:7px; border:1px solid var(--accent-line); background:var(--accent-wash); color:var(--accent-ink); font-size:11.5px; font-weight:600; }
+.rec-btn:hover{ filter:brightness(.98); background:var(--accent-wash); }
+.rec-btn svg{ width:13px; height:13px; }
+.rowmenu{ width:28px; height:28px; border-radius:7px; border:0; background:transparent; color:var(--ink-3); display:grid; place-items:center; }
+.rowmenu:hover{ background:var(--surface); color:var(--ink); }
+.rowmenu svg{ width:16px; height:16px; }
+.tbl-foot{ display:flex; align-items:center; justify-content:space-between; padding:12px 15px; border-top:1px solid var(--border); font-size:12px; color:var(--ink-3); }
+.tbl-foot .pager{ display:flex; gap:6px; }
+.tbl-foot .pager button{ height:28px; min-width:28px; padding:0 8px; border-radius:7px; border:1px solid var(--border); background:var(--surface); color:var(--ink-2); font-size:12px; font-weight:600; }
+.tbl-foot .pager button.on{ background:var(--accent-wash); color:var(--accent-ink); border-color:var(--accent-line); }
+.tbl-foot .pager button:hover:not(.on){ background:var(--surface-3); }
+
+/* Right rail */
+.rail{ display:flex; flex-direction:column; gap:14px; position:sticky; top:74px; }
+.rcard{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow-xs); padding:16px; }
+.rcard h3{ font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-3); margin-bottom:0; display:flex; align-items:center; justify-content:space-between; }
+.rcard h3 a{ font-size:11px; font-weight:600; color:var(--accent-ink); text-transform:none; letter-spacing:0; }
+/* is mahine */
+.mon-big{ font-size:26px; font-weight:680; letter-spacing:-.02em; margin:12px 0 2px; }
+.mon-big .rs{ font-size:13px; color:var(--ink-3); font-weight:600; }
+.mon-cap{ font-size:11.5px; color:var(--ink-3); }
+.mon-cap .up{ color:var(--ok); font-weight:600; }
+.mbar{ display:flex; height:8px; border-radius:5px; overflow:hidden; margin:14px 0 12px; background:var(--surface-3); }
+.mbar span{ display:block; height:100%; }
+.dl{ display:flex; flex-direction:column; gap:0; }
+.dl-row{ display:flex; align-items:center; gap:9px; padding:8px 0; border-top:1px solid var(--border); font-size:12.5px; }
+.dl-row:first-child{ border-top:0; }
+.dl-row .k{ display:flex; align-items:center; gap:8px; color:var(--ink-2); }
+.dl-row .k i{ width:8px; height:8px; border-radius:3px; flex:none; }
+.dl-row .val{ margin-left:auto; font-weight:660; font-variant-numeric:tabular-nums; }
+.dl-row.net{ border-top:1.5px solid var(--border-2); margin-top:2px; }
+.dl-row.net .k{ color:var(--ink); font-weight:600; } .dl-row.net .val{ color:var(--accent-ink); }
+/* baqaya + wapsi items */
+.qitem{ display:flex; align-items:center; gap:11px; padding:11px 0; border-top:1px solid var(--border); }
+.qitem:first-child{ border-top:0; }
+.qitem .ava{ width:32px; height:32px; }
+.q-main{ flex:1; min-width:0; }
+.q-nm{ font-weight:600; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.q-sub{ font-size:11px; color:var(--ink-3); margin-top:1px; display:flex; align-items:center; gap:6px; }
+.q-amt{ text-align:right; }
+.q-amt .a{ font-weight:660; font-size:12.5px; font-variant-numeric:tabular-nums; }
+.q-amt.due .a{ color:var(--warn); } .q-amt.out .a{ color:var(--bad); }
+.q-act{ margin-top:11px; }
+.q-btn{ width:100%; height:34px; border-radius:8px; border:1px solid var(--border-2); background:var(--surface); color:var(--ink); font-size:12.5px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:7px; }
+.q-btn:hover{ background:var(--surface-3); }
+.q-btn svg{ width:14px; height:14px; }
+.q-btn.primary{ background:var(--accent); color:var(--on-accent); border-color:transparent; box-shadow:var(--shadow-xs); }
+.q-btn.primary:hover{ filter:brightness(1.05); }
+.urg{ font-size:10px; font-weight:700; padding:1px 6px; border-radius:5px; white-space:nowrap; }
+.urg.hi{ color:var(--bad); background:var(--bad-wash); } .urg.mid{ color:var(--warn); background:var(--warn-wash); }
+.wapsi-item{ border-left:2px solid transparent; }
+
+.foot{ text-align:center; color:var(--ink-4); font-size:11.5px; margin-top:26px; }
+
+@media (max-width:900px){
+  .sumrow{ grid-template-columns:repeat(2,1fr); }
+  .filters{ margin-left:0; width:100%; } .f-search{ flex:1; width:auto; }
+}
+@media (max-width:820px){
+  .app{ grid-template-columns:1fr; }
+  .side{ position:fixed; left:0; top:0; bottom:0; width:236px; transform:translateX(-100%); z-index:50; transition:transform .2s; }
+  .content{ padding:20px 16px 40px; }
+  .search{ display:none; }
+}
+@media (max-width:520px){ .sumrow{ grid-template-columns:1fr; } }
+@media (prefers-reduced-motion:reduce){ *{ transition:none !important; animation:none !important; } }
+
+/* ── Scrollbars — thin, subtle, theme-aware ─────────────────── */
+*{ scrollbar-width:thin; scrollbar-color:var(--border-2) transparent; }
+::-webkit-scrollbar{ width:11px; height:11px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background-color:var(--border-2); border-radius:20px; border:3px solid transparent; background-clip:padding-box; }
+::-webkit-scrollbar-thumb:hover{ background-color:var(--ink-4); border:3px solid transparent; background-clip:padding-box; }
+::-webkit-scrollbar-corner{ background:transparent; }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<div class="app">
+  <!-- SIDEBAR (identical shell; Khata active) -->
+  <aside class="side">
+    <button class="side-top" aria-haspopup="listbox">
+      <span class="logo" aria-hidden="true">R</span>
+      <span class="st-txt">
+        <span class="st-name">Rehman Grand Marquee</span>
+        <span class="st-sub">Lahore · Johar Town</span>
+      </span>
+      <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"/></svg>
+    </button>
+    <nav class="nav" aria-label="Main">
+      <div class="nav-sec">Console</div>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg> Overview</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M8 2v4M16 2v4M4 10h16"/></svg> Bookings <span class="badge">9</span></a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg> Calendar</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Chat</a>
+      <div class="nav-sec">Paisa</div>
+      <a href="#" class="active" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg> Khata</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/></svg> Wapsi <span class="badge warn">3</span></a>
+      <div class="nav-sec">Grow</div>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M15 11a3 3 0 1 0 0-6M3 20c0-3 2.7-5 6-5s6 2 6 5M17 20c0-2.2-.9-3.8-2.2-4.6"/></svg> Leads</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/></svg> Reports</a>
+    </nav>
+    <div class="side-spring"></div>
+    <div class="side-foot">
+      <div class="me" role="button" tabindex="0">
+        <span class="m-ava" aria-hidden="true">RY</span>
+        <span><span class="m-name">Rehman Yousaf</span><br><span class="m-sub">Owner</span></span>
+        <svg class="cog" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8 2 2 0 1 1-2.8 2.8 1.6 1.6 0 0 0-2.7 1.1 2 2 0 1 1-4 0A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3 2 2 0 1 1-2.8-2.8A1.6 1.6 0 0 0 3 14.1a2 2 0 1 1 0-4A1.6 1.6 0 0 0 4.6 7a1.6 1.6 0 0 0-.3-1.8 2 2 0 1 1 2.8-2.8A1.6 1.6 0 0 0 10 3a2 2 0 1 1 4 0 1.6 1.6 0 0 0 3 1.6 2 2 0 1 1 2.8 2.8A1.6 1.6 0 0 0 21 10a2 2 0 1 1 0 4"/></svg>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="crumb"><b>Khata</b><span class="sep">/</span>Paisa ka hisaab</div>
+      <div class="tb-spring"></div>
+      <label class="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input placeholder="Search…" aria-label="Search">
+        <span class="kbd">⌘K</span>
+      </label>
+      <button class="ibtn" onclick="toggleTheme()" title="Theme" aria-label="Toggle theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
+      <button class="ibtn" aria-label="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span class="dot"></span></button>
+    </header>
+
+    <div class="content">
+      <!-- HEAD -->
+      <div class="head">
+        <div>
+          <h1>Khata</h1>
+          <div class="sub">Har booking ka paisa — kya aya, kya baqaya, kya wapsi. Is mahine <b>Rs 8,75,000</b> aya.</div>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Export</button>
+          <button class="btn btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> Payment record karein</button>
+        </div>
+      </div>
+
+      <!-- SUMMARY TILES -->
+      <div class="sumrow">
+        <div class="sumtile in">
+          <div class="l"><i></i> Kul aya (is saal)</div>
+          <div class="v tnum"><span class="rs">Rs</span> 62,40,000</div>
+          <div class="d"><span class="up">▲ 12%</span> pichle saal se</div>
+        </div>
+        <div class="sumtile due">
+          <div class="l"><i></i> Baqaya</div>
+          <div class="v tnum"><span class="rs">Rs</span> 13,00,000</div>
+          <div class="d"><b>5 bookings</b> par pending</div>
+        </div>
+        <div class="sumtile out">
+          <div class="l"><i></i> Wapsi pending</div>
+          <div class="v tnum"><span class="rs">Rs</span> 1,45,000</div>
+          <div class="d"><b>3 requests</b> · 1 urgent</div>
+        </div>
+        <div class="sumtile mon">
+          <div class="l"><i></i> Is mahine aya</div>
+          <div class="v tnum"><span class="rs">Rs</span> 8,75,000</div>
+          <div class="d"><span class="up">▲ 18%</span> pichle mahine se</div>
+        </div>
+      </div>
+
+      <!-- TOOLBAR -->
+      <div class="toolbar">
+        <div class="tabs" id="tabs" role="tablist" aria-label="Filter">
+          <button class="tab on" data-f="all">Sab <span class="cnt">10</span></button>
+          <button class="tab" data-f="aya"><span class="dot d-ok"></span> Aya <span class="cnt">6</span></button>
+          <button class="tab" data-f="due"><span class="dot d-warn"></span> Baqaya <span class="cnt">2</span></button>
+          <button class="tab" data-f="wapsi"><span class="dot d-bad"></span> Wapsi <span class="cnt">2</span></button>
+          <button class="tab" data-f="settled"><span class="dot d-mut"></span> Settled <span class="cnt">2</span></button>
+        </div>
+        <div class="filters">
+          <label class="f-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input placeholder="Couple ya booking # dhoondein…" aria-label="Filter">
+          </label>
+          <button class="fbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M7 12h10M10 18h4"/></svg> Is mahine</button>
+        </div>
+      </div>
+
+      <div class="ledlayout">
+        <!-- LEDGER -->
+        <div class="card">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr>
+                <th>Taareekh</th><th>Kis ka</th><th>Kis liye</th><th>Tareeqa</th>
+                <th class="r">Raqam</th><th>Status</th><th></th>
+              </tr></thead>
+              <tbody id="tbody">
+                <!-- due: Ahmed baqaya (aaj) -->
+                <tr data-status="due">
+                  <td class="td-date">30 Aug<div class="sub">aaj — due</div></td>
+                  <td><div class="c-who"><span class="ava">A&amp;M</span><div><div class="cw-nm">Ahmed &amp; Mariam</div><div class="cw-ev">Walima · #712</div></div></div></td>
+                  <td><span class="pp due">Baqaya</span></td>
+                  <td><span class="mth">—</span></td>
+                  <td class="r"><span class="amt due"><span class="rs">Rs</span> 2,00,000<span class="sub">event se pehle</span></span></td>
+                  <td><span class="st warn"><i></i> Baqaya due</span></td>
+                  <td><button class="rec-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> Record</button></td>
+                </tr>
+                <!-- aya: Ahmed doosri qist -->
+                <tr data-status="aya">
+                  <td class="td-date">30 Aug<div class="sub">11:20 AM</div></td>
+                  <td><div class="c-who"><span class="ava">A&amp;M</span><div><div class="cw-nm">Ahmed &amp; Mariam</div><div class="cw-ev">Walima · #712</div></div></div></td>
+                  <td><span class="pp">Doosri qist</span></td>
+                  <td><span class="mth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg> Bank</span></td>
+                  <td class="r"><span class="amt in">+ <span class="rs">Rs</span> 3,00,000<span class="sub">baqaya 2,00,000</span></span></td>
+                  <td><span class="st ok"><i></i> Aya</span></td>
+                  <td><button class="rowmenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button></td>
+                </tr>
+                <!-- aya: Hamza advance -->
+                <tr data-status="aya">
+                  <td class="td-date">30 Aug<div class="sub">9:05 AM</div></td>
+                  <td><div class="c-who"><span class="ava">H&amp;S</span><div><div class="cw-nm">Hamza &amp; Sana</div><div class="cw-ev">Barat · #708</div></div></div></td>
+                  <td><span class="pp">Advance</span></td>
+                  <td><span class="mth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 18h6"/></svg> EasyPaisa</span></td>
+                  <td class="r"><span class="amt in">+ <span class="rs">Rs</span> 1,40,000<span class="sub">baqaya 2,80,000</span></span></td>
+                  <td><span class="st ok"><i></i> Aya</span></td>
+                  <td><button class="rowmenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button></td>
+                </tr>
+                <!-- due: Fatima baqaya -->
+                <tr data-status="due">
+                  <td class="td-date">15 Sept<div class="sub">due</div></td>
+                  <td><div class="c-who"><span class="ava">F&amp;A</span><div><div class="cw-nm">Fatima &amp; Ali</div><div class="cw-ev">Walima · #715</div></div></div></td>
+                  <td><span class="pp due">Baqaya</span></td>
+                  <td><span class="mth">—</span></td>
+                  <td class="r"><span class="amt due"><span class="rs">Rs</span> 6,10,000<span class="sub">16 din baaki</span></span></td>
+                  <td><span class="st warn"><i></i> Baqaya due</span></td>
+                  <td><button class="rec-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> Record</button></td>
+                </tr>
+                <!-- aya: Waleed booking fee -->
+                <tr data-status="aya">
+                  <td class="td-date">29 Aug<div class="sub">6:40 PM</div></td>
+                  <td><div class="c-who"><span class="ava">W&amp;M</span><div><div class="cw-nm">Waleed &amp; Mahira</div><div class="cw-ev">Barat · #721</div></div></div></td>
+                  <td><span class="pp">Booking fee</span></td>
+                  <td><span class="mth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg> Bank</span></td>
+                  <td class="r"><span class="amt in">+ <span class="rs">Rs</span> 2,00,000<span class="sub">baqaya 5,40,000</span></span></td>
+                  <td><span class="st ok"><i></i> Aya</span></td>
+                  <td><button class="rowmenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button></td>
+                </tr>
+                <!-- wapsi: Nadia cancel refund -->
+                <tr data-status="wapsi">
+                  <td class="td-date">28 Aug<div class="sub">2:10 PM</div></td>
+                  <td><div class="c-who"><span class="ava">NK</span><div><div class="cw-nm">Nadia Khan</div><div class="cw-ev">Mehndi · cancel</div></div></div></td>
+                  <td><span class="pp wapsi">Wapsi</span></td>
+                  <td><span class="mth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg> Bank</span></td>
+                  <td class="r"><span class="amt out">− <span class="rs">Rs</span> 45,000<span class="sub">advance wapas</span></span></td>
+                  <td><span class="st bad"><i></i> Wapsi</span></td>
+                  <td><button class="rowmenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button></td>
+                </tr>
+                <!-- aya: Fatima advance -->
+                <tr data-status="aya">
+                  <td class="td-date">27 Aug<div class="sub">1:30 PM</div></td>
+                  <td><div class="c-who"><span class="ava">F&amp;A</span><div><div class="cw-nm">Fatima &amp; Ali</div><div class="cw-ev">Walima · #715</div></div></div></td>
+                  <td><span class="pp">Advance</span></td>
+                  <td><span class="mth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v10H3zM3 11h18"/></svg> Cash</span></td>
+                  <td class="r"><span class="amt in">+ <span class="rs">Rs</span> 2,00,000<span class="sub">baqaya 6,10,000</span></span></td>
+                  <td><span class="st ok"><i></i> Aya</span></td>
+                  <td><button class="rowmenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button></td>
+                </tr>
+                <!-- wapsi: Imran overcharge partial -->
+                <tr data-status="wapsi">
+                  <td class="td-date">24 Aug<div class="sub">4:00 PM</div></td>
+                  <td><div class="c-who"><span class="ava">I&amp;Z</span><div><div class="cw-nm">Imran &amp; Zoya</div><div class="cw-ev">Nikah · #698</div></div></div></td>
+                  <td><span class="pp wapsi">Wapsi</span></td>
+                  <td><span class="mth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 18h6"/></svg> EasyPaisa</span></td>
+                  <td class="r"><span class="amt out">− <span class="rs">Rs</span> 20,000<span class="sub">extra charge wapas</span></span></td>
+                  <td><span class="st bad"><i></i> Wapsi</span></td>
+                  <td><button class="rowmenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button></td>
+                </tr>
+                <!-- settled: Kamran final -->
+                <tr data-status="settled">
+                  <td class="td-date">25 Aug<div class="sub">7:00 PM</div></td>
+                  <td><div class="c-who"><span class="ava">K&amp;R</span><div><div class="cw-nm">Kamran &amp; Rabia</div><div class="cw-ev">Barat · #689</div></div></div></td>
+                  <td><span class="pp settle">Settle</span></td>
+                  <td><span class="mth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v10H3zM3 11h18"/></svg> Cash</span></td>
+                  <td class="r"><span class="amt in">+ <span class="rs">Rs</span> 1,20,000<span class="sub">poora settle</span></span></td>
+                  <td><span class="st mut"><i></i> Settled</span></td>
+                  <td><button class="rowmenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button></td>
+                </tr>
+                <!-- settled: Zainab settle -->
+                <tr data-status="settled">
+                  <td class="td-date">20 Aug<div class="sub">5:15 PM</div></td>
+                  <td><div class="c-who"><span class="ava">Z&amp;H</span><div><div class="cw-nm">Zainab &amp; Hassan</div><div class="cw-ev">Nikah · #710</div></div></div></td>
+                  <td><span class="pp settle">Settle</span></td>
+                  <td><span class="mth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg> Bank</span></td>
+                  <td class="r"><span class="amt in">+ <span class="rs">Rs</span> 1,50,000<span class="sub">poora settle</span></span></td>
+                  <td><span class="st mut"><i></i> Settled</span></td>
+                  <td><button class="rowmenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tbl-foot">
+            <span id="rowcount">10 entries dikhaye ja rahe hain</span>
+            <div class="pager"><button>‹</button><button class="on">1</button><button>2</button><button>›</button></div>
+          </div>
+        </div>
+
+        <!-- RIGHT RAIL -->
+        <aside class="rail">
+          <!-- Is mahine -->
+          <div class="rcard">
+            <h3>Is mahine ka hisaab <a href="#">Agast</a></h3>
+            <div class="mon-big tnum"><span class="rs">Rs</span> 8,10,000 <span style="font-size:12px;color:var(--ink-3);font-weight:600">net</span></div>
+            <div class="mon-cap"><span class="up">▲ 18%</span> pichle mahine se · Rs 8,75,000 aya</div>
+            <div class="mbar">
+              <span style="width:48%;background:var(--ok)"></span>
+              <span style="width:34%;background:var(--accent)"></span>
+              <span style="width:11%;background:var(--info)"></span>
+              <span style="width:7%;background:var(--bad)"></span>
+            </div>
+            <div class="dl">
+              <div class="dl-row"><span class="k"><i style="background:var(--ok)"></i> Advance</span><span class="val tnum">4,20,000</span></div>
+              <div class="dl-row"><span class="k"><i style="background:var(--accent)"></i> Qist / Settle</span><span class="val tnum">2,90,000</span></div>
+              <div class="dl-row"><span class="k"><i style="background:var(--info)"></i> Booking fee</span><span class="val tnum">1,00,000</span></div>
+              <div class="dl-row"><span class="k"><i style="background:var(--bad)"></i> Wapsi</span><span class="val tnum" style="color:var(--bad)">− 65,000</span></div>
+              <div class="dl-row net"><span class="k">Net aamdani</span><span class="val tnum">Rs 8,10,000</span></div>
+            </div>
+          </div>
+
+          <!-- Baqaya top -->
+          <div class="rcard">
+            <h3>Baqaya — sab se zyada</h3>
+            <div style="margin-top:12px">
+              <div class="qitem">
+                <span class="ava">F&amp;A</span>
+                <div class="q-main"><div class="q-nm">Fatima &amp; Ali</div><div class="q-sub">Walima · #715 · 15 Sept</div></div>
+                <div class="q-amt due"><div class="a tnum">6,10,000</div></div>
+              </div>
+              <div class="qitem">
+                <span class="ava">W&amp;M</span>
+                <div class="q-main"><div class="q-nm">Waleed &amp; Mahira</div><div class="q-sub">Barat · #721 · 21 Sept</div></div>
+                <div class="q-amt due"><div class="a tnum">5,40,000</div></div>
+              </div>
+              <div class="qitem">
+                <span class="ava">A&amp;M</span>
+                <div class="q-main"><div class="q-nm">Ahmed &amp; Mariam</div><div class="q-sub"><span class="urg mid">aaj due</span> Walima · #712</div></div>
+                <div class="q-amt due"><div class="a tnum">2,00,000</div></div>
+              </div>
+            </div>
+            <div class="q-act"><button class="q-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Sab ko yaad dilayein</button></div>
+          </div>
+
+          <!-- Wapsi queue -->
+          <div class="rcard">
+            <h3>Wapsi — jaldi karein <a href="#">Sab</a></h3>
+            <div style="margin-top:12px">
+              <div class="qitem wapsi-item" style="border-left-color:var(--bad); padding-left:11px">
+                <span class="ava">SR</span>
+                <div class="q-main"><div class="q-nm">Sana Riaz</div><div class="q-sub"><span class="urg hi">5 din se</span> cancel · advance</div></div>
+                <div class="q-amt out"><div class="a tnum">80,000</div></div>
+              </div>
+              <div class="qitem">
+                <span class="ava">UF</span>
+                <div class="q-main"><div class="q-nm">Umar Farooq</div><div class="q-sub"><span class="urg mid">2 din se</span> date change</div></div>
+                <div class="q-amt out"><div class="a tnum">45,000</div></div>
+              </div>
+              <div class="qitem">
+                <span class="ava">TG</span>
+                <div class="q-main"><div class="q-nm">Tania Gul</div><div class="q-sub">extra charge wapas</div></div>
+                <div class="q-amt out"><div class="a tnum">20,000</div></div>
+              </div>
+            </div>
+            <div class="q-act"><button class="q-btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/></svg> Wapsi process karein</button></div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="foot">WeddingWala vendor console · Khata / Wapsi — same locked design language (docs/design-samples/)</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleTheme(){
+  const r=document.documentElement, cur=r.getAttribute('data-theme');
+  const dark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+  const next=cur? (cur==='dark'?'light':'dark') : (dark?'light':'dark');
+  r.setAttribute('data-theme',next);
+  try{localStorage.setItem('ww-theme',next);}catch(e){}
+}
+try{const t=localStorage.getItem('ww-theme'); if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}
+
+/* Status filter tabs */
+(function(){
+  const tabs=document.getElementById('tabs');
+  const rows=[...document.querySelectorAll('#tbody tr')];
+  const count=document.getElementById('rowcount');
+  tabs.addEventListener('click',e=>{
+    const b=e.target.closest('.tab'); if(!b)return;
+    tabs.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+    b.classList.add('on');
+    const f=b.dataset.f; let n=0;
+    rows.forEach(r=>{ const show=f==='all'||r.dataset.status===f; r.hidden=!show; if(show)n++; });
+    count.textContent=n+' '+(n===1?'entry':'entries')+' dikhaye ja rahe hain';
+  });
+})();
+</script>

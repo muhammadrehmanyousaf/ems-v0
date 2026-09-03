@@ -25,6 +25,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Cookie, X } from "lucide-react"
 
 const COOKIE_NAME = "wedding_wala_consent"
@@ -151,6 +152,7 @@ function useReservedSpace(open: boolean, el: HTMLElement | null) {
 }
 
 export function CookieConsent() {
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
   const [analytics, setAnalytics] = useState(true)
@@ -166,6 +168,11 @@ export function CookieConsent() {
   }, [])
 
   useReservedSpace(open, bannerEl)
+
+  // Not on the authenticated dashboard — a logged-in vendor already has
+  // essential cookies, and the banner has no reserved-space anchor inside the
+  // shadow-DOM app shell, so it floated over the console's content.
+  if (pathname?.startsWith("/dashboard")) return null
 
   if (!open) return null
 

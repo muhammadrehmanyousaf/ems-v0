@@ -1,13 +1,12 @@
-import { CustomersRedesignedView } from "@/components/dashboard/mainScreens/customers/redesigned/customers-redesigned-view";
+import { CustomersArtifact } from "@/components/dashboard/mainScreens/customers/artifact/customers-artifact";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: 'Dashboard : Customers',
-  description: 'Basic dashboard with Next.js and Shadcn'
+  description: 'Your customer book — bookings, repeat customers and contact.'
 };
 
-
 export default function CustomersPage() {
-  return <CustomersRedesignedView />
+  return <CustomersArtifact />
 }
 

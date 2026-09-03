@@ -1,12 +1,10 @@
-import { ReceiptsRedesignedView } from '@/components/dashboard/mainScreens/receipts/redesigned/receipts-redesigned-view';
+import { ReceiptsArtifact } from '@/components/dashboard/mainScreens/receipts/artifact/receipts-artifact';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Dashboard : Payment Receipts',
-  description:
-    'Cash + digital payment receipt tracking for Pakistani wedding vendors — JazzCash, Easypaisa, Raast, IBFT.',
+  title: 'Dashboard : Receipts',
+  description: 'Record and manage the payments you have received, by method.',
 };
 
-export default function Page() {
-  return <ReceiptsRedesignedView />
-}
+const page = () => <ReceiptsArtifact />;
+export default page;

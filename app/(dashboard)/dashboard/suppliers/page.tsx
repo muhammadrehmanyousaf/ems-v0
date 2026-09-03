@@ -1,4 +1,4 @@
-import { SuppliersRedesignedView } from '@/components/dashboard/mainScreens/suppliers/redesigned/suppliers-redesigned-view';
+import { SuppliersArtifact } from "@/components/dashboard/mainScreens/suppliers/artifact/suppliers-artifact";
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <SuppliersRedesignedView />
+  return <SuppliersArtifact />
 }

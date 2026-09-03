@@ -16,6 +16,7 @@ import { CITIES } from "@/lib/seo/constants"
 import { useBeforeUnloadGuard } from "@/lib/hooks/useBeforeUnloadGuard"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { BusinessesAPI, type ApiBusiness } from "@/lib/api/dashboard"
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { EmptyState } from "@/components/dashboard/primitives/empty-state"
 import { DetailSkeleton } from "@/components/dashboard/primitives/skeletons"
@@ -226,8 +227,20 @@ export function BusinessSettingsHubView() {
      `?biz=<id>` makes the choice linkable and survives a reload; it falls back
      to the first business, so single-venue vendors see no change at all. */
   const bizParam = Number(searchParams?.get("biz")) || null
-  const [pickedId, setPickedId] = React.useState<number | null>(bizParam)
+  // Default to the venue chosen in the global champagne switcher so opening
+  // Settings edits the SAME venue the rest of the console is scoped to (WWL-QA
+  // 2026-09-03: previously it always defaulted to businesses[0], so switching to
+  // e.g. a QA venue globally then opening Settings still showed the first venue —
+  // a jarring mismatch, and bank-details/pricing edited against the wrong venue).
+  // An explicit ?biz= (the in-hub picker) still wins; null active = "All venues"
+  // falls back to businesses[0] exactly as before, so single-venue vendors and the
+  // existing deep-link behaviour are unchanged.
+  const activeBusinessId = useActiveBusinessId()
+  const [pickedId, setPickedId] = React.useState<number | null>(bizParam ?? activeBusinessId)
   React.useEffect(() => { if (bizParam) setPickedId(bizParam) }, [bizParam])
+  React.useEffect(() => {
+    if (!bizParam && activeBusinessId != null) setPickedId(activeBusinessId)
+  }, [activeBusinessId, bizParam])
   const biz =
     (pickedId ? businesses?.find((b) => b.id === pickedId) : undefined) ??
     businesses?.[0]

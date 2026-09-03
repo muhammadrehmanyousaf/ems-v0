@@ -1,5 +1,4 @@
-import PageContainer from '@/components/dashboard/layout/page-container';
-import LeadDetailView from '@/components/dashboard/mainScreens/leads/lead-detail-view';
+import { LeadDetailArtifact } from '@/components/dashboard/mainScreens/leads/artifact/lead-detail-artifact';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -15,10 +14,5 @@ export const metadata: Metadata = {
  * function sheet) has one, but the place money STARTS was a row in a list.
  */
 export default function Page({ params }: { params: { id: string } }) {
-  const leadId = Number(params.id);
-  return (
-    <PageContainer>
-      <LeadDetailView leadId={leadId} />
-    </PageContainer>
-  );
+  return <LeadDetailArtifact leadId={Number(params.id)} />;
 }

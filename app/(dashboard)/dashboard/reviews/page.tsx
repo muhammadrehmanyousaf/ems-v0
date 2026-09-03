@@ -1,4 +1,4 @@
-import ReviewsListingView from '@/components/dashboard/mainScreens/reviews/reviewsListing/reviews-listing-view';
+import { ReviewsArtifact } from '@/components/dashboard/mainScreens/reviews/artifact/reviews-artifact';
 import { Metadata } from 'next';
 import React from 'react'
 
@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 const page = () => {
-  return <ReviewsListingView/>
+  return <ReviewsArtifact/>
 }
 
 export default page

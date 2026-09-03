@@ -1,4 +1,4 @@
-import { BrokersRedesignedView } from '@/components/dashboard/mainScreens/brokers/redesigned/brokers-redesigned-view';
+import { BrokersArtifact } from "@/components/dashboard/mainScreens/brokers/artifact/brokers-artifact";
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <BrokersRedesignedView />
+  return <BrokersArtifact />
 }
