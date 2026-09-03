@@ -38,6 +38,94 @@ export interface InstallmentsResponse {
   totals: { scheduled: number; paid: number; outstanding: number };
 }
 
+// WW-SETTLEMENT — the final bill (GET /:id/settlement, read-only preview).
+// Two shapes on `settleable`: a per-head booking returns the full quote; a flat
+// booking returns `{ settleable:false, reason }`. See bookingSettlementService.
+export interface SettlementLine {
+  label: string;
+  heads: number;
+  rate: number;
+  amount: number;
+  why?: string;
+}
+
+export interface SettlementBalance {
+  quotedTotal: number;
+  baselineFood: number;
+  settledFood: number;
+  variance: number;
+  settledTotal: number;
+  alreadyPaid: number;
+  outstanding: number;
+  source: "installments" | "transactions" | "none" | "unavailable";
+}
+
+export interface SettlementPreview {
+  settleable: boolean;
+  reason?: string;
+  bookingId: number;
+  locked?: boolean;
+  lockedAt?: string | null;
+  settled?: boolean;
+  settledAt?: string | null;
+  rate?: number;
+  rateLabel?: string | null;
+  mode?: "per_head" | "excess_only" | "none";
+  guaranteed?: number;
+  statedTotal?: number;
+  totalAmount?: number;
+  heads?: { billableHeads: number; staff?: number; [k: string]: unknown };
+  bill?: {
+    guaranteed: number;
+    actual: number;
+    billedHeads?: number;
+    normalRate?: number;
+    walkInRate?: number;
+    food: number;
+    lines?: SettlementLine[];
+  };
+  staffMeals?: { count: number; rate: number; amount: number } | null;
+  crewMeals?: { count: number; rate: number; amount: number } | null;
+  foodTotal?: number;
+  balance?: SettlementBalance;
+  cashSettlement?: {
+    totalPkr: number;
+    handovers: { at: string; amountPkr: number; reference?: string | null }[];
+  };
+  amended?: boolean;
+  amendments?: { supersededAt: string; billedFood?: number; statedTotal?: number }[];
+  terms?: string | null;
+}
+
+// WW-DEPOSIT A17/A18 — security deposit + damage claims against it.
+// GET /:id/deposit (both parties); vendor-only writes. Arithmetic lives in
+// backend utils/depositLedger.js — the client only renders the position.
+export type DamageClaimStatus = "open" | "accepted" | "disputed" | "settled" | "withdrawn";
+export interface DamageClaimLine {
+  id: number;
+  description: string;
+  amountPkr: number;
+  status: DamageClaimStatus;
+  deductedFromDepositPkr: number | null;
+  photos: number;
+}
+export interface DepositPosition {
+  bookingId: number;
+  deposit: number;                 // securityDepositPkr held
+  status: string | null;           // pending / held / returned / partially_returned…
+  claimed: number;                 // asked across live claims
+  settledClaimTotal: number;
+  deducted: number;                // actually taken from the deposit
+  returnable: number;              // deposit − deducted
+  shortfall: number;               // settled claims beyond the deposit (a real debt)
+  openClaims: number;
+  disputedClaims: number;
+  lines: DamageClaimLine[];
+  viewerIsVendor: boolean;
+  viewerIsCustomer: boolean;
+  returnedAt?: string | null;
+}
+
 // BK-054 + BK-055 + BK-056 — mid-booking change requests.
 export type ChangeRequestStatus =
   | "pending"
@@ -155,6 +243,100 @@ export class BookingAPI {
     bookingId: number,
   ): Promise<InstallmentsResponse> {
     const res = await axiosInstance.get(`${v1}/${bookingId}/installments`);
+    return res.data?.data;
+  }
+
+  // WW-SETTLEMENT — read the final bill (or the "not settled on headcount"
+  // reason). Read-only; safe to show at any time. Optional `counts` lets the
+  // vendor model "what if N turn up?" before committing (server query params).
+  static async getSettlement(
+    bookingId: number,
+    counts?: { total?: number; kidsUnder5?: number; kids5to12?: number; staff?: number; crew?: number },
+  ): Promise<SettlementPreview> {
+    const res = await axiosInstance.get(`${v1}/${bookingId}/settlement`, {
+      params: counts && counts.total != null ? counts : undefined,
+    });
+    return res.data?.data;
+  }
+
+  // WW-DEPOSIT — the security-deposit position (held / deducted / returnable +
+  // damage claims). Readable by both parties.
+  static async getDeposit(bookingId: number): Promise<DepositPosition> {
+    const res = await axiosInstance.get(`${v1}/${bookingId}/deposit`);
+    return res.data?.data;
+  }
+
+  // Hand the returnable balance back to the customer. Refuses if claims are open.
+  static async returnDeposit(bookingId: number, note?: string): Promise<DepositPosition> {
+    const res = await axiosInstance.post(`${v1}/${bookingId}/deposit/return`, { note });
+    return res.data?.data;
+  }
+
+  // Vendor raises a damage claim against the deposit (event must have happened).
+  static async raiseDamageClaim(
+    bookingId: number,
+    body: { description: string; amountPkr: number; photos?: string[] },
+  ): Promise<unknown> {
+    const res = await axiosInstance.post(`${v1}/${bookingId}/damage-claims`, body);
+    return res.data?.data;
+  }
+
+  // Settle a claim — the only move that takes money from the deposit. `deductPkr`
+  // omitted = take the full claim amount (capped at the returnable balance).
+  static async settleDamageClaim(
+    bookingId: number,
+    claimId: number,
+    body: { deductPkr?: number; note?: string } = {},
+  ): Promise<unknown> {
+    const res = await axiosInstance.post(`${v1}/${bookingId}/damage-claims/${claimId}/settle`, body);
+    return res.data?.data;
+  }
+
+  static async withdrawDamageClaim(bookingId: number, claimId: number): Promise<unknown> {
+    const res = await axiosInstance.post(`${v1}/${bookingId}/damage-claims/${claimId}/withdraw`, {});
+    return res.data?.data;
+  }
+
+  // WW-SETTLEMENT — record the count from the night and FREEZE the final bill.
+  // Vendor-only; server re-prices on the per-head rate the booking was sold on.
+  // Re-settling overwrites the snapshot but keeps an amendment trail (both parties
+  // can see the number moved). Returns the struck preview.
+  static async settle(
+    bookingId: number,
+    body: { total: number; kidsUnder5?: number; kids5to12?: number; staff?: number; crew?: number; note?: string },
+  ): Promise<SettlementPreview> {
+    const res = await axiosInstance.post(`${v1}/${bookingId}/settle`, body);
+    return res.data?.data;
+  }
+
+  // WW-SETTLEMENT — freeze the guarantee before the night (optional). Returns the
+  // updated preview.
+  static async lockHeadcount(
+    bookingId: number,
+    body: { guaranteed?: number } = {},
+  ): Promise<SettlementPreview> {
+    const res = await axiosInstance.post(`${v1}/${bookingId}/headcount-lock`, body);
+    return res.data?.data;
+  }
+
+  // WW-SETTLEMENT — the balance handed over in cash on the night, against the
+  // struck bill. Omit `amountPkr` to settle the whole outstanding balance.
+  static async confirmCashSettlement(
+    bookingId: number,
+    body: { amountPkr?: number; reference?: string; note?: string } = {},
+  ): Promise<SettlementPreview> {
+    const res = await axiosInstance.post(`${v1}/${bookingId}/settlement/confirm-cash`, body);
+    return res.data?.data;
+  }
+
+  // Phase-2 EPIC 8 · 8.2 — log a manual wa.me reminder against a booking.
+  // Flag-gated (WHATSAPP_TIER1_ENABLED): a 404 here means the engine is off for
+  // this vendor — callers treat it as best-effort and do not surface an error.
+  static async logReminder(
+    bookingId: number,
+    body: { trigger?: string; channel?: string; body?: string },
+  ): Promise<unknown> {
+    const res = await axiosInstance.post(`${v1}/${bookingId}/reminders/log`, body);
     return res.data?.data;
   }
 
@@ -338,6 +520,7 @@ export class BookingAPI {
     const res = await axiosInstance.get(`${v1}/${bookingId}/history`);
     return res.data?.data;
   }
+
 
   // Single-booking fetch reused on the dedicated detail page. The
   // backend already exposes /:id/with-availability for the public flow;

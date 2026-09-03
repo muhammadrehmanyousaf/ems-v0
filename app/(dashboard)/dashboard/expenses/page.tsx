@@ -1,12 +1,10 @@
-import { ExpensesRedesignedView } from '@/components/dashboard/mainScreens/expenses/redesigned/expenses-redesigned-view';
+import { ExpensesArtifact } from '@/components/dashboard/mainScreens/expenses/artifact/expenses-artifact';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Dashboard : Expenses',
-  description:
-    'Outflow tracking for Pakistani wedding vendors — mandi cash, fuel, casual labour, broker commission, tax.',
+  description: 'Track your costs — ingredients, fuel, labour, salaries and more, by category.',
 };
 
-export default function Page() {
-  return <ExpensesRedesignedView />
-}
+const page = () => <ExpensesArtifact />;
+export default page;

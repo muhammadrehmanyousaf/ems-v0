@@ -1,0 +1,617 @@
+<title>Leads — Rehman Grand Marquee</title>
+<style>
+/* ─────────────────────────────────────────────────────────────
+   WeddingWala — Leads (List + Cards + Board). Same locked design
+   language as docs/design-samples/ (dashboard, bookings, detail).
+   ───────────────────────────────────────────────────────────── */
+:root{
+  --bg:#F7F6F3; --surface:#FFFFFF; --surface-2:#FAF9F6; --surface-3:#F3F1EC;
+  --ink:#1A1815; --ink-2:#605A52; --ink-3:#6E6A62; --ink-4:#8C857B;
+  --border:#EBE9E3; --border-2:#DEDBD3;
+  --accent:#B8863B; --accent-ink:#8A6220; --accent-wash:#F5EFE2; --accent-line:#E3D3AE; --on-accent:#FFFFFF;
+  --ok:#3F7A55; --ok-wash:#EEF4EF; --warn:#8A6220; --warn-wash:#F6EEDD;
+  --info:#3F6FA6; --info-wash:#EDF2F8; --bad:#A24845; --bad-wash:#F8ECEB;
+  --shadow-xs:0 1px 2px rgba(20,18,15,.04);
+  --shadow-sm:0 1px 3px rgba(20,18,15,.06),0 1px 2px rgba(20,18,15,.04);
+  --shadow-md:0 8px 24px -12px rgba(20,18,15,.16);
+  --r:12px; --r-sm:9px; --r-xs:7px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0C0B09; --surface:#161410; --surface-2:#121009; --surface-3:#1E1B15;
+  --ink:#F5F2EC; --ink-2:#ABA498; --ink-3:#9A9184; --ink-4:#6B6558;
+  --border:#26231C; --border-2:#322E25;
+  --accent:#D8A85A; --accent-ink:#E7C079; --accent-wash:#221B10; --accent-line:#3A2F1A; --on-accent:#231A08;
+  --ok:#7FB894; --ok-wash:#16211A; --warn:#D6A94E; --warn-wash:#221B0F;
+  --info:#7FA6D6; --info-wash:#141D28; --bad:#DA9490; --bad-wash:#241614;
+  --shadow-xs:0 1px 2px rgba(0,0,0,.4); --shadow-sm:0 1px 3px rgba(0,0,0,.5);
+  --shadow-md:0 10px 28px -12px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --bg:#0C0B09; --surface:#161410; --surface-2:#121009; --surface-3:#1E1B15;
+  --ink:#F5F2EC; --ink-2:#ABA498; --ink-3:#9A9184; --ink-4:#6B6558;
+  --border:#26231C; --border-2:#322E25;
+  --accent:#D8A85A; --accent-ink:#E7C079; --accent-wash:#221B10; --accent-line:#3A2F1A; --on-accent:#231A08;
+  --ok:#7FB894; --ok-wash:#16211A; --warn:#D6A94E; --warn-wash:#221B0F;
+  --info:#7FA6D6; --info-wash:#141D28; --bad:#DA9490; --bad-wash:#241614;
+  --shadow-xs:0 1px 2px rgba(0,0,0,.4); --shadow-sm:0 1px 3px rgba(0,0,0,.5);
+  --shadow-md:0 10px 28px -12px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html{ -webkit-text-size-adjust:100% }
+body{ margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Geist","Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:13.5px; line-height:1.5; -webkit-font-smoothing:antialiased; letter-spacing:-.006em; }
+.tnum{ font-variant-numeric:tabular-nums; }
+h1,h2,h3{ margin:0; line-height:1.2; letter-spacing:-.02em; font-weight:600; }
+a{ color:inherit; text-decoration:none; }
+button{ font:inherit; color:inherit; cursor:pointer; }
+:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
+::selection{ background:var(--accent-wash); }
+svg{ display:block; }
+[hidden]{ display:none !important; }
+
+/* Shell */
+.app{ display:grid; grid-template-columns:236px 1fr; min-height:100vh; }
+.side{ background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; position:sticky; top:0; height:100vh; overflow-y:auto; }
+.side-top{ display:flex; align-items:center; gap:10px; width:100%; padding:16px 16px 14px; border:0; border-bottom:1px solid var(--border); background:transparent; text-align:left; transition:background .12s; }
+.side-top:hover{ background:var(--surface-3); }
+.logo{ width:32px; height:32px; border-radius:9px; background:var(--accent); color:var(--on-accent); display:grid; place-items:center; font-weight:700; font-size:15px; flex:none; box-shadow:var(--shadow-xs); }
+.side-top .st-txt{ flex:1; min-width:0; }
+.side-top .st-name{ display:block; font-weight:600; font-size:13px; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.side-top .st-sub{ display:block; font-size:11.5px; color:var(--ink-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+.side-top .chev{ color:var(--ink-3); flex:none; }
+.nav{ padding:10px 12px 4px; }
+.side-spring{ flex:1 1 auto; min-height:14px; }
+.nav-sec{ font-size:11px; font-weight:600; letter-spacing:.04em; color:var(--ink-3); text-transform:uppercase; padding:14px 10px 6px; }
+.nav-sec:first-child{ padding-top:2px; }
+.nav a{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; min-height:36px; color:var(--ink-2); font-weight:500; font-size:13px; position:relative; transition:background .12s,color .12s; }
+.nav a svg{ width:17px; height:17px; color:var(--ink-3); flex:none; }
+.nav a:hover{ background:var(--surface-3); color:var(--ink); }
+.nav a:hover svg{ color:var(--ink-2); }
+.nav a.active{ background:var(--surface-3); color:var(--ink); font-weight:600; }
+.nav a.active svg{ color:var(--accent-ink); }
+.nav a.active::before{ content:""; position:absolute; left:0; top:9px; bottom:9px; width:2.5px; border-radius:0 3px 3px 0; background:var(--accent); }
+.nav a .badge{ margin-left:auto; font-size:11px; font-weight:600; color:var(--ink-2); background:var(--surface-3); border:1px solid var(--border); border-radius:20px; padding:0 7px; min-width:20px; text-align:center; }
+.nav a:hover .badge,.nav a.active .badge{ background:var(--surface); }
+.side-foot{ border-top:1px solid var(--border); padding:10px 12px; }
+.side-foot .me{ display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px; }
+.side-foot .me:hover{ background:var(--surface-3); }
+.me .m-ava{ width:30px; height:30px; border-radius:8px; background:var(--surface-3); border:1px solid var(--border-2); color:var(--ink); display:grid; place-items:center; font-weight:600; font-size:12px; flex:none; }
+.me .m-name{ font-weight:600; font-size:12.5px; }
+.me .m-sub{ font-size:11px; color:var(--ink-3); }
+.me .cog{ margin-left:auto; color:var(--ink-3); }
+.main{ min-width:0; display:flex; flex-direction:column; }
+
+.topbar{ display:flex; align-items:center; gap:12px; padding:11px 22px; min-height:57px; border-bottom:1px solid var(--border); background:color-mix(in srgb,var(--bg) 80%,transparent); backdrop-filter:blur(10px); position:sticky; top:0; z-index:20; }
+.crumb{ font-size:13px; color:var(--ink-3); display:flex; align-items:center; gap:8px; }
+.crumb b{ color:var(--ink); font-weight:600; }
+.crumb .sep{ color:var(--border-2); }
+.tb-spring{ flex:1 }
+.search{ width:260px; display:flex; align-items:center; gap:8px; height:36px; padding:0 11px; border:1px solid var(--border); border-radius:9px; background:var(--surface); color:var(--ink-3); transition:border-color .12s; }
+.search:focus-within{ border-color:var(--border-2); }
+.search input{ border:0; background:transparent; color:var(--ink); width:100%; outline:none; font-size:13px; }
+.search input::placeholder{ color:var(--ink-3); }
+.kbd{ font-size:10.5px; color:var(--ink-3); border:1px solid var(--border); border-radius:5px; padding:1px 5px; }
+.ibtn{ width:36px; height:36px; border-radius:9px; border:1px solid var(--border); background:var(--surface); display:grid; place-items:center; color:var(--ink-2); position:relative; transition:background .12s,border-color .12s; }
+.ibtn:hover{ background:var(--surface-3); }
+.ibtn svg{ width:17px; height:17px; }
+.ibtn .dot{ position:absolute; top:7px; right:8px; width:7px; height:7px; border-radius:50%; background:var(--bad); border:1.5px solid var(--surface); }
+
+.content{ padding:24px 26px 40px; max-width:1320px; width:100%; margin:0 auto; }
+.head{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px; flex-wrap:wrap; }
+.head h1{ font-size:22px; font-weight:600; letter-spacing:-.025em; }
+.head .sub{ color:var(--ink-3); font-size:13px; margin-top:5px; }
+.head .sub b{ color:var(--ink-2); font-weight:600; }
+.head-actions{ display:flex; gap:8px; }
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:7px; height:36px; padding:0 14px; border-radius:9px; font-weight:600; font-size:13px; border:1px solid transparent; white-space:nowrap; transition:background .12s,border-color .12s,box-shadow .12s; }
+.btn svg{ width:16px; height:16px; }
+.btn-primary{ background:var(--accent); color:var(--on-accent); box-shadow:var(--shadow-xs); }
+.btn-primary:hover{ filter:brightness(1.05); }
+.btn-ghost{ background:var(--surface); border-color:var(--border-2); color:var(--ink); }
+.btn-ghost:hover{ background:var(--surface-3); }
+.btn.sm{ height:32px; padding:0 11px; font-size:12.5px; }
+
+.seg{ display:inline-flex; background:var(--surface-3); border:1px solid var(--border); border-radius:9px; padding:2px; gap:1px; }
+.seg button{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--ink-3); padding:0 11px; border-radius:7px; border:0; background:transparent; height:30px; transition:color .12s; }
+.seg button svg{ width:15px; height:15px; }
+.seg button.on{ background:var(--surface); color:var(--ink); box-shadow:var(--shadow-xs); }
+
+.toolbar{ display:flex; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+.tabs{ display:inline-flex; gap:2px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:3px; flex-wrap:wrap; }
+.tab{ display:inline-flex; align-items:center; gap:7px; height:30px; padding:0 11px; border-radius:7px; border:0; background:transparent; color:var(--ink-2); font-size:12.5px; font-weight:600; transition:background .12s,color .12s; }
+.tab:hover{ color:var(--ink); }
+.tab.on{ background:var(--surface); color:var(--ink); box-shadow:var(--shadow-xs); }
+.tab .dot{ width:7px; height:7px; border-radius:50%; }
+.tab .cnt{ font-size:11px; font-weight:600; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+.tab.on .cnt{ color:var(--ink-2); }
+.filters{ display:flex; align-items:center; gap:8px; margin-left:auto; }
+.f-search{ width:210px; display:flex; align-items:center; gap:8px; height:34px; padding:0 11px; border:1px solid var(--border); border-radius:9px; background:var(--surface); color:var(--ink-3); }
+.f-search input{ border:0; background:transparent; color:var(--ink); width:100%; outline:none; font-size:12.5px; }
+.f-search input::placeholder{ color:var(--ink-3); }
+.f-search svg{ width:15px; height:15px; }
+.fbtn{ display:inline-flex; align-items:center; gap:6px; height:34px; padding:0 11px; border-radius:9px; border:1px solid var(--border); background:var(--surface); color:var(--ink-2); font-size:12.5px; font-weight:600; }
+.fbtn:hover{ background:var(--surface-3); color:var(--ink); }
+.fbtn svg{ width:14px; height:14px; color:var(--ink-3); }
+
+.d-ok{ background:var(--ok); } .d-warn{ background:var(--warn); } .d-info{ background:var(--info); }
+.d-bad{ background:var(--bad); } .d-mut{ background:var(--ink-4); } .d-acc{ background:var(--accent); }
+
+.st{ display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:2px 8px 2px 7px; border-radius:6px; background:var(--surface-2); border:1px solid var(--border); color:var(--ink-2); white-space:nowrap; }
+.st i{ width:6px; height:6px; border-radius:50%; flex:none; }
+.st.ok{ color:var(--ok); background:var(--ok-wash); border-color:transparent; } .st.ok i{ background:var(--ok); }
+.st.warn{ color:var(--warn); background:var(--warn-wash); border-color:transparent; } .st.warn i{ background:var(--warn); }
+.st.info{ color:var(--info); background:var(--info-wash); border-color:transparent; } .st.info i{ background:var(--info); }
+.st.bad{ color:var(--bad); background:var(--bad-wash); border-color:transparent; } .st.bad i{ background:var(--bad); }
+.st.mut i{ background:var(--ink-4); }
+.st.acc{ color:var(--accent-ink); background:var(--accent-wash); border-color:transparent; } .st.acc i{ background:var(--accent); }
+
+.ava{ width:34px; height:34px; border-radius:9px; flex:none; display:grid; place-items:center; font-weight:600; font-size:11px; background:var(--surface-3); border:1px solid var(--border); color:var(--ink-2); }
+
+/* Leads-specific */
+.src{ display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:var(--ink-2); }
+.src i{ width:7px; height:7px; border-radius:50%; flex:none; }
+.hot{ display:inline-flex; align-items:center; gap:3px; font-size:10px; font-weight:700; color:var(--bad); text-transform:uppercase; letter-spacing:.03em; }
+.hot svg{ width:12px; height:12px; }
+
+/* LIST view (table) */
+.card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow-xs); }
+.tbl-wrap{ overflow-x:auto; }
+table.tbl{ width:100%; border-collapse:collapse; }
+.tbl thead th{ text-align:left; font-size:11px; font-weight:600; color:var(--ink-3); text-transform:uppercase; letter-spacing:.03em; padding:11px 16px; border-bottom:1px solid var(--border); white-space:nowrap; background:var(--surface-2); }
+.tbl thead th.r{ text-align:right; }
+.tbl thead th:first-child{ border-top-left-radius:var(--r); }
+.tbl thead th:last-child{ border-top-right-radius:var(--r); }
+.tbl tbody td{ padding:12px 16px; border-bottom:1px solid var(--border); vertical-align:middle; white-space:nowrap; font-size:12.5px; }
+.tbl tbody tr:last-child td{ border-bottom:0; }
+.tbl tbody tr{ transition:background .1s; cursor:pointer; }
+.tbl tbody tr:hover{ background:var(--surface-3); }
+.c-couple{ display:flex; align-items:center; gap:11px; }
+.cc-nm{ font-weight:600; font-size:13px; color:var(--ink); display:flex; align-items:center; gap:8px; }
+.cc-ev{ font-size:11.5px; color:var(--ink-3); margin-top:1px; }
+.td-date{ font-weight:500; } .td-date .sub{ color:var(--ink-3); font-weight:400; font-size:11px; }
+.td-mut{ color:var(--ink-2); }
+.td-guests{ color:var(--ink-2); font-weight:500; }
+.r{ text-align:right; }
+.td-amt{ font-weight:660; letter-spacing:-.01em; } .td-amt .rs{ font-size:11px; color:var(--ink-3); font-weight:600; }
+.td-amt .sub{ display:block; font-size:11px; font-weight:500; margin-top:1px; }
+.rowmenu{ width:28px; height:28px; border-radius:7px; border:0; background:transparent; color:var(--ink-3); display:grid; place-items:center; }
+.rowmenu:hover{ background:var(--surface); color:var(--ink); }
+.rowmenu svg{ width:16px; height:16px; }
+.tbl-foot{ display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid var(--border); font-size:12px; color:var(--ink-3); }
+.tbl-foot .pager{ display:flex; gap:6px; }
+.tbl-foot .pager button{ height:28px; min-width:28px; padding:0 8px; border-radius:7px; border:1px solid var(--border); background:var(--surface); color:var(--ink-2); font-size:12px; font-weight:600; }
+.tbl-foot .pager button.on{ background:var(--accent-wash); color:var(--accent-ink); border-color:var(--accent-line); }
+.tbl-foot .pager button:hover:not(.on){ background:var(--surface-3); }
+
+/* BOARD view (kanban) */
+.board{ display:flex; gap:12px; overflow-x:auto; padding-bottom:10px; align-items:flex-start; }
+.col{ flex:0 0 268px; width:268px; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r); display:flex; flex-direction:column; max-height:calc(100vh - 220px); }
+.col-h{ display:flex; align-items:center; gap:8px; padding:12px 13px 10px; }
+.col-h .ct{ display:inline-flex; align-items:center; gap:7px; font-weight:600; font-size:12.5px; }
+.col-h .ct i{ width:8px; height:8px; border-radius:50%; }
+.col-h .cn{ margin-left:auto; font-size:11px; font-weight:600; color:var(--ink-3); background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:0 7px; min-width:20px; text-align:center; font-variant-numeric:tabular-nums; }
+.col-h .cadd{ width:24px; height:24px; border-radius:6px; border:0; background:transparent; color:var(--ink-3); display:grid; place-items:center; }
+.col-h .cadd:hover{ background:var(--surface); color:var(--ink); }
+.col-h .cadd svg{ width:15px; height:15px; }
+.col-body{ display:flex; flex-direction:column; gap:9px; padding:0 10px 12px; overflow-y:auto; }
+.bcard{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px; box-shadow:var(--shadow-xs); cursor:grab; transition:box-shadow .12s,transform .12s,border-color .12s; }
+.bcard:hover{ box-shadow:var(--shadow-sm); border-color:var(--border-2); transform:translateY(-1px); }
+.bcard:active{ cursor:grabbing; }
+.bc-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+.bc-name{ font-weight:600; font-size:13px; }
+.bc-ev{ font-size:11.5px; color:var(--ink-3); margin-top:2px; }
+.bc-tag{ font-size:10px; font-weight:600; color:var(--ink-3); background:var(--surface-3); border-radius:5px; padding:2px 6px; white-space:nowrap; }
+.bc-meta{ display:flex; flex-wrap:wrap; gap:9px; margin-top:10px; font-size:11.5px; color:var(--ink-2); }
+.bc-meta .mi{ display:inline-flex; align-items:center; gap:4px; }
+.bc-meta .mi.acc{ color:var(--accent-ink); font-weight:600; }
+.bc-meta svg{ width:12px; height:12px; }
+.bc-foot{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:11px; padding-top:10px; border-top:1px solid var(--border); }
+.bc-amt{ font-weight:660; font-size:12.5px; letter-spacing:-.01em; }
+.bc-amt .rs{ font-size:10px; color:var(--ink-3); font-weight:600; }
+.bc-due{ font-size:10.5px; font-weight:600; color:var(--ink-3); }
+.col-add{ margin:2px 10px 12px; height:34px; border-radius:8px; border:1px dashed var(--border-2); background:transparent; color:var(--ink-3); font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:6px; }
+.col-add:hover{ background:var(--surface); color:var(--ink-2); border-color:var(--ink-4); }
+.col-add svg{ width:14px; height:14px; }
+
+/* CARDS view (grid) */
+.cards-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(312px,1fr)); gap:12px; }
+.gcard{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow-xs); padding:16px; display:flex; flex-direction:column; transition:box-shadow .14s,transform .14s,border-color .14s; cursor:pointer; }
+.gcard:hover{ box-shadow:var(--shadow-sm); border-color:var(--border-2); transform:translateY(-2px); }
+.gc-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.gc-head .ava{ width:40px; height:40px; font-size:12px; }
+.gc-meta{ display:flex; flex-wrap:wrap; gap:12px; margin-top:13px; font-size:11.5px; color:var(--ink-2); }
+.gc-meta .mi{ display:inline-flex; align-items:center; gap:5px; }
+.gc-meta .mi.acc{ color:var(--accent-ink); font-weight:600; }
+.gc-meta svg{ width:13px; height:13px; color:var(--ink-3); flex:none; }
+.gc-pay{ margin-top:14px; padding-top:13px; border-top:1px solid var(--border); }
+.gc-payrow{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.gc-pct{ font-size:11.5px; font-weight:600; color:var(--ink-3); }
+.gc-amt{ font-weight:660; font-size:16px; letter-spacing:-.02em; }
+.gc-amt .rs{ font-size:11px; color:var(--ink-3); font-weight:600; }
+.gc-foot{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:11px; }
+.gc-due{ font-size:11.5px; font-weight:600; color:var(--ink-3); }
+.gc-open{ display:inline-flex; align-items:center; gap:3px; font-size:12px; font-weight:600; color:var(--ink-2); background:transparent; border:0; padding:4px 6px; border-radius:6px; margin:-4px -6px -4px 0; }
+.gc-open:hover{ background:var(--surface-3); color:var(--ink); }
+.gc-open svg{ width:13px; height:13px; }
+.gc-note{ font-size:11px; color:var(--ink-3); margin-top:9px; }
+.gc-actions{ display:flex; gap:7px; margin-top:11px; }
+.gc-actions .btn{ flex:1; height:34px; font-size:12.5px; padding:0 12px; }
+.iconbtn{ width:34px; height:34px; flex:none; border-radius:8px; border:1px solid var(--border-2); background:var(--surface); color:var(--ink-2); display:grid; place-items:center; transition:background .12s,color .12s,border-color .12s; }
+.iconbtn:hover{ background:var(--surface-3); color:var(--ink); }
+.iconbtn.wa:hover{ color:var(--ok); border-color:var(--ok); }
+.iconbtn svg{ width:16px; height:16px; }
+@media (max-width:560px){ .cards-grid{ grid-template-columns:1fr; } }
+
+.foot{ text-align:center; color:var(--ink-4); font-size:11.5px; margin-top:26px; }
+
+@media (max-width:980px){ .filters{ margin-left:0; width:100%; } .f-search{ flex:1; width:auto; } }
+@media (max-width:820px){
+  .app{ grid-template-columns:1fr; }
+  .side{ position:fixed; left:0; top:0; bottom:0; width:236px; transform:translateX(-100%); z-index:50; transition:transform .2s; }
+  .content{ padding:20px 16px 40px; }
+  .search{ display:none; }
+}
+@media (prefers-reduced-motion:reduce){ *{ transition:none !important; animation:none !important; } }
+
+/* ── Scrollbars — thin, subtle, theme-aware ─────────────────── */
+*{ scrollbar-width:thin; scrollbar-color:var(--border-2) transparent; }
+::-webkit-scrollbar{ width:11px; height:11px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background-color:var(--border-2); border-radius:20px; border:3px solid transparent; background-clip:padding-box; }
+::-webkit-scrollbar-thumb:hover{ background-color:var(--ink-4); border:3px solid transparent; background-clip:padding-box; }
+::-webkit-scrollbar-corner{ background:transparent; }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<div class="app">
+  <aside class="side">
+    <button class="side-top" aria-haspopup="listbox">
+      <span class="logo" aria-hidden="true">R</span>
+      <span class="st-txt"><span class="st-name">Rehman Grand Marquee</span><span class="st-sub">Lahore · Johar Town</span></span>
+      <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"/></svg>
+    </button>
+    <nav class="nav" aria-label="Main">
+      <div class="nav-sec">Console</div>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg> Overview</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M8 2v4M16 2v4M4 10h16"/></svg> Bookings <span class="badge">9</span></a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg> Calendar</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Chat</a>
+      <div class="nav-sec">Paisa</div>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg> Khata</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/></svg> Wapsi <span class="badge">7</span></a>
+      <div class="nav-sec">Grow</div>
+      <a href="#" class="active" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M15 11a3 3 0 1 0 0-6M3 20c0-3 2.7-5 6-5s6 2 6 5M17 20c0-2.2-.9-3.8-2.2-4.6"/></svg> Leads <span class="badge">9</span></a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/></svg> Reports</a>
+    </nav>
+    <div class="side-spring"></div>
+    <div class="side-foot">
+      <div class="me" role="button" tabindex="0">
+        <span class="m-ava" aria-hidden="true">RY</span>
+        <span><span class="m-name">Rehman Yousaf</span><br><span class="m-sub">Owner</span></span>
+        <svg class="cog" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8 2 2 0 1 1-2.8 2.8 1.6 1.6 0 0 0-2.7 1.1 2 2 0 1 1-4 0A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3 2 2 0 1 1-2.8-2.8A1.6 1.6 0 0 0 3 14.1a2 2 0 1 1 0-4A1.6 1.6 0 0 0 4.6 7a1.6 1.6 0 0 0-.3-1.8 2 2 0 1 1 2.8-2.8A1.6 1.6 0 0 0 10 3a2 2 0 1 1 4 0 1.6 1.6 0 0 0 3 1.6 2 2 0 1 1 2.8 2.8A1.6 1.6 0 0 0 21 10a2 2 0 1 1 0 4"/></svg>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="crumb"><b>Leads</b><span class="sep">/</span>Saari puchh-gichh</div>
+      <div class="tb-spring"></div>
+      <label class="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input placeholder="Search…" aria-label="Search">
+        <span class="kbd">⌘K</span>
+      </label>
+      <button class="ibtn" onclick="toggleTheme()" title="Theme" aria-label="Toggle theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
+      <button class="ibtn" aria-label="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span class="dot"></span></button>
+    </header>
+
+    <div class="content">
+      <div class="head">
+        <div>
+          <h1>Leads</h1>
+          <div class="sub">Puchh-gichh jinka jawab dena hai — <b>3 naye</b>, is hafte <b>5 nayi</b>.</div>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Export</button>
+          <button class="btn btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> Naya lead</button>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="tabs" id="tabs" role="tablist" aria-label="Stage filter">
+          <button class="tab on" data-f="all">Sab <span class="cnt">9</span></button>
+          <button class="tab" data-f="naya"><span class="dot d-mut"></span> Naya <span class="cnt">2</span></button>
+          <button class="tab" data-f="raabta"><span class="dot d-info"></span> Raabta <span class="cnt">1</span></button>
+          <button class="tab" data-f="quote"><span class="dot d-warn"></span> Quote <span class="cnt">2</span></button>
+          <button class="tab" data-f="visit"><span class="dot d-acc"></span> Visit <span class="cnt">2</span></button>
+          <button class="tab" data-f="jeeta"><span class="dot d-ok"></span> Jeeta <span class="cnt">1</span></button>
+          <button class="tab" data-f="khoya"><span class="dot d-bad"></span> Khoya <span class="cnt">1</span></button>
+        </div>
+        <div class="filters">
+          <label class="f-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input placeholder="Naam ya phone dhoondein…" aria-label="Filter leads">
+          </label>
+          <button class="fbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M7 12h10M10 18h4"/></svg> Filter</button>
+          <div class="seg" role="group" aria-label="View">
+            <button id="btnList" class="on" onclick="setView('list')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg> List</button>
+            <button id="btnCards" onclick="setView('cards')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg> Cards</button>
+            <button id="btnBoard" onclick="setView('board')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="6" height="16" rx="1.5"/><rect x="10" y="4" width="6" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="14" rx="1.5"/></svg> Board</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ LIST ══ -->
+      <div id="viewList" class="card">
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr>
+              <th>Lead</th><th>Event</th><th>Kab</th><th class="r">Budget</th><th>Source</th><th>Stage</th><th>Aakhri raabta</th><th></th>
+            </tr></thead>
+            <tbody>
+              <tr data-status="naya">
+                <td><div class="c-couple"><span class="ava">UF</span><div><div class="cc-nm">Umar Farooq</div><div class="cc-ev">+92 301 2345678</div></div></div></td>
+                <td class="td-mut">Walima · ~400</td>
+                <td class="td-date">Dec 2026</td>
+                <td class="r td-amt tnum">~<span class="rs">Rs</span> 9,00,000</td>
+                <td><span class="src"><i style="background:var(--ok)"></i> WhatsApp</span></td>
+                <td><span class="st mut"><i></i> Naya</span></td>
+                <td class="td-mut">2 din pehle</td>
+                <td><button class="rowmenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button></td>
+              </tr>
+              <tr data-status="naya">
+                <td><div class="c-couple"><span class="ava">NK</span><div><div class="cc-nm">Nadia Khan</div><div class="cc-ev">+92 333 4455667</div></div></div></td>
+                <td class="td-mut">Mehndi · ~250</td>
+                <td class="td-date">Nov 2026</td>
+                <td class="r td-amt tnum">~<span class="rs">Rs</span> 4,00,000</td>
+                <td><span class="src"><i style="background:#b07dd4"></i> Instagram</span></td>
+                <td><span class="st mut"><i></i> Naya</span></td>
+                <td class="td-mut">4 din pehle</td>
+                <td><button class="rowmenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button></td>
+              </tr>
+              <tr data-status="raabta">
+                <td><div class="c-couple"><span class="ava">TS</span><div><div class="cc-nm">Tariq Shah <span class="hot"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2c1 3-1 4-1 6a3 3 0 0 0 6 0c0-1 0-2-1-3 3 2 5 5 5 9a9 9 0 1 1-18 0c0-4 3-7 5-9 0 2 1 3 2 3 1-1 1-3-1-6z"/></svg> Hot</span></div><div class="cc-ev">+92 300 9988776</div></div></div></td>
+                <td class="td-mut">Barat · ~600</td>
+                <td class="td-date">Jan 2027</td>
+                <td class="r td-amt tnum">~<span class="rs">Rs</span> 12,00,000</td>
+                <td><span class="src"><i style="background:var(--accent)"></i> Referral</span></td>
+                <td><span class="st info"><i></i> Raabta hua</span></td>
+                <td class="td-mut">Kal baat hui</td>
+                <td><button class="rowmenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button></td>
+              </tr>
+              <tr data-status="quote">
+                <td><div class="c-couple"><span class="ava">SM</span><div><div class="cc-nm">Sana Malik</div><div class="cc-ev">+92 321 1122334</div></div></div></td>
+                <td class="td-mut">Nikah · ~150</td>
+                <td class="td-date">Oct 2026</td>
+                <td class="r td-amt tnum">~<span class="rs">Rs</span> 3,00,000</td>
+                <td><span class="src"><i style="background:var(--ink-4)"></i> Website</span></td>
+                <td><span class="st warn"><i></i> Quote bheja</span></td>
+                <td class="td-mut">Quote · 22 Aug</td>
+                <td><button class="rowmenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button></td>
+              </tr>
+              <tr data-status="quote">
+                <td><div class="c-couple"><span class="ava">BK</span><div><div class="cc-nm">Bilal Khan</div><div class="cc-ev">+92 345 6677889</div></div></div></td>
+                <td class="td-mut">Walima · ~500</td>
+                <td class="td-date">Dec 2026</td>
+                <td class="r td-amt tnum">~<span class="rs">Rs</span> 8,00,000</td>
+                <td><span class="src"><i style="background:var(--ok)"></i> WhatsApp</span></td>
+                <td><span class="st warn"><i></i> Quote bheja</span></td>
+                <td class="td-mut">Quote · 25 Aug</td>
+                <td><button class="rowmenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button></td>
+              </tr>
+              <tr data-status="visit">
+                <td><div class="c-couple"><span class="ava">AS</span><div><div class="cc-nm">Ayesha Siddiqui</div><div class="cc-ev">+92 302 5566778</div></div></div></td>
+                <td class="td-mut">Barat · ~350</td>
+                <td class="td-date">Nov 2026</td>
+                <td class="r td-amt tnum">~<span class="rs">Rs</span> 6,00,000</td>
+                <td><span class="src"><i style="background:#b07dd4"></i> Instagram</span></td>
+                <td><span class="st acc"><i></i> Visit tay</span></td>
+                <td class="td-mut">Aaj · 5:00 PM</td>
+                <td><button class="rowmenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button></td>
+              </tr>
+              <tr data-status="visit">
+                <td><div class="c-couple"><span class="ava">HS</span><div><div class="cc-nm">Hamza Sheikh <span class="hot"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2c1 3-1 4-1 6a3 3 0 0 0 6 0c0-1 0-2-1-3 3 2 5 5 5 9a9 9 0 1 1-18 0c0-4 3-7 5-9 0 2 1 3 2 3 1-1 1-3-1-6z"/></svg> Hot</span></div><div class="cc-ev">+92 311 2233445</div></div></div></td>
+                <td class="td-mut">Walima · ~450</td>
+                <td class="td-date">Feb 2027</td>
+                <td class="r td-amt tnum">~<span class="rs">Rs</span> 8,50,000</td>
+                <td><span class="src"><i style="background:var(--accent)"></i> Referral</span></td>
+                <td><span class="st acc"><i></i> Visit tay</span></td>
+                <td class="td-mut">31 Aug · 4 PM</td>
+                <td><button class="rowmenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button></td>
+              </tr>
+              <tr data-status="jeeta">
+                <td><div class="c-couple"><span class="ava">FA</span><div><div class="cc-nm">Fahad Ali</div><div class="cc-ev">+92 300 3344556</div></div></div></td>
+                <td class="td-mut">Mehndi · ~300</td>
+                <td class="td-date">Sept 2026</td>
+                <td class="r td-amt tnum">~<span class="rs">Rs</span> 5,00,000</td>
+                <td><span class="src"><i style="background:var(--ink-4)"></i> Website</span></td>
+                <td><span class="st ok"><i></i> Jeeta</span></td>
+                <td class="td-mut">Booking #720</td>
+                <td><button class="rowmenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button></td>
+              </tr>
+              <tr data-status="khoya">
+                <td><div class="c-couple"><span class="ava">ZA</span><div><div class="cc-nm">Zoya Ahmed</div><div class="cc-ev">+92 333 7788990</div></div></div></td>
+                <td class="td-mut">Walima · ~200</td>
+                <td class="td-date">Dec 2026</td>
+                <td class="r td-amt tnum td-mut">~<span class="rs">Rs</span> 3,00,000</td>
+                <td><span class="src"><i style="background:#b07dd4"></i> Instagram</span></td>
+                <td><span class="st bad"><i></i> Khoya</span></td>
+                <td class="td-mut">Budget zyada tha</td>
+                <td><button class="rowmenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tbl-foot">
+          <span id="rowcount">9 leads dikhaye ja rahe hain</span>
+          <div class="pager"><button>‹</button><button class="on">1</button><button>2</button><button>›</button></div>
+        </div>
+      </div>
+
+      <!-- ══ CARDS ══ -->
+      <div id="viewCards" class="cards-grid" hidden>
+        <div class="gcard" data-status="naya">
+          <div class="gc-head"><div class="c-couple"><span class="ava">UF</span><div><div class="cc-nm">Umar Farooq</div><div class="cc-ev">Walima · ~400 mehmaan</div></div></div><span class="st mut"><i></i> Naya</span></div>
+          <div class="gc-meta"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg> Dec 2026</span><span class="mi"><i style="width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block"></i> WhatsApp</span></div>
+          <div class="gc-pay"><div class="gc-payrow"><span class="gc-pct">Budget</span><span class="gc-amt tnum">~<span class="rs">Rs</span> 9,00,000</span></div><div class="gc-note">2 din pehle aya · WhatsApp se</div><div class="gc-actions"><button class="iconbtn" aria-label="Call"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg></button><button class="iconbtn wa" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.2-5.6A8.4 8.4 0 1 1 21 11.5z"/></svg></button><button class="btn btn-primary">Jawab dein</button></div></div>
+        </div>
+        <div class="gcard" data-status="naya">
+          <div class="gc-head"><div class="c-couple"><span class="ava">NK</span><div><div class="cc-nm">Nadia Khan</div><div class="cc-ev">Mehndi · ~250 mehmaan</div></div></div><span class="st mut"><i></i> Naya</span></div>
+          <div class="gc-meta"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg> Nov 2026</span><span class="mi"><i style="width:7px;height:7px;border-radius:50%;background:#b07dd4;display:inline-block"></i> Instagram</span></div>
+          <div class="gc-pay"><div class="gc-payrow"><span class="gc-pct">Budget</span><span class="gc-amt tnum">~<span class="rs">Rs</span> 4,00,000</span></div><div class="gc-note">4 din pehle aya · Instagram se</div><div class="gc-actions"><button class="iconbtn" aria-label="Call"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg></button><button class="iconbtn wa" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.2-5.6A8.4 8.4 0 1 1 21 11.5z"/></svg></button><button class="btn btn-primary">Jawab dein</button></div></div>
+        </div>
+        <div class="gcard" data-status="raabta">
+          <div class="gc-head"><div class="c-couple"><span class="ava">TS</span><div><div class="cc-nm">Tariq Shah</div><div class="cc-ev">Barat · ~600 mehmaan</div></div></div><span class="st info"><i></i> Raabta</span></div>
+          <div class="gc-meta"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg> Jan 2027</span><span class="mi"><i style="width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block"></i> Referral</span><span class="mi"><span class="hot"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2c1 3-1 4-1 6a3 3 0 0 0 6 0c0-1 0-2-1-3 3 2 5 5 5 9a9 9 0 1 1-18 0c0-4 3-7 5-9 0 2 1 3 2 3 1-1 1-3-1-6z"/></svg> Hot</span></span></div>
+          <div class="gc-pay"><div class="gc-payrow"><span class="gc-pct">Budget</span><span class="gc-amt tnum">~<span class="rs">Rs</span> 12,00,000</span></div><div class="gc-note">Kal baat hui · Referral</div><div class="gc-actions"><button class="iconbtn" aria-label="Call"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg></button><button class="iconbtn wa" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.2-5.6A8.4 8.4 0 1 1 21 11.5z"/></svg></button><button class="btn btn-primary">Quote bhejein</button></div></div>
+        </div>
+        <div class="gcard" data-status="quote">
+          <div class="gc-head"><div class="c-couple"><span class="ava">SM</span><div><div class="cc-nm">Sana Malik</div><div class="cc-ev">Nikah · ~150 mehmaan</div></div></div><span class="st warn"><i></i> Quote</span></div>
+          <div class="gc-meta"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg> Oct 2026</span><span class="mi"><i style="width:7px;height:7px;border-radius:50%;background:var(--ink-4);display:inline-block"></i> Website</span></div>
+          <div class="gc-pay"><div class="gc-payrow"><span class="gc-pct">Budget</span><span class="gc-amt tnum">~<span class="rs">Rs</span> 3,00,000</span></div><div class="gc-note">Quote bheja 22 Aug · Website</div><div class="gc-actions"><button class="iconbtn" aria-label="Call"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg></button><button class="iconbtn wa" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.2-5.6A8.4 8.4 0 1 1 21 11.5z"/></svg></button><button class="btn btn-primary">Follow-up</button></div></div>
+        </div>
+        <div class="gcard" data-status="quote">
+          <div class="gc-head"><div class="c-couple"><span class="ava">BK</span><div><div class="cc-nm">Bilal Khan</div><div class="cc-ev">Walima · ~500 mehmaan</div></div></div><span class="st warn"><i></i> Quote</span></div>
+          <div class="gc-meta"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg> Dec 2026</span><span class="mi"><i style="width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block"></i> WhatsApp</span></div>
+          <div class="gc-pay"><div class="gc-payrow"><span class="gc-pct">Budget</span><span class="gc-amt tnum">~<span class="rs">Rs</span> 8,00,000</span></div><div class="gc-note">Quote bheja 25 Aug · WhatsApp</div><div class="gc-actions"><button class="iconbtn" aria-label="Call"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg></button><button class="iconbtn wa" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.2-5.6A8.4 8.4 0 1 1 21 11.5z"/></svg></button><button class="btn btn-primary">Follow-up</button></div></div>
+        </div>
+        <div class="gcard" data-status="visit">
+          <div class="gc-head"><div class="c-couple"><span class="ava">AS</span><div><div class="cc-nm">Ayesha Siddiqui</div><div class="cc-ev">Barat · ~350 mehmaan</div></div></div><span class="st acc"><i></i> Visit</span></div>
+          <div class="gc-meta"><span class="mi acc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Aaj 5 PM</span><span class="mi"><i style="width:7px;height:7px;border-radius:50%;background:#b07dd4;display:inline-block"></i> Instagram</span></div>
+          <div class="gc-pay"><div class="gc-payrow"><span class="gc-pct">Budget</span><span class="gc-amt tnum">~<span class="rs">Rs</span> 6,00,000</span></div><div class="gc-note">Venue visit · Aaj 5 PM</div><div class="gc-actions"><button class="iconbtn" aria-label="Call"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg></button><button class="iconbtn wa" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.2-5.6A8.4 8.4 0 1 1 21 11.5z"/></svg></button><button class="btn btn-primary">Visit kholein</button></div></div>
+        </div>
+        <div class="gcard" data-status="visit">
+          <div class="gc-head"><div class="c-couple"><span class="ava">HS</span><div><div class="cc-nm">Hamza Sheikh</div><div class="cc-ev">Walima · ~450 mehmaan</div></div></div><span class="st acc"><i></i> Visit</span></div>
+          <div class="gc-meta"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> 31 Aug 4 PM</span><span class="mi"><i style="width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block"></i> Referral</span><span class="mi"><span class="hot"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2c1 3-1 4-1 6a3 3 0 0 0 6 0c0-1 0-2-1-3 3 2 5 5 5 9a9 9 0 1 1-18 0c0-4 3-7 5-9 0 2 1 3 2 3 1-1 1-3-1-6z"/></svg> Hot</span></span></div>
+          <div class="gc-pay"><div class="gc-payrow"><span class="gc-pct">Budget</span><span class="gc-amt tnum">~<span class="rs">Rs</span> 8,50,000</span></div><div class="gc-note">Venue visit · 31 Aug 4 PM · Referral</div><div class="gc-actions"><button class="iconbtn" aria-label="Call"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg></button><button class="iconbtn wa" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.2-5.6A8.4 8.4 0 1 1 21 11.5z"/></svg></button><button class="btn btn-primary">Visit kholein</button></div></div>
+        </div>
+        <div class="gcard" data-status="jeeta">
+          <div class="gc-head"><div class="c-couple"><span class="ava">FA</span><div><div class="cc-nm">Fahad Ali</div><div class="cc-ev">Mehndi · ~300 mehmaan</div></div></div><span class="st ok"><i></i> Jeeta</span></div>
+          <div class="gc-meta"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg> Sept 2026</span><span class="mi"><i style="width:7px;height:7px;border-radius:50%;background:var(--ink-4);display:inline-block"></i> Website</span></div>
+          <div class="gc-pay"><div class="gc-payrow"><span class="gc-pct" style="color:var(--ok)">Booking bana</span><span class="gc-amt tnum">~<span class="rs">Rs</span> 5,00,000</span></div><div class="gc-note" style="color:var(--ok)">Jeet gaye — Booking #720 bana</div><div class="gc-actions"><button class="btn btn-primary">Booking kholein</button></div></div>
+        </div>
+        <div class="gcard" data-status="khoya">
+          <div class="gc-head"><div class="c-couple"><span class="ava">ZA</span><div><div class="cc-nm">Zoya Ahmed</div><div class="cc-ev">Walima · ~200 mehmaan</div></div></div><span class="st bad"><i></i> Khoya</span></div>
+          <div class="gc-meta"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg> Dec 2026</span><span class="mi"><i style="width:7px;height:7px;border-radius:50%;background:#b07dd4;display:inline-block"></i> Instagram</span></div>
+          <div class="gc-pay"><div class="gc-payrow"><span class="gc-pct">Budget</span><span class="gc-amt tnum" style="color:var(--ink-3)">~<span class="rs">Rs</span> 3,00,000</span></div><div class="gc-note">Khoya — budget zyada tha</div><div class="gc-actions"><button class="btn btn-ghost">Dobara raabta karein</button></div></div>
+        </div>
+      </div>
+
+      <!-- ══ BOARD ══ -->
+      <div id="viewBoard" class="board" hidden>
+        <div class="col">
+          <div class="col-h"><span class="ct"><i class="d-mut"></i> Naya</span><span class="cn">2</span><button class="cadd" aria-label="Add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+          <div class="col-body">
+            <div class="bcard">
+              <div class="bc-top"><div><div class="bc-name">Umar Farooq</div><div class="bc-ev">Walima · ~400</div></div><span class="bc-tag">WhatsApp</span></div>
+              <div class="bc-meta"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg> Dec 2026</span></div>
+              <div class="bc-foot"><span class="bc-amt tnum">~<span class="rs">Rs</span> 9,00,000</span><span class="bc-due">2 din pehle</span></div>
+            </div>
+            <div class="bcard">
+              <div class="bc-top"><div><div class="bc-name">Nadia Khan</div><div class="bc-ev">Mehndi · ~250</div></div><span class="bc-tag">Instagram</span></div>
+              <div class="bc-meta"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg> Nov 2026</span></div>
+              <div class="bc-foot"><span class="bc-amt tnum">~<span class="rs">Rs</span> 4,00,000</span><span class="bc-due">4 din pehle</span></div>
+            </div>
+          </div>
+          <button class="col-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Lead add karein</button>
+        </div>
+        <div class="col">
+          <div class="col-h"><span class="ct"><i class="d-info"></i> Raabta hua</span><span class="cn">1</span><button class="cadd" aria-label="Add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+          <div class="col-body">
+            <div class="bcard">
+              <div class="bc-top"><div><div class="bc-name">Tariq Shah <span class="hot"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2c1 3-1 4-1 6a3 3 0 0 0 6 0c0-1 0-2-1-3 3 2 5 5 5 9a9 9 0 1 1-18 0c0-4 3-7 5-9 0 2 1 3 2 3 1-1 1-3-1-6z"/></svg></span></div><div class="bc-ev">Barat · ~600</div></div><span class="bc-tag">Referral</span></div>
+              <div class="bc-meta"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg> Jan 2027</span></div>
+              <div class="bc-foot"><span class="bc-amt tnum">~<span class="rs">Rs</span> 12,00,000</span><span class="bc-due">Kal baat hui</span></div>
+            </div>
+          </div>
+          <button class="col-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Add</button>
+        </div>
+        <div class="col">
+          <div class="col-h"><span class="ct"><i class="d-warn"></i> Quote bheja</span><span class="cn">2</span><button class="cadd" aria-label="Add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+          <div class="col-body">
+            <div class="bcard">
+              <div class="bc-top"><div><div class="bc-name">Sana Malik</div><div class="bc-ev">Nikah · ~150</div></div><span class="bc-tag">Website</span></div>
+              <div class="bc-meta"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg> Oct 2026</span></div>
+              <div class="bc-foot"><span class="bc-amt tnum">~<span class="rs">Rs</span> 3,00,000</span><span class="bc-due">22 Aug</span></div>
+            </div>
+            <div class="bcard">
+              <div class="bc-top"><div><div class="bc-name">Bilal Khan</div><div class="bc-ev">Walima · ~500</div></div><span class="bc-tag">WhatsApp</span></div>
+              <div class="bc-meta"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg> Dec 2026</span></div>
+              <div class="bc-foot"><span class="bc-amt tnum">~<span class="rs">Rs</span> 8,00,000</span><span class="bc-due">25 Aug</span></div>
+            </div>
+          </div>
+          <button class="col-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Add</button>
+        </div>
+        <div class="col">
+          <div class="col-h"><span class="ct"><i class="d-acc"></i> Visit tay</span><span class="cn">2</span><button class="cadd" aria-label="Add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+          <div class="col-body">
+            <div class="bcard">
+              <div class="bc-top"><div><div class="bc-name">Ayesha Siddiqui</div><div class="bc-ev">Barat · ~350</div></div><span class="bc-tag">Instagram</span></div>
+              <div class="bc-meta"><span class="mi acc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Aaj 5 PM</span></div>
+              <div class="bc-foot"><span class="bc-amt tnum">~<span class="rs">Rs</span> 6,00,000</span><span class="bc-due">Nov 2026</span></div>
+            </div>
+            <div class="bcard">
+              <div class="bc-top"><div><div class="bc-name">Hamza Sheikh <span class="hot"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2c1 3-1 4-1 6a3 3 0 0 0 6 0c0-1 0-2-1-3 3 2 5 5 5 9a9 9 0 1 1-18 0c0-4 3-7 5-9 0 2 1 3 2 3 1-1 1-3-1-6z"/></svg></span></div><div class="bc-ev">Walima · ~450</div></div><span class="bc-tag">Referral</span></div>
+              <div class="bc-meta"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> 31 Aug 4 PM</span></div>
+              <div class="bc-foot"><span class="bc-amt tnum">~<span class="rs">Rs</span> 8,50,000</span><span class="bc-due">Feb 2027</span></div>
+            </div>
+          </div>
+          <button class="col-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Add</button>
+        </div>
+        <div class="col">
+          <div class="col-h"><span class="ct"><i class="d-ok"></i> Jeeta</span><span class="cn">1</span><button class="cadd" aria-label="Add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+          <div class="col-body">
+            <div class="bcard">
+              <div class="bc-top"><div><div class="bc-name">Fahad Ali</div><div class="bc-ev">Mehndi · ~300</div></div><span class="bc-tag">Website</span></div>
+              <div class="bc-meta"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg> Booking #720</span></div>
+              <div class="bc-foot"><span class="bc-amt tnum">~<span class="rs">Rs</span> 5,00,000</span><span class="bc-due" style="color:var(--ok)">Jeet gaye</span></div>
+            </div>
+          </div>
+          <button class="col-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Add</button>
+        </div>
+      </div>
+
+      <div class="foot">WeddingWala vendor console · Leads — same locked design language (docs/design-samples/)</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleTheme(){
+  const r=document.documentElement, cur=r.getAttribute('data-theme');
+  const dark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+  const next=cur? (cur==='dark'?'light':'dark') : (dark?'light':'dark');
+  r.setAttribute('data-theme',next);
+  try{localStorage.setItem('ww-theme',next);}catch(e){}
+}
+try{const t=localStorage.getItem('ww-theme'); if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}
+
+function setView(v){
+  document.getElementById('viewList').hidden = v!=='list';
+  document.getElementById('viewCards').hidden = v!=='cards';
+  document.getElementById('viewBoard').hidden = v!=='board';
+  document.getElementById('btnList').classList.toggle('on',v==='list');
+  document.getElementById('btnCards').classList.toggle('on',v==='cards');
+  document.getElementById('btnBoard').classList.toggle('on',v==='board');
+  document.getElementById('tabs').hidden = v==='board';
+}
+
+(function(){
+  const tabs=document.getElementById('tabs');
+  const rows=[...document.querySelectorAll('#viewList tbody tr')];
+  const cards=[...document.querySelectorAll('#viewCards .gcard')];
+  const count=document.getElementById('rowcount');
+  tabs.addEventListener('click',e=>{
+    const b=e.target.closest('.tab'); if(!b)return;
+    tabs.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+    b.classList.add('on');
+    const f=b.dataset.f; let n=0;
+    rows.forEach(r=>{ const show=f==='all'||r.dataset.status===f; r.hidden=!show; if(show)n++; });
+    cards.forEach(c=>{ c.hidden = !(f==='all'||c.dataset.status===f); });
+    count.textContent=n+' lead'+(n===1?'':'s')+' dikhaye ja rahe hain';
+  });
+})();
+</script>

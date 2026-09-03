@@ -1,4 +1,4 @@
-import { HalalCertsRedesignedView } from '@/components/dashboard/mainScreens/halal-certs/redesigned/halal-certs-redesigned-view';
+import { HalalCertsArtifact } from "@/components/dashboard/mainScreens/halal-certs/artifact/halal-certs-artifact";
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <HalalCertsRedesignedView />
+  return <HalalCertsArtifact />
 }

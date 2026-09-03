@@ -1,4 +1,4 @@
-import { AutomationRedesignedView } from "@/components/dashboard/mainScreens/automation/redesigned/automation-redesigned-view";
+import { AutomationArtifact } from "@/components/dashboard/mainScreens/automation/artifact/automation-artifact";
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <AutomationRedesignedView />
+  return <AutomationArtifact />
 }

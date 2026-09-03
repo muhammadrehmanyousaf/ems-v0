@@ -1,4 +1,4 @@
-import { FunctionSheetsRedesignedView } from '@/components/dashboard/mainScreens/function-sheets/redesigned/function-sheets-redesigned-view';
+import { FunctionSheetsArtifact } from "@/components/dashboard/mainScreens/function-sheets/artifact/function-sheets-artifact";
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <FunctionSheetsRedesignedView />
+  return <FunctionSheetsArtifact />
 }

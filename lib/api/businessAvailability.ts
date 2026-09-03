@@ -136,6 +136,66 @@ export class BusinessAvailabilityAPI {
     );
     return res.data?.data;
   }
+
+  // BK-008 — one day's slot availability (bulk with from==to). Returns the
+  // per-slot rows the vendor sees when managing a single date.
+  static async getDayAvailability(
+    businessId: number,
+    date: string,
+    subVenueId?: number | null,
+  ): Promise<SlotAvailabilityRow[]> {
+    const r = await BusinessAvailabilityAPI.getBulkAvailability(businessId, date, date, subVenueId);
+    return r?.days?.[date] ?? [];
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────
+// BK-008 — per-(date, slot) blocks (BusinessSlotBlock). Distinct from the
+// whole-day VendorBlockedDate leave the calendar toggle writes: this blocks
+// ONE slot template on ONE date (e.g. "Evening band on the 15th — maintenance")
+// while the day's other slots stay bookable. NULL slotTemplateId = whole day.
+// Enforced at booking-create via slotService.assertSlotAvailable → isBlocked.
+// ───────────────────────────────────────────────────────────────────
+
+export interface SlotBlock {
+  id: number;
+  businessId: number;
+  blockedDate: string; // YYYY-MM-DD
+  slotTemplateId: number | null; // NULL = whole day
+  reason: string | null;
+  blockedByUserId: number | null;
+}
+
+export class SlotBlocksAPI {
+  static async list(
+    businessId: number,
+    opts: { from?: string; to?: string } = {},
+  ): Promise<SlotBlock[]> {
+    const res = await axiosInstance.get(
+      `${v1}/businesses/${businessId}/slots/blocks`,
+      { params: opts },
+    );
+    return res.data?.data?.blocks ?? res.data?.data ?? [];
+  }
+
+  /** Block one slot on one date. `slotTemplateId: null` blocks the whole day.
+   *  Throws a 409 (with `code`) when active holds/bookings sit on that slot. */
+  static async block(
+    businessId: number,
+    body: { blockedDate: string; slotTemplateId?: number | null; reason?: string },
+  ): Promise<SlotBlock> {
+    const res = await axiosInstance.post(
+      `${v1}/businesses/${businessId}/slots/blocks`,
+      body,
+    );
+    return res.data?.data?.block ?? res.data?.data;
+  }
+
+  static async unblock(businessId: number, blockId: number): Promise<void> {
+    await axiosInstance.delete(
+      `${v1}/businesses/${businessId}/slots/blocks/${blockId}`,
+    );
+  }
 }
 
 // Per (date, slotTemplate) shape — mirrors `slotService.availability()`.

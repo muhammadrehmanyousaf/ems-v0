@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { MoneyHubView } from "@/components/dashboard/mainScreens/money/money-hub-view";
+import { KhataArtifact } from "@/components/dashboard/mainScreens/money/artifact/khata-artifact";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading…</div>}>
-      <MoneyHubView />
+      <KhataArtifact />
     </Suspense>
   );
 }

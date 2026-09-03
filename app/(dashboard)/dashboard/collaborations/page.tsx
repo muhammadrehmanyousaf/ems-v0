@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { CollaborationsRedesignedView } from '@/components/dashboard/mainScreens/collaborations/redesigned/collaborations-redesigned-view';
+import { CollaborationsArtifact } from "@/components/dashboard/mainScreens/collaborations/artifact/collaborations-artifact";
 
 export const metadata: Metadata = {
   title: 'Dashboard : Collaborations',
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <CollaborationsRedesignedView />
+  return <CollaborationsArtifact />
 }

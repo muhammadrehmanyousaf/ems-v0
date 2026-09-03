@@ -1,4 +1,4 @@
-import { TodayRedesignedView } from '@/components/dashboard/mainScreens/today/redesigned/today-redesigned-view';
+import { TodayArtifact } from "@/components/dashboard/mainScreens/today/artifact/today-artifact";
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <TodayRedesignedView />
+  return <TodayArtifact />
 }

@@ -1,4 +1,4 @@
-import { LeadsRedesignedView } from '@/components/dashboard/mainScreens/leads/redesigned/leads-redesigned-view';
+import { LeadsArtifact } from '@/components/dashboard/mainScreens/leads/artifact/leads-artifact';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <LeadsRedesignedView />
+  return <LeadsArtifact />
 }

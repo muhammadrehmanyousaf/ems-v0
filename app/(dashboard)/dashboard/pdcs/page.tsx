@@ -1,12 +1,10 @@
-import { PdcsRedesignedView } from '@/components/dashboard/mainScreens/pdcs/redesigned/pdcs-redesigned-view';
+import { PdcsArtifact } from '@/components/dashboard/mainScreens/pdcs/artifact/pdcs-artifact';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Dashboard : PDC Ledger',
-  description:
-    'Post-dated cheque tracking for Pakistani wedding vendors — held, deposited, cleared, bounced.',
+  title: 'Dashboard : Cheque ledger',
+  description: 'Post-dated cheques — track held, deposited, cleared and bounced cheques.',
 };
 
-export default function Page() {
-  return <PdcsRedesignedView />
-}
+const page = () => <PdcsArtifact />;
+export default page;

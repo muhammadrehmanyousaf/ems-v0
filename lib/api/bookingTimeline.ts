@@ -40,6 +40,9 @@ export interface TodayEvent {
     bookingTime: string | null;
     status: string;
     totalAmount: number | string | null;
+    // Received money (receipts sync into it) — needed to derive a real baqaya
+    // when no order snapshot exists. The endpoint returns it (verified live).
+    downPayment?: number | string | null;
     // Phase-1 SPINE — order snapshot (present only once a vendor builds an order).
     orderStage?: string | null;
     orderGrand?: number | null;

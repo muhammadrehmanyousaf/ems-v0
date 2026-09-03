@@ -40,6 +40,13 @@ export interface StatCardProps {
    * never assert a number it does not have.
    */
   error?: boolean
+  /**
+   * Optional mini bar-sparkline drawn along the bottom of the tile (the
+   * dashboard-artifact KPI look). Opt-in: list-screen tiles stay compact and
+   * pass nothing. Values are a real series (e.g. monthly bookings/revenue); the
+   * last bar is emphasised as "now". Purely decorative to a screen reader.
+   */
+  sparkline?: number[]
 }
 
 const TREND: Record<NonNullable<StatCardProps["trend"]>, string> = {
@@ -64,6 +71,7 @@ export function StatCard({
   href,
   className,
   error,
+  sparkline,
 }: StatCardProps) {
   // A failed load must never be able to render as a number. See `error` above.
   const shownValue = error ? "—" : value
@@ -104,6 +112,21 @@ export function StatCard({
         <div className={cn("flex items-center gap-1 text-xs", trend ? TREND[trend] : "text-muted-foreground")}>
           {trend && <Icon name={TREND_ICON[trend]} size={12} />}
           {delta}
+        </div>
+      )}
+      {!error && sparkline && sparkline.length > 1 && (
+        <div className="mt-2 flex h-6 items-end gap-[3px]" aria-hidden="true">
+          {(() => {
+            const max = Math.max(...sparkline, 1)
+            const last = sparkline.length - 1
+            return sparkline.map((v, i) => (
+              <span
+                key={i}
+                className={cn("min-w-0 flex-1 rounded-sm", i === last ? "bg-primary" : "bg-primary/25")}
+                style={{ height: `${Math.max(10, Math.round((v / max) * 100))}%` }}
+              />
+            ))
+          })()}
         </div>
       )}
     </Wrapper>

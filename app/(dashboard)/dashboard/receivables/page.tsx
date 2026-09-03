@@ -1,4 +1,4 @@
-import { ReceivablesRedesignedView } from '@/components/dashboard/mainScreens/receivables/redesigned/receivables-redesigned-view';
+import { ReceivablesArtifact } from '@/components/dashboard/mainScreens/receivables/artifact/receivables-artifact';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <ReceivablesRedesignedView />
+  return <ReceivablesArtifact />
 }

@@ -1,0 +1,499 @@
+<title>Tariq Shah — Lead</title>
+<style>
+/* ─────────────────────────────────────────────────────────────
+   WeddingWala — Booking Detail. Same locked design language as
+   docs/design-samples/ (dashboard + bookings). Modern-library
+   aesthetic, one gold accent, hairline borders, both themes, AA.
+   ───────────────────────────────────────────────────────────── */
+:root{
+  --bg:#F7F6F3; --surface:#FFFFFF; --surface-2:#FAF9F6; --surface-3:#F3F1EC;
+  --ink:#1A1815; --ink-2:#605A52; --ink-3:#6E6A62; --ink-4:#8C857B;
+  --border:#EBE9E3; --border-2:#DEDBD3;
+  --accent:#B8863B; --accent-ink:#8A6220; --accent-wash:#F5EFE2; --accent-line:#E3D3AE; --on-accent:#FFFFFF;
+  --ok:#3F7A55; --ok-wash:#EEF4EF; --warn:#8A6220; --warn-wash:#F6EEDD;
+  --info:#3F6FA6; --info-wash:#EDF2F8; --bad:#A24845; --bad-wash:#F8ECEB;
+  --shadow-xs:0 1px 2px rgba(20,18,15,.04);
+  --shadow-sm:0 1px 3px rgba(20,18,15,.06),0 1px 2px rgba(20,18,15,.04);
+  --shadow-md:0 8px 24px -12px rgba(20,18,15,.16);
+  --r:12px; --r-sm:9px; --r-xs:7px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0C0B09; --surface:#161410; --surface-2:#121009; --surface-3:#1E1B15;
+  --ink:#F5F2EC; --ink-2:#ABA498; --ink-3:#9A9184; --ink-4:#6B6558;
+  --border:#26231C; --border-2:#322E25;
+  --accent:#D8A85A; --accent-ink:#E7C079; --accent-wash:#221B10; --accent-line:#3A2F1A; --on-accent:#231A08;
+  --ok:#7FB894; --ok-wash:#16211A; --warn:#D6A94E; --warn-wash:#221B0F;
+  --info:#7FA6D6; --info-wash:#141D28; --bad:#DA9490; --bad-wash:#241614;
+  --shadow-xs:0 1px 2px rgba(0,0,0,.4); --shadow-sm:0 1px 3px rgba(0,0,0,.5);
+  --shadow-md:0 10px 28px -12px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --bg:#0C0B09; --surface:#161410; --surface-2:#121009; --surface-3:#1E1B15;
+  --ink:#F5F2EC; --ink-2:#ABA498; --ink-3:#9A9184; --ink-4:#6B6558;
+  --border:#26231C; --border-2:#322E25;
+  --accent:#D8A85A; --accent-ink:#E7C079; --accent-wash:#221B10; --accent-line:#3A2F1A; --on-accent:#231A08;
+  --ok:#7FB894; --ok-wash:#16211A; --warn:#D6A94E; --warn-wash:#221B0F;
+  --info:#7FA6D6; --info-wash:#141D28; --bad:#DA9490; --bad-wash:#241614;
+  --shadow-xs:0 1px 2px rgba(0,0,0,.4); --shadow-sm:0 1px 3px rgba(0,0,0,.5);
+  --shadow-md:0 10px 28px -12px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html{ -webkit-text-size-adjust:100% }
+body{ margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Geist","Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:13.5px; line-height:1.5; -webkit-font-smoothing:antialiased; letter-spacing:-.006em; }
+.tnum{ font-variant-numeric:tabular-nums; }
+h1,h2,h3{ margin:0; line-height:1.2; letter-spacing:-.02em; font-weight:600; }
+a{ color:inherit; text-decoration:none; }
+button{ font:inherit; color:inherit; cursor:pointer; }
+:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
+::selection{ background:var(--accent-wash); }
+svg{ display:block; }
+
+/* Shell (identical to dashboard/bookings) */
+.app{ display:grid; grid-template-columns:236px 1fr; min-height:100vh; }
+.side{ background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; position:sticky; top:0; height:100vh; overflow-y:auto; }
+.side-top{ display:flex; align-items:center; gap:10px; width:100%; padding:16px 16px 14px; border:0; border-bottom:1px solid var(--border); background:transparent; text-align:left; transition:background .12s; }
+.side-top:hover{ background:var(--surface-3); }
+.logo{ width:32px; height:32px; border-radius:9px; background:var(--accent); color:var(--on-accent); display:grid; place-items:center; font-weight:700; font-size:15px; flex:none; box-shadow:var(--shadow-xs); }
+.side-top .st-txt{ flex:1; min-width:0; }
+.side-top .st-name{ display:block; font-weight:600; font-size:13px; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.side-top .st-sub{ display:block; font-size:11.5px; color:var(--ink-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+.side-top .chev{ color:var(--ink-3); flex:none; }
+.nav{ padding:10px 12px 4px; }
+.side-spring{ flex:1 1 auto; min-height:14px; }
+.nav-sec{ font-size:11px; font-weight:600; letter-spacing:.04em; color:var(--ink-3); text-transform:uppercase; padding:14px 10px 6px; }
+.nav-sec:first-child{ padding-top:2px; }
+.nav a{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; min-height:36px; color:var(--ink-2); font-weight:500; font-size:13px; position:relative; transition:background .12s,color .12s; }
+.nav a svg{ width:17px; height:17px; color:var(--ink-3); flex:none; }
+.nav a:hover{ background:var(--surface-3); color:var(--ink); }
+.nav a:hover svg{ color:var(--ink-2); }
+.nav a.active{ background:var(--surface-3); color:var(--ink); font-weight:600; }
+.nav a.active svg{ color:var(--accent-ink); }
+.nav a.active::before{ content:""; position:absolute; left:0; top:9px; bottom:9px; width:2.5px; border-radius:0 3px 3px 0; background:var(--accent); }
+.nav a .badge{ margin-left:auto; font-size:11px; font-weight:600; color:var(--ink-2); background:var(--surface-3); border:1px solid var(--border); border-radius:20px; padding:0 7px; min-width:20px; text-align:center; }
+.nav a:hover .badge,.nav a.active .badge{ background:var(--surface); }
+.side-foot{ border-top:1px solid var(--border); padding:10px 12px; }
+.side-foot .me{ display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px; }
+.side-foot .me:hover{ background:var(--surface-3); }
+.me .m-ava{ width:30px; height:30px; border-radius:8px; background:var(--surface-3); border:1px solid var(--border-2); color:var(--ink); display:grid; place-items:center; font-weight:600; font-size:12px; flex:none; }
+.me .m-name{ font-weight:600; font-size:12.5px; }
+.me .m-sub{ font-size:11px; color:var(--ink-3); }
+.me .cog{ margin-left:auto; color:var(--ink-3); }
+.main{ min-width:0; display:flex; flex-direction:column; }
+
+.topbar{ display:flex; align-items:center; gap:12px; padding:11px 22px; min-height:57px; border-bottom:1px solid var(--border); background:color-mix(in srgb,var(--bg) 80%,transparent); backdrop-filter:blur(10px); position:sticky; top:0; z-index:20; }
+.crumb{ font-size:13px; color:var(--ink-3); display:flex; align-items:center; gap:8px; }
+.crumb a:hover{ color:var(--ink-2); }
+.crumb b{ color:var(--ink); font-weight:600; }
+.crumb .sep{ color:var(--border-2); }
+.tb-spring{ flex:1 }
+.ibtn{ width:36px; height:36px; border-radius:9px; border:1px solid var(--border); background:var(--surface); display:grid; place-items:center; color:var(--ink-2); position:relative; transition:background .12s,border-color .12s; }
+.ibtn:hover{ background:var(--surface-3); }
+.ibtn svg{ width:17px; height:17px; }
+.ibtn .dot{ position:absolute; top:7px; right:8px; width:7px; height:7px; border-radius:50%; background:var(--bad); border:1.5px solid var(--surface); }
+
+.content{ padding:22px 26px 40px; max-width:1240px; width:100%; margin:0 auto; }
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:7px; height:36px; padding:0 14px; border-radius:9px; font-weight:600; font-size:13px; border:1px solid transparent; white-space:nowrap; transition:background .12s,border-color .12s,box-shadow .12s; }
+.btn svg{ width:16px; height:16px; }
+.btn-primary{ background:var(--accent); color:var(--on-accent); box-shadow:var(--shadow-xs); }
+.btn-primary:hover{ filter:brightness(1.05); }
+.btn-ghost{ background:var(--surface); border-color:var(--border-2); color:var(--ink); }
+.btn-ghost:hover{ background:var(--surface-3); }
+.btn.icon{ width:36px; padding:0; }
+
+/* Status badge */
+.st{ display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:2px 9px 2px 7px; border-radius:6px; background:var(--surface-2); border:1px solid var(--border); color:var(--ink-2); white-space:nowrap; }
+.st i{ width:6px; height:6px; border-radius:50%; flex:none; }
+.st.ok{ color:var(--ok); background:var(--ok-wash); border-color:transparent; } .st.ok i{ background:var(--ok); }
+.st.warn{ color:var(--warn); background:var(--warn-wash); border-color:transparent; } .st.warn i{ background:var(--warn); }
+
+/* Detail header */
+.back{ display:inline-flex; align-items:center; gap:5px; font-size:12.5px; color:var(--ink-3); font-weight:500; margin-bottom:14px; }
+.back:hover{ color:var(--ink); }
+.back svg{ width:15px; height:15px; }
+.dhead{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px; flex-wrap:wrap; }
+.dh-left{ display:flex; align-items:center; gap:14px; }
+.dh-mono{ width:52px; height:52px; border-radius:13px; background:var(--surface-3); border:1px solid var(--border); display:grid; place-items:center; font-weight:600; font-size:14px; color:var(--ink-2); flex:none; }
+.dh-title{ display:flex; align-items:center; gap:10px; font-size:23px; font-weight:600; letter-spacing:-.025em; flex-wrap:wrap; }
+.dh-sub{ font-size:12.5px; color:var(--ink-3); margin-top:4px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.dh-sub .sep{ color:var(--border-2); }
+.dhead-actions{ display:flex; gap:8px; align-items:center; }
+
+/* Stat strip */
+.stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px; }
+.stat{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 15px; box-shadow:var(--shadow-xs); }
+.stat .s-cap{ font-size:11.5px; color:var(--ink-3); font-weight:500; display:flex; align-items:center; gap:6px; }
+.stat .s-cap svg{ width:13px; height:13px; }
+.stat .s-val{ font-size:19px; font-weight:660; letter-spacing:-.02em; margin-top:9px; line-height:1.1; }
+.stat .s-val .rs{ font-size:12px; color:var(--ink-3); font-weight:600; }
+.stat .s-sub{ font-size:11px; color:var(--ink-3); margin-top:4px; }
+.stat.hl{ background:linear-gradient(155deg,var(--accent-wash),color-mix(in srgb,var(--surface) 72%,var(--accent-wash))); border-color:var(--accent-line); }
+.stat.hl .s-cap,.stat.hl .s-val{ color:var(--accent-ink); }
+.stat.hl .s-sub{ color:var(--accent-ink); opacity:.85; }
+.stat.warnv .s-val{ color:var(--warn); }
+
+/* Two-column layout */
+.two{ display:grid; grid-template-columns:1.7fr 1fr; gap:14px; align-items:start; }
+.col-stack{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+.card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow-xs); }
+.card-h{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px 12px; }
+.card-h h2{ font-size:13.5px; font-weight:600; letter-spacing:-.01em; }
+.card-h .sub{ font-size:11.5px; color:var(--ink-3); margin-top:2px; font-weight:400; }
+.link{ font-size:12.5px; font-weight:500; color:var(--ink-2); display:inline-flex; align-items:center; gap:3px; padding:5px 7px; border-radius:7px; margin:-5px -7px; }
+.link:hover{ background:var(--surface-3); color:var(--ink); }
+.link svg{ width:13px; height:13px; }
+
+/* Payment summary + progress */
+.pay-sum{ display:flex; gap:24px; padding:2px 16px 12px; flex-wrap:wrap; }
+.ps-cap{ font-size:11.5px; color:var(--ink-3); }
+.ps-val{ font-size:19px; font-weight:660; letter-spacing:-.02em; margin-top:3px; }
+.ps-val .rs{ font-size:12px; color:var(--ink-3); font-weight:600; }
+.ps-val.ok{ color:var(--ok); } .ps-val.due{ color:var(--warn); }
+.pay-bar-wrap{ padding:0 16px 4px; }
+.pay-bar-lbl{ display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:7px; }
+.pay-bar-lbl b{ color:var(--accent-ink); font-weight:600; }
+.pay-bar-lbl span{ color:var(--ink-3); }
+.paybar{ height:7px; border-radius:4px; background:var(--surface-3); overflow:hidden; }
+.paybar span{ display:block; height:100%; border-radius:4px; background:linear-gradient(90deg,var(--accent),var(--accent-ink)); }
+.pay-tl{ padding:14px 16px 6px; margin-top:8px; border-top:1px solid var(--border); }
+.pay-tl .tl-h{ font-size:11px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; color:var(--ink-3); margin-bottom:12px; }
+
+/* Timeline (payment + activity) */
+.tl-item{ display:flex; gap:13px; position:relative; padding-bottom:16px; }
+.tl-item:last-child{ padding-bottom:2px; }
+.tl-item::before{ content:""; position:absolute; left:11px; top:25px; bottom:-1px; width:2px; background:var(--border); }
+.tl-item:last-child::before{ display:none; }
+.tl-item.done::before{ background:var(--ok); opacity:.35; }
+.tl-dot{ width:24px; height:24px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--surface-3); border:1px solid var(--border-2); color:var(--ink-4); z-index:1; }
+.tl-dot svg{ width:13px; height:13px; }
+.tl-item.done .tl-dot{ background:var(--ok-wash); border-color:transparent; color:var(--ok); }
+.tl-item.due .tl-dot{ background:var(--warn-wash); border-color:transparent; color:var(--warn); }
+.tl-item.acc .tl-dot{ background:var(--accent-wash); border-color:var(--accent-line); color:var(--accent-ink); }
+.tl-body{ flex:1; min-width:0; padding-top:2px; }
+.tl-title{ font-weight:600; font-size:13px; display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+.tl-amt{ font-weight:660; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.tl-amt .rs{ font-size:10px; color:var(--ink-3); font-weight:600; }
+.tl-amt.due{ color:var(--warn); }
+.tl-meta{ font-size:11.5px; color:var(--ink-3); margin-top:2px; }
+.tl-cta{ margin:6px 0 0 37px; }
+
+/* Package */
+.pkg{ padding:4px 8px 4px; }
+.pkg-row{ display:flex; align-items:center; gap:12px; padding:11px 8px; }
+.pkg-ico{ width:34px; height:34px; border-radius:9px; background:var(--surface-3); border:1px solid var(--border); display:grid; place-items:center; color:var(--ink-2); flex:none; }
+.pkg-ico svg{ width:16px; height:16px; }
+.pkg-main{ flex:1; min-width:0; }
+.pkg-nm{ font-weight:600; font-size:13px; }
+.pkg-sub{ font-size:11.5px; color:var(--ink-3); margin-top:1px; }
+.pkg-amt{ font-weight:660; font-size:13px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.pkg-amt .rs{ font-size:10px; color:var(--ink-3); font-weight:600; }
+.pkg-amt.inc{ font-size:11.5px; color:var(--ok); font-weight:600; }
+.pkg-total{ display:flex; align-items:center; justify-content:space-between; padding:13px 16px; border-top:1px solid var(--border); }
+.pkg-total .t-cap{ font-weight:600; font-size:12.5px; }
+.pkg-total .t-val{ font-weight:700; font-size:16px; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+.pkg-total .t-val .rs{ font-size:11px; color:var(--ink-3); font-weight:600; }
+
+/* Customer card */
+.cust{ padding:2px 16px 16px; }
+.cust-top{ display:flex; align-items:center; gap:12px; }
+.cust-ava{ width:44px; height:44px; border-radius:12px; background:linear-gradient(150deg,#7a5cad,#b07dd4); color:#fff; display:grid; place-items:center; font-weight:600; font-size:15px; flex:none; }
+.cust-nm{ font-weight:600; font-size:14px; }
+.cust-role{ font-size:11.5px; color:var(--ink-3); margin-top:1px; }
+.cust-actions{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px; }
+.cact{ display:flex; flex-direction:column; align-items:center; gap:5px; padding:10px 4px; border-radius:9px; border:1px solid var(--border); background:var(--surface); color:var(--ink-2); font-size:11px; font-weight:600; transition:background .12s,border-color .12s,color .12s; }
+.cact:hover{ background:var(--surface-3); color:var(--ink); border-color:var(--border-2); }
+.cact svg{ width:17px; height:17px; }
+.cact.wa:hover{ color:var(--ok); }
+
+/* Definition list */
+.dl{ padding:2px 16px 12px; }
+.dl-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--border); font-size:12.5px; }
+.dl-row:last-child{ border-bottom:0; }
+.dl-row .k{ color:var(--ink-3); display:inline-flex; align-items:center; gap:7px; }
+.dl-row .k svg{ width:14px; height:14px; color:var(--ink-4); }
+.dl-row .v{ font-weight:600; color:var(--ink); text-align:right; }
+
+/* Documents */
+.docs{ padding:6px 8px 10px; }
+.doc-row{ display:flex; align-items:center; gap:11px; padding:9px 8px; border-radius:8px; transition:background .1s; }
+.doc-row:hover{ background:var(--surface-3); }
+.doc-ico{ width:30px; height:34px; border-radius:6px; background:var(--surface-3); border:1px solid var(--border); display:grid; place-items:center; color:var(--ink-3); flex:none; position:relative; }
+.doc-ico svg{ width:15px; height:15px; }
+.doc-main{ flex:1; min-width:0; }
+.doc-nm{ font-weight:600; font-size:12.5px; }
+.doc-sub{ font-size:11px; color:var(--ink-3); margin-top:1px; }
+.doc-dl{ width:30px; height:30px; border-radius:7px; border:0; background:transparent; color:var(--ink-3); display:grid; place-items:center; }
+.doc-dl:hover{ background:var(--surface); color:var(--ink); }
+.doc-dl svg{ width:16px; height:16px; }
+
+/* Notes */
+.note{ padding:2px 16px 16px; }
+.note textarea{ width:100%; min-height:76px; resize:vertical; border:1px solid var(--border); border-radius:9px; background:var(--surface-2); color:var(--ink); padding:10px 11px; font:inherit; font-size:12.5px; outline:none; }
+.note textarea:focus{ border-color:var(--border-2); background:var(--surface); }
+.note textarea::placeholder{ color:var(--ink-3); }
+
+/* Pipeline stepper (the wow) */
+.stepper{ display:flex; padding:12px 18px 4px; }
+.stp{ flex:1; display:flex; flex-direction:column; align-items:center; position:relative; text-align:center; }
+.stp::before{ content:""; position:absolute; top:13px; right:50%; width:100%; height:2px; background:var(--border); }
+.stp:first-child::before{ display:none; }
+.stp.done::before,.stp.active::before{ background:var(--accent); }
+.stp .sdot{ width:30px; height:30px; border-radius:50%; background:var(--surface); border:2px solid var(--border-2); display:grid; place-items:center; position:relative; z-index:1; color:var(--ink-4); font-size:12px; font-weight:600; }
+.stp .sdot svg{ width:15px; height:15px; }
+.stp.done .sdot{ background:var(--accent); border-color:transparent; color:var(--on-accent); }
+.stp.active .sdot{ background:var(--surface); border-color:var(--accent); color:var(--accent-ink); box-shadow:0 0 0 4px var(--accent-wash); }
+.stp.active .sdot::after{ content:""; position:absolute; inset:-5px; border-radius:50%; border:2px solid var(--accent); opacity:.5; animation:stppulse 2.2s ease-out infinite; }
+@keyframes stppulse{ 0%{transform:scale(.65);opacity:.55} 100%{transform:scale(1.55);opacity:0} }
+.stp.active .sdot i{ width:8px; height:8px; border-radius:50%; background:var(--accent); }
+.stp .slbl{ font-size:11.5px; font-weight:600; margin-top:10px; color:var(--ink-3); }
+.stp.done .slbl{ color:var(--ink-2); }
+.stp.active .slbl{ color:var(--accent-ink); }
+.stp .ssub{ font-size:10px; color:var(--ink-4); margin-top:3px; }
+.stp.done .ssub{ color:var(--ink-3); }
+.stp.active .ssub{ color:var(--accent-ink); font-weight:600; }
+.next-step{ margin:16px; padding:12px 14px; border-radius:var(--r-sm); background:var(--accent-wash); border:1px solid var(--accent-line); display:flex; gap:11px; align-items:flex-start; }
+.next-step svg{ width:17px; height:17px; color:var(--accent-ink); flex:none; margin-top:1px; }
+.next-step .ns-t{ font-weight:600; font-size:12.5px; color:var(--accent-ink); }
+.next-step .ns-s{ font-size:11.5px; color:var(--ink-2); margin-top:2px; line-height:1.5; }
+
+/* Quick actions */
+.qa{ padding:6px 12px 14px; display:flex; flex-direction:column; gap:8px; }
+.qa .btn{ width:100%; justify-content:flex-start; height:38px; }
+.qa .btn.danger{ color:var(--bad); }
+.qa .btn.danger:hover{ background:var(--bad-wash); border-color:transparent; }
+
+/* Hot flag */
+.hot{ display:inline-flex; align-items:center; gap:3px; font-size:10.5px; font-weight:700; color:var(--bad); text-transform:uppercase; letter-spacing:.03em; }
+.hot svg{ width:13px; height:13px; }
+
+.foot{ text-align:center; color:var(--ink-4); font-size:11.5px; margin-top:26px; }
+
+@media (max-width:1080px){
+  .stats{ grid-template-columns:repeat(2,1fr); }
+  .two{ grid-template-columns:1fr; }
+}
+@media (max-width:820px){
+  .app{ grid-template-columns:1fr; }
+  .side{ position:fixed; left:0; top:0; bottom:0; width:236px; transform:translateX(-100%); z-index:50; transition:transform .2s; }
+  .content{ padding:18px 16px 40px; }
+  .dhead-actions .lbl{ display:none; }
+}
+@media (prefers-reduced-motion:reduce){ *{ transition:none !important; animation:none !important; } }
+
+/* ── Scrollbars — thin, subtle, theme-aware ─────────────────── */
+*{ scrollbar-width:thin; scrollbar-color:var(--border-2) transparent; }
+::-webkit-scrollbar{ width:11px; height:11px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background-color:var(--border-2); border-radius:20px; border:3px solid transparent; background-clip:padding-box; }
+::-webkit-scrollbar-thumb:hover{ background-color:var(--ink-4); border:3px solid transparent; background-clip:padding-box; }
+::-webkit-scrollbar-corner{ background:transparent; }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<div class="app">
+  <aside class="side">
+    <button class="side-top" aria-haspopup="listbox">
+      <span class="logo" aria-hidden="true">R</span>
+      <span class="st-txt"><span class="st-name">Rehman Grand Marquee</span><span class="st-sub">Lahore · Johar Town</span></span>
+      <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"/></svg>
+    </button>
+    <nav class="nav" aria-label="Main">
+      <div class="nav-sec">Console</div>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg> Overview</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M8 2v4M16 2v4M4 10h16"/></svg> Bookings <span class="badge">9</span></a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg> Calendar</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Chat</a>
+      <div class="nav-sec">Paisa</div>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg> Khata</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/></svg> Wapsi <span class="badge">7</span></a>
+      <div class="nav-sec">Grow</div>
+      <a href="#" class="active" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M15 11a3 3 0 1 0 0-6M3 20c0-3 2.7-5 6-5s6 2 6 5M17 20c0-2.2-.9-3.8-2.2-4.6"/></svg> Leads <span class="badge">9</span></a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/></svg> Reports</a>
+    </nav>
+    <div class="side-spring"></div>
+    <div class="side-foot">
+      <div class="me" role="button" tabindex="0">
+        <span class="m-ava" aria-hidden="true">RY</span>
+        <span><span class="m-name">Rehman Yousaf</span><br><span class="m-sub">Owner</span></span>
+        <svg class="cog" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8 2 2 0 1 1-2.8 2.8 1.6 1.6 0 0 0-2.7 1.1 2 2 0 1 1-4 0A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3 2 2 0 1 1-2.8-2.8A1.6 1.6 0 0 0 3 14.1a2 2 0 1 1 0-4A1.6 1.6 0 0 0 4.6 7a1.6 1.6 0 0 0-.3-1.8 2 2 0 1 1 2.8-2.8A1.6 1.6 0 0 0 10 3a2 2 0 1 1 4 0 1.6 1.6 0 0 0 3 1.6 2 2 0 1 1 2.8 2.8A1.6 1.6 0 0 0 21 10a2 2 0 1 1 0 4"/></svg>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="crumb"><a href="#">Leads</a><span class="sep">/</span><b>Tariq Shah</b></div>
+      <div class="tb-spring"></div>
+      <button class="ibtn" onclick="toggleTheme()" title="Theme" aria-label="Toggle theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
+      <button class="ibtn" aria-label="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span class="dot"></span></button>
+    </header>
+
+    <div class="content">
+      <a href="#" class="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg> Sab leads</a>
+
+      <!-- HEADER -->
+      <div class="dhead">
+        <div class="dh-left">
+          <span class="dh-mono" aria-hidden="true">TS</span>
+          <div>
+            <div class="dh-title">Tariq Shah <span class="st info"><i></i> Raabta hua</span> <span class="hot"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2c1 3-1 4-1 6a3 3 0 0 0 6 0c0-1 0-2-1-3 3 2 5 5 5 9a9 9 0 1 1-18 0c0-4 3-7 5-9 0 2 1 3 2 3 1-1 1-3-1-6z"/></svg> Hot lead</span></div>
+            <div class="dh-sub"><span>Barat</span><span class="sep">·</span><span>~600 mehmaan</span><span class="sep">·</span><span>Referral se</span></div>
+          </div>
+        </div>
+        <div class="dhead-actions">
+          <button class="btn btn-ghost icon" aria-label="Call"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg></button>
+          <button class="btn btn-ghost icon" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.2-5.6A8.4 8.4 0 1 1 21 11.5z"/></svg></button>
+          <button class="btn btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> Quote bhejein</button>
+        </div>
+      </div>
+
+      <!-- STAT STRIP -->
+      <div class="stats">
+        <div class="stat hl">
+          <div class="s-cap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22V4h13l-2 4 2 4H4"/></svg> Stage</div>
+          <div class="s-val">Raabta hua</div>
+          <div class="s-sub">5 mein se 2-sra · agla: quote</div>
+        </div>
+        <div class="stat">
+          <div class="s-cap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/></svg> Event</div>
+          <div class="s-val">Barat</div>
+          <div class="s-sub">~600 mehmaan</div>
+        </div>
+        <div class="stat">
+          <div class="s-cap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg> Shaadi kab</div>
+          <div class="s-val">Jan 2027</div>
+          <div class="s-sub">~5 mahine · date flexible</div>
+        </div>
+        <div class="stat">
+          <div class="s-cap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg> Budget</div>
+          <div class="s-val tnum">~<span class="rs">Rs</span> 12,00,000</div>
+          <div class="s-sub">high value lead</div>
+        </div>
+      </div>
+
+      <!-- TWO COLUMNS -->
+      <div class="two">
+        <!-- LEFT -->
+        <div class="col-stack">
+          <!-- PIPELINE STEPPER (star) -->
+          <div class="card">
+            <div class="card-h"><div><h2>Pipeline</h2><div class="sub">Lead kahan tak pohcha</div></div></div>
+            <div class="stepper">
+              <div class="stp done"><span class="sdot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg></span><span class="slbl">Naya</span><span class="ssub">26 Aug</span></div>
+              <div class="stp active"><span class="sdot"><i></i></span><span class="slbl">Raabta hua</span><span class="ssub">abhi yahan</span></div>
+              <div class="stp"><span class="sdot">3</span><span class="slbl">Quote</span><span class="ssub">agla kadam</span></div>
+              <div class="stp"><span class="sdot">4</span><span class="slbl">Visit</span><span class="ssub">baaki</span></div>
+              <div class="stp"><span class="sdot">5</span><span class="slbl">Jeeta</span><span class="ssub">baaki</span></div>
+            </div>
+            <div class="next-step">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg>
+              <div><div class="ns-t">Agla kadam — Quote bhejein</div><div class="ns-s">Referral se aya, ~12 lakh budget, serious lag raha hai. Barat ~600 ka package quote taiyar karke aaj bhej dein.</div></div>
+            </div>
+          </div>
+
+          <!-- REQUIREMENT -->
+          <div class="card">
+            <div class="card-h"><div><h2>Kya chahiye</h2><div class="sub">Customer ki requirement</div></div><a class="link" href="#">Edit</a></div>
+            <div class="dl">
+              <div class="dl-row"><span class="k">Event</span><span class="v">Barat</span></div>
+              <div class="dl-row"><span class="k">Mehmaan</span><span class="v tnum">~600</span></div>
+              <div class="dl-row"><span class="k">Taareekh</span><span class="v">Jan 2027 · flexible</span></div>
+              <div class="dl-row"><span class="k">Budget</span><span class="v tnum">~Rs 12,00,000</span></div>
+              <div class="dl-row"><span class="k">Hall pasand</span><span class="v">Grand Hall</span></div>
+              <div class="dl-row"><span class="k">Catering</span><span class="v">Premium menu</span></div>
+              <div class="dl-row"><span class="k">Extra</span><span class="v">Valet · DJ · lighting</span></div>
+            </div>
+          </div>
+
+          <!-- CONVERSATION -->
+          <div class="card">
+            <div class="card-h"><div><h2>Baat-cheet</h2><div class="sub">Lead ke saath saari activity</div></div></div>
+            <div style="padding:2px 16px 14px">
+              <div class="tl-item acc">
+                <span class="tl-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+                <div class="tl-body"><div class="tl-title">Quote bhejna hai</div><div class="tl-meta">Aaj · reminder laga hua · high priority</div></div>
+              </div>
+              <div class="tl-item done">
+                <span class="tl-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg></span>
+                <div class="tl-body"><div class="tl-title" style="font-weight:500">Phone par baat hui</div><div class="tl-meta">Kal, 4:30 PM · 8 min · budget confirm kiya</div></div>
+              </div>
+              <div class="tl-item done"><span class="tl-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.2-5.6A8.4 8.4 0 1 1 21 11.5z"/></svg></span><div class="tl-body"><div class="tl-title" style="font-weight:500">Venue + package WhatsApp kiya</div><div class="tl-meta">27 Aug · Grand Hall tasveerein</div></div></div>
+              <div class="tl-item done"><span class="tl-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg></span><div class="tl-body"><div class="tl-title" style="font-weight:500">Pehli call — requirement li</div><div class="tl-meta">26 Aug · ~15 min</div></div></div>
+              <div class="tl-item done"><span class="tl-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.2-5.6A8.4 8.4 0 1 1 21 11.5z"/></svg></span><div class="tl-body"><div class="tl-title" style="font-weight:500">WhatsApp par pehla raabta</div><div class="tl-meta">26 Aug · greeting + intro</div></div></div>
+              <div class="tl-item"><span class="tl-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M15 11a3 3 0 1 0 0-6M3 20c0-3 2.7-5 6-5s6 2 6 5"/></svg></span><div class="tl-body"><div class="tl-title" style="font-weight:500">Lead aaya — Ali Raza ne bheja</div><div class="tl-meta">26 Aug · Referral</div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT RAIL -->
+        <div class="col-stack">
+          <!-- CUSTOMER -->
+          <div class="card">
+            <div class="card-h"><div><h2>Customer</h2></div></div>
+            <div class="cust">
+              <div class="cust-top">
+                <span class="cust-ava" style="background:linear-gradient(150deg,#3f6fa6,#6f9fd0)" aria-hidden="true">TS</span>
+                <div><div class="cust-nm">Tariq Shah</div><div class="cust-role">Referral · Ali Raza ne bheja</div></div>
+              </div>
+              <div class="cust-actions">
+                <button class="cact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg> Call</button>
+                <button class="cact wa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.2-5.6A8.4 8.4 0 1 1 21 11.5z"/></svg> WhatsApp</button>
+                <button class="cact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Message</button>
+              </div>
+            </div>
+            <div class="dl">
+              <div class="dl-row"><span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg> Phone</span><span class="v tnum">+92 300 9988776</span></div>
+              <div class="dl-row"><span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg> Email</span><span class="v">tariq.shah@email.com</span></div>
+              <div class="dl-row"><span class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Sheher</span><span class="v">Lahore</span></div>
+            </div>
+          </div>
+
+          <!-- LEAD INFO -->
+          <div class="card">
+            <div class="card-h"><div><h2>Lead info</h2></div></div>
+            <div class="dl">
+              <div class="dl-row"><span class="k">Source</span><span class="v">Referral</span></div>
+              <div class="dl-row"><span class="k">Aaya</span><span class="v">26 Aug 2026</span></div>
+              <div class="dl-row"><span class="k">Assigned</span><span class="v">Rehman Yousaf</span></div>
+              <div class="dl-row"><span class="k">Value</span><span class="v tnum">~Rs 12,00,000</span></div>
+              <div class="dl-row"><span class="k">Priority</span><span class="v" style="color:var(--bad)">Hot</span></div>
+            </div>
+          </div>
+
+          <!-- QUICK ACTIONS -->
+          <div class="card">
+            <div class="card-h"><div><h2>Quick actions</h2></div></div>
+            <div class="qa">
+              <button class="btn btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> Quote bhejein</button>
+              <button class="btn btn-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg> Visit schedule karein</button>
+              <button class="btn btn-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg> Booking mein badlein</button>
+              <button class="btn btn-ghost danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg> Lost mark karein</button>
+            </div>
+          </div>
+
+          <!-- NOTES -->
+          <div class="card">
+            <div class="card-h"><div><h2>Notes</h2><div class="sub">Sirf aap dekh sakte hain</div></div></div>
+            <div class="note"><textarea placeholder="Internal note likhein…">Ali Raza (purana customer) ne bheja — achi payment history. Budget flexible upar tak. Grand Hall dikhana hai, Jan ki date confirm karni hai.</textarea></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="foot">WeddingWala vendor console · Lead detail — same locked design language (docs/design-samples/)</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleTheme(){
+  const r=document.documentElement, cur=r.getAttribute('data-theme');
+  const dark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+  const next=cur? (cur==='dark'?'light':'dark') : (dark?'light':'dark');
+  r.setAttribute('data-theme',next);
+  try{localStorage.setItem('ww-theme',next);}catch(e){}
+}
+try{const t=localStorage.getItem('ww-theme'); if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}
+</script>

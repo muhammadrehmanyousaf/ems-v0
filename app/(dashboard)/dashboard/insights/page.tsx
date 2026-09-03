@@ -1,12 +1,11 @@
-import { InsightsRedesignedView } from '@/components/dashboard/mainScreens/insights/redesigned/insights-redesigned-view';
+import { ReportsArtifact } from '@/components/dashboard/mainScreens/insights/artifact/reports-artifact';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Dashboard : Insights',
-  description:
-    'Funnel by source, quote-acceptance rate, monthly ticket-size trend, LTV, and a 90-day revenue forecast.',
+  title: 'Dashboard : Reports',
+  description: 'Revenue trend, bookings by status, lead sources, and hall performance.',
 };
 
 export default function Page() {
-  return <InsightsRedesignedView />
+  return <ReportsArtifact />
 }

@@ -1,4 +1,4 @@
-import { PromoteRedesignedView } from '@/components/dashboard/mainScreens/promote/redesigned/promote-redesigned-view';
+import { PromoteArtifact } from '@/components/dashboard/mainScreens/promote/artifact/promote-artifact';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <PromoteRedesignedView />
+  return <PromoteArtifact />
 }

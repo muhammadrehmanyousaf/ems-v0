@@ -1,12 +1,10 @@
-import { TaxRedesignedView } from '@/components/dashboard/mainScreens/tax/redesigned/tax-redesigned-view';
+import { TaxArtifact } from '@/components/dashboard/mainScreens/tax/artifact/tax-artifact';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Dashboard : Tax report',
-  description:
-    'Annual revenue + expense + P&L summary, FBR-fiscal-year aligned. One-click PDF export for your accountant.',
+  description: 'Your annual revenue, expenses and net P&L — fiscal or calendar year, with a PDF export.',
 };
 
-export default function Page() {
-  return <TaxRedesignedView />
-}
+const page = () => <TaxArtifact />;
+export default page;

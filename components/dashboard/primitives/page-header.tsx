@@ -74,7 +74,7 @@ export function PageHeader({
        * already loaded (app/layout.tsx) and `.font-display` already exists, so
        * this costs no bytes and no density.
        */}
-      <h1 className="font-display min-w-0 truncate text-xl font-semibold tracking-tight text-foreground">
+      <h1 className="min-w-0 truncate text-[22px] font-semibold tracking-[-0.02em] text-foreground">
         {title}
       </h1>
       {description && (

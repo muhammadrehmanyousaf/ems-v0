@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { AddBusinessView } from "@/components/dashboard/mainScreens/business/add-business-view";
+import { BusinessNewArtifact } from "@/components/dashboard/mainScreens/business/artifact/business-new-artifact";
 
 export const metadata: Metadata = {
   title: "Dashboard : Add a business",
@@ -7,6 +7,5 @@ export const metadata: Metadata = {
 };
 
 // Static segment: Next matches /dashboard/business/new here, not in [id].
-const page = () => <AddBusinessView />;
-
+const page = () => <BusinessNewArtifact />;
 export default page;

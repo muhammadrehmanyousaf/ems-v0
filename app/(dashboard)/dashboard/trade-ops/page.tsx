@@ -1,3 +1,3 @@
-import { TradeOperationsHubView } from "@/components/dashboard/mainScreens/function-sheets/redesigned/trade-operations-hub-view"
-export const metadata = { title: "Dashboard : Trade operations" }
-export default function Page() { return <TradeOperationsHubView /> }
+import { TradeOpsArtifact } from "@/components/dashboard/mainScreens/function-sheets/artifact/trade-ops-artifact"
+
+export default function Page() { return <TradeOpsArtifact /> }

@@ -88,6 +88,9 @@ export type UpdateReceiptInput = Partial<
 export interface ReceiptListFilters {
   customerUserId?: number;
   bookingId?: number;
+  /** Per-venue scope — the backend attributes receipts to a business via their
+   * booking's BookingDetails (receipts have no businessId column of their own). */
+  businessId?: number;
   method?: ReceiptMethod;
   from?: string;
   to?: string;

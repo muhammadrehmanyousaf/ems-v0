@@ -27,6 +27,7 @@ import {
   Activity,
   Inbox,
   LayoutDashboard,
+  LayoutGrid,
   Megaphone,
   MessageSquareText,
   ScrollText,
@@ -70,7 +71,9 @@ export const data = {
     { name: "Cheque ledger", url: "/dashboard/pdcs",           icon: Wallet,          i18nKey: "nav.cheque_ledger" },
     { name: "Expenses",      url: "/dashboard/expenses",       icon: Wallet,          i18nKey: "nav.expenses" },
     { name: "Tax report",    url: "/dashboard/tax",            icon: Receipt,         i18nKey: "nav.tax" },
-    { name: "Reports",       url: "/dashboard/reports",        icon: BarChart3,       i18nKey: "nav.reports" },
+    // Points at /insights (the champagne-shell ReportsArtifact), NOT the legacy
+    // /dashboard/reports route which still renders the old off-shell ReportCardsView.
+    { name: "Reports",       url: "/dashboard/insights",       icon: BarChart3,       i18nKey: "nav.reports" },
     { name: "Trade operations", url: "/dashboard/trade-ops",   icon: Workflow,        i18nKey: "nav.trade_ops" },
     { name: "Automation",    url: "/dashboard/automation",     icon: Zap,             i18nKey: "nav.automation" },
     { name: "Kitchen prep",  url: "/dashboard/kitchen-prep",   icon: ChefHat,         i18nKey: "nav.kitchen_prep" },
@@ -94,31 +97,33 @@ export const data = {
     // Both screens were built and unreachable. A vendor could not say when they
     // are bookable, or what happens when a customer cancels — the two questions
     // every enquiry starts with.
-    { name: "Availability", url: "/dashboard/availability", icon: CalendarClock, i18nKey: "nav.availability" },
+    // Points at /slots (the champagne-shell SlotsArtifact, which lives in the
+    // availability module folder), NOT the legacy /dashboard/availability route
+    // which still renders the old off-shell AvailabilitySetup.
+    { name: "Availability", url: "/dashboard/slots", icon: CalendarClock, i18nKey: "nav.availability" },
     { name: "Cancellation policy", url: "/dashboard/cancellation-policy", icon: FileText, i18nKey: "nav.cancellation_policy" },
     { name: "Setup checklist", url: "/dashboard/onboarding", icon: ListChecks, i18nKey: "nav.onboarding" },
   ],
 
-  // Venue-OS (multi-venue vendor-OS spine). No i18nKey: falls back to `name`
-  // so there is no missing-translation key.
-  // WW-VENUEOS — seven doors, not one.
+  // Venue-OS. No i18nKey: falls back to `name` so there is no missing-key.
   //
-  // This was a single "Venue-OS" entry leading to a tabbed hub holding 46 views
-  // over 179 endpoints. Everything a venue owner actually runs their business
-  // with — tonight's event, whether each shaadi made money, cheques, halls,
-  // kitchen — sat behind one word that told them none of it was there.
-  //
-  // Each tab is now its own rail entry pointing at its own URL. Same hub
-  // renders; the difference is that a vendor can SEE what exists, bookmark the
-  // one they use daily, and send a hall manager a link to Spaces.
+  // HISTORY: this was once seven rail entries (Tonight / Event profit / Venue
+  // money / Halls & spaces / Cash & cheques / Kitchen / Accounting), each a
+  // distinct `/dashboard/venue-os?tab=…` URL. But the founder found that tabbed
+  // multi-view hub confusing, so `venue-os-artifact.tsx` was deliberately
+  // rebuilt as ONE simple business-health view (money in − out = profit) that
+  // ignores `?tab=`. The seven doors therefore all opened the same room — a QA
+  // finding (2026-09). Collapsed back to the single entry that matches the
+  // screen that actually renders. The per-purpose destinations already live in
+  // the main rail (Today, Cheque ledger, Kitchen prep, Tax report) or on the
+  // Setup landing (Halls & spaces → /dashboard/spaces). Restore individual
+  // doors only if/when the artifact grows real per-tab views.
   vendorVenueOs: [
-    { name: "Tonight", url: "/dashboard/venue-os?tab=today", icon: CalendarDays },
-    { name: "Event profit", url: "/dashboard/venue-os?tab=profit", icon: CircleDollarSign },
-    { name: "Venue money", url: "/dashboard/venue-os?tab=money", icon: Wallet },
-    { name: "Halls & spaces", url: "/dashboard/venue-os?tab=spaces", icon: Building2 },
-    { name: "Cash & cheques", url: "/dashboard/venue-os?tab=cash", icon: CreditCard },
-    { name: "Kitchen", url: "/dashboard/venue-os?tab=kitchen", icon: Boxes },
-    { name: "Accounting", url: "/dashboard/venue-os?tab=advanced", icon: Settings2 },
+    { name: "Venue-OS", url: "/dashboard/venue-os", icon: Building2 },
+    // Halls & spaces (SpacesArtifact) — a real, distinct screen that otherwise
+    // only lived on the Setup landing card once the stale ?tab= doors were
+    // collapsed. Given its own rail entry so it stays one tap away.
+    { name: "Halls & spaces", url: "/dashboard/spaces", icon: LayoutGrid },
   ],
 
   // PWA-02 — Field Capture hub (offline-first lead/payment/expense/hold capture).
