@@ -26,12 +26,12 @@ const payTone = (p: string) => { const v = (p || "").toLowerCase(); if (v.includ
 const payLabel = (p: string) => { const v = (p || "").toLowerCase(); if (v.includes("paid") || v.includes("complete")) return "Poora"; if (v.includes("partial")) return "Kuch mila"; if (v.includes("cancel")) return "Cancel"; if (v.includes("refund")) return "Refund"; return "Baqaya" }
 
 const EXTRA_CSS = String.raw`
-.pay-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px; }
-.tile{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 15px; box-shadow:var(--shadow-xs); }
+.pay-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px; }
+.tile{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:10px 13px; box-shadow:var(--shadow-xs); }
 .tile.hl{ background:linear-gradient(155deg,var(--accent-wash),color-mix(in srgb,var(--surface) 72%,var(--accent-wash))); border-color:var(--accent-line); } .tile.hl .t-cap,.tile.hl .t-val{ color:var(--accent-ink); }
 .tile.ok .t-val{ color:var(--ok); } .tile.warn .t-val{ color:var(--warn); }
 .t-cap{ font-size:11.5px; color:var(--ink-3); font-weight:500; display:flex; align-items:center; gap:6px; } .t-cap svg{ width:13px; height:13px; }
-.t-val{ font-size:19px; font-weight:680; letter-spacing:-.02em; margin-top:8px; } .t-val .rs{ font-size:12px; color:var(--ink-3); font-weight:600; } .t-sub{ font-size:11px; color:var(--ink-3); margin-top:4px; }
+.t-val{ font-size:17px; font-weight:680; letter-spacing:-.02em; margin-top:4px; } .t-val .rs{ font-size:12px; color:var(--ink-3); font-weight:600; } .t-sub{ font-size:11px; color:var(--ink-3); margin-top:4px; }
 .t-split{ display:flex; gap:8px; margin-top:8px; } .t-split .sp{ flex:1; font-size:11px; } .t-split .sp b{ display:block; font-size:13px; font-weight:660; font-variant-numeric:tabular-nums; }
 .srcchip{ display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:6px; } .srcchip.on{ color:var(--info); background:var(--info-wash); } .srcchip.off{ color:var(--accent-ink); background:var(--accent-wash); }
 .loadwrap{ display:grid; place-items:center; padding:80px 16px; color:var(--ink-3); font-size:13px; }

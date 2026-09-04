@@ -25,12 +25,12 @@ const CAT_LABEL: Record<string, string> = {
 }
 
 const EXTRA_CSS = String.raw`
-.tax-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px; }
-.tile{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 15px; box-shadow:var(--shadow-xs); }
+.tax-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px; }
+.tile{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:10px 13px; box-shadow:var(--shadow-xs); }
 .tile.hl{ background:linear-gradient(155deg,var(--accent-wash),color-mix(in srgb,var(--surface) 72%,var(--accent-wash))); border-color:var(--accent-line); } .tile.hl .t-cap,.tile.hl .t-val{ color:var(--accent-ink); }
 .tile.pos .t-val{ color:var(--ok); } .tile.neg .t-val{ color:var(--bad); }
 .t-cap{ font-size:11.5px; color:var(--ink-3); font-weight:500; display:flex; align-items:center; gap:6px; } .t-cap svg{ width:13px; height:13px; }
-.t-val{ font-size:19px; font-weight:680; letter-spacing:-.02em; margin-top:8px; } .t-val .rs{ font-size:12px; color:var(--ink-3); font-weight:600; } .t-sub{ font-size:11px; color:var(--ink-3); margin-top:4px; }
+.t-val{ font-size:17px; font-weight:680; letter-spacing:-.02em; margin-top:4px; } .t-val .rs{ font-size:12px; color:var(--ink-3); font-weight:600; } .t-sub{ font-size:11px; color:var(--ink-3); margin-top:4px; }
 .seg{ display:inline-flex; gap:2px; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:3px; } .seg button{ height:28px; padding:0 12px; border-radius:7px; border:0; background:transparent; color:var(--ink-2); font-size:12px; font-weight:600; } .seg button.on{ background:var(--surface); color:var(--ink); box-shadow:var(--shadow-xs); }
 .yearsel{ height:34px; border:1px solid var(--border); border-radius:9px; background:var(--surface); color:var(--ink); padding:0 10px; font:inherit; font-size:12.5px; font-weight:600; outline:none; }
 .legend{ display:flex; gap:16px; padding:0 16px 8px; font-size:11.5px; color:var(--ink-3); } .legend i{ display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:5px; vertical-align:middle; }

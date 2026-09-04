@@ -54,16 +54,27 @@ const CHROME_CSS = String.raw`
   --border:#26231C; --border-2:#322E25; --accent:#D8A85A; --accent-ink:#E7C079; --accent-wash:#221B10; --accent-line:#3A2F1A; --on-accent:#231A08;
   --ok:#7FB894; --ok-wash:#16211A; --warn:#D6A94E; --warn-wash:#221B0F; --info:#7FA6D6; --info-wash:#141D28; --bad:#DA9490; --bad-wash:#241614;
   --shadow-xs:0 1px 2px rgba(0,0,0,.4); --shadow-sm:0 1px 3px rgba(0,0,0,.5); --shadow-md:0 10px 28px -12px rgba(0,0,0,.6); }
+/* Token bridge — map the shadcn/tailwind tokens to the champagne palette WITHIN
+   the shell, so React hub pages (the settings hub and its editors) render in the
+   SAME gold/cream system as the artifact console instead of the app-wide purple
+   primary (globals.css --primary:263…). This is the single source of the
+   "settings colours/borders look different" inconsistency. */
+.cshell{ --background:45 18% 96%; --foreground:40 11% 9%; --card:0 0% 100%; --card-foreground:40 11% 9%; --popover:0 0% 100%; --popover-foreground:40 11% 9%; --primary:36 51% 48%; --primary-foreground:0 0% 100%; --secondary:43 21% 94%; --secondary-foreground:40 11% 9%; --muted:43 21% 94%; --muted-foreground:40 6% 41%; --accent:43 21% 94%; --accent-foreground:40 11% 9%; --destructive:2 55% 46%; --destructive-foreground:0 0% 100%; --border:43 15% 90%; --input:43 15% 85%; --ring:36 51% 48%; }
+@media (prefers-color-scheme:dark){ .cshell:not([data-theme="light"]){ --background:40 14% 4%; --foreground:40 33% 94%; --card:40 18% 7%; --card-foreground:40 33% 94%; --popover:40 18% 7%; --popover-foreground:40 33% 94%; --primary:36 61% 60%; --primary-foreground:36 63% 9%; --secondary:38 17% 10%; --secondary-foreground:40 33% 94%; --muted:38 17% 10%; --muted-foreground:36 9% 56%; --accent:38 17% 10%; --accent-foreground:40 33% 94%; --border:40 16% 13%; --input:40 16% 16%; --ring:36 61% 60%; } }
+.cshell[data-theme="dark"]{ --background:40 14% 4%; --foreground:40 33% 94%; --card:40 18% 7%; --card-foreground:40 33% 94%; --popover:40 18% 7%; --popover-foreground:40 33% 94%; --primary:36 61% 60%; --primary-foreground:36 63% 9%; --secondary:38 17% 10%; --secondary-foreground:40 33% 94%; --muted:38 17% 10%; --muted-foreground:36 9% 56%; --accent:38 17% 10%; --accent-foreground:40 33% 94%; --border:40 16% 13%; --input:40 16% 16%; --ring:36 61% 60%; }
 .cshell *{ box-sizing:border-box; }
 .cshell h1,.cshell h2,.cshell h3{ margin:0; line-height:1.2; letter-spacing:-.02em; font-weight:600; }
 .cshell a{ color:inherit; text-decoration:none; } .cshell button{ font:inherit; color:inherit; cursor:pointer; }
 .cshell svg{ display:block; }
 .cshell .app{ display:grid; grid-template-columns:236px 1fr; height:100%; }
 .cshell .app.app-sub{ grid-template-columns:236px 234px 1fr; }
-.cshell .side{ background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; height:100vh; overflow-y:auto; }
+/* The rail is a fixed-height column: the business switcher (top) and the profile
+   (foot) are PINNED, and only the nav in between scrolls. overflow stays visible
+   so the business-switcher dropdown isn't clipped. */
+.cshell .side{ background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; height:100vh; overflow:visible; }
 .cshell .side-top{ display:flex; align-items:center; gap:10px; width:100%; padding:16px 16px 14px; border:0; border-bottom:1px solid var(--border); background:transparent; text-align:left; }
 .cshell .side-top:hover{ background:var(--surface-3); } .cshell .side-top[aria-expanded="true"]{ background:var(--surface-3); }
-.cshell .bizwrap{ position:relative; }
+.cshell .bizwrap{ position:relative; flex:none; }
 .cshell .bizmenu{ position:absolute; left:12px; right:12px; top:calc(100% - 6px); z-index:60; background:var(--surface); border:1px solid var(--border-2); border-radius:11px; box-shadow:var(--shadow-md); padding:6px; max-height:60vh; overflow-y:auto; }
 .cshell .bizmenu[hidden]{ display:none; }
 .cshell .bizmenu .bm-lbl{ font-size:10.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-4); padding:8px 9px 5px; }
@@ -78,7 +89,7 @@ const CHROME_CSS = String.raw`
 .cshell .logo{ width:32px; height:32px; border-radius:9px; background:var(--accent); color:var(--on-accent); display:grid; place-items:center; font-weight:700; font-size:15px; flex:none; box-shadow:var(--shadow-xs); }
 .cshell .side-top .st-txt{ flex:1; min-width:0; } .cshell .side-top .st-name{ display:block; font-weight:600; font-size:13px; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .cshell .side-top .st-sub{ display:block; font-size:11.5px; color:var(--ink-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; } .cshell .side-top .chev{ color:var(--ink-3); flex:none; }
-.cshell .nav{ padding:10px 12px 4px; } .cshell .side-spring{ flex:1 1 auto; min-height:14px; }
+.cshell .nav{ padding:10px 12px 4px; flex:1 1 auto; min-height:0; overflow-y:auto; } .cshell .side-spring{ display:none; }
 .cshell .nav-sec{ font-size:11px; font-weight:600; letter-spacing:.04em; color:var(--ink-3); text-transform:uppercase; padding:14px 10px 6px; } .cshell .nav-sec:first-child{ padding-top:2px; }
 .cshell .nav a{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; min-height:36px; color:var(--ink-2); font-weight:500; font-size:13px; position:relative; transition:background .12s,color .12s; }
 .cshell .nav a svg{ width:17px; height:17px; color:var(--ink-3); flex:none; }
@@ -91,7 +102,7 @@ const CHROME_CSS = String.raw`
 .cshell .nav-mod{ display:flex; align-items:center; gap:10px; margin:8px 12px 2px; padding:9px 10px; border-radius:8px; color:var(--ink); font-weight:600; font-size:13px; position:relative; }
 .cshell .nav-mod svg{ width:17px; height:17px; color:var(--ink-3); flex:none; } .cshell .nav-mod .mod-caret{ margin-left:auto; width:14px; height:14px; color:var(--ink-4); }
 .cshell .nav-mod:hover{ background:var(--surface-3); } .cshell .nav-mod.active{ background:var(--accent-wash); color:var(--accent-ink); } .cshell .nav-mod.active svg,.cshell .nav-mod.active .mod-caret{ color:var(--accent-ink); }
-.cshell .side-foot{ border-top:1px solid var(--border); padding:10px 12px; } .cshell .side-foot .me{ display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px; } .cshell .side-foot .me:hover{ background:var(--surface-3); }
+.cshell .side-foot{ border-top:1px solid var(--border); padding:10px 12px; flex:none; background:var(--surface); } .cshell .side-foot .me{ display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px; } .cshell .side-foot .me:hover{ background:var(--surface-3); }
 .cshell .me .m-ava{ width:30px; height:30px; border-radius:8px; background:var(--surface-3); border:1px solid var(--border-2); color:var(--ink); display:grid; place-items:center; font-weight:600; font-size:12px; flex:none; }
 .cshell .me .m-name{ font-weight:600; font-size:12.5px; } .cshell .me .m-sub{ font-size:11px; color:var(--ink-3); } .cshell .me .cog{ margin-left:auto; color:var(--ink-3); }
 .cshell .sub-side{ background:var(--surface-2); border-right:1px solid var(--border); height:100vh; overflow-y:auto; padding:16px 12px 24px; }
@@ -113,7 +124,7 @@ const CHROME_CSS = String.raw`
 .cshell .ibtn{ width:36px; height:36px; border-radius:9px; border:1px solid var(--border); background:var(--surface); display:grid; place-items:center; color:var(--ink-2); position:relative; }
 .cshell .ibtn:hover{ background:var(--surface-3); } .cshell .ibtn svg{ width:17px; height:17px; } .cshell .ibtn .dot{ position:absolute; top:7px; right:8px; width:7px; height:7px; border-radius:50%; background:var(--bad); border:1.5px solid var(--surface); }
 .cshell .cscroll{ flex:1; min-height:0; overflow-y:auto; }
-.cshell .cscroll .content{ padding:24px 26px 40px; max-width:1320px; width:100%; margin:0 auto; }
+.cshell .cscroll .content{ padding:16px 26px 20px; max-width:1320px; width:100%; margin:0 auto; }
 @media (max-width:820px){ .cshell .app,.cshell .app.app-sub{ grid-template-columns:1fr; } .cshell .side,.cshell .sub-side{ display:none; } }
 `
 

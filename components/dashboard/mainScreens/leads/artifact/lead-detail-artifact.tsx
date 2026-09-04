@@ -106,8 +106,8 @@ const EXTRA_CSS = String.raw`
 .dh-sub{ font-size:12.5px; color:var(--ink-3); margin-top:4px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; } .dh-sub .sep{ color:var(--border-2); }
 .dhead-actions{ display:flex; gap:8px; align-items:center; } .btn.icon{ width:36px; padding:0; }
 .hot{ display:inline-flex; align-items:center; gap:3px; font-size:10.5px; font-weight:700; color:var(--bad); text-transform:uppercase; letter-spacing:.03em; } .hot svg{ width:13px; height:13px; }
-.stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px; }
-.stat{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 15px; box-shadow:var(--shadow-xs); }
+.stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px; }
+.stat{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:10px 13px; box-shadow:var(--shadow-xs); }
 .stat .s-cap{ font-size:11.5px; color:var(--ink-3); font-weight:500; display:flex; align-items:center; gap:6px; } .stat .s-cap svg{ width:13px; height:13px; }
 .stat .s-val{ font-size:19px; font-weight:660; letter-spacing:-.02em; margin-top:9px; line-height:1.1; } .stat .s-val .rs{ font-size:12px; color:var(--ink-3); font-weight:600; } .stat .s-sub{ font-size:11px; color:var(--ink-3); margin-top:4px; }
 .stat.hl{ background:linear-gradient(155deg,var(--accent-wash),color-mix(in srgb,var(--surface) 72%,var(--accent-wash))); border-color:var(--accent-line); } .stat.hl .s-cap,.stat.hl .s-val{ color:var(--accent-ink); } .stat.hl .s-sub{ color:var(--accent-ink); opacity:.85; }

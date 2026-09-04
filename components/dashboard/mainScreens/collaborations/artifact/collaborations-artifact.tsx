@@ -25,11 +25,11 @@ const IC = {
 }
 
 const EXTRA_CSS = String.raw`
-.col-tiles{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:14px; }
-.tile{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 15px; box-shadow:var(--shadow-xs); }
+.col-tiles{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:10px; }
+.tile{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:10px 13px; box-shadow:var(--shadow-xs); }
 .tile.hl{ background:linear-gradient(155deg,var(--accent-wash),color-mix(in srgb,var(--surface) 72%,var(--accent-wash))); border-color:var(--accent-line); } .tile.hl .t-cap,.tile.hl .t-val{ color:var(--accent-ink); }
 .t-cap{ font-size:11.5px; color:var(--ink-3); font-weight:500; display:flex; align-items:center; gap:6px; } .t-cap svg{ width:13px; height:13px; }
-.t-val{ font-size:20px; font-weight:680; letter-spacing:-.02em; margin-top:8px; } .t-sub{ font-size:11px; color:var(--ink-3); margin-top:4px; }
+.t-val{ font-size:17px; font-weight:680; letter-spacing:-.02em; margin-top:4px; } .t-sub{ font-size:11px; color:var(--ink-3); margin-top:4px; }
 .col-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px; }
 .colcard{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow-xs); padding:15px 16px; display:flex; flex-direction:column; gap:12px; }
 .col-top{ display:flex; align-items:center; gap:11px; }

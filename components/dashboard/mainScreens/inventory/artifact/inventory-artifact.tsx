@@ -32,12 +32,12 @@ const IC = {
 }
 
 const EXTRA_CSS = String.raw`
-.inv-tiles{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:14px; }
-.tile{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 15px; box-shadow:var(--shadow-xs); }
+.inv-tiles{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:10px; }
+.tile{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:10px 13px; box-shadow:var(--shadow-xs); }
 .tile.hl{ background:linear-gradient(155deg,var(--accent-wash),color-mix(in srgb,var(--surface) 72%,var(--accent-wash))); border-color:var(--accent-line); } .tile.hl .t-cap,.tile.hl .t-val{ color:var(--accent-ink); } .tile.warn .t-val{ color:var(--warn); }
 .tile[data-f]{ cursor:pointer; transition:border-color .12s,box-shadow .12s; } .tile[data-f]:hover{ border-color:var(--warn); box-shadow:var(--shadow-sm); } .tile[data-f].on{ border-color:var(--warn); box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 18%,transparent); }
 .t-cap{ font-size:11.5px; color:var(--ink-3); font-weight:500; display:flex; align-items:center; gap:6px; } .t-cap svg{ width:13px; height:13px; }
-.t-val{ font-size:20px; font-weight:680; letter-spacing:-.02em; margin-top:8px; } .t-val .rs{ font-size:12px; color:var(--ink-3); font-weight:600; } .t-sub{ font-size:11px; color:var(--ink-3); margin-top:4px; }
+.t-val{ font-size:17px; font-weight:680; letter-spacing:-.02em; margin-top:4px; } .t-val .rs{ font-size:12px; color:var(--ink-3); font-weight:600; } .t-sub{ font-size:11px; color:var(--ink-3); margin-top:4px; }
 .catchip{ display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:6px; background:var(--surface-2); border:1px solid var(--border); } .catchip .dot{ width:7px; height:7px; border-radius:50%; }
 .stock{ font-weight:660; font-variant-numeric:tabular-nums; } .stock .u{ font-size:11px; color:var(--ink-3); font-weight:500; }
 .low{ display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:700; color:var(--bad); margin-top:2px; } .low svg{ width:11px; height:11px; }

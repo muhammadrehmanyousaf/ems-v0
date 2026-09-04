@@ -27,7 +27,7 @@ const SRC: Record<string, { label: string; color: string }> = {
 }
 
 const EXTRA_CSS = String.raw`
-.kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px; }
+.kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px; }
 @media (max-width:820px){ .kpis{ grid-template-columns:1fr 1fr; } } @media (max-width:520px){ .kpis{ grid-template-columns:1fr; } }
 .kpi{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow-xs); padding:15px 16px; }
 .kpi .l{ font-size:12px; color:var(--ink-3); font-weight:600; } .kpi .vrow{ display:flex; align-items:flex-end; justify-content:space-between; gap:10px; margin-top:9px; }
