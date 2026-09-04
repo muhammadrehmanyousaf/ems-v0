@@ -46,8 +46,8 @@ const EXTRA_CSS = String.raw`
 .dh-sub{ font-size:12.5px; color:var(--ink-3); margin-top:4px; display:flex; gap:8px; flex-wrap:wrap; } .dh-sub .sep{ color:var(--border-2); }
 .dhead-actions{ display:flex; gap:8px; } .btn.icon{ width:36px; padding:0; }
 .repeat-badge{ display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; color:var(--accent-ink); background:var(--accent-wash); padding:2px 8px; border-radius:20px; }
-.stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px; }
-.stat{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 15px; box-shadow:var(--shadow-xs); }
+.stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px; }
+.stat{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:10px 13px; box-shadow:var(--shadow-xs); }
 .stat.hl{ background:linear-gradient(155deg,var(--accent-wash),color-mix(in srgb,var(--surface) 72%,var(--accent-wash))); border-color:var(--accent-line); } .stat.hl .s-cap,.stat.hl .s-val{ color:var(--accent-ink); }
 .s-cap{ font-size:11.5px; color:var(--ink-3); font-weight:500; display:flex; align-items:center; gap:6px; } .s-cap svg{ width:13px; height:13px; }
 .s-val{ font-size:19px; font-weight:660; letter-spacing:-.02em; margin-top:9px; } .s-val .rs{ font-size:12px; color:var(--ink-3); font-weight:600; } .s-sub{ font-size:11px; color:var(--ink-3); margin-top:4px; }

@@ -36,7 +36,7 @@ const waDigits = (ph?: string | null) => { let d = (ph || "").replace(/\D/g, "")
 const STATUSES: PdcStatus[] = ["held", "deposited", "cleared", "bounced", "cancelled"]
 
 const EXTRA_CSS = String.raw`
-.pdc-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px; }
+.pdc-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px; }
 .tile{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:13px 15px; box-shadow:var(--shadow-xs); }
 .tile.hl{ background:linear-gradient(155deg,var(--accent-wash),color-mix(in srgb,var(--surface) 72%,var(--accent-wash))); border-color:var(--accent-line); } .tile.hl .t-cap,.tile.hl .t-val{ color:var(--accent-ink); }
 .t-cap{ font-size:11.5px; color:var(--ink-3); font-weight:500; display:flex; align-items:center; gap:6px; } .t-cap svg{ width:13px; height:13px; }

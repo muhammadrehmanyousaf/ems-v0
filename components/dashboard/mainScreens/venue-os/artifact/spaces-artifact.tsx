@@ -40,7 +40,7 @@ function flatten(tree: SubVenueNode[]): SubVenueNode[] {
 const EXTRA_CSS = String.raw`
 .content{ max-width:1080px; }
 .sp-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
-.tile{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 15px; box-shadow:var(--shadow-xs); }
+.tile{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:10px 13px; box-shadow:var(--shadow-xs); }
 .tile.hl{ background:linear-gradient(155deg,var(--accent-wash),color-mix(in srgb,var(--surface) 72%,var(--accent-wash))); border-color:var(--accent-line); } .tile.hl .t-cap,.tile.hl .t-val{ color:var(--accent-ink); } .tile.warn .t-val{ color:var(--warn); }
 .t-cap{ font-size:11.5px; color:var(--ink-3); font-weight:500; display:flex; align-items:center; gap:6px; } .t-cap svg{ width:13px; height:13px; }
 .t-val{ font-size:21px; font-weight:680; margin-top:8px; } .t-sub{ font-size:11px; color:var(--ink-3); margin-top:4px; }

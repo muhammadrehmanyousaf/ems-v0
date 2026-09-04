@@ -32,12 +32,12 @@ const AGING: Record<string, { label: string; tone: string }> = {
 }
 
 const EXTRA_CSS = String.raw`
-.rc-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px; }
-.tile{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 15px; box-shadow:var(--shadow-xs); }
+.rc-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px; }
+.tile{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:10px 13px; box-shadow:var(--shadow-xs); }
 .tile.hl{ background:linear-gradient(155deg,var(--accent-wash),color-mix(in srgb,var(--surface) 72%,var(--accent-wash))); border-color:var(--accent-line); } .tile.hl .t-cap,.tile.hl .t-val{ color:var(--accent-ink); }
 .tile.warn .t-val{ color:var(--warn); } .tile.bad .t-val{ color:var(--bad); }
 .t-cap{ font-size:11.5px; color:var(--ink-3); font-weight:500; display:flex; align-items:center; gap:6px; } .t-cap svg{ width:13px; height:13px; }
-.t-val{ font-size:20px; font-weight:680; letter-spacing:-.02em; margin-top:8px; } .t-val .rs{ font-size:12px; color:var(--ink-3); font-weight:600; } .t-sub{ font-size:11px; color:var(--ink-3); margin-top:4px; }
+.t-val{ font-size:17px; font-weight:680; letter-spacing:-.02em; margin-top:4px; } .t-val .rs{ font-size:12px; color:var(--ink-3); font-weight:600; } .t-sub{ font-size:11px; color:var(--ink-3); margin-top:4px; }
 .rc-acts{ display:flex; gap:6px; justify-content:flex-end; }
 .rc-rec{ display:inline-flex; align-items:center; gap:5px; height:30px; padding:0 11px; border-radius:8px; border:1px solid var(--accent-line); background:var(--accent-wash); color:var(--accent-ink); font-size:12px; font-weight:600; } .rc-rec:hover{ filter:brightness(.98); } .rc-rec svg{ width:13px; height:13px; }
 .iconbtn{ width:30px; height:30px; flex:none; border-radius:8px; border:1px solid var(--border-2); background:var(--surface); color:var(--ink-2); display:grid; place-items:center; } .iconbtn:hover{ background:var(--surface-3); color:var(--ink); } .iconbtn.wa:hover{ color:var(--ok); border-color:var(--ok); } .iconbtn svg{ width:15px; height:15px; } .iconbtn:disabled{ opacity:.4; }

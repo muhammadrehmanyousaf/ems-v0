@@ -607,7 +607,7 @@ table.tbl{ width:100%; border-collapse:collapse; }
 .errbanner .eb-ic{ width:34px; height:34px; border-radius:9px; background:var(--surface); display:grid; place-items:center; color:var(--bad); flex:none; } .errbanner .eb-ic svg{ width:18px; height:18px; }
 .errbanner .eb-txt{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; } .errbanner .eb-txt b{ font-size:13px; color:var(--ink); } .errbanner .eb-txt span{ font-size:12px; color:var(--ink-2); }
 .errbanner .btn{ flex:none; }
-.foot{ text-align:center; color:var(--ink-4); font-size:11.5px; margin-top:26px; }
+.foot{ text-align:center; color:var(--ink-4); font-size:11px; margin-top:12px; padding-bottom:2px; }
 /* shared micro — canonical versions of classes screens were each copy-pasting.
    Injected before extraCss, so a screen's own copy still wins; these only supply
    the canon to screens that don't define their own (and stop future drift). */

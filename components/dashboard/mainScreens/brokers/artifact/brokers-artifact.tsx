@@ -39,12 +39,12 @@ const COMM_STATUS: Record<string, { label: string; tone: string }> = {
 function fmtD(s?: string | null) { if (!s) return "—"; const d = new Date(s); return isNaN(d.getTime()) ? String(s) : d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) }
 
 const EXTRA_CSS = String.raw`
-.brk-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px; }
+.brk-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px; }
 .tile.warn .t-val{ color:var(--warn); }
-.tile{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 15px; box-shadow:var(--shadow-xs); }
+.tile{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:10px 13px; box-shadow:var(--shadow-xs); }
 .tile.hl{ background:linear-gradient(155deg,var(--accent-wash),color-mix(in srgb,var(--surface) 72%,var(--accent-wash))); border-color:var(--accent-line); } .tile.hl .t-cap,.tile.hl .t-val{ color:var(--accent-ink); }
 .t-cap{ font-size:11.5px; color:var(--ink-3); font-weight:500; display:flex; align-items:center; gap:6px; } .t-cap svg{ width:13px; height:13px; }
-.t-val{ font-size:20px; font-weight:680; letter-spacing:-.02em; margin-top:8px; } .t-sub{ font-size:11px; color:var(--ink-3); margin-top:4px; }
+.t-val{ font-size:17px; font-weight:680; letter-spacing:-.02em; margin-top:4px; } .t-sub{ font-size:11px; color:var(--ink-3); margin-top:4px; }
 .typechip{ display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:6px; background:var(--surface-2); border:1px solid var(--border); } .typechip .dot{ width:7px; height:7px; border-radius:50%; }
 .comm{ font-weight:660; font-variant-numeric:tabular-nums; } .comm .u{ font-size:11px; color:var(--ink-3); font-weight:500; }
 .rowacts{ display:flex; gap:5px; justify-content:flex-end; align-items:center; }
