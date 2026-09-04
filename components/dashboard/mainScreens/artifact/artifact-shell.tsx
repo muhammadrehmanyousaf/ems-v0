@@ -534,8 +534,8 @@ a{ color:inherit; text-decoration:none; } button{ font:inherit; color:inherit; c
 .kbd{ font-size:10.5px; color:var(--ink-3); border:1px solid var(--border); border-radius:5px; padding:1px 5px; }
 .ibtn{ width:36px; height:36px; border-radius:9px; border:1px solid var(--border); background:var(--surface); display:grid; place-items:center; color:var(--ink-2); position:relative; }
 .ibtn:hover{ background:var(--surface-3); } .ibtn svg{ width:17px; height:17px; } .ibtn .dot{ position:absolute; top:7px; right:8px; width:7px; height:7px; border-radius:50%; background:var(--bad); border:1.5px solid var(--surface); }
-.content{ padding:24px 26px 40px; max-width:1320px; width:100%; margin:0 auto; }
-.head{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px; flex-wrap:wrap; }
+.content{ padding:16px 26px 20px; max-width:1320px; width:100%; margin:0 auto; }
+.head{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:14px; flex-wrap:wrap; }
 .head h1{ font-size:22px; font-weight:600; letter-spacing:-.025em; } .head .sub{ color:var(--ink-3); font-size:13px; margin-top:5px; } .head .sub b{ color:var(--ink-2); font-weight:600; }
 .head-actions{ display:flex; gap:8px; }
 .btn{ display:inline-flex; align-items:center; justify-content:center; gap:7px; height:36px; padding:0 14px; border-radius:9px; font-weight:600; font-size:13px; border:1px solid transparent; white-space:nowrap; transition:background .12s,border-color .12s; }
@@ -881,7 +881,7 @@ export function useArtifactShell(hostRef: React.RefObject<HTMLDivElement | null>
       const card = wrap.closest(".card") as HTMLElement | null
       const foot = ((card || wrap.parentElement) as HTMLElement | null)?.querySelector(".tbl-foot") as HTMLElement | null
       const footH = foot ? foot.offsetHeight : 0
-      let avail = window.innerHeight - naturalTop - footH - 28
+      let avail = window.innerHeight - naturalTop - footH - 12
       if (avail >= 200) {
         wrap.style.maxHeight = Math.round(avail) + "px"
         wrap.classList.add("ww-bounded")
