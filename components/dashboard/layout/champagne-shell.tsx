@@ -204,9 +204,17 @@ export function ChampagneShell({
   // shell is mounted; restore it on unmount so other surfaces are unaffected.
   React.useEffect(() => {
     const html = document.documentElement
-    const prev = html.style.overflow
+    const prevOverflow = html.style.overflow
+    const prevGutter = html.style.scrollbarGutter
+    // overflow:hidden removes the document scrollbar, but the global
+    // `html { scrollbar-gutter: stable }` (kept for overlay shift-prevention on
+    // other surfaces) would still RESERVE the track — an empty dead bar on the
+    // right. Drop the gutter too while the shell owns the scroll; the existing
+    // `html body[data-scroll-locked]{ margin-right:0 }` rule already stops any
+    // dropdown-open shake, so nothing regresses.
     html.style.overflow = "hidden"
-    return () => { html.style.overflow = prev }
+    html.style.scrollbarGutter = "auto"
+    return () => { html.style.overflow = prevOverflow; html.style.scrollbarGutter = prevGutter }
   }, [])
   const hasPanel = SETUP_PATHS.has(activeHref) || KHATA_PATHS.has(activeHref)
   const panelHtml = SETUP_PATHS.has(activeHref) ? setupPanelHtml(activeHref)
