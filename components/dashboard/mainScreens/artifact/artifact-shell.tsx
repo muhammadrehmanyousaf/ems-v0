@@ -480,7 +480,7 @@ export function venuePickerHtml(
 }
 
 export const SHELL_CSS = String.raw`
-:host{ position:fixed; inset:0; overflow:auto; z-index:45; display:block; background:var(--bg); color:var(--ink);
+:host{ position:fixed; inset:0; overflow:auto; z-index:45; display:block; background:var(--bg); color:var(--ink); color-scheme:light; accent-color:var(--accent);
   font-family:"Geist","Inter",system-ui,-apple-system,"Segoe UI",sans-serif; font-size:13.5px; line-height:1.5; -webkit-font-smoothing:antialiased; letter-spacing:-.006em;
   --bg:#F7F6F3; --surface:#FFFFFF; --surface-2:#FAF9F6; --surface-3:#F3F1EC; --ink:#1A1815; --ink-2:#605A52; --ink-3:#6E6A62; --ink-4:#8C857B;
   --border:#EBE9E3; --border-2:#DEDBD3; --accent:#B8863B; --accent-ink:#8A6220; --accent-wash:#F5EFE2; --accent-line:#E3D3AE; --on-accent:#FFFFFF;
@@ -488,11 +488,13 @@ export const SHELL_CSS = String.raw`
   --shadow-xs:0 1px 2px rgba(20,18,15,.04); --shadow-sm:0 1px 3px rgba(20,18,15,.06),0 1px 2px rgba(20,18,15,.04); --shadow-md:0 8px 24px -12px rgba(20,18,15,.16);
   --r:12px; --r-sm:9px; --r-xs:7px; }
 @media (prefers-color-scheme:dark){ :host(:not([data-theme="light"])){
+  color-scheme:dark;
   --bg:#0C0B09; --surface:#161410; --surface-2:#121009; --surface-3:#1E1B15; --ink:#F5F2EC; --ink-2:#ABA498; --ink-3:#9A9184; --ink-4:#6B6558;
   --border:#26231C; --border-2:#322E25; --accent:#D8A85A; --accent-ink:#E7C079; --accent-wash:#221B10; --accent-line:#3A2F1A; --on-accent:#231A08;
   --ok:#7FB894; --ok-wash:#16211A; --warn:#D6A94E; --warn-wash:#221B0F; --info:#7FA6D6; --info-wash:#141D28; --bad:#DA9490; --bad-wash:#241614; --chart:#D8A85A;
   --shadow-xs:0 1px 2px rgba(0,0,0,.4); --shadow-sm:0 1px 3px rgba(0,0,0,.5); --shadow-md:0 10px 28px -12px rgba(0,0,0,.6); }}
 :host([data-theme="dark"]){
+  color-scheme:dark;
   --bg:#0C0B09; --surface:#161410; --surface-2:#121009; --surface-3:#1E1B15; --ink:#F5F2EC; --ink-2:#ABA498; --ink-3:#9A9184; --ink-4:#6B6558;
   --border:#26231C; --border-2:#322E25; --accent:#D8A85A; --accent-ink:#E7C079; --accent-wash:#221B10; --accent-line:#3A2F1A; --on-accent:#231A08;
   --ok:#7FB894; --ok-wash:#16211A; --warn:#D6A94E; --warn-wash:#221B0F; --info:#7FA6D6; --info-wash:#141D28; --bad:#DA9490; --bad-wash:#241614; --chart:#D8A85A;
@@ -502,6 +504,7 @@ export const SHELL_CSS = String.raw`
 h1,h2,h3{ margin:0; line-height:1.2; letter-spacing:-.02em; font-weight:600; }
 a{ color:inherit; text-decoration:none; } button{ font:inherit; color:inherit; cursor:pointer; }
 ::selection{ background:var(--accent-wash); } svg{ display:block; }
+input,select,textarea,button{ accent-color:var(--accent); }
 .app{ display:grid; grid-template-columns:236px 1fr; min-height:100%; }
 .side{ background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; position:sticky; top:0; height:100vh; overflow-y:auto; }
 .side-top{ display:flex; align-items:center; gap:10px; width:100%; padding:16px 16px 14px; border:0; border-bottom:1px solid var(--border); background:transparent; text-align:left; transition:background .12s; }
