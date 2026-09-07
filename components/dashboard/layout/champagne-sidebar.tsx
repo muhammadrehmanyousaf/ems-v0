@@ -3,13 +3,10 @@
 /**
  * ChampagneSidebar — the vendor console's primary rail on the shadcn `Sidebar`
  * primitive (collapse-to-icons), champagne palette. Mirrors the champagne rail's
- * own NAV / KHATA / SETUP structure (artifact-shell) so nothing regresses, with
- * two disclosure styles:
+ * own NAV / KHATA / SETUP structure (artifact-shell) so nothing regresses.
  *
- *   Khata → INLINE COLLAPSIBLE: click it and its sub-modules toggle open BELOW
- *           it (shadcn Collapsible + SidebarMenuSub); the rest of the rail stays.
- *   Set up / Zyada → DRILL-DOWN: the section's grouped items REPLACE the whole
- *           rail, with a "← Back" header to return.
+ *   Khata / Set up / Zyada → DRILL-DOWN: clicking the module REPLACES the whole
+ *           rail with that section's items, and a "← Back" header returns.
  */
 
 import * as React from "react"
@@ -23,10 +20,8 @@ import {
 } from "lucide-react"
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel,
-  SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub,
-  SidebarMenuSubButton, SidebarMenuSubItem, SidebarRail, SidebarSeparator,
+  SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail, SidebarSeparator,
 } from "@/components/ui/sidebar"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
@@ -51,7 +46,7 @@ const ROZANA: NItem[] = [
   { name: "Customers", url: "/dashboard/customers", icon: Users },
 ]
 
-// Khata (money) — shown as a flat inline list under the collapsible.
+// Khata (money) — shown as a flat list inside the Khata drill-down.
 const KHATA: NItem[] = [
   { name: "Payments", url: "/dashboard/payments", icon: CircleDollarSign },
   { name: "Receipts", url: "/dashboard/receipts", icon: ReceiptText },
@@ -162,16 +157,13 @@ export function ChampagneSidebar() {
   const pathname = usePathname()
   const go = (url: string) => router.push(url)
 
-  const onKhata = KHATA_ACTIVE(pathname)
-  const [khataOpen, setKhataOpen] = React.useState(onKhata)
-  React.useEffect(() => { setKhataOpen(onKhata) }, [onKhata])
-
-  const activeDrill = React.useMemo<null | "setup" | "more">(() => {
+  const activeDrill = React.useMemo<null | "khata" | "setup" | "more">(() => {
+    if (KHATA_ACTIVE(pathname)) return "khata"
     if (SETUP_ACTIVE(pathname)) return "setup"
     if (ZYADA_ACTIVE(pathname)) return "more"
     return null
   }, [pathname])
-  const [drill, setDrill] = React.useState<null | "setup" | "more">(activeDrill)
+  const [drill, setDrill] = React.useState<null | "khata" | "setup" | "more">(activeDrill)
   React.useEffect(() => { setDrill(activeDrill) }, [activeDrill])
 
   const Item = ({ it }: { it: NItem }) => (
@@ -217,29 +209,13 @@ export function ChampagneSidebar() {
             <SidebarGroup>
               <SidebarGroupLabel>Modules</SidebarGroupLabel>
               <SidebarMenu>
-                {/* Khata — inline collapsible: sub-modules toggle open BELOW it. */}
-                <Collapsible open={khataOpen} onOpenChange={setKhataOpen} className="group/khata">
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip="Khata" isActive={onKhata}>
-                        <Wallet /><span>Khata</span>
-                        <ChevronRight className="ml-auto size-4 text-muted-foreground transition-transform group-data-[state=open]/khata:rotate-90" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {KHATA.map((it) => (
-                          <SidebarMenuSubItem key={it.name}>
-                            <SidebarMenuSubButton isActive={isActiveForNav(pathname, it.url)} onClick={() => go(it.url)}>
-                              <it.icon /><span>{it.name}</span>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </SidebarMenuItem>
-                </Collapsible>
-                {/* Set up / Zyada — drill-downs that replace the whole rail. */}
+                {/* Khata / Set up / Zyada — drill-downs that replace the whole rail. */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton tooltip="Khata" isActive={KHATA_ACTIVE(pathname)} onClick={() => setDrill("khata")}>
+                    <Wallet /><span>Khata</span>
+                    <ChevronRight className="ml-auto size-4 text-muted-foreground" />
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton tooltip="Set up" isActive={SETUP_ACTIVE(pathname)} onClick={() => setDrill("setup")}>
                     <Settings2 /><span>Set up</span>
@@ -257,8 +233,14 @@ export function ChampagneSidebar() {
           </div>
         ) : (
           <div key={drill} className="duration-200 animate-in fade-in-0 slide-in-from-right-3">
-            <BackHeader title={drill === "setup" ? "Set up" : "Zyada"} />
-            <Grouped groups={drill === "setup" ? SETUP : ZYADA} />
+            <BackHeader title={drill === "khata" ? "Khata" : drill === "setup" ? "Set up" : "Zyada"} />
+            {drill === "khata" ? (
+              <SidebarGroup>
+                <SidebarMenu>{KHATA.map((it) => <Item key={it.name} it={it} />)}</SidebarMenu>
+              </SidebarGroup>
+            ) : (
+              <Grouped groups={drill === "setup" ? SETUP : ZYADA} />
+            )}
           </div>
         )}
       </SidebarContent>
