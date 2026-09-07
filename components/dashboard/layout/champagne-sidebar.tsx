@@ -1,42 +1,110 @@
 "use client"
 
 /**
- * ChampagneSidebar — the vendor console's primary rail, rebuilt on the shadcn
- * `Sidebar` primitive (collapse-to-icons) in the champagne palette, with a
- * DRILL-DOWN model instead of the old secondary panel: the daily nav lives at
- * the root; Khata / Set up / Zyada are drill entries that REPLACE the rail's
- * content (with a "← Back" header) rather than opening a second column.
+ * ChampagneSidebar — the vendor console's primary rail on the shadcn `Sidebar`
+ * primitive (collapse-to-icons), champagne palette. Mirrors the champagne rail's
+ * own NAV / KHATA / SETUP structure (artifact-shell) so nothing regresses, with
+ * two disclosure styles:
  *
- * Nav content is the real, vendor-type-aware output of buildVendorSections
- * (same source the classic AppSidebar uses), so no route, craft-label or
- * persona wording regresses. Active state + routing go through the same
- * isActiveForNav / router.push the rest of the app uses.
+ *   Khata → INLINE COLLAPSIBLE: click it and its sub-modules toggle open BELOW
+ *           it (shadcn Collapsible + SidebarMenuSub); the rest of the rail stays.
+ *   Set up / Zyada → DRILL-DOWN: the section's grouped items REPLACE the whole
+ *           rail, with a "← Back" header to return.
  */
 
 import * as React from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { ArrowLeft, ChevronRight, ChevronsUpDown, Wallet, Settings2, MoreHorizontal, Check } from "lucide-react"
+import {
+  ArrowLeft, ChevronRight, ChevronsUpDown, Check, Wallet, Settings2, MoreHorizontal,
+  LayoutGrid, Inbox, CalendarCheck, CalendarDays, MessageSquare, FileText, Users,
+  CircleDollarSign, ReceiptText, Undo2, ArrowDownUp, HandCoins, Truck, BookOpen, Landmark,
+  ListChecks, Zap, CalendarClock, Package, Building2, Boxes, Fuel, ShieldCheck, Plane,
+  Megaphone, Handshake, FileQuestion, Clock, Star, Compass, Workflow, ChefHat, BarChart3, CreditCard,
+} from "lucide-react"
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel,
-  SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail, SidebarSeparator,
+  SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub,
+  SidebarMenuSubButton, SidebarMenuSubItem, SidebarRail, SidebarSeparator,
 } from "@/components/ui/sidebar"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { buildVendorSections } from "./app-sidebar"
 import { isActiveForNav } from "./nav-projects"
 import { NavUser } from "./nav-user"
-import { useUser } from "@/context/UserContext"
 import { useBusiness } from "@/context/BusinessContext"
 import { useActiveBusinessStore } from "@/lib/store/active-business-store"
-import { useNavPersona, navLabel, NAV_LABELS } from "@/lib/nav/nav-persona"
-import { useT } from "@/lib/i18n/useT"
 
-type Biz = { id: number; name?: string; city?: string; subArea?: string; vendor?: { vendorType?: string } }
+type Biz = { id: number; name?: string; city?: string; subArea?: string }
+type NItem = { name: string; url: string; icon: React.ElementType }
+type Group = { grp: string; items: NItem[] }
 
-// The secondary-panel sections, now drill destinations. Raw labels from
-// buildVendorSections; the "Zyada" drawer folds the remaining secondary groups.
-const MORE_LABELS = ["Sell & serve", "Operations", "Grow", "Venue-OS"]
+// ── Nav data — mirrors artifact-shell's NAV / KHATA / SETUP (static, like the
+//    champagne rail it replaces) with lucide icons. ─────────────────────────
+const ROZANA: NItem[] = [
+  { name: "Overview", url: "/dashboard", icon: LayoutGrid },
+  { name: "Leads", url: "/dashboard/leads", icon: Inbox },
+  { name: "Bookings", url: "/dashboard/bookings", icon: CalendarCheck },
+  { name: "Calendar", url: "/dashboard/calendar", icon: CalendarDays },
+  { name: "Chat", url: "/dashboard/chat", icon: MessageSquare },
+  { name: "Function sheets", url: "/dashboard/function-sheets", icon: FileText },
+  { name: "Customers", url: "/dashboard/customers", icon: Users },
+]
+
+// Khata (money) — shown as a flat inline list under the collapsible.
+const KHATA: NItem[] = [
+  { name: "Payments", url: "/dashboard/payments", icon: CircleDollarSign },
+  { name: "Receipts", url: "/dashboard/receipts", icon: ReceiptText },
+  { name: "Wapsi (due)", url: "/dashboard/receivables", icon: Undo2 },
+  { name: "Kharche", url: "/dashboard/expenses", icon: ArrowDownUp },
+  { name: "Staff & payroll", url: "/dashboard/staff", icon: HandCoins },
+  { name: "Suppliers", url: "/dashboard/suppliers", icon: Truck },
+  { name: "Cheque ledger", url: "/dashboard/pdcs", icon: BookOpen },
+  { name: "Tax report", url: "/dashboard/tax", icon: Landmark },
+]
+const KHATA_ROOT = "/dashboard/money"
+
+const SETUP: Group[] = [
+  { grp: "Mera business", items: [
+    { name: "Business settings", url: "/dashboard/settings", icon: Settings2 },
+    { name: "Setup checklist", url: "/dashboard/onboarding", icon: ListChecks },
+    { name: "Automation", url: "/dashboard/automation", icon: Zap },
+    { name: "Cancellation policy", url: "/dashboard/cancellation-policy", icon: FileText } ] },
+  { grp: "Venue", items: [
+    { name: "Halls & spaces", url: "/dashboard/spaces", icon: Building2 },
+    { name: "Bookable slots", url: "/dashboard/slots", icon: CalendarClock },
+    { name: "Packages & menus", url: "/dashboard/packages", icon: Package },
+    { name: "Venue-OS hub", url: "/dashboard/venue-os", icon: Building2 } ] },
+  { grp: "Stock & compliance", items: [
+    { name: "Inventory", url: "/dashboard/inventory", icon: Boxes },
+    { name: "Generator fuel", url: "/dashboard/generator-fuel", icon: Fuel },
+    { name: "Halal certs", url: "/dashboard/halal-certs", icon: ShieldCheck },
+    { name: "Drone NOC", url: "/dashboard/drone-noc", icon: Plane } ] },
+  { grp: "Grow", items: [
+    { name: "Promote", url: "/dashboard/promote", icon: Megaphone },
+    { name: "Collaborations", url: "/dashboard/collaborations", icon: Handshake } ] },
+]
+const SETUP_ROOT = "/dashboard/setup"
+
+const ZYADA: Group[] = [
+  { grp: "Bechna & serve", items: [
+    { name: "Quote requests", url: "/dashboard/quotes", icon: FileQuestion },
+    { name: "Date holds", url: "/dashboard/holds", icon: Clock },
+    { name: "Reviews", url: "/dashboard/reviews", icon: Star },
+    { name: "Field capture", url: "/dashboard/field", icon: Compass } ] },
+  { grp: "Operations", items: [
+    { name: "Trade ops", url: "/dashboard/trade-ops", icon: Workflow },
+    { name: "Kitchen prep", url: "/dashboard/kitchen-prep", icon: ChefHat },
+    { name: "Brokers", url: "/dashboard/brokers", icon: Handshake } ] },
+  { grp: "Grow", items: [
+    { name: "Reports", url: "/dashboard/insights", icon: BarChart3 },
+    { name: "Plan & billing", url: "/dashboard/billing", icon: CreditCard } ] },
+]
+
+const anyActive = (pathname: string | null, items: NItem[]) => items.some((i) => isActiveForNav(pathname, i.url))
+const KHATA_ACTIVE = (p: string | null) => isActiveForNav(p, KHATA_ROOT) || anyActive(p, KHATA)
+const SETUP_ACTIVE = (p: string | null) => isActiveForNav(p, SETUP_ROOT) || SETUP.some((g) => anyActive(p, g.items))
+const ZYADA_ACTIVE = (p: string | null) => ZYADA.some((g) => anyActive(p, g.items))
 
 function BusinessSwitcher() {
   const { business, businesses } = useBusiness()
@@ -92,58 +160,49 @@ function BusinessSwitcher() {
 export function ChampagneSidebar() {
   const router = useRouter()
   const pathname = usePathname()
-  const { user } = useUser()
-  const { business } = useBusiness()
-  const { persona } = useNavPersona()
-  const t = useT()
-
-  const sections = React.useMemo(
-    () => buildVendorSections(user, (business as Biz | null)?.vendor?.vendorType),
-    [user, business],
-  )
-  const byLabel = (l: string) => sections.find((s) => s.label === l)
-  const mainSec = byLabel("Main")
-  const khataSec = byLabel("Khata")
-  const setupSec = byLabel("My Business")
-  const moreSecs = sections.filter((s) => MORE_LABELS.includes(s.label))
-
-  const label = (item: { name: string; i18nKey?: string; labelOverride?: string }) =>
-    item.labelOverride ? item.labelOverride : item.i18nKey ? t(item.i18nKey) : item.name
-  const secLabel = (l: string) => (NAV_LABELS[l] ? navLabel(l, persona) : l)
-
-  // Which drawer holds the current route — so navigating INTO a section opens
-  // its drawer, and Back to root stays put until the route leaves the section.
-  const has = (sec: typeof khataSec, p: string | null) => !!sec?.items.some((i) => isActiveForNav(p, i.url))
-  const activeDrill = React.useMemo<null | "khata" | "setup" | "more">(() => {
-    if (has(khataSec, pathname)) return "khata"
-    if (has(setupSec, pathname)) return "setup"
-    if (moreSecs.some((s) => s.items.some((i) => isActiveForNav(pathname, i.url)))) return "more"
-    return null
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, sections])
-  const [drill, setDrill] = React.useState<null | "khata" | "setup" | "more">(activeDrill)
-  React.useEffect(() => { setDrill(activeDrill) }, [activeDrill])
-
   const go = (url: string) => router.push(url)
 
-  const Item = ({ it }: { it: { name: string; url: string; icon: React.ElementType; i18nKey?: string; labelOverride?: string } }) => (
+  const onKhata = KHATA_ACTIVE(pathname)
+  const [khataOpen, setKhataOpen] = React.useState(onKhata)
+  React.useEffect(() => { setKhataOpen(onKhata) }, [onKhata])
+
+  const activeDrill = React.useMemo<null | "setup" | "more">(() => {
+    if (SETUP_ACTIVE(pathname)) return "setup"
+    if (ZYADA_ACTIVE(pathname)) return "more"
+    return null
+  }, [pathname])
+  const [drill, setDrill] = React.useState<null | "setup" | "more">(activeDrill)
+  React.useEffect(() => { setDrill(activeDrill) }, [activeDrill])
+
+  const Item = ({ it }: { it: NItem }) => (
     <SidebarMenuItem>
-      <SidebarMenuButton tooltip={label(it)} isActive={isActiveForNav(pathname, it.url)} onClick={() => go(it.url)}>
-        <it.icon /><span>{label(it)}</span>
+      <SidebarMenuButton tooltip={it.name} isActive={isActiveForNav(pathname, it.url)} onClick={() => go(it.url)}>
+        <it.icon /><span>{it.name}</span>
       </SidebarMenuButton>
     </SidebarMenuItem>
   )
-
-  const DrillTrigger = ({ id, icon: Icon, text }: { id: "khata" | "setup" | "more"; icon: React.ElementType; text: string }) => (
-    <SidebarMenuItem>
-      <SidebarMenuButton tooltip={text} onClick={() => setDrill(id)}>
-        <Icon /><span>{text}</span>
-        <ChevronRight className="ml-auto size-4 text-muted-foreground" />
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+  const Grouped = ({ groups }: { groups: Group[] }) => (
+    <>{groups.map((g) => (
+      <SidebarGroup key={g.grp}>
+        <SidebarGroupLabel>{g.grp}</SidebarGroupLabel>
+        <SidebarMenu>{g.items.map((it) => <Item key={it.name} it={it} />)}</SidebarMenu>
+      </SidebarGroup>
+    ))}</>
   )
-
-  const drillTitle = drill === "khata" ? secLabel("Khata") : drill === "setup" ? "Set up" : "Zyada"
+  const BackHeader = ({ title }: { title: string }) => (
+    <>
+      <SidebarGroup className="pb-0">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={() => setDrill(null)} tooltip="Back" className="font-semibold text-foreground">
+              <ArrowLeft /><span>{title}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarGroup>
+      <SidebarSeparator />
+    </>
+  )
 
   return (
     <Sidebar collapsible="icon">
@@ -152,45 +211,55 @@ export function ChampagneSidebar() {
       <SidebarContent className="overflow-x-hidden">
         {drill === null ? (
           <div key="root" className="duration-200 animate-in fade-in-0 slide-in-from-left-2">
-            {mainSec && (
-              <SidebarGroup>
-                <SidebarGroupLabel>{secLabel("Main")}</SidebarGroupLabel>
-                <SidebarMenu>{mainSec.items.map((it) => <Item key={it.name} it={it} />)}</SidebarMenu>
-              </SidebarGroup>
-            )}
+            <SidebarGroup>
+              <SidebarGroupLabel>Rozana</SidebarGroupLabel>
+              <SidebarMenu>{ROZANA.map((it) => <Item key={it.name} it={it} />)}</SidebarMenu>
+            </SidebarGroup>
             <SidebarSeparator />
             <SidebarGroup>
               <SidebarMenu>
-                {khataSec && khataSec.items.length > 0 && <DrillTrigger id="khata" icon={Wallet} text={secLabel("Khata")} />}
-                {setupSec && setupSec.items.length > 0 && <DrillTrigger id="setup" icon={Settings2} text="Set up" />}
-                {moreSecs.length > 0 && <DrillTrigger id="more" icon={MoreHorizontal} text="Zyada" />}
+                {/* Khata — inline collapsible: sub-modules toggle open BELOW it. */}
+                <Collapsible open={khataOpen} onOpenChange={setKhataOpen} className="group/khata">
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton tooltip="Khata" isActive={onKhata}>
+                        <Wallet /><span>Khata</span>
+                        <ChevronRight className="ml-auto size-4 text-muted-foreground transition-transform group-data-[state=open]/khata:rotate-90" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        {KHATA.map((it) => (
+                          <SidebarMenuSubItem key={it.name}>
+                            <SidebarMenuSubButton isActive={isActiveForNav(pathname, it.url)} onClick={() => go(it.url)}>
+                              <it.icon /><span>{it.name}</span>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+                {/* Set up / Zyada — drill-downs that replace the whole rail. */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton tooltip="Set up" isActive={SETUP_ACTIVE(pathname)} onClick={() => setDrill("setup")}>
+                    <Settings2 /><span>Set up</span>
+                    <ChevronRight className="ml-auto size-4 text-muted-foreground" />
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton tooltip="Zyada" isActive={ZYADA_ACTIVE(pathname)} onClick={() => setDrill("more")}>
+                    <MoreHorizontal /><span>Zyada</span>
+                    <ChevronRight className="ml-auto size-4 text-muted-foreground" />
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroup>
           </div>
         ) : (
           <div key={drill} className="duration-200 animate-in fade-in-0 slide-in-from-right-3">
-            <SidebarGroup className="pb-0">
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => setDrill(null)} tooltip="Back" className="font-semibold text-foreground">
-                    <ArrowLeft /><span>{drillTitle}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroup>
-            <SidebarSeparator />
-            {drill === "khata" && khataSec && (
-              <SidebarGroup><SidebarMenu>{khataSec.items.map((it) => <Item key={it.name} it={it} />)}</SidebarMenu></SidebarGroup>
-            )}
-            {drill === "setup" && setupSec && (
-              <SidebarGroup><SidebarMenu>{setupSec.items.map((it) => <Item key={it.name} it={it} />)}</SidebarMenu></SidebarGroup>
-            )}
-            {drill === "more" && moreSecs.map((s) => (
-              <SidebarGroup key={s.label}>
-                <SidebarGroupLabel>{secLabel(s.label)}</SidebarGroupLabel>
-                <SidebarMenu>{s.items.map((it) => <Item key={it.name} it={it} />)}</SidebarMenu>
-              </SidebarGroup>
-            ))}
+            <BackHeader title={drill === "setup" ? "Set up" : "Zyada"} />
+            <Grouped groups={drill === "setup" ? SETUP : ZYADA} />
           </div>
         )}
       </SidebarContent>
