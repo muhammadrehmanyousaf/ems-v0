@@ -79,7 +79,7 @@ const EXTRA_CSS = String.raw`
    padding) with no flex parent, so give it a definite viewport-fit height —
    the panes (inbox list, thread, detail) then scroll internally and the PAGE
    never scrolls. */
-#wwc{ flex:1; display:flex; min-height:0; height:calc(100dvh - 36px); }
+#wwc{ flex:1; display:flex; min-height:0; height:calc(100dvh - 20px); }
 
 .chat{ flex:1; display:flex; min-height:0; }
 .avatar{ position:relative; flex:none; border-radius:50%; display:grid; place-items:center; font-weight:600; background:var(--surface-3); border:1px solid var(--border-2); color:var(--ink-2); font-size:12px; }

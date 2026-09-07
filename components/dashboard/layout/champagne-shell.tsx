@@ -129,7 +129,7 @@ const CHROME_CSS = String.raw`
 .cshell .ibtn{ width:36px; height:36px; border-radius:9px; border:1px solid var(--border); background:var(--surface); display:grid; place-items:center; color:var(--ink-2); position:relative; }
 .cshell .ibtn:hover{ background:var(--surface-3); } .cshell .ibtn svg{ width:17px; height:17px; } .cshell .ibtn .dot{ position:absolute; top:7px; right:8px; width:7px; height:7px; border-radius:50%; background:var(--bad); border:1.5px solid var(--surface); }
 .cshell .cscroll{ flex:1; min-height:0; overflow-y:auto; }
-.cshell .cscroll .content{ padding:16px 26px 20px; max-width:1320px; width:100%; margin:0 auto; }
+.cshell .cscroll .content{ padding:10px 12px; max-width:none; width:100%; margin:0; }
 .cshell .group/sidebar-wrapper{ height:100%; min-height:0 !important; overflow:hidden; } .cshell .cs-inset{ height:100%; min-height:0 !important; overflow:hidden; } .cshell .cs-trigger{ height:34px; width:34px; border-radius:9px; color:var(--ink-2); } .cshell .cs-trigger:hover{ background:var(--surface-3); }
 @media (max-width:820px){ .cshell .app,.cshell .app.app-sub{ grid-template-columns:1fr; } .cshell .side,.cshell .sub-side{ display:none; } }
 `

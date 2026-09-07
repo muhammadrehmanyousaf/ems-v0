@@ -534,7 +534,7 @@ a{ color:inherit; text-decoration:none; } button{ font:inherit; color:inherit; c
 .kbd{ font-size:10.5px; color:var(--ink-3); border:1px solid var(--border); border-radius:5px; padding:1px 5px; }
 .ibtn{ width:36px; height:36px; border-radius:9px; border:1px solid var(--border); background:var(--surface); display:grid; place-items:center; color:var(--ink-2); position:relative; }
 .ibtn:hover{ background:var(--surface-3); } .ibtn svg{ width:17px; height:17px; } .ibtn .dot{ position:absolute; top:7px; right:8px; width:7px; height:7px; border-radius:50%; background:var(--bad); border:1.5px solid var(--surface); }
-.content{ padding:16px 26px 20px; max-width:1320px; width:100%; margin:0 auto; }
+.content{ padding:10px 12px; max-width:none; width:100%; margin:0; }
 .head{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:14px; flex-wrap:wrap; }
 .head h1{ font-size:22px; font-weight:600; letter-spacing:-.025em; } .head .sub{ color:var(--ink-3); font-size:13px; margin-top:5px; } .head .sub b{ color:var(--ink-2); font-weight:600; }
 .head-actions{ display:flex; gap:8px; }
