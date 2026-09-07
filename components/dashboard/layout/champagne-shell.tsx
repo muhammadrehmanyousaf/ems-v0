@@ -67,6 +67,18 @@ const CHROME_CSS = String.raw`
   --sidebar-background:40 18% 7%; --sidebar-foreground:40 20% 82%; --sidebar-primary:36 61% 60%; --sidebar-primary-foreground:36 63% 9%; --sidebar-accent:38 17% 12%; --sidebar-accent-foreground:40 33% 94%; --sidebar-border:40 16% 13%; --sidebar-ring:36 61% 60%; } }
 .cshell[data-theme="dark"]{ --background:40 14% 4%; --foreground:40 33% 94%; --card:40 18% 7%; --card-foreground:40 33% 94%; --popover:40 18% 7%; --popover-foreground:40 33% 94%; --primary:36 61% 60%; --primary-foreground:36 63% 9%; --secondary:38 17% 10%; --secondary-foreground:40 33% 94%; --muted:38 17% 10%; --muted-foreground:36 9% 56%; --accent:38 17% 10%; --accent-foreground:40 33% 94%; --border:40 16% 13%; --input:40 16% 16%; --ring:36 61% 60%;
   --sidebar-background:40 18% 7%; --sidebar-foreground:40 20% 82%; --sidebar-primary:36 61% 60%; --sidebar-primary-foreground:36 63% 9%; --sidebar-accent:38 17% 12%; --sidebar-accent-foreground:40 33% 94%; --sidebar-border:40 16% 13%; --sidebar-ring:36 61% 60%; }
+/* The footer profile menu is a Radix dropdown portaled to document.body — OUTSIDE
+   .cshell — so it would fall back to the app-wide purple --primary. Re-declare the
+   gold/cream shadcn tokens on the menu itself, keyed off html.dark (which the shell
+   toggles) so it tracks the active theme. This is why the badge/toggle were purple. */
+.champagne-menu{ --background:45 18% 96%; --foreground:40 11% 9%; --card:0 0% 100%; --card-foreground:40 11% 9%; --popover:0 0% 100%; --popover-foreground:40 11% 9%; --primary:36 51% 48%; --primary-foreground:0 0% 100%; --secondary:43 21% 94%; --secondary-foreground:40 11% 9%; --muted:43 21% 94%; --muted-foreground:40 6% 41%; --accent:43 21% 94%; --accent-foreground:40 11% 9%; --destructive:2 55% 46%; --destructive-foreground:0 0% 100%; --border:43 15% 90%; --input:43 15% 85%; --ring:36 51% 48%; }
+html.dark .champagne-menu{ --background:40 14% 4%; --foreground:40 33% 94%; --card:40 18% 7%; --card-foreground:40 33% 94%; --popover:40 18% 7%; --popover-foreground:40 33% 94%; --primary:36 61% 60%; --primary-foreground:36 63% 9%; --secondary:38 17% 10%; --secondary-foreground:40 33% 94%; --muted:38 17% 10%; --muted-foreground:36 9% 56%; --accent:38 17% 10%; --accent-foreground:40 33% 94%; --border:40 16% 13%; --input:40 16% 16%; --ring:36 61% 60%; }
+/* Light/Dark segmented toggle inside that menu. */
+.champagne-menu .thseg{ display:flex; gap:4px; padding:3px; margin:2px 4px 2px; border-radius:9px; background:hsl(var(--secondary)); }
+.champagne-menu .thseg button{ flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px; height:30px; border:0; border-radius:6px; background:transparent; font:inherit; font-size:12.5px; font-weight:500; color:hsl(var(--muted-foreground)); cursor:pointer; }
+.champagne-menu .thseg button:hover{ color:hsl(var(--foreground)); }
+.champagne-menu .thseg button[aria-pressed="true"]{ background:hsl(var(--popover)); color:hsl(var(--foreground)); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+.champagne-menu .thseg button svg{ width:14px; height:14px; }
 .cshell *{ box-sizing:border-box; }
 .cshell h1,.cshell h2,.cshell h3{ margin:0; line-height:1.2; letter-spacing:-.02em; font-weight:600; }
 .cshell a{ color:inherit; text-decoration:none; } .cshell button{ font:inherit; color:inherit; cursor:pointer; }

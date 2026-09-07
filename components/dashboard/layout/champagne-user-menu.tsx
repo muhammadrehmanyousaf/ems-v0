@@ -2,14 +2,15 @@
 
 /**
  * ChampagneUserMenu — the vendor rail's footer profile button. Since the top
- * bar was removed, the things that lived there now live in THIS dropdown:
- * a screen search, notifications (with unread count) and the theme switch —
- * alongside the usual account actions (Profile, Log out).
+ * bar was removed, notifications (with unread count) and a Light/Dark theme
+ * toggle now live in THIS dropdown, alongside the account actions (Profile,
+ * Log out). The menu carries the `champagne-menu` class so its gold/cream
+ * shadcn tokens survive the Radix portal (see CHROME_CSS in champagne-shell).
  */
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { BadgeCheck, Bell, Check, ChevronsUpDown, LogOut, Monitor, Moon, Search, Sun } from "lucide-react"
+import { BadgeCheck, Bell, ChevronsUpDown, LogOut, Moon, Sun } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -17,23 +18,17 @@ import {
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
 import { useUser } from "@/context/UserContext"
 import { getDashboardRole, type DashboardRole } from "@/lib/dashboard-role"
-import { useThemePrefs } from "@/lib/store/theme-prefs"
+import { useThemePrefs, useResolvedThemeMode } from "@/lib/store/theme-prefs"
 import { NotificationAPI } from "@/lib/api/notifications"
-import { applyContentSearch } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const ROLE_LABEL: Record<DashboardRole, string> = { superAdmin: "Super admin", admin: "Admin", vendor: "Vendor", none: "Workspace" }
-const THEMES: { key: "light" | "dark" | "system"; label: string; icon: React.ElementType }[] = [
-  { key: "light", label: "Light", icon: Sun },
-  { key: "dark", label: "Dark", icon: Moon },
-  { key: "system", label: "System", icon: Monitor },
-]
 
 export function ChampagneUserMenu() {
   const { isMobile } = useSidebar()
   const { user, logout } = useUser()
   const router = useRouter()
-  const mode = useThemePrefs((s) => s.mode)
   const setMode = useThemePrefs((s) => s.setMode)
+  const resolved = useResolvedThemeMode()
   const [unread, setUnread] = React.useState(0)
   React.useEffect(() => {
     let a = true
@@ -59,7 +54,7 @@ export function ChampagneUserMenu() {
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] min-w-64 rounded-lg" side={isMobile ? "bottom" : "right"} align="end" sideOffset={4}>
+          <DropdownMenuContent className="champagne-menu w-[--radix-dropdown-menu-trigger-width] min-w-64 rounded-lg" side={isMobile ? "bottom" : "right"} align="end" sideOffset={4}>
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg"><AvatarFallback className="rounded-lg bg-primary/20 text-primary text-xs">{initials}</AvatarFallback></Avatar>
@@ -72,15 +67,6 @@ export function ChampagneUserMenu() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
 
-            {/* Search — was the top-bar search box. */}
-            <div className="px-1 py-1" onKeyDown={(e) => e.stopPropagation()}>
-              <div className="flex h-8 items-center gap-2 rounded-md border border-border bg-card px-2">
-                <Search className="size-3.5 text-muted-foreground" />
-                <input className="w-full bg-transparent text-[13px] outline-none placeholder:text-muted-foreground" placeholder="Is screen mein dhoondein…" onChange={(e) => applyContentSearch(e.currentTarget.value)} />
-              </div>
-            </div>
-            <DropdownMenuSeparator />
-
             {/* Notifications — was the top-bar bell. */}
             <DropdownMenuItem onClick={() => router.push("/dashboard/notifications")}>
               <Bell />
@@ -89,15 +75,12 @@ export function ChampagneUserMenu() {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
 
-            {/* Theme — was the top-bar theme toggle. */}
-            <DropdownMenuLabel className="py-1 text-[11px] font-normal uppercase tracking-wide text-muted-foreground">Theme</DropdownMenuLabel>
-            {THEMES.map((th) => (
-              <DropdownMenuItem key={th.key} onClick={() => setMode(th.key)}>
-                <th.icon />
-                {th.label}
-                {mode === th.key && <Check className="ml-auto size-4 text-primary" />}
-              </DropdownMenuItem>
-            ))}
+            {/* Theme — a plain Light/Dark toggle (not DropdownMenuItems, so a tap
+                switches the theme without closing the menu). */}
+            <div className="thseg" role="group" aria-label="Theme">
+              <button type="button" aria-pressed={resolved === "light"} onClick={() => setMode("light")}><Sun />Light</button>
+              <button type="button" aria-pressed={resolved === "dark"} onClick={() => setMode("dark")}><Moon />Dark</button>
+            </div>
             <DropdownMenuSeparator />
 
             <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}><BadgeCheck />Profile</DropdownMenuItem>
