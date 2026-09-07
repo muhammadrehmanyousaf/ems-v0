@@ -360,7 +360,15 @@ function pagerRender(st: PagerState) {
   if (st.rowcount) st.rowcount.textContent = `${total} ${st.noun}`
   if (st.info) st.info.textContent = total === 0 ? "0" : `${start + 1}–${Math.min(end, total)} / ${total}`
   if (st.pagesEl) st.pagesEl.innerHTML = pagerButtons(st.page, pages)
-  if (st.wrap) st.wrap.hidden = total <= st.pageSize
+  if (st.wrap) {
+    // Always show the pager bar (even on a single page), for a consistent
+    // footer across every list; the arrows just disable at the ends.
+    st.wrap.hidden = false
+    const prev = st.wrap.querySelector("[data-pager-prev]") as HTMLButtonElement | null
+    const next = st.wrap.querySelector("[data-pager-next]") as HTMLButtonElement | null
+    if (prev) prev.disabled = st.page <= 0
+    if (next) next.disabled = st.page >= pages - 1
+  }
 }
 /** Attach the shared paginator inside #wwc. Idempotent — safe to call again after
  * a re-render (it re-snapshots the rows). Two modes:
@@ -596,7 +604,7 @@ table.tbl{ width:100%; border-collapse:collapse; }
 .tbl-foot{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 15px; border-top:1px solid var(--border); font-size:12px; color:var(--ink-3); flex-wrap:wrap; }
 /* shared paginator */
 .pager{ display:flex; align-items:center; gap:4px; margin-left:auto; } .pager[hidden]{ display:none; }
-.pager .pgbtn{ width:30px; height:30px; border-radius:8px; border:1px solid var(--border-2); background:var(--surface); color:var(--ink-2); display:grid; place-items:center; } .pager .pgbtn:hover{ background:var(--surface-3); color:var(--ink); } .pager .pgbtn svg{ width:15px; height:15px; }
+.pager .pgbtn{ width:30px; height:30px; border-radius:8px; border:1px solid var(--border-2); background:var(--surface); color:var(--ink-2); display:grid; place-items:center; } .pager .pgbtn:hover{ background:var(--surface-3); color:var(--ink); } .pager .pgbtn svg{ width:15px; height:15px; } .pager .pgbtn:disabled{ opacity:.4; pointer-events:none; }
 .pager .pgnums{ display:inline-flex; gap:2px; align-items:center; }
 .pager .pgnum{ min-width:30px; height:30px; padding:0 8px; border-radius:8px; border:1px solid transparent; background:transparent; color:var(--ink-2); font-weight:600; font-size:12.5px; font-variant-numeric:tabular-nums; } .pager .pgnum:hover{ background:var(--surface-3); color:var(--ink); }
 .pager .pgnum.on{ background:var(--accent); color:var(--on-accent); box-shadow:var(--shadow-xs); }
