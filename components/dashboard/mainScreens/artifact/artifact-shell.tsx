@@ -360,7 +360,15 @@ function pagerRender(st: PagerState) {
   if (st.rowcount) st.rowcount.textContent = `${total} ${st.noun}`
   if (st.info) st.info.textContent = total === 0 ? "0" : `${start + 1}–${Math.min(end, total)} / ${total}`
   if (st.pagesEl) st.pagesEl.innerHTML = pagerButtons(st.page, pages)
-  if (st.wrap) st.wrap.hidden = total <= st.pageSize
+  if (st.wrap) {
+    // Always show the pager bar (even on a single page), for a consistent
+    // footer across every list; the arrows just disable at the ends.
+    st.wrap.hidden = false
+    const prev = st.wrap.querySelector("[data-pager-prev]") as HTMLButtonElement | null
+    const next = st.wrap.querySelector("[data-pager-next]") as HTMLButtonElement | null
+    if (prev) prev.disabled = st.page <= 0
+    if (next) next.disabled = st.page >= pages - 1
+  }
 }
 /** Attach the shared paginator inside #wwc. Idempotent — safe to call again after
  * a re-render (it re-snapshots the rows). Two modes:
@@ -534,7 +542,7 @@ a{ color:inherit; text-decoration:none; } button{ font:inherit; color:inherit; c
 .kbd{ font-size:10.5px; color:var(--ink-3); border:1px solid var(--border); border-radius:5px; padding:1px 5px; }
 .ibtn{ width:36px; height:36px; border-radius:9px; border:1px solid var(--border); background:var(--surface); display:grid; place-items:center; color:var(--ink-2); position:relative; }
 .ibtn:hover{ background:var(--surface-3); } .ibtn svg{ width:17px; height:17px; } .ibtn .dot{ position:absolute; top:7px; right:8px; width:7px; height:7px; border-radius:50%; background:var(--bad); border:1.5px solid var(--surface); }
-.content{ padding:16px 26px 20px; max-width:1320px; width:100%; margin:0 auto; }
+.content{ padding:10px 12px; max-width:none; width:100%; margin:0; }
 .head{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:14px; flex-wrap:wrap; }
 .head h1{ font-size:22px; font-weight:600; letter-spacing:-.025em; } .head .sub{ color:var(--ink-3); font-size:13px; margin-top:5px; } .head .sub b{ color:var(--ink-2); font-weight:600; }
 .head-actions{ display:flex; gap:8px; }
@@ -596,7 +604,7 @@ table.tbl{ width:100%; border-collapse:collapse; }
 .tbl-foot{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 15px; border-top:1px solid var(--border); font-size:12px; color:var(--ink-3); flex-wrap:wrap; }
 /* shared paginator */
 .pager{ display:flex; align-items:center; gap:4px; margin-left:auto; } .pager[hidden]{ display:none; }
-.pager .pgbtn{ width:30px; height:30px; border-radius:8px; border:1px solid var(--border-2); background:var(--surface); color:var(--ink-2); display:grid; place-items:center; } .pager .pgbtn:hover{ background:var(--surface-3); color:var(--ink); } .pager .pgbtn svg{ width:15px; height:15px; }
+.pager .pgbtn{ width:30px; height:30px; border-radius:8px; border:1px solid var(--border-2); background:var(--surface); color:var(--ink-2); display:grid; place-items:center; } .pager .pgbtn:hover{ background:var(--surface-3); color:var(--ink); } .pager .pgbtn svg{ width:15px; height:15px; } .pager .pgbtn:disabled{ opacity:.4; pointer-events:none; }
 .pager .pgnums{ display:inline-flex; gap:2px; align-items:center; }
 .pager .pgnum{ min-width:30px; height:30px; padding:0 8px; border-radius:8px; border:1px solid transparent; background:transparent; color:var(--ink-2); font-weight:600; font-size:12.5px; font-variant-numeric:tabular-nums; } .pager .pgnum:hover{ background:var(--surface-3); color:var(--ink); }
 .pager .pgnum.on{ background:var(--accent); color:var(--on-accent); box-shadow:var(--shadow-xs); }
@@ -607,7 +615,7 @@ table.tbl{ width:100%; border-collapse:collapse; }
 .errbanner .eb-ic{ width:34px; height:34px; border-radius:9px; background:var(--surface); display:grid; place-items:center; color:var(--bad); flex:none; } .errbanner .eb-ic svg{ width:18px; height:18px; }
 .errbanner .eb-txt{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; } .errbanner .eb-txt b{ font-size:13px; color:var(--ink); } .errbanner .eb-txt span{ font-size:12px; color:var(--ink-2); }
 .errbanner .btn{ flex:none; }
-.foot{ text-align:center; color:var(--ink-4); font-size:11px; margin-top:12px; padding-bottom:2px; }
+.foot{ display:none; }
 /* shared micro — canonical versions of classes screens were each copy-pasting.
    Injected before extraCss, so a screen's own copy still wins; these only supply
    the canon to screens that don't define their own (and stop future drift). */

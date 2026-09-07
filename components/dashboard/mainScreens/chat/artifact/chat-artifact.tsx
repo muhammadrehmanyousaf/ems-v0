@@ -75,7 +75,11 @@ const EXTRA_CSS = String.raw`
 :host{ overflow:hidden; }
 .main{ height:100vh; overflow:hidden; }
 .content{ padding:0; max-width:none; margin:0; flex:1; min-height:0; display:flex; }
-#wwc{ flex:1; display:flex; min-height:0; }
+/* Persistent shell: #wwc sits inside the React .content (16/20 vertical
+   padding) with no flex parent, so give it a definite viewport-fit height —
+   the panes (inbox list, thread, detail) then scroll internally and the PAGE
+   never scrolls. */
+#wwc{ flex:1; display:flex; min-height:0; height:calc(100dvh - 20px); }
 
 .chat{ flex:1; display:flex; min-height:0; }
 .avatar{ position:relative; flex:none; border-radius:50%; display:grid; place-items:center; font-weight:600; background:var(--surface-3); border:1px solid var(--border-2); color:var(--ink-2); font-size:12px; }

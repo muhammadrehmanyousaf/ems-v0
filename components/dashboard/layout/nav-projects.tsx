@@ -77,7 +77,7 @@ function getDashboardSubModule(path: string) {
   return segs[2] ?? ""
 }
 
-function isActiveForNav(currentPathname: string | null, itemUrl: string) {
+export function isActiveForNav(currentPathname: string | null, itemUrl: string) {
   const current = normalizePath(currentPathname)
   const target = normalizePath(itemUrl)
   const currentMod = getDashboardModule(current)

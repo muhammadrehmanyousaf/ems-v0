@@ -110,7 +110,7 @@ function buildContent(list: PaymentReceipt[], summary: { total: number; byMethod
   return `
   <div class="head"><div><h1>Receipts</h1><div class="sub">Paisa jo aaya — <b>Rs ${pkNum(total)}</b> kul. Naya receipt darj karein ya galti hataayein.</div></div>
     <div class="head-actions"><button class="btn btn-primary" data-r-new>${svg(IC.plus, 2.2)} Naya receipt</button></div></div>
-  ${tiles}${breakdown}${toolbar}
+  ${tiles}${toolbar}
   <div class="card"><div class="tbl-wrap"><table class="tbl">
     <thead><tr><th>Taareekh</th><th>Kis ka</th><th>Tareeqa</th><th>Reference</th><th class="r">Amount</th><th></th></tr></thead>
     <tbody>${body}</tbody></table></div>
