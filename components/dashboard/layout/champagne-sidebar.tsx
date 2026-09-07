@@ -200,7 +200,6 @@ export function ChampagneSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarGroup>
-      <SidebarSeparator />
     </>
   )
 
@@ -215,8 +214,8 @@ export function ChampagneSidebar() {
               <SidebarGroupLabel>Rozana</SidebarGroupLabel>
               <SidebarMenu>{ROZANA.map((it) => <Item key={it.name} it={it} />)}</SidebarMenu>
             </SidebarGroup>
-            <SidebarSeparator />
             <SidebarGroup>
+              <SidebarGroupLabel>Modules</SidebarGroupLabel>
               <SidebarMenu>
                 {/* Khata — inline collapsible: sub-modules toggle open BELOW it. */}
                 <Collapsible open={khataOpen} onOpenChange={setKhataOpen} className="group/khata">
