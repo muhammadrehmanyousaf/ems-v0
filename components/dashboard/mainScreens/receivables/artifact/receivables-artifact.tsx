@@ -93,7 +93,7 @@ function buildContent(data: ReceivablesData): string {
     <div class="head-actions"><button class="btn btn-ghost" data-act="export-table">${svg(IC.dl, 2)} Export</button></div></div>
   ${tiles}${toolbar}
   <div class="card"><div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Customer</th><th class="r">Bookings</th><th>Purana</th><th class="r">Baqaya</th><th></th></tr></thead>
+    <thead><tr><th>Customer</th><th>Bookings</th><th>Purana</th><th class="r">Baqaya</th><th></th></tr></thead>
     <tbody id="tbody">${body}</tbody></table></div>
     ${custs.length ? `<div class="tbl-foot"><span id="rowcount">${custs.length} customers</span></div>` : `<div class="empty">Koi baqaya nahi — sab clear! 🎉</div>`}</div>
   <div class="foot">WeddingWala vendor console · Wapsi</div>`
