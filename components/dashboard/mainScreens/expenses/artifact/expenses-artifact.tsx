@@ -49,11 +49,6 @@ const EXTRA_CSS = String.raw`
 .t-cap{ font-size:11.5px; color:var(--ink-3); font-weight:500; display:flex; align-items:center; gap:6px; } .t-cap svg{ width:13px; height:13px; }
 .t-val{ font-size:17px; font-weight:680; letter-spacing:-.02em; margin-top:4px; } .t-val .rs{ font-size:12px; color:var(--ink-3); font-weight:600; }
 .t-sub{ font-size:11px; color:var(--ink-3); margin-top:4px; }
-.catbars{ display:flex; flex-direction:column; gap:9px; padding:2px 0; }
-.catbar{ display:grid; grid-template-columns:120px 1fr auto; gap:12px; align-items:center; }
-.cb-nm{ font-size:12px; color:var(--ink-2); display:flex; align-items:center; gap:7px; } .cb-nm .dot{ width:8px; height:8px; border-radius:50%; flex:none; }
-.cb-track{ height:7px; border-radius:4px; background:var(--surface-3); overflow:hidden; } .cb-track span{ display:block; height:100%; border-radius:4px; }
-.cb-amt{ font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; }
 .catchip{ display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:6px; background:var(--surface-2); border:1px solid var(--border); } .catchip .dot{ width:7px; height:7px; border-radius:50%; }
 .del{ width:30px; height:30px; border-radius:7px; border:0; background:transparent; color:var(--ink-3); display:grid; place-items:center; } .del:hover{ background:var(--bad-wash); color:var(--bad); } .del svg{ width:15px; height:15px; }
 .rowacts{ display:flex; gap:4px; justify-content:flex-end; align-items:center; }
@@ -87,7 +82,6 @@ function buildContent(list: VendorExpense[], summary: { total: number; byCategor
   const monthTotal = list.filter((e) => { const d = new Date(e.spentDate); return !isNaN(d.getTime()) && d.getMonth() === mo && d.getFullYear() === yr }).reduce((s, e) => s + money(e.amount), 0)
   const byCat = summary.byCategory || {}
   const catEntries = (Object.entries(byCat) as [ExpenseCategory, number][]).filter(([, v]) => money(v) > 0).sort((a, b) => money(b[1]) - money(a[1]))
-  const maxCat = catEntries.length ? money(catEntries[0][1]) : 1
   const topCat = catEntries[0]
 
   const tiles = `<div class="exp-tiles">
@@ -95,8 +89,6 @@ function buildContent(list: VendorExpense[], summary: { total: number; byCategor
     <div class="tile"><div class="t-cap">${svg(IC.cal, 1.9)} Is mahine</div><div class="t-val tnum"><span class="rs">Rs</span> ${pkNum(monthTotal)}</div><div class="t-sub">${now.toLocaleDateString("en-PK", { month: "long" })}</div></div>
     <div class="tile"><div class="t-cap">${svg(IC.tag, 1.9)} Sab se bara category</div><div class="t-val" style="font-size:16px">${topCat ? escHtml(CAT_LABEL[topCat[0]]) : "—"}</div><div class="t-sub">${topCat ? "Rs " + pkNum(money(topCat[1])) : "koi kharcha nahi"}</div></div>
   </div>`
-
-  const catBars = catEntries.length ? `<div class="card" style="margin-bottom:14px"><div class="card-h" style="padding:14px 16px 6px"><div><h2 style="font-size:13.5px;font-weight:600">Category ke hisaab se</h2></div></div><div style="padding:8px 16px 16px"><div class="catbars">${catEntries.slice(0, 8).map(([c, v]) => `<div class="catbar"><span class="cb-nm"><span class="dot" style="background:${CAT_COLOR[c]}"></span>${escHtml(CAT_LABEL[c])}</span><span class="cb-track"><span style="width:${Math.round((money(v) / maxCat) * 100)}%;background:${CAT_COLOR[c]}"></span></span><span class="cb-amt tnum">Rs ${pkNum(money(v))}</span></div>`).join("")}</div></div></div>` : ""
 
   const tabCats = catEntries.slice(0, 6).map(([c]) => c)
   const toolbar = `<div class="toolbar"><div class="tabs" id="tabs">
@@ -116,7 +108,7 @@ function buildContent(list: VendorExpense[], summary: { total: number; byCategor
 
   return `
   <div class="head"><div><h1>Kharcha</h1><div class="sub">Aapke saare expenses — <b>Rs ${pkNum(total)}</b> kul.</div></div></div>
-  ${tiles}${catBars}${toolbar}
+  ${tiles}${toolbar}
   <div class="card"><div class="tbl-wrap"><table class="tbl">
     <thead><tr><th>Tareekh</th><th>Category</th><th>Kis liye</th><th>Tareeqa</th><th class="r">Amount</th><th></th></tr></thead>
     <tbody>${body}</tbody></table></div>
