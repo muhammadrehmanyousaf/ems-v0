@@ -73,7 +73,7 @@ const srcOf = (c: ConversationItem) => (c.bookingId ? "rf" : "web")
 /* ── chat-specific CSS (generic names — isolated by the shadow root) ── */
 const EXTRA_CSS = String.raw`
 :host{ overflow:hidden; }
-.main{ height:100vh; overflow:hidden; }
+.main{ height:100dvh; overflow:hidden; }
 .content{ padding:0; max-width:none; margin:0; flex:1; min-height:0; display:flex; }
 /* Persistent shell: #wwc sits inside the React .content (16/20 vertical
    padding) with no flex parent, so give it a definite viewport-fit height —
@@ -84,7 +84,7 @@ const EXTRA_CSS = String.raw`
 .chat{ flex:1; display:flex; min-height:0; }
 .avatar{ position:relative; flex:none; border-radius:50%; display:grid; place-items:center; font-weight:600; background:var(--surface-3); border:1px solid var(--border-2); color:var(--ink-2); font-size:12px; }
 .avatar .src{ position:absolute; right:-1px; bottom:-1px; width:11px; height:11px; border-radius:50%; border:2px solid var(--surface); }
-.src.wa{ background:var(--ok); } .src.ig{ background:#B5657A; } .src.rf{ background:var(--accent); } .src.web{ background:var(--info); }
+.src.wa{ background:var(--ok); } .src.ig{ background:#B5657A; } .src.rf{ background:var(--accent); } .src.web{ background:var(--ink-4); }
 
 /* conversation list */
 .clist{ width:326px; flex:none; border-right:1px solid var(--border); display:flex; flex-direction:column; background:var(--surface); min-height:0; }
@@ -117,7 +117,7 @@ const EXTRA_CSS = String.raw`
 .cv-badge{ flex:none; min-width:19px; height:19px; padding:0 6px; border-radius:20px; background:var(--accent); color:var(--on-accent); font-size:10.5px; font-weight:700; display:grid; place-items:center; font-variant-numeric:tabular-nums; }
 .cv-ctx{ display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:600; padding:1px 6px; border-radius:5px; margin-top:6px; white-space:nowrap; }
 .cv-ctx svg{ width:11px; height:11px; }
-.cv-ctx.book{ color:var(--accent-ink); background:var(--accent-wash); } .cv-ctx.lead{ color:var(--info); background:var(--info-wash); }
+.cv-ctx.book{ color:var(--accent-ink); background:var(--accent-wash); } .cv-ctx.lead{ color:var(--ink-2); background:var(--surface-3); border:1px solid var(--border); }
 .clist-empty{ padding:40px 18px; text-align:center; color:var(--ink-3); font-size:12.5px; }
 
 /* thread */
