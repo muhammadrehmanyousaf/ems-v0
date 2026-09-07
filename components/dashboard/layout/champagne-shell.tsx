@@ -39,7 +39,7 @@ export function ShellChromeSetter({ activeHref, crumbBold, crumbSub }: { activeH
 }
 
 const CHROME_CSS = String.raw`
-.cshell{ position:fixed; inset:0; overflow:hidden; z-index:46; display:block; color:var(--ink);
+.cshell{ position:fixed; inset:0; overflow:hidden; z-index:46; display:block; color:var(--ink); color-scheme:light; accent-color:var(--accent);
   font-family:"Geist","Inter",system-ui,-apple-system,"Segoe UI",sans-serif; font-size:13.5px; line-height:1.5; -webkit-font-smoothing:antialiased; letter-spacing:-.006em;
   --bg:#F7F6F3; --surface:#FFFFFF; --surface-2:#FAF9F6; --surface-3:#F3F1EC; --ink:#1A1815; --ink-2:#605A52; --ink-3:#6E6A62; --ink-4:#8C857B;
   --border:#EBE9E3; --border-2:#DEDBD3; --accent:#B8863B; --accent-ink:#8A6220; --accent-wash:#F5EFE2; --accent-line:#E3D3AE; --on-accent:#FFFFFF;
@@ -47,11 +47,13 @@ const CHROME_CSS = String.raw`
   --shadow-xs:0 1px 2px rgba(20,18,15,.04); --shadow-sm:0 1px 3px rgba(20,18,15,.06),0 1px 2px rgba(20,18,15,.04); --shadow-md:0 8px 24px -12px rgba(20,18,15,.16);
   --r:12px; --r-sm:9px; --r-xs:7px; background:var(--bg); }
 @media (prefers-color-scheme:dark){ .cshell:not([data-theme="light"]){
+  color-scheme:dark;
   --bg:#0C0B09; --surface:#161410; --surface-2:#121009; --surface-3:#1E1B15; --ink:#F5F2EC; --ink-2:#ABA498; --ink-3:#9A9184; --ink-4:#6B6558;
   --border:#26231C; --border-2:#322E25; --accent:#D8A85A; --accent-ink:#E7C079; --accent-wash:#221B10; --accent-line:#3A2F1A; --on-accent:#231A08;
   --ok:#7FB894; --ok-wash:#16211A; --warn:#D6A94E; --warn-wash:#221B0F; --info:#7FA6D6; --info-wash:#141D28; --bad:#DA9490; --bad-wash:#241614;
   --shadow-xs:0 1px 2px rgba(0,0,0,.4); --shadow-sm:0 1px 3px rgba(0,0,0,.5); --shadow-md:0 10px 28px -12px rgba(0,0,0,.6); } }
 .cshell[data-theme="dark"]{
+  color-scheme:dark;
   --bg:#0C0B09; --surface:#161410; --surface-2:#121009; --surface-3:#1E1B15; --ink:#F5F2EC; --ink-2:#ABA498; --ink-3:#9A9184; --ink-4:#6B6558;
   --border:#26231C; --border-2:#322E25; --accent:#D8A85A; --accent-ink:#E7C079; --accent-wash:#221B10; --accent-line:#3A2F1A; --on-accent:#231A08;
   --ok:#7FB894; --ok-wash:#16211A; --warn:#D6A94E; --warn-wash:#221B0F; --info:#7FA6D6; --info-wash:#141D28; --bad:#DA9490; --bad-wash:#241614;
@@ -71,8 +73,8 @@ const CHROME_CSS = String.raw`
    .cshell — so it would fall back to the app-wide purple --primary. Re-declare the
    gold/cream shadcn tokens on the menu itself, keyed off html.dark (which the shell
    toggles) so it tracks the active theme. This is why the badge/toggle were purple. */
-.champagne-menu{ --background:45 18% 96%; --foreground:40 11% 9%; --card:0 0% 100%; --card-foreground:40 11% 9%; --popover:0 0% 100%; --popover-foreground:40 11% 9%; --primary:36 51% 48%; --primary-foreground:0 0% 100%; --secondary:43 21% 94%; --secondary-foreground:40 11% 9%; --muted:43 21% 94%; --muted-foreground:40 6% 41%; --accent:43 21% 94%; --accent-foreground:40 11% 9%; --destructive:2 55% 46%; --destructive-foreground:0 0% 100%; --border:43 15% 90%; --input:43 15% 85%; --ring:36 51% 48%; }
-html.dark .champagne-menu{ --background:40 14% 4%; --foreground:40 33% 94%; --card:40 18% 7%; --card-foreground:40 33% 94%; --popover:40 18% 7%; --popover-foreground:40 33% 94%; --primary:36 61% 60%; --primary-foreground:36 63% 9%; --secondary:38 17% 10%; --secondary-foreground:40 33% 94%; --muted:38 17% 10%; --muted-foreground:36 9% 56%; --accent:38 17% 10%; --accent-foreground:40 33% 94%; --border:40 16% 13%; --input:40 16% 16%; --ring:36 61% 60%; }
+.champagne-menu{ color-scheme:light; accent-color:hsl(36 51% 48%); --background:45 18% 96%; --foreground:40 11% 9%; --card:0 0% 100%; --card-foreground:40 11% 9%; --popover:0 0% 100%; --popover-foreground:40 11% 9%; --primary:36 51% 48%; --primary-foreground:0 0% 100%; --secondary:43 21% 94%; --secondary-foreground:40 11% 9%; --muted:43 21% 94%; --muted-foreground:40 6% 41%; --accent:43 21% 94%; --accent-foreground:40 11% 9%; --destructive:2 55% 46%; --destructive-foreground:0 0% 100%; --border:43 15% 90%; --input:43 15% 85%; --ring:36 51% 48%; }
+html.dark .champagne-menu{ color-scheme:dark; accent-color:hsl(36 61% 60%); --background:40 14% 4%; --foreground:40 33% 94%; --card:40 18% 7%; --card-foreground:40 33% 94%; --popover:40 18% 7%; --popover-foreground:40 33% 94%; --primary:36 61% 60%; --primary-foreground:36 63% 9%; --secondary:38 17% 10%; --secondary-foreground:40 33% 94%; --muted:38 17% 10%; --muted-foreground:36 9% 56%; --accent:38 17% 10%; --accent-foreground:40 33% 94%; --border:40 16% 13%; --input:40 16% 16%; --ring:36 61% 60%; }
 /* Light/Dark segmented toggle inside that menu. */
 .champagne-menu .thseg{ display:flex; gap:4px; padding:3px; margin:2px 4px 2px; border-radius:9px; background:hsl(var(--secondary)); }
 .champagne-menu .thseg button{ flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px; height:30px; border:0; border-radius:6px; background:transparent; font:inherit; font-size:12.5px; font-weight:500; color:hsl(var(--muted-foreground)); cursor:pointer; }
