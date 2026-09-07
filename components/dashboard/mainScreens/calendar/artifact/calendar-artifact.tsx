@@ -31,7 +31,8 @@ const evtTone = (s?: string) => { const v = (s || "").toLowerCase(); if (v.inclu
 const bdate = (b: BlockedDate) => ((b as unknown as { date?: string; blockedDate?: string }).date || (b as unknown as { blockedDate?: string }).blockedDate || "")
 
 const EXTRA_CSS = String.raw`
-.calbar{ display:flex; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+.calbar{ display:flex; align-items:center; gap:12px; margin-bottom:8px; flex-wrap:wrap; }
+.calbar + .toolbar{ margin-bottom:8px; }
 .monthnav{ display:flex; align-items:center; gap:6px; } .navb{ width:34px; height:34px; border-radius:9px; border:1px solid var(--border); background:var(--surface); display:grid; place-items:center; color:var(--ink-2); } .navb:hover{ background:var(--surface-3); color:var(--ink); } .navb svg{ width:16px; height:16px; }
 .mtitle{ font-size:16px; font-weight:600; letter-spacing:-.02em; min-width:150px; text-align:center; } .today-btn{ height:34px; padding:0 13px; border-radius:9px; border:1px solid var(--border-2); background:var(--surface); color:var(--ink); font-size:12.5px; font-weight:600; } .today-btn:hover{ background:var(--surface-3); }
 .seg{ display:inline-flex; background:var(--surface-3); border:1px solid var(--border); border-radius:9px; padding:2px; gap:1px; margin-left:auto; } .seg button{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--ink-3); padding:0 11px; border-radius:7px; border:0; background:transparent; height:30px; } .seg button.on{ background:var(--surface); color:var(--ink); box-shadow:var(--shadow-xs); }
@@ -39,7 +40,7 @@ const EXTRA_CSS = String.raw`
 /* Month view fits the viewport — no page scroll. .cal is a fixed-height flex
    column; its grid fills the remaining height and the week rows share it
    equally, so 5- or 6-week months both fit with the day cells clipping. */
-.cal{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow-xs); overflow:hidden; display:flex; flex-direction:column; height:calc(100dvh - 218px); min-height:380px; }
+.cal{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow-xs); overflow:hidden; display:flex; flex-direction:column; height:calc(100dvh - 192px); min-height:380px; }
 .cal-dow{ display:grid; grid-template-columns:repeat(7,1fr); background:var(--surface-2); border-bottom:1px solid var(--border); } .cal-dow span{ padding:9px 10px; font-size:11px; font-weight:600; letter-spacing:.02em; text-transform:uppercase; color:var(--ink-3); }
 .cal-grid{ display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:1px; background:var(--border); flex:1 1 auto; grid-auto-rows:minmax(0,1fr); min-height:0; }
 .cell{ position:relative; background:var(--surface); min-width:0; min-height:0; overflow:hidden; padding:6px 7px 8px; display:flex; flex-direction:column; cursor:pointer; transition:background .1s; } .cell:hover{ background:var(--surface-2); }
