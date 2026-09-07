@@ -31,7 +31,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { isActiveForNav } from "./nav-projects"
-import { NavUser } from "./nav-user"
+import { ChampagneUserMenu } from "./champagne-user-menu"
 import { useBusiness } from "@/context/BusinessContext"
 import { useActiveBusinessStore } from "@/lib/store/active-business-store"
 
@@ -264,7 +264,7 @@ export function ChampagneSidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter><NavUser /></SidebarFooter>
+      <SidebarFooter><ChampagneUserMenu /></SidebarFooter>
       <SidebarRail />
     </Sidebar>
   )
