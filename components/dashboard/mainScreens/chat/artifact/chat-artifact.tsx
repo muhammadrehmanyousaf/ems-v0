@@ -102,8 +102,9 @@ const EXTRA_CSS = String.raw`
 .ctab .cc{ font-size:10.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; } .ctab.on .cc{ color:var(--accent-ink); }
 .clist-body{ flex:1; overflow-y:auto; }
 .conv{ display:flex; gap:11px; padding:12px 14px; cursor:pointer; position:relative; border-bottom:1px solid var(--border); transition:background .1s; }
-.conv:hover{ background:var(--surface-2); } .conv.active{ background:var(--surface-3); }
-.conv.active::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:2.5px; background:var(--accent); }
+.conv:hover{ background:var(--surface-2); } .conv.active{ background:var(--accent-wash); }
+.conv.active .cv-nm{ color:var(--accent-ink); }
+.conv.active::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--accent); }
 .conv .avatar{ width:44px; height:44px; font-size:13px; }
 .cv-main{ flex:1; min-width:0; }
 .cv-top{ display:flex; align-items:center; gap:8px; }
@@ -165,14 +166,14 @@ const EXTRA_CSS = String.raw`
 
 /* context rail */
 .cinfo{ width:296px; flex:none; border-left:1px solid var(--border); background:var(--surface); overflow-y:auto; }
-.ci-hero{ padding:22px 18px 18px; text-align:center; border-bottom:1px solid var(--border); }
-.ci-hero .avatar{ width:66px; height:66px; font-size:20px; margin:0 auto 12px; }
+.ci-hero{ padding:16px 18px 14px; text-align:center; border-bottom:1px solid var(--border); }
+.ci-hero .avatar{ width:56px; height:56px; font-size:17px; margin:0 auto 9px; }
 .ci-nm{ font-size:15px; font-weight:600; } .ci-sub{ font-size:12px; color:var(--ink-3); margin-top:3px; word-break:break-word; }
-.ci-quick{ display:flex; justify-content:center; gap:8px; margin-top:14px; }
+.ci-quick{ display:flex; justify-content:center; gap:8px; margin-top:11px; }
 .ci-q{ width:38px; height:38px; border-radius:10px; border:1px solid var(--border-2); background:var(--surface); color:var(--ink-2); display:grid; place-items:center; }
 .ci-q:hover{ background:var(--surface-3); color:var(--ink); } .ci-q.wa:hover{ color:var(--ok); border-color:var(--ok); } .ci-q svg{ width:17px; height:17px; }
-.ci-sec{ padding:15px 18px; border-bottom:1px solid var(--border); }
-.ci-sec h4{ font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-3); margin-bottom:11px; }
+.ci-sec{ padding:12px 18px; border-bottom:1px solid var(--border); }
+.ci-sec h4{ font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-3); margin-bottom:9px; }
 .ci-ctxcard{ border:1px solid var(--border); border-radius:10px; padding:12px; background:var(--surface-2); }
 .ci-ctxcard .cc-t{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .ci-ctxcard .cc-nm{ font-weight:600; font-size:13px; }
@@ -483,7 +484,7 @@ export function ChatArtifact() {
           : `<div class="ci-empty">Abhi koi file share nahi hui.</div>`
         cinfo.innerHTML = `
           <div class="ci-hero">
-            <span class="avatar" style="width:66px;height:66px;font-size:20px">${escHtml(initialsOf(nm))}<span class="src ${srcOf(active)}"></span></span>
+            <span class="avatar" style="width:56px;height:56px;font-size:17px">${escHtml(initialsOf(nm))}<span class="src ${srcOf(active)}"></span></span>
             <div class="ci-nm">${escHtml(nm)}</div>
             <div class="ci-sub">${escHtml(sub || "—")}</div>
             <div class="ci-quick">
