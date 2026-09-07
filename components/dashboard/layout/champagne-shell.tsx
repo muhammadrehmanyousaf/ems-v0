@@ -130,7 +130,7 @@ const CHROME_CSS = String.raw`
 .cshell .ibtn:hover{ background:var(--surface-3); } .cshell .ibtn svg{ width:17px; height:17px; } .cshell .ibtn .dot{ position:absolute; top:7px; right:8px; width:7px; height:7px; border-radius:50%; background:var(--bad); border:1.5px solid var(--surface); }
 .cshell .cscroll{ flex:1; min-height:0; overflow-y:auto; }
 .cshell .cscroll .content{ padding:16px 26px 20px; max-width:1320px; width:100%; margin:0 auto; }
-.cshell .cs-inset{ min-height:0; } .cshell .cs-trigger{ height:34px; width:34px; border-radius:9px; color:var(--ink-2); } .cshell .cs-trigger:hover{ background:var(--surface-3); }
+.cshell .group/sidebar-wrapper{ height:100%; min-height:0 !important; overflow:hidden; } .cshell .cs-inset{ height:100%; min-height:0 !important; overflow:hidden; } .cshell .cs-trigger{ height:34px; width:34px; border-radius:9px; color:var(--ink-2); } .cshell .cs-trigger:hover{ background:var(--surface-3); }
 @media (max-width:820px){ .cshell .app,.cshell .app.app-sub{ grid-template-columns:1fr; } .cshell .side,.cshell .sub-side{ display:none; } }
 `
 
@@ -197,6 +197,17 @@ export function ChampagneShell({
   React.useEffect(() => {
     if (typeof document !== "undefined") document.documentElement.classList.toggle("dark", resolvedMode === "dark")
   }, [resolvedMode])
+  // The console lives in a fixed overlay with its OWN scroll region (.cscroll).
+  // The global `html { overflow-y: scroll }` reset would otherwise leave a
+  // second, permanently-empty window scrollbar beside it — the "double
+  // scrollbar" seen on every screen. Hide the document's own scroll while the
+  // shell is mounted; restore it on unmount so other surfaces are unaffected.
+  React.useEffect(() => {
+    const html = document.documentElement
+    const prev = html.style.overflow
+    html.style.overflow = "hidden"
+    return () => { html.style.overflow = prev }
+  }, [])
   const hasPanel = SETUP_PATHS.has(activeHref) || KHATA_PATHS.has(activeHref)
   const panelHtml = SETUP_PATHS.has(activeHref) ? setupPanelHtml(activeHref)
     : KHATA_PATHS.has(activeHref) ? khataPanelHtml(activeHref) : ""
