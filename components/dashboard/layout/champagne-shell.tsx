@@ -26,6 +26,8 @@ import { NotificationAPI } from "@/lib/api/notifications"
 import {
   navHtml, setupPanelHtml, khataPanelHtml, SETUP_PATHS, KHATA_PATHS, initialsOf, applyContentSearch,
 } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
+import { ChampagneSidebar } from "./champagne-sidebar"
 
 /** React pages (non-artifact, e.g. the settings hub) call this to set the
  * persistent shell's crumb + active-route, mirroring what useArtifactShell does
@@ -59,9 +61,12 @@ const CHROME_CSS = String.raw`
    SAME gold/cream system as the artifact console instead of the app-wide purple
    primary (globals.css --primary:263…). This is the single source of the
    "settings colours/borders look different" inconsistency. */
-.cshell{ --background:45 18% 96%; --foreground:40 11% 9%; --card:0 0% 100%; --card-foreground:40 11% 9%; --popover:0 0% 100%; --popover-foreground:40 11% 9%; --primary:36 51% 48%; --primary-foreground:0 0% 100%; --secondary:43 21% 94%; --secondary-foreground:40 11% 9%; --muted:43 21% 94%; --muted-foreground:40 6% 41%; --accent:43 21% 94%; --accent-foreground:40 11% 9%; --destructive:2 55% 46%; --destructive-foreground:0 0% 100%; --border:43 15% 90%; --input:43 15% 85%; --ring:36 51% 48%; }
-@media (prefers-color-scheme:dark){ .cshell:not([data-theme="light"]){ --background:40 14% 4%; --foreground:40 33% 94%; --card:40 18% 7%; --card-foreground:40 33% 94%; --popover:40 18% 7%; --popover-foreground:40 33% 94%; --primary:36 61% 60%; --primary-foreground:36 63% 9%; --secondary:38 17% 10%; --secondary-foreground:40 33% 94%; --muted:38 17% 10%; --muted-foreground:36 9% 56%; --accent:38 17% 10%; --accent-foreground:40 33% 94%; --border:40 16% 13%; --input:40 16% 16%; --ring:36 61% 60%; } }
-.cshell[data-theme="dark"]{ --background:40 14% 4%; --foreground:40 33% 94%; --card:40 18% 7%; --card-foreground:40 33% 94%; --popover:40 18% 7%; --popover-foreground:40 33% 94%; --primary:36 61% 60%; --primary-foreground:36 63% 9%; --secondary:38 17% 10%; --secondary-foreground:40 33% 94%; --muted:38 17% 10%; --muted-foreground:36 9% 56%; --accent:38 17% 10%; --accent-foreground:40 33% 94%; --border:40 16% 13%; --input:40 16% 16%; --ring:36 61% 60%; }
+.cshell{ --background:45 18% 96%; --foreground:40 11% 9%; --card:0 0% 100%; --card-foreground:40 11% 9%; --popover:0 0% 100%; --popover-foreground:40 11% 9%; --primary:36 51% 48%; --primary-foreground:0 0% 100%; --secondary:43 21% 94%; --secondary-foreground:40 11% 9%; --muted:43 21% 94%; --muted-foreground:40 6% 41%; --accent:43 21% 94%; --accent-foreground:40 11% 9%; --destructive:2 55% 46%; --destructive-foreground:0 0% 100%; --border:43 15% 90%; --input:43 15% 85%; --ring:36 51% 48%;
+  --sidebar-background:0 0% 100%; --sidebar-foreground:33 9% 35%; --sidebar-primary:36 51% 48%; --sidebar-primary-foreground:0 0% 100%; --sidebar-accent:43 21% 94%; --sidebar-accent-foreground:40 11% 9%; --sidebar-border:43 15% 90%; --sidebar-ring:36 51% 48%; }
+@media (prefers-color-scheme:dark){ .cshell:not([data-theme="light"]){ --background:40 14% 4%; --foreground:40 33% 94%; --card:40 18% 7%; --card-foreground:40 33% 94%; --popover:40 18% 7%; --popover-foreground:40 33% 94%; --primary:36 61% 60%; --primary-foreground:36 63% 9%; --secondary:38 17% 10%; --secondary-foreground:40 33% 94%; --muted:38 17% 10%; --muted-foreground:36 9% 56%; --accent:38 17% 10%; --accent-foreground:40 33% 94%; --border:40 16% 13%; --input:40 16% 16%; --ring:36 61% 60%;
+  --sidebar-background:40 18% 7%; --sidebar-foreground:40 20% 82%; --sidebar-primary:36 61% 60%; --sidebar-primary-foreground:36 63% 9%; --sidebar-accent:38 17% 12%; --sidebar-accent-foreground:40 33% 94%; --sidebar-border:40 16% 13%; --sidebar-ring:36 61% 60%; } }
+.cshell[data-theme="dark"]{ --background:40 14% 4%; --foreground:40 33% 94%; --card:40 18% 7%; --card-foreground:40 33% 94%; --popover:40 18% 7%; --popover-foreground:40 33% 94%; --primary:36 61% 60%; --primary-foreground:36 63% 9%; --secondary:38 17% 10%; --secondary-foreground:40 33% 94%; --muted:38 17% 10%; --muted-foreground:36 9% 56%; --accent:38 17% 10%; --accent-foreground:40 33% 94%; --border:40 16% 13%; --input:40 16% 16%; --ring:36 61% 60%;
+  --sidebar-background:40 18% 7%; --sidebar-foreground:40 20% 82%; --sidebar-primary:36 61% 60%; --sidebar-primary-foreground:36 63% 9%; --sidebar-accent:38 17% 12%; --sidebar-accent-foreground:40 33% 94%; --sidebar-border:40 16% 13%; --sidebar-ring:36 61% 60%; }
 .cshell *{ box-sizing:border-box; }
 .cshell h1,.cshell h2,.cshell h3{ margin:0; line-height:1.2; letter-spacing:-.02em; font-weight:600; }
 .cshell a{ color:inherit; text-decoration:none; } .cshell button{ font:inherit; color:inherit; cursor:pointer; }
@@ -125,6 +130,7 @@ const CHROME_CSS = String.raw`
 .cshell .ibtn:hover{ background:var(--surface-3); } .cshell .ibtn svg{ width:17px; height:17px; } .cshell .ibtn .dot{ position:absolute; top:7px; right:8px; width:7px; height:7px; border-radius:50%; background:var(--bad); border:1.5px solid var(--surface); }
 .cshell .cscroll{ flex:1; min-height:0; overflow-y:auto; }
 .cshell .cscroll .content{ padding:16px 26px 20px; max-width:1320px; width:100%; margin:0 auto; }
+.cshell .cs-inset{ min-height:0; } .cshell .cs-trigger{ height:34px; width:34px; border-radius:9px; color:var(--ink-2); } .cshell .cs-trigger:hover{ background:var(--surface-3); }
 @media (max-width:820px){ .cshell .app,.cshell .app.app-sub{ grid-template-columns:1fr; } .cshell .side,.cshell .sub-side{ display:none; } }
 `
 
@@ -216,22 +222,13 @@ export function ChampagneShell({
   return (
     <div className="cshell" data-theme={resolvedMode} onClick={onClick}>
       <style dangerouslySetInnerHTML={{ __html: CHROME_CSS }} />
-      <div className={hasPanel ? "app app-sub" : "app"}>
-        <aside className="side">
-          <BizSwitcher />
-          <nav className="nav" aria-label="Main" dangerouslySetInnerHTML={{ __html: nav }} />
-          <div className="side-spring" />
-          <div className="side-foot">
-            <div className="me" role="button" tabIndex={0} data-nav-btn="/dashboard/profile">
-              <span className="m-ava" aria-hidden>{fullName ? initialsOf(fullName) : "·"}</span>
-              <span><span className="m-name">{fullName || " "}</span><br /><span className="m-sub">Owner</span></span>
-              <svg className="cog" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8 2 2 0 1 1-2.8 2.8 1.6 1.6 0 0 0-2.7 1.1 2 2 0 1 1-4 0A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3 2 2 0 1 1-2.8-2.8A1.6 1.6 0 0 0 3 14.1a2 2 0 1 1 0-4A1.6 1.6 0 0 0 4.6 7a1.6 1.6 0 0 0-.3-1.8 2 2 0 1 1 2.8-2.8A1.6 1.6 0 0 0 10 3a2 2 0 1 1 4 0 1.6 1.6 0 0 0 3 1.6 2 2 0 1 1 2.8 2.8A1.6 1.6 0 0 0 21 10a2 2 0 1 1 0 4" /></svg>
-            </div>
-          </div>
-        </aside>
-        {hasPanel ? <aside className="sub-side" aria-label="Module menu" dangerouslySetInnerHTML={{ __html: panelHtml }} /> : null}
-        <div className="main">
+      <SidebarProvider className="min-h-0 h-full w-full">
+        {/* Primary rail — shadcn Sidebar, drill-down, champagne. Replaces the
+            hand-rolled .side AND the Khata/Setup secondary panels (.sub-side). */}
+        <ChampagneSidebar />
+        <SidebarInset className="cs-inset min-h-0 bg-background">
           <header className="topbar">
+            <SidebarTrigger className="cs-trigger" />
             <div className="crumb"><b>{crumbBold}</b><span className="sep">/</span>{crumbSub}</div>
             <div className="tb-spring" />
             <label className="search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg><input placeholder="Search…" aria-label="Search" onChange={(e) => applyContentSearch(e.currentTarget.value)} /><span className="kbd">⌘K</span></label>
@@ -239,8 +236,8 @@ export function ChampagneShell({
             <button className="ibtn" data-nav-btn="/dashboard/notifications" aria-label="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0" /></svg>{unread > 0 ? <span className="dot" /> : null}</button>
           </header>
           <div className="cscroll"><div className="content">{children}</div></div>
-        </div>
-      </div>
+        </SidebarInset>
+      </SidebarProvider>
     </div>
   )
 }

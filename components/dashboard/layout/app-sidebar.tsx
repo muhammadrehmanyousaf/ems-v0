@@ -50,7 +50,7 @@ const TAB_LABELS: Record<SettingsTabKey, string> = {
 // Items inside `adminPlatform` that are super-admin only.
 const SUPER_ONLY_PLATFORM = new Set(["Audit logs", "Roles", "Users", "Currency rates"])
 
-function buildVendorSections(
+export function buildVendorSections(
   user: ReturnType<typeof useUser>["user"],
   // Issue #32 — the active business's vendor type drives the nav
   // craft-labels and settings tabs, not the user's vendorType. Both
@@ -224,7 +224,7 @@ function buildVendorSections(
   return sections
 }
 
-function buildAdminSections(role: DashboardRole): NavSection[] {
+export function buildAdminSections(role: DashboardRole): NavSection[] {
   const isSuper = role === "superAdmin"
 
   // Filter platform group by role — admin only sees Revenue.
