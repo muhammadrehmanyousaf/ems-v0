@@ -22,6 +22,8 @@ export interface VendorDetail {
   description?: string
   imageUrl?: string
   images: string[]
+  /** WW-MEDIA — walkthrough clips. Same shape as `images`. */
+  videos: string[]
   rating: number
   reviewCount: number
   reviews: any[]
@@ -154,6 +156,15 @@ function pickFirstImage(raw: any): string | undefined {
   return undefined
 }
 
+/**
+ * WW-MEDIA — videos arrive exactly like images (a Postgres text[] that some
+ * callers hand back as a JSON string), so it reuses the same normaliser rather
+ * than growing a second, subtly different one.
+ */
+function normalizeVideos(raw: any): string[] {
+  return normalizeImages({ images: raw?.videos })
+}
+
 function normalizeImages(raw: any): string[] {
   const imgs = raw?.images
   if (Array.isArray(imgs)) {
@@ -197,6 +208,7 @@ function normalize(raw: any): VendorDetail {
     description: raw?.description ?? "",
     imageUrl: pickFirstImage(raw),
     images: normalizeImages(raw),
+    videos: normalizeVideos(raw),
     rating: Number(raw?.rating ?? 0) || 0,
     reviewCount: Number(raw?.reviewCount ?? 0) || 0,
     reviews: Array.isArray(raw?.reviews) ? raw.reviews : [],

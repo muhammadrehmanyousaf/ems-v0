@@ -420,6 +420,36 @@ export async function VendorDetailPage(input: PageInput) {
           </section>
         )}
 
+        {/* WW-MEDIA — walkthrough clips.
+
+            A venue is a space, and stills do not tell a couple what it feels
+            like to walk into it. Vendors were already sending these over
+            WhatsApp; this is where they belong. `preload="metadata"` so a
+            gallery of clips costs a few KB until someone actually presses play,
+            and no autoplay — a page that starts making noise on a phone in a
+            quiet room is a page people close. */}
+        {vendor.videos?.length > 0 && (
+          <section className="mb-12">
+            <h2 className="font-display italic text-[24px] text-bridal-charcoal mb-5">
+              Videos
+            </h2>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {vendor.videos.slice(0, 6).map((src, i) => (
+                <li key={i} className="overflow-hidden rounded-md bg-black">
+                  <video
+                    src={src}
+                    controls
+                    preload="metadata"
+                    playsInline
+                    className="aspect-video w-full object-cover"
+                    aria-label={`${vendor.name} — video ${i + 1}`}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {/* WW-AMENITIES — what the vendor actually ticked in Setup.
 
             `lib/seo/fetch-vendor.ts` had already normalised `amenities` onto
