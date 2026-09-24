@@ -16,6 +16,8 @@ import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { openRecordPaymentDrawer } from "@/components/dashboard/mainScreens/artifact/record-payment"
 import { useChat } from "@/context/ChatContext"
+import { uploadChatAttachment } from "@/lib/api/chat"
+import { toast } from "sonner"
 import { useUser } from "@/context/UserContext"
 import { useBusiness } from "@/context/BusinessContext"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
@@ -218,6 +220,8 @@ const SKELETON = `
       <div class="quick" id="quick"></div>
       <div class="cbar">
         <div class="cinput"><input id="cmsg" placeholder="Message likhein…" aria-label="Message"/></div>
+        <input type="file" id="cfile" accept="image/*,video/*" style="display:none"/>
+        <button class="cbtn" id="cattach" title="Tasveer ya video bhejein" aria-label="Attach">${svg('<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>')}</button>
         <button class="cbtn" id="ctemplate" title="Ready reply daalein" aria-label="Template">${svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/>')}</button>
         <button class="csend" id="csend" aria-label="Send">${svg('<path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/>')}</button>
       </div>
@@ -308,8 +312,47 @@ export function ChatArtifact() {
       if (send) send.disabled = true
     }
 
+    /**
+     * WW-MEDIA — the vendor's half of sending media.
+     *
+     * The console already RENDERED photos and clips a customer sent, but had no
+     * way to send one back: the composer was text-only. A vendor asked for a
+     * picture of the stage and could only answer in words.
+     *
+     * Upload first, then send, same as the customer composer — a failed upload
+     * leaves no half-message in the thread, and the SERVER decides image vs
+     * video from the real mimetype so the two surfaces cannot disagree.
+     */
+    s.addEventListener("change", async (e) => {
+      const t = e.target as HTMLInputElement
+      if (t?.id !== "cfile") return
+      const file = t.files?.[0]
+      t.value = "" // so picking the same file twice still fires
+      if (!file) return
+      const btn = s.getElementById("cattach") as HTMLButtonElement | null
+      if (btn) btn.disabled = true
+      try {
+        const up = await uploadChatAttachment(file)
+        const cap = (s.getElementById("cmsg") as HTMLInputElement | null)
+        api.current.sendMessage(cap?.value?.trim() || "", undefined, {
+          attachmentUrl: up.attachmentUrl,
+          attachmentName: up.attachmentName,
+          messageType: (up.messageType as "image" | "video" | "file") ?? "file",
+        })
+        if (cap) cap.value = ""
+      } catch (err: unknown) {
+        toast.error(
+          (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+            || "File nahi bheji ja saki",
+        )
+      } finally {
+        if (btn) btn.disabled = false
+      }
+    })
+
     s.addEventListener("click", (e) => {
       const t = e.target as HTMLElement
+      if (t.closest("#cattach")) { (s.getElementById("cfile") as HTMLInputElement | null)?.click(); return }
       const conv = t.closest(".conv") as HTMLElement | null
       if (conv?.dataset.id) { api.current.setActiveConversation(Number(conv.dataset.id)); return }
       const tab = t.closest(".ctab") as HTMLElement | null
