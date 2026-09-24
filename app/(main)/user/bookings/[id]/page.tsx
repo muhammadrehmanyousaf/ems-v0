@@ -506,7 +506,23 @@ export default function BookingDetailPage() {
   const paymentKey = sk(booking?.paymentStatus || "");
   const isPartiallyPaid = paymentKey === "partial";
   const isFullyPaid = paymentKey === "paid";
-  const showPayCta = !isFullyPaid && (isAwaitingPayment || isPartiallyPaid);
+  /**
+   * A closed booking never asks for more money.
+   *
+   * `showPayCta` was decided from paymentStatus alone. A cancelled booking that
+   * had taken a deposit still reads "Partial" — paymentStatus records what was
+   * collected, not whether the booking is alive — so a CANCELLED booking kept a
+   * full-size "Pay remaining Rs 2,021,500" button and a "Now due" figure beside
+   * it. The money is owed BACK to this customer at that point, not by them, and
+   * the button was live: they could have paid two million rupees into a booking
+   * that no longer exists.
+   *
+   * (Its mirror image is why a part-paid booking could not be cancelled: that
+   * path read booking status and ignored paymentStatus. Both facts matter, and
+   * neither is sufficient on its own.)
+   */
+  const isClosedStatus = ["cancelled", "rejected", "declined", "refunded"].includes(statusKey);
+  const showPayCta = !isClosedStatus && !isFullyPaid && (isAwaitingPayment || isPartiallyPaid);
   const dueAmount = isPartiallyPaid
     ? Math.max(Number(booking?.totalAmount || 0) - Number(booking?.downPayment || 0), 0)
     : Number(booking?.downPayment || booking?.totalAmount || 0);

@@ -331,17 +331,44 @@ function damageClaimDrawerBody(id: number, returnable: number): string {
 }
 
 type CashRefundOwed = { id: number; amount: number; reason: string | null; owedSince: string }
-function refundOwedCard(refunds: CashRefundOwed[]): string {
+/** WW-PAYOUT — where the customer asked for the money. Null until they say. */
+type RefundPayout = {
+  method: string | null; accountName: string | null; accountNumber: string | null
+  bankName: string | null; iban: string | null; note: string | null
+} | null
+
+/**
+ * The destination line on the refund card.
+ *
+ * A vendor told "you owe Rs X" still has to find out WHERE to send it, and
+ * chasing that over WhatsApp is where refunds stall. When the customer has not
+ * supplied it we say so plainly rather than leaving the space blank — an empty
+ * row reads as "nothing needed".
+ */
+function payoutLine(p: RefundPayout): string {
+  if (!p || !p.method) {
+    return `<div class="ir-d" style="color:var(--warn)">Customer ne abhi account details nahi di — unse poochein</div>`
+  }
+  if (p.method === "cash_in_person") {
+    return `<div class="ir-d">Cash — customer venue se khud lega${p.note ? ` · ${escHtml(p.note)}` : ""}</div>`
+  }
+  const bits = [p.bankName, p.accountNumber, p.accountName ? `(${p.accountName})` : ""].filter(Boolean)
+  return `<div class="ir-d"><b>Bhejein:</b> ${escHtml(bits.join(" · "))}${p.iban ? `<br><b>IBAN:</b> ${escHtml(p.iban)}` : ""}</div>`
+}
+
+function refundOwedCard(refunds: CashRefundOwed[], payout: RefundPayout = null): string {
   if (!refunds.length) return ""
   const total = refunds.reduce((a, r) => a + Number(r.amount || 0), 0)
   const rows = refunds.map((r) => `<div class="inst-row"><div class="ir-l"><div class="ir-nm">${rs(Number(r.amount))}</div><div class="ir-d">${r.reason ? escHtml(r.reason.replace(/_/g, " ")) : "refund"}${r.owedSince ? ` · ${fmtDateShort(r.owedSince)}` : ""}</div></div><button class="btn btn-primary" data-refund-settle="${r.id}" style="height:30px;padding:0 12px;font-size:12px">Refund de diya</button></div>`).join("")
   return `<div class="card">
       <div class="card-h"><div><h2>Refund dena hai</h2><div class="sub">Cancel/kami par customer ko wapas karna hai</div></div><span class="st bad"><i></i> ${rs(total)}</span></div>
-      <div style="padding:2px 16px 12px">${rows}</div>
+      <div style="padding:2px 16px 12px">${rows}
+        <div class="inst-row" style="border-top:1px dashed var(--line)">${payoutLine(payout)}</div>
+      </div>
     </div>`
 }
 
-function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmount?: number; remainingAmount?: number; cashRefundOwedTotal?: number; cashRefundsOwed?: CashRefundOwed[] } | null, receipts: PaymentReceipt[], history: any[], sheets: FunctionSheet[], installments: InstallmentsResponse | null, settlement: SettlementPreview | null, deposit: DepositPosition | null): string {
+function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmount?: number; remainingAmount?: number; cashRefundOwedTotal?: number; cashRefundsOwed?: CashRefundOwed[]; refundPayout?: RefundPayout } | null, receipts: PaymentReceipt[], history: any[], sheets: FunctionSheet[], installments: InstallmentsResponse | null, settlement: SettlementPreview | null, deposit: DepositPosition | null): string {
   const statusLabel = bookingStatusLabel(booking) || "Booking"
   const tone = toneOf(statusLabel)
   const st = (booking.status || "").toLowerCase()
@@ -468,7 +495,7 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
         <div class="pay-tl"><div class="tl-h">Payment history</div>${confirmItem}${rcItems}${dueItem}${isCancelled ? cancelledItem : settleItem}</div>
       </div>
 
-      ${refundOwedCard(pay?.cashRefundsOwed ?? [])}
+      ${refundOwedCard(pay?.cashRefundsOwed ?? [], pay?.refundPayout ?? null)}
 
       ${installmentsCard(installments, due)}
 
