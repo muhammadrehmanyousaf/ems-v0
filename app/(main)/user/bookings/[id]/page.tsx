@@ -71,6 +71,7 @@ import { RefundSettlementCard } from "@/components/bookings/refund-settlement-ca
 // QA #4 — show the refund the customer would get back inside the cancel dialog.
 import { getRefundPreview, requestCancellation, type RefundPreview } from "@/lib/api/bookingOrder";
 import { slotText, slotFromBooking } from "@/lib/booking/slot-vocabulary";
+import { cancelRouteFor, cancelErrorMessage, isPaymentAlreadyReceived } from "@/lib/bookings/cancel-route";
 
 interface BookingDetail {
   id: number;
@@ -345,16 +346,7 @@ export default function BookingDetailPage() {
     if (!booking) return;
     setIsCancelling(true);
     try {
-      if (sk(booking.status) === "awaiting payment") {
-        await axiosInstance.delete(
-          `${BACKEND_URL}api/v1/bookings/${booking.id}/cancel-pending`,
-        );
-        toast({
-          title: "Booking cancelled",
-          description: `Booking #${booking.id} has been cancelled.`,
-        });
-        router.push("/user/bookings");
-      } else {
+      const refundFlow = async () => {
         await axiosInstance.patch(
           `${BACKEND_URL}api/v1/bookings/${booking.id}/cancel`,
         );
@@ -363,6 +355,27 @@ export default function BookingDetailPage() {
           description: `Booking #${booking.id} has been cancelled.`,
         });
         fetchBooking();
+      };
+
+      if (cancelRouteFor(booking) === "delete") {
+        try {
+          await axiosInstance.delete(
+            `${BACKEND_URL}api/v1/bookings/${booking.id}/cancel-pending`,
+          );
+          toast({
+            title: "Booking cancelled",
+            description: `Booking #${booking.id} has been cancelled.`,
+          });
+          router.push("/user/bookings");
+        } catch (deleteError: unknown) {
+          // A payment landed between this screen loading and the click. The
+          // booking is owed a refund, so finish on the refund path rather than
+          // failing at the customer — the previous code reported nothing here.
+          if (!isPaymentAlreadyReceived(deleteError)) throw deleteError;
+          await refundFlow();
+        }
+      } else {
+        await refundFlow();
       }
     } catch (e: any) {
       /**
@@ -378,7 +391,7 @@ export default function BookingDetailPage() {
       }
       toast({
         title: "Error",
-        description: "Failed to cancel booking.",
+        description: cancelErrorMessage(e),
         variant: "destructive",
       });
     } finally {
@@ -1142,7 +1155,11 @@ export default function BookingDetailPage() {
                       </div>
                     )}
                     <p className="mt-1.5 text-[11px] text-bridal-text-soft leading-relaxed">
-                      Cancelling {refundPreview.daysBefore} day{refundPreview.daysBefore === 1 ? "" : "s"} before the
+                      {/* Whole days only. daysBefore arrives as an exact float
+                          (19.40760377314815) and was rendered raw, on the screen
+                          where the customer decides about money. */}
+                      Cancelling {Math.round(refundPreview.daysBefore)} day
+                      {Math.round(refundPreview.daysBefore) === 1 ? "" : "s"} before the
                       event. The refund is processed per the vendor&apos;s policy.
                     </p>
                     {/* Say the deadline while it can still be acted on, rather
