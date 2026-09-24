@@ -172,6 +172,39 @@ function MessageBubble({ message, isOwn, showAvatar, showName, isLastInGroup }: 
                 )
           )}
         >
+          {/* WW-MEDIA — an image shows, a clip plays. Rendering either as a
+              download row (which is what "file" did) means the recipient has to
+              save a five-second clip of a stage setup before they can look at
+              it. `content` stays as the caption underneath. */}
+          {message.attachmentUrl && message.messageType === "image" && (
+            <a href={message.attachmentUrl} target="_blank" rel="noopener noreferrer" className="block">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={message.attachmentUrl}
+                alt={message.attachmentName || "Photo"}
+                loading="lazy"
+                className="mb-1 max-h-64 w-auto max-w-full rounded-lg object-cover"
+              />
+            </a>
+          )}
+          {message.attachmentUrl && message.messageType === "video" && (
+            <video
+              src={message.attachmentUrl}
+              controls
+              preload="metadata"
+              className="mb-1 max-h-64 w-full max-w-[320px] rounded-lg bg-black"
+            />
+          )}
+          {message.attachmentUrl && message.messageType === "file" && (
+            <a
+              href={message.attachmentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mb-1 block underline underline-offset-2"
+            >
+              {message.attachmentName || "Open file"}
+            </a>
+          )}
           {message.content}
           <div
             className={cn(

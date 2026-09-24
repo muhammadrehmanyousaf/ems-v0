@@ -48,6 +48,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { slotText, slotFromBooking } from "@/lib/booking/slot-vocabulary";
+import { cancelRouteFor, cancelErrorMessage, isPaymentAlreadyReceived } from "@/lib/bookings/cancel-route";
 
 interface BookingDetail {
   id: number;
@@ -285,24 +286,34 @@ export default function BookingsPage() {
     if (!bookingToCancel) return;
     setIsCancelling(true);
     try {
-      if (statusKey(bookingToCancel.status) === "awaiting payment") {
-        await axiosInstance.delete(
-          `${BACKEND_URL}api/v1/bookings/${bookingToCancel.id}/cancel-pending`,
-        );
-      } else {
-        await axiosInstance.patch(
+      const refundFlow = () =>
+        axiosInstance.patch(
           `${BACKEND_URL}api/v1/bookings/${bookingToCancel.id}/cancel`,
         );
+
+      if (cancelRouteFor(bookingToCancel) === "delete") {
+        try {
+          await axiosInstance.delete(
+            `${BACKEND_URL}api/v1/bookings/${bookingToCancel.id}/cancel-pending`,
+          );
+        } catch (deleteError: unknown) {
+          // Money arrived since this list was fetched — finish on the refund
+          // path instead of reporting a failure the customer cannot act on.
+          if (!isPaymentAlreadyReceived(deleteError)) throw deleteError;
+          await refundFlow();
+        }
+      } else {
+        await refundFlow();
       }
       toast({
         title: "Booking cancelled",
         description: `Booking #${bookingToCancel.id} cancelled.`,
       });
       fetchBookings();
-    } catch {
+    } catch (e: unknown) {
       toast({
         title: "Error",
-        description: "Failed to cancel booking.",
+        description: cancelErrorMessage(e),
         variant: "destructive",
       });
     } finally {

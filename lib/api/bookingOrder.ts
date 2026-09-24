@@ -287,6 +287,26 @@ export interface RefundRequestRow {
   disputedAt?: string | null;
   disputeNote?: string | null;
   withdrawnAt?: string | null;
+  /** WW-PAYOUT — where the customer asked for the money to be sent. */
+  payoutMethod?: PayoutMethod | null;
+  payoutAccountName?: string | null;
+  payoutAccountNumber?: string | null;
+  payoutBankName?: string | null;
+  payoutIban?: string | null;
+  payoutNote?: string | null;
+  payoutCapturedAt?: string | null;
+}
+
+/** Where a refund should be sent. `cash_in_person` is an answer, not a blank. */
+export type PayoutMethod = "bank" | "jazzcash" | "easypaisa" | "cash_in_person";
+
+export interface PayoutDestinationInput {
+  method: PayoutMethod;
+  accountName?: string;
+  accountNumber?: string;
+  bankName?: string;
+  iban?: string;
+  note?: string;
 }
 
 /**
@@ -336,6 +356,22 @@ export async function markRefundPaid(
 /** CUSTOMER: "I received it." The only path to ACKNOWLEDGED. */
 export async function acknowledgeRefund(bookingId: number, reqId: number, note?: string) {
   const { data } = await axiosInstance.patch(`${v1}/${bookingId}/refund-requests/${reqId}/acknowledge`, { note });
+  return (data?.data as { request: RefundRequestRow }).request;
+}
+
+/**
+ * CUSTOMER: "send it here."
+ *
+ * The venue cannot pay a refund they have no account for, and chasing it over
+ * WhatsApp is where refunds stall. Settable until the venue has paid, and again
+ * after a dispute so a mistyped account number can be corrected.
+ */
+export async function setRefundPayoutDestination(
+  bookingId: number, reqId: number, input: PayoutDestinationInput,
+) {
+  const { data } = await axiosInstance.patch(
+    `${v1}/${bookingId}/refund-requests/${reqId}/payout-destination`, input,
+  );
   return (data?.data as { request: RefundRequestRow }).request;
 }
 

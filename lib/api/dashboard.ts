@@ -220,6 +220,8 @@ export interface ApiBusiness {
   ntnVerifiedAt?: string | null;
   minimumPrice: number | null;
   images: string[];
+  /** WW-MEDIA — walkthrough clips, same shape as `images`. */
+  videos?: string[];
   maxCapacity: number | null;
   minCapacity: number | null;
   // Type-specific fields
@@ -419,6 +421,25 @@ export class BusinessesAPI {
     const url = businessId
       ? `/api/v1/businesses/upload-images?businessId=${businessId}`
       : "/api/v1/businesses/upload-images";
+    const res = await axiosInstance.post(url, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data?.data ?? [];
+  }
+
+  /**
+   * WW-MEDIA — venue walkthrough clips.
+   *
+   * Separate endpoint from uploadImages because the server's limits differ:
+   * video/* only, 60 MB, 5 per call. Returns Cloudinary URLs; persisting them
+   * onto `business.videos` is the caller's job, exactly as with images.
+   */
+  static async uploadVideos(files: File[], businessId?: number): Promise<string[]> {
+    const formData = new FormData();
+    files.forEach((file) => formData.append("videos", file));
+    const url = businessId
+      ? `/api/v1/businesses/upload-videos?businessId=${businessId}`
+      : "/api/v1/businesses/upload-videos";
     const res = await axiosInstance.post(url, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });

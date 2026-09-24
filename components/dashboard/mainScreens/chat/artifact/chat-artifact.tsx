@@ -143,6 +143,7 @@ const EXTRA_CSS = String.raw`
 .msg-doc{ display:flex; align-items:center; gap:10px; padding:4px 2px 2px; } .msg-doc[data-dl]{ cursor:pointer; }
 .msg-doc .di{ width:34px; height:34px; border-radius:8px; background:var(--surface-3); border:1px solid var(--border); display:grid; place-items:center; color:var(--accent-ink); flex:none; } .msg-doc .di svg{ width:17px; height:17px; }
 .msg-doc .dn{ font-weight:600; font-size:12.5px; } .msg-doc .ds{ font-size:11px; color:var(--ink-3); }
+.msg-vid{ max-width:260px; max-height:280px; width:100%; border-radius:10px; display:block; margin:2px 0; background:#000; border:1px solid var(--border); }
 .msg-img{ display:block; cursor:pointer; margin:2px 0 2px; } .msg-img img{ max-width:240px; max-height:260px; width:auto; border-radius:10px; display:block; border:1px solid var(--border); }
 .msg-cap{ margin-top:6px; font-size:13px; line-height:1.45; }
 .typing-b{ align-self:flex-start; background:var(--surface); border:1px solid var(--border); border-radius:13px; border-top-left-radius:4px; padding:11px 14px; display:flex; gap:4px; margin-top:10px; }
@@ -440,7 +441,11 @@ export function ChatArtifact() {
           let body: string
           if (m.messageType === "image" && m.attachmentUrl) {
             body = `<span class="msg-img" data-dl="${escHtml(m.attachmentUrl)}" role="button" title="Poori tasveer kholein"><img src="${escHtml(m.attachmentUrl)}" alt="${escHtml(m.attachmentName || "Tasveer")}" loading="lazy"/></span>${m.content ? `<div class="msg-cap">${escHtml(m.content)}</div>` : ""}`
-          } else if (m.messageType === "file" || m.messageType === "image") {
+          } else if (m.messageType === "video" && m.attachmentUrl) {
+            // WW-MEDIA — plays in the thread. As a "file" row the vendor had to
+            // download a clip before they could see what the customer meant.
+            body = `<video class="msg-vid" src="${escHtml(m.attachmentUrl)}" controls preload="metadata" playsinline></video>${m.content ? `<div class="msg-cap">${escHtml(m.content)}</div>` : ""}`
+          } else if (m.messageType === "file" || m.messageType === "image" || m.messageType === "video") {
             body = `<div class="msg-doc" ${m.attachmentUrl ? `data-dl="${escHtml(m.attachmentUrl)}" role="button"` : ""}><span class="di">${svg(IC.doc, 1.8)}</span><div><div class="dn">${escHtml(m.attachmentName || (m.messageType === "image" ? "Tasveer" : "File"))}</div><div class="ds">${m.attachmentUrl ? "Kholein" : escHtml(m.messageType === "image" ? "Image" : "File")}</div></div></div>`
           } else {
             body = escHtml(m.content)

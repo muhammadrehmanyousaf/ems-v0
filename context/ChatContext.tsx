@@ -41,7 +41,12 @@ interface ChatContextType {
   onlineStatuses: OnlineStatuses;
   typingUsers: Record<number, string>; // conversationId -> userName
   setActiveConversation: (id: number | null) => void;
-  sendMessage: (content: string, tempId?: string) => void;
+  /** WW-MEDIA — `attachment` carries an already-uploaded image/video. */
+  sendMessage: (
+    content: string,
+    tempId?: string,
+    attachment?: { attachmentUrl: string; attachmentName?: string; messageType: "image" | "video" | "file" },
+  ) => void;
   loadMoreMessages: () => Promise<void>;
   startTyping: () => void;
   stopTyping: () => void;
@@ -296,9 +301,16 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const sendMessage = useCallback(
-    async (content: string, tempId?: string) => {
-      if (!activeConversationId || !content.trim()) return;
+    async (
+      content: string,
+      tempId?: string,
+      attachment?: { attachmentUrl: string; attachmentName?: string; messageType: "image" | "video" | "file" },
+    ) => {
+      // A media message may carry no caption at all, so an empty `content` is
+      // only a reason to bail when there is nothing attached either.
+      if (!activeConversationId || (!content.trim() && !attachment)) return;
       const trimmed = content.trim();
+      const msgType = attachment?.messageType ?? "text";
       const txTempId = tempId || `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
       // Optimistic update — same shape whether we go via socket or
@@ -311,7 +323,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         conversationId: activeConversationId,
         senderId: Number(user?.id),
         content: trimmed,
-        messageType: "text",
+        messageType: msgType,
+        attachmentUrl: attachment?.attachmentUrl ?? null,
+        attachmentName: attachment?.attachmentName ?? null,
         isRead: false,
         readAt: null,
         isEdited: false,
@@ -341,14 +355,22 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         socketRef.current.emit("chat:send-message", {
           conversationId: activeConversationId,
           content: trimmed,
-          messageType: "text",
+          messageType: msgType,
+          ...(attachment
+            ? { attachmentUrl: attachment.attachmentUrl, attachmentName: attachment.attachmentName }
+            : {}),
           tempId: txTempId,
         });
         return;
       }
 
       try {
-        const real = await ChatAPI.sendMessage(activeConversationId, trimmed, "text");
+        const real = await ChatAPI.sendMessage(
+          activeConversationId, trimmed, msgType,
+          attachment
+            ? { attachmentUrl: attachment.attachmentUrl, attachmentName: attachment.attachmentName }
+            : undefined,
+        );
         if (real) {
           // Replace the optimistic placeholder with the canonical row.
           setMessages((prev) =>

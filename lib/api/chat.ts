@@ -28,7 +28,7 @@ export interface ChatMessageItem {
   conversationId: number;
   senderId: number;
   content: string;
-  messageType: "text" | "image" | "file" | "system";
+  messageType: ChatMessageType;
   attachmentUrl?: string;
   attachmentName?: string;
   isRead: boolean;
@@ -53,6 +53,27 @@ export interface ChatMessageItem {
  * places as a badge count, so it keeps returning 0 rather than producing an
  * unhandled rejection. It logs instead of failing silently.
  */
+/** What a chat message can be. "video" plays inline; "file" is a download row. */
+export type ChatMessageType = "text" | "image" | "video" | "file" | "system";
+
+/**
+ * Upload a chat attachment, then send it as a message.
+ *
+ * Two steps on purpose: an upload that fails leaves no half-message in the
+ * thread, and a slow 50 MB clip does not hold the conversation open while it
+ * transfers. The SERVER decides whether this is an image or a video from the
+ * real mimetype — a client mislabelling a clip as an image would render a
+ * broken <img> for everyone in the thread.
+ */
+export async function uploadChatAttachment(file: File): Promise<{
+  attachmentUrl: string; attachmentName: string; messageType: ChatMessageType;
+}> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const { data } = await axiosInstance.post(`${BACKEND_URL}api/v1/chat/attachments`, fd);
+  return data?.data;
+}
+
 export class ChatAPI {
   static async getConversations(): Promise<ConversationItem[]> {
     const response = await axiosInstance.get(
@@ -117,15 +138,22 @@ export class ChatAPI {
    * returned `message` payload (canonical from the DB, replacing
    * any tempId placeholder the FE may have rendered optimistically).
    */
+  /**
+   * WW-MEDIA — an attachment rides alongside the text.
+   *
+   * `content` becomes the caption and may be empty for a media message; the
+   * server requires content OR an attachmentUrl, not both.
+   */
   static async sendMessage(
     conversationId: number,
     content: string,
-    messageType: "text" | "image" | "file" = "text",
+    messageType: ChatMessageType = "text",
+    attachment?: { attachmentUrl: string; attachmentName?: string },
   ): Promise<ChatMessageItem | null> {
     try {
       const response = await axiosInstance.post(
         `${BACKEND_URL}api/v1/chat/conversations/${conversationId}/messages`,
-        { content, messageType },
+        { content, messageType, ...(attachment || {}) },
       );
       return response.data?.data?.message ?? null;
     } catch (error) {

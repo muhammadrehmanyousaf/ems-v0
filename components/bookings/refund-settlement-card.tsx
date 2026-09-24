@@ -26,7 +26,9 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import {
   listRefundRequests, acknowledgeRefund, disputeRefundSettlement, withdrawRefundRequest,
+  setRefundPayoutDestination,
   outstandingRefund, type RefundRequestRow, type RefundState, type VendorPaymentMethod,
+  type PayoutMethod,
 } from "@/lib/api/bookingOrder";
 
 const rs = (n: number) => "Rs " + Math.round(n || 0).toLocaleString("en-PK");
@@ -60,6 +62,12 @@ export function RefundSettlementCard({ bookingId }: { bookingId: number | string
   const qc = useQueryClient();
   const [disputingId, setDisputingId] = useState<number | null>(null);
   const [disputeNote, setDisputeNote] = useState("");
+  /* WW-PAYOUT — the venue cannot transfer to an account they were never given.
+     Editing one request at a time; a booking realistically has one open refund. */
+  const [payoutFor, setPayoutFor] = useState<number | null>(null);
+  const [payout, setPayout] = useState<{
+    method: PayoutMethod; accountName: string; accountNumber: string; bankName: string;
+  }>({ method: "bank", accountName: "", accountNumber: "", bankName: "" });
 
   const reqs = useQuery({
     queryKey: ["refund-requests", id],
@@ -95,7 +103,36 @@ export function RefundSettlementCard({ bookingId }: { bookingId: number | string
     onSuccess: () => { invalidate(); toast({ title: "Request withdrawn" }); },
     onError: onFail,
   });
-  const busy = confirm.isPending || deny.isPending || pull.isPending;
+  const savePayout = useMutation({
+    mutationFn: (reqId: number) =>
+      setRefundPayoutDestination(id, reqId, {
+        method: payout.method,
+        ...(payout.method === "cash_in_person"
+          ? {}
+          : {
+              accountName: payout.accountName.trim(),
+              accountNumber: payout.accountNumber.trim(),
+              // Wallets name their own rail server-side; only a bank needs this.
+              ...(payout.method === "bank" ? { bankName: payout.bankName.trim() } : {}),
+            }),
+      }),
+    onSuccess: () => {
+      setPayoutFor(null); invalidate();
+      toast({ title: "Saved", description: "Your venue can now see where to send the refund." });
+    },
+    onError: onFail,
+  });
+  const busy = confirm.isPending || deny.isPending || pull.isPending || savePayout.isPending;
+
+  /** Still open, so a destination is still worth having. */
+  const canSetPayout = (r: RefundRequestRow) =>
+    r.state !== "ACKNOWLEDGED" && r.state !== "REJECTED" && r.state !== "WITHDRAWN";
+
+  const payoutSummary = (r: RefundRequestRow) => {
+    if (r.payoutMethod === "cash_in_person") return "Collecting in person at the venue";
+    const where = r.payoutBankName ? `${r.payoutBankName} — ` : "";
+    return `${where}${r.payoutAccountNumber ?? ""}${r.payoutAccountName ? ` (${r.payoutAccountName})` : ""}`;
+  };
 
   const requests: RefundRequestRow[] = reqs.data?.requests ?? [];
   // Nothing raised, or the engine is dark for this booking — say nothing at all
@@ -142,6 +179,95 @@ export function RefundSettlementCard({ bookingId }: { bookingId: number | string
 
               {r.state === "DISPUTED" && r.disputeNote && (
                 <p className="text-[12px] text-muted-foreground">You said: &ldquo;{r.disputeNote}&rdquo;</p>
+              )}
+
+              {/* WW-PAYOUT — where the money should go. Without this the venue
+                  has to chase your bank details over WhatsApp before they can
+                  pay, which is where refunds stall; and if one ever goes wrong
+                  there is nothing to check the transfer against. */}
+              {canSetPayout(r) && (
+                payoutFor === r.id ? (
+                  <div className="space-y-2 rounded-md border border-dashed p-2.5">
+                    <p className="text-[12px] font-medium">Where should your venue send it?</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(["bank", "jazzcash", "easypaisa", "cash_in_person"] as PayoutMethod[]).map((m) => (
+                        <Button
+                          key={m}
+                          type="button"
+                          size="sm"
+                          variant={payout.method === m ? "default" : "outline"}
+                          className="h-7 text-[11px]"
+                          onClick={() => setPayout((p) => ({ ...p, method: m }))}
+                        >
+                          {m === "bank" ? "Bank" : m === "jazzcash" ? "JazzCash"
+                            : m === "easypaisa" ? "Easypaisa" : "In person"}
+                        </Button>
+                      ))}
+                    </div>
+
+                    {payout.method !== "cash_in_person" && (
+                      <div className="grid gap-1.5 sm:grid-cols-2">
+                        <input
+                          className="h-8 rounded-md border px-2 text-[12px]"
+                          placeholder="Account holder name"
+                          value={payout.accountName}
+                          onChange={(e) => setPayout((p) => ({ ...p, accountName: e.target.value }))}
+                        />
+                        <input
+                          className="h-8 rounded-md border px-2 text-[12px]"
+                          placeholder={payout.method === "bank" ? "Account number" : "Registered mobile number"}
+                          value={payout.accountNumber}
+                          onChange={(e) => setPayout((p) => ({ ...p, accountNumber: e.target.value }))}
+                        />
+                        {payout.method === "bank" && (
+                          <input
+                            className="h-8 rounded-md border px-2 text-[12px] sm:col-span-2"
+                            placeholder="Bank name"
+                            value={payout.bankName}
+                            onChange={(e) => setPayout((p) => ({ ...p, bankName: e.target.value }))}
+                          />
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex gap-1.5">
+                      <Button size="sm" className="h-7 text-[11px]" disabled={busy}
+                        onClick={() => savePayout.mutate(r.id)}>
+                        {savePayout.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                        Save
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-[11px]" disabled={busy}
+                        onClick={() => setPayoutFor(null)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[12px]">
+                    <span className={r.payoutMethod ? "text-muted-foreground" : "text-amber-700 dark:text-amber-400"}>
+                      {r.payoutMethod
+                        ? <>Send to: {payoutSummary(r)}</>
+                        : <>Your venue doesn&apos;t know where to send this yet.</>}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant={r.payoutMethod ? "ghost" : "outline"}
+                      className="h-7 text-[11px]"
+                      disabled={busy}
+                      onClick={() => {
+                        setPayout({
+                          method: (r.payoutMethod as PayoutMethod) ?? "bank",
+                          accountName: r.payoutAccountName ?? "",
+                          accountNumber: r.payoutAccountNumber ?? "",
+                          bankName: r.payoutBankName ?? "",
+                        });
+                        setPayoutFor(r.id);
+                      }}
+                    >
+                      {r.payoutMethod ? "Change" : "Add account details"}
+                    </Button>
+                  </div>
+                )
               )}
 
               {r.state === "ACKNOWLEDGED" && r.acknowledgedAt && (

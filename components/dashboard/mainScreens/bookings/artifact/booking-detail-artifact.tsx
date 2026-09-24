@@ -17,6 +17,7 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { listRefundRequests, decideRefundRequest, applyRefundRequest, markRefundPaid } from "@/lib/api/bookingOrder"
 import { toast } from "sonner"
 import { BookingAPI, type InstallmentsResponse, type SettlementPreview, type DepositPosition } from "@/lib/api/bookings"
 import { BookingsAPI } from "@/lib/api/dashboard"
@@ -330,18 +331,155 @@ function damageClaimDrawerBody(id: number, returnable: number): string {
   <div class="ww-dfoot"><button class="btn btn-ghost" type="button" data-drawer-close>Waapas</button><button class="btn btn-primary" type="button" data-dc-save="${id}">Claim raise karein</button></div>`
 }
 
+/**
+ * WW-REFUNDUI — "I have paid this" drawer.
+ *
+ * A method and a reference, because the row this writes is one half of a
+ * two-sided record: the customer is about to be asked whether the money
+ * arrived, and "the venue says they paid you" is worth very little without
+ * saying HOW and against what transfer id. It is a claim, not a settlement —
+ * nothing here advances the request to acknowledged.
+ */
+function refundPaidDrawerBody(id: number, amount: number): string {
+  return `
+  <div class="settle-note">Customer ko <b>${rs(amount)}</b> wapas bhejne ke baad yahan mark karein. Tasdeeq customer khud karega — ye sirf aap ka bayan hai.</div>
+  <div class="dfield"><label class="dlabel">Kaise bheja <span class="req">*</span></label>
+    <select id="rr-method">
+      <option value="cash">Cash</option>
+      <option value="bank_transfer">Bank transfer</option>
+      <option value="jazzcash">JazzCash</option>
+      <option value="easypaisa">Easypaisa</option>
+      <option value="cheque">Cheque</option>
+      <option value="other">Aur koi tareeqa</option>
+    </select>
+  </div>
+  <div class="dfield"><label class="dlabel">Reference</label><input id="rr-ref" type="text" placeholder="e.g. transfer id, cheque no, ya 'haath mein diya'"/></div>
+  <div class="ww-dfoot"><button class="btn btn-ghost" type="button" data-drawer-close>Waapas</button><button class="btn btn-primary" type="button" data-rr-paid-save="${id}">Mark karein</button></div>`
+}
+
 type CashRefundOwed = { id: number; amount: number; reason: string | null; owedSince: string }
-function refundOwedCard(refunds: CashRefundOwed[]): string {
+/** WW-PAYOUT — where the customer asked for the money. Null until they say. */
+type RefundPayout = {
+  method: string | null; accountName: string | null; accountNumber: string | null
+  bankName: string | null; iban: string | null; note: string | null
+} | null
+
+/**
+ * The destination line on the refund card.
+ *
+ * A vendor told "you owe Rs X" still has to find out WHERE to send it, and
+ * chasing that over WhatsApp is where refunds stall. When the customer has not
+ * supplied it we say so plainly rather than leaving the space blank — an empty
+ * row reads as "nothing needed".
+ */
+function payoutLine(p: RefundPayout): string {
+  if (!p || !p.method) {
+    return `<div class="ir-d" style="color:var(--warn)">Customer ne abhi account details nahi di — unse poochein</div>`
+  }
+  if (p.method === "cash_in_person") {
+    return `<div class="ir-d">Cash — customer venue se khud lega${p.note ? ` · ${escHtml(p.note)}` : ""}</div>`
+  }
+  const bits = [p.bankName, p.accountNumber, p.accountName ? `(${p.accountName})` : ""].filter(Boolean)
+  return `<div class="ir-d"><b>Bhejein:</b> ${escHtml(bits.join(" · "))}${p.iban ? `<br><b>IBAN:</b> ${escHtml(p.iban)}` : ""}</div>`
+}
+
+type RefundReq = {
+  id: number; state: string; reason: string
+  computed?: { refund?: number; forfeit?: number }
+  settlementDue?: number | string | null
+  vendorPaymentMethod?: string | null; vendorPaymentRef?: string | null
+  disputeNote?: string | null
+  payoutMethod?: string | null; payoutAccountName?: string | null
+  payoutAccountNumber?: string | null; payoutBankName?: string | null
+}
+
+/**
+ * WW-REFUNDUI — the vendor's half of the refund lifecycle.
+ *
+ * The card below this one (refundOwedCard) only ever appears AFTER a request is
+ * applied, because it reads the cash-owed ledger. So a request sitting at RAISED
+ * — the state every customer cancellation lands in — had no vendor surface at
+ * all: decide/apply existed only as API calls, and in practice nothing moved
+ * until someone hit them by hand. This is that missing screen.
+ *
+ * One action per state, because at any point exactly one party owes the next
+ * move and offering more than that is how people press the wrong thing:
+ *   RAISED          → approve / reject
+ *   APPROVED        → apply (writes the obligation into the khata)
+ *   APPLIED         → mark paid   (only when money is actually owed)
+ *   PAID_BY_VENDOR  → waiting on the customer. No vendor button exists, by
+ *                     design: only they can confirm they received it.
+ *   DISPUTED        → mark paid again, with their complaint shown above it.
+ */
+function refundRequestsCard(reqs: RefundReq[]): string {
+  const open = (reqs || []).filter((r) => !["ACKNOWLEDGED", "REJECTED", "WITHDRAWN"].includes(r.state))
+  if (!open.length) return ""
+
+  const STATE_LINE: Record<string, string> = {
+    RAISED: "Customer ne refund maanga hai — review karein",
+    APPROVED: "Approve ho chuka — khata mein darj karein",
+    APPLIED: "Aap ke zimme hai — customer ko paisa bhejein",
+    PAID_BY_VENDOR: "Aap ne paid mark kiya — customer ki tasdeeq ka intezar",
+    DISPUTED: "Customer kehta hai paisa nahi mila",
+  }
+
+  const rows = open.map((r) => {
+    const amt = Number(r.settlementDue ?? r.computed?.refund ?? 0)
+    const forfeit = Number(r.computed?.forfeit ?? 0)
+
+    // Where to send it. Without this the vendor has to go and ask.
+    let dest = `<div class="ir-d" style="color:var(--warn)">Customer ne account details nahi di</div>`
+    if (r.payoutMethod === "cash_in_person") {
+      dest = `<div class="ir-d">Cash — customer khud lega</div>`
+    } else if (r.payoutMethod) {
+      const bits = [r.payoutBankName, r.payoutAccountNumber, r.payoutAccountName ? `(${r.payoutAccountName})` : ""].filter(Boolean)
+      dest = `<div class="ir-d"><b>Bhejein:</b> ${escHtml(bits.join(" · "))}</div>`
+    }
+
+    let actions = ""
+    if (r.state === "RAISED") {
+      actions = `<button class="btn btn-primary" data-rr-approve="${r.id}" style="height:30px;padding:0 12px;font-size:12px">Approve</button>`
+        + `<button class="btn btn-ghost" data-rr-reject="${r.id}" style="height:30px;padding:0 12px;font-size:12px">Reject</button>`
+    } else if (r.state === "APPROVED") {
+      actions = `<button class="btn btn-primary" data-rr-apply="${r.id}" style="height:30px;padding:0 12px;font-size:12px">Khata mein darj karein</button>`
+    } else if (r.state === "APPLIED" || r.state === "DISPUTED") {
+      actions = amt > 0
+        ? `<button class="btn btn-primary" data-rr-paid="${r.id}" data-rr-amt="${amt}" style="height:30px;padding:0 12px;font-size:12px">Refund de diya</button>`
+        : `<div class="ir-d">Is par kuch dena nahi banta</div>`
+    } else if (r.state === "PAID_BY_VENDOR") {
+      actions = `<div class="ir-d">Customer ki tasdeeq baaki hai</div>`
+    }
+
+    return `<div class="inst-row" style="align-items:flex-start">
+      <div class="ir-l">
+        <div class="ir-nm">${rs(amt)}${forfeit > 0 ? ` <span style="color:var(--ink-4);font-weight:400">· ${rs(forfeit)} zabt</span>` : ""}</div>
+        <div class="ir-d">${escHtml(STATE_LINE[r.state] || r.state)}</div>
+        ${r.state === "DISPUTED" && r.disputeNote ? `<div class="ir-d" style="color:var(--bad)">&ldquo;${escHtml(r.disputeNote)}&rdquo;</div>` : ""}
+        ${dest}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${actions}</div>
+    </div>`
+  }).join("")
+
+  return `<div class="card">
+      <div class="card-h"><div><h2>Refund request</h2><div class="sub">Cancel/kami par customer ka refund</div></div></div>
+      <div style="padding:2px 16px 12px">${rows}</div>
+    </div>`
+}
+
+function refundOwedCard(refunds: CashRefundOwed[], payout: RefundPayout = null): string {
   if (!refunds.length) return ""
   const total = refunds.reduce((a, r) => a + Number(r.amount || 0), 0)
   const rows = refunds.map((r) => `<div class="inst-row"><div class="ir-l"><div class="ir-nm">${rs(Number(r.amount))}</div><div class="ir-d">${r.reason ? escHtml(r.reason.replace(/_/g, " ")) : "refund"}${r.owedSince ? ` · ${fmtDateShort(r.owedSince)}` : ""}</div></div><button class="btn btn-primary" data-refund-settle="${r.id}" style="height:30px;padding:0 12px;font-size:12px">Refund de diya</button></div>`).join("")
   return `<div class="card">
       <div class="card-h"><div><h2>Refund dena hai</h2><div class="sub">Cancel/kami par customer ko wapas karna hai</div></div><span class="st bad"><i></i> ${rs(total)}</span></div>
-      <div style="padding:2px 16px 12px">${rows}</div>
+      <div style="padding:2px 16px 12px">${rows}
+        <div class="inst-row" style="border-top:1px dashed var(--line)">${payoutLine(payout)}</div>
+      </div>
     </div>`
 }
 
-function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmount?: number; remainingAmount?: number; cashRefundOwedTotal?: number; cashRefundsOwed?: CashRefundOwed[] } | null, receipts: PaymentReceipt[], history: any[], sheets: FunctionSheet[], installments: InstallmentsResponse | null, settlement: SettlementPreview | null, deposit: DepositPosition | null): string {
+function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmount?: number; remainingAmount?: number; cashRefundOwedTotal?: number; cashRefundsOwed?: CashRefundOwed[]; refundPayout?: RefundPayout } | null, receipts: PaymentReceipt[], history: any[], sheets: FunctionSheet[], installments: InstallmentsResponse | null, settlement: SettlementPreview | null, deposit: DepositPosition | null, refundReqs: RefundReq[] = []): string {
   const statusLabel = bookingStatusLabel(booking) || "Booking"
   const tone = toneOf(statusLabel)
   const st = (booking.status || "").toLowerCase()
@@ -468,7 +606,8 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
         <div class="pay-tl"><div class="tl-h">Payment history</div>${confirmItem}${rcItems}${dueItem}${isCancelled ? cancelledItem : settleItem}</div>
       </div>
 
-      ${refundOwedCard(pay?.cashRefundsOwed ?? [])}
+      ${refundRequestsCard(refundReqs)}
+      ${refundOwedCard(pay?.cashRefundsOwed ?? [], pay?.refundPayout ?? null)}
 
       ${installmentsCard(installments, due)}
 
@@ -558,6 +697,9 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
   const instQ = useQuery({ queryKey: ["bk-detail-inst", bookingId], queryFn: () => BookingAPI.getInstallments(bookingId).catch(() => null), enabled: valid })
   const settleQ = useQuery({ queryKey: ["bk-detail-settle", bookingId], queryFn: () => BookingAPI.getSettlement(bookingId).catch(() => null), enabled: valid })
   const depQ = useQuery({ queryKey: ["bk-detail-deposit", bookingId], queryFn: () => BookingAPI.getDeposit(bookingId).catch(() => null), enabled: valid })
+  // WW-REFUNDUI — 404s when the refund engine is dark for this vendor, which is
+  // a normal answer, not an error: the card simply does not render.
+  const refundQ = useQuery({ queryKey: ["bk-detail-refunds", bookingId], queryFn: () => listRefundRequests(bookingId).catch(() => null), enabled: valid })
 
   React.useEffect(() => {
     const s = shadowRef.current
@@ -575,6 +717,7 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
       instQ.data ?? null,
       settleQ.data ?? null,
       depQ.data ?? null,
+      (refundQ.data?.requests ?? []) as unknown as RefundReq[],
     )
     // restore the vendor's private per-booking note (persisted locally)
     const vn = s.getElementById("vendor-note") as HTMLTextAreaElement | null
@@ -582,14 +725,14 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
     // update the crumb with the real customer name
     const crumb = s.querySelector(".crumb b"); if (crumb) crumb.textContent = booking.customerName || "Booking"
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, bookingQ.data, bookingQ.isLoading, payQ.data, rcQ.data, histQ.data, sheetsQ.data, instQ.data, settleQ.data, depQ.data])
+  }, [ready, bookingQ.data, bookingQ.isLoading, payQ.data, rcQ.data, histQ.data, sheetsQ.data, instQ.data, settleQ.data, depQ.data, refundQ.data])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
     const s = shadowRef.current
     if (!s || !ready || bound.current) return
     bound.current = true
-    const invalidateAll = () => ["bk-detail", "bk-detail-pay", "bk-detail-rc", "bk-detail-hist", "bk-detail-inst", "bk-detail-settle", "bk-detail-deposit"].forEach((k) => qc.invalidateQueries({ queryKey: [k, bookingId] }))
+    const invalidateAll = () => ["bk-detail", "bk-detail-pay", "bk-detail-rc", "bk-detail-hist", "bk-detail-inst", "bk-detail-settle", "bk-detail-deposit", "bk-detail-refunds"].forEach((k) => qc.invalidateQueries({ queryKey: [k, bookingId] }))
     s.addEventListener("click", async (e) => {
       const t = e.target as HTMLElement
       // inline record payment (header button + timeline "Baqaya record karein")
@@ -721,6 +864,47 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
         scs.disabled = true; scs.textContent = "Record ho raha…"
         try { await BookingAPI.confirmCashSettlement(Number(scs.dataset.settleCashSave), { reference: (s.getElementById("sc-ref") as HTMLInputElement | null)?.value?.trim() || undefined }); toast.success("Cash settle ho gaya"); closeDrawer(s); invalidateAll() }
         catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua"); scs.disabled = false; scs.textContent = "Haan, cash mila" }
+        return
+      }
+      // ── WW-REFUNDUI: the refund request lifecycle ────────────────────
+      const rrApprove = t.closest("[data-rr-approve]") as HTMLButtonElement | null
+      if (rrApprove?.dataset.rrApprove) {
+        rrApprove.disabled = true; const o = rrApprove.textContent; rrApprove.textContent = "Ho raha…"
+        try { await decideRefundRequest(bookingId, Number(rrApprove.dataset.rrApprove), true); toast.success("Refund approve ho gaya"); invalidateAll() }
+        catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua"); rrApprove.disabled = false; if (o) rrApprove.textContent = o }
+        return
+      }
+      const rrReject = t.closest("[data-rr-reject]") as HTMLButtonElement | null
+      if (rrReject?.dataset.rrReject) {
+        rrReject.disabled = true; const o = rrReject.textContent; rrReject.textContent = "Ho raha…"
+        try { await decideRefundRequest(bookingId, Number(rrReject.dataset.rrReject), false); toast.success("Refund reject ho gaya"); invalidateAll() }
+        catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua"); rrReject.disabled = false; if (o) rrReject.textContent = o }
+        return
+      }
+      const rrApply = t.closest("[data-rr-apply]") as HTMLButtonElement | null
+      if (rrApply?.dataset.rrApply) {
+        rrApply.disabled = true; const o = rrApply.textContent; rrApply.textContent = "Ho raha…"
+        try { await applyRefundRequest(bookingId, Number(rrApply.dataset.rrApply)); toast.success("Khata mein darj ho gaya"); invalidateAll() }
+        catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua"); rrApply.disabled = false; if (o) rrApply.textContent = o }
+        return
+      }
+      const rrPaid = t.closest("[data-rr-paid]") as HTMLElement | null
+      if (rrPaid?.dataset.rrPaid) {
+        openDrawer(s, "Refund de diya", refundPaidDrawerBody(Number(rrPaid.dataset.rrPaid), Number(rrPaid.dataset.rrAmt) || 0))
+        return
+      }
+      const rrSave = t.closest("[data-rr-paid-save]") as HTMLButtonElement | null
+      if (rrSave?.dataset.rrPaidSave) {
+        const method = (s.getElementById("rr-method") as HTMLSelectElement | null)?.value || "cash"
+        const reference = (s.getElementById("rr-ref") as HTMLInputElement | null)?.value?.trim() || undefined
+        rrSave.disabled = true; const o = rrSave.textContent; rrSave.textContent = "Ho raha…"
+        try {
+          await markRefundPaid(bookingId, Number(rrSave.dataset.rrPaidSave), { method: method as never, reference })
+          toast.success("Mark ho gaya — ab customer tasdeeq karega"); closeDrawer(s); invalidateAll()
+        } catch (err: unknown) {
+          toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua")
+          rrSave.disabled = false; if (o) rrSave.textContent = o
+        }
         return
       }
       // ── Refund owed: mark a cash refund handed over ──────────────────

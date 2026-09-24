@@ -38,7 +38,11 @@ export function RefundPreviewCard({ bookingId }: { bookingId: number }) {
   if (!data) return null; // feature off (404) or no booking money yet
 
   const { preview, comparison, daysBefore, totalPaid } = data;
-  const waText = `Assalam-o-Alaikum.\n${data.policy.labelUr} policy ke mutabiq — agar aap ${daysBefore} din pehle cancel karte hain:\nWapas: ${rs(preview.refund)}\nZabt (advance/deposit): ${rs(preview.forfeit)}\nShukriya — Wedding Wala`;
+  /* Whole days. `daysBefore` is an exact float (19.40760377314815) — it was
+     going out raw both on this card and inside the WhatsApp message a vendor
+     sends the customer. */
+  const days = Math.round(daysBefore);
+  const waText = `Assalam-o-Alaikum.\n${data.policy.labelUr} policy ke mutabiq — agar aap ${days} din pehle cancel karte hain:\nWapas: ${rs(preview.refund)}\nZabt (advance/deposit): ${rs(preview.forfeit)}\nShukriya — Wedding Wala`;
   const waHref = `https://wa.me/?text=${encodeURIComponent(waText)}`;
 
   return (
@@ -49,7 +53,7 @@ export function RefundPreviewCard({ bookingId }: { bookingId: number }) {
             <Shield className="size-4 text-muted-foreground" />
             <h3 className="text-sm font-semibold">Cancellation / Refund</h3>
           </div>
-          <span className="text-xs text-muted-foreground">{daysBefore} din pehle</span>
+          <span className="text-xs text-muted-foreground">{days} din pehle</span>
         </div>
 
         {/* Policy preset picker */}

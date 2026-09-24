@@ -2,7 +2,9 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useChat } from "@/context/ChatContext";
-import { Send, Paperclip, Smile, Image } from "lucide-react";
+import { Send, Paperclip, Smile, Image, Loader2 } from "lucide-react";
+import { uploadChatAttachment } from "@/lib/api/chat";
+import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 export function ChatInput() {
@@ -10,6 +12,43 @@ export function ChatInput() {
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isFocused, setIsFocused] = useState(false);
+  /* WW-MEDIA — one picker, two buttons: the image button filters to images,
+     the clip button to video. Both end at the same upload. */
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [accept, setAccept] = useState("image/*,video/*");
+  const [uploading, setUploading] = useState(false);
+
+  const pick = (mode: "image" | "video" | "any") => {
+    setAccept(mode === "image" ? "image/*" : mode === "video" ? "video/*" : "image/*,video/*");
+    // Let the accept attribute land before the dialog opens.
+    requestAnimationFrame(() => fileRef.current?.click());
+  };
+
+  const onFile = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = ""; // so picking the same file twice still fires
+      if (!file || !activeConversationId) return;
+      setUploading(true);
+      try {
+        const up = await uploadChatAttachment(file);
+        sendMessage(message.trim(), undefined, {
+          attachmentUrl: up.attachmentUrl,
+          attachmentName: up.attachmentName,
+          // The server decides image vs video from the real mimetype.
+          messageType: (up.messageType as "image" | "video" | "file") ?? "file",
+        });
+        setMessage("");
+      } catch (err: unknown) {
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+          ?? "Could not send that file.";
+        toast({ title: "Upload failed", description: msg, variant: "destructive" });
+      } finally {
+        setUploading(false);
+      }
+    },
+    [activeConversationId, message, sendMessage],
+  );
 
   // Auto-resize textarea
   useEffect(() => {
@@ -69,30 +108,36 @@ export function ChatInput() {
             : "border-gray-200 dark:border-gray-800"
         )}
       >
-        {/* Issue #21 — Attach + Image buttons were rendered with no
-            onClick handler and no backend support for message attachments.
-            Vendors clicked them, nothing happened, they reported the
-            module as broken. Hidden until the upload endpoint ships;
-            the icons stay imported so the wire-up is one-edit when
-            the BE catches up. */}
-        {/*
+        {/* WW-MEDIA — these were rendered-but-hidden since Issue #21, waiting on
+            an upload endpoint (POST /chat/attachments). It now exists, so they
+            do what they always looked like they did. */}
+        <input
+          ref={fileRef}
+          type="file"
+          accept={accept}
+          className="hidden"
+          onChange={onFile}
+        />
         <div className="flex items-center gap-0.5 pb-0.5">
           <button
             type="button"
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            title="Attach file"
+            disabled={uploading}
+            onClick={() => pick("any")}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+            title="Attach a photo or video"
           >
-            <Paperclip className="h-4.5 w-4.5" />
+            {uploading ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <Paperclip className="h-4.5 w-4.5" />}
           </button>
           <button
             type="button"
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            title="Send image"
+            disabled={uploading}
+            onClick={() => pick("image")}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+            title="Send a photo"
           >
             <Image className="h-4.5 w-4.5" />
           </button>
         </div>
-        */}
 
         {/* Textarea */}
         <textarea

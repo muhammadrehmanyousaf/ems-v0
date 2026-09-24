@@ -31,6 +31,7 @@ import { MenusManager } from "@/components/dashboard/mainScreens/businessSetting
 import { OfferingsPreview } from "@/components/dashboard/mainScreens/businessSettings/redesigned/offerings-preview"
 import { AvailabilityManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/availability-manager"
 import { ImagesManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/images-manager"
+import { VideosManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/videos-manager"
 import { TypeSpecificManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/type-specific-manager"
 import { ProfileContentManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/profile-content-manager"
 import { getVendorTypeConfig } from "@/lib/vendor-type-config"
@@ -1260,7 +1261,14 @@ export function BusinessSettingsHubView() {
             </>
           )}
           {active === "availability" && <AvailabilityManager businessId={biz.id} />}
-          {active === "images" && <ImagesManager businessId={biz.id} images={biz.images || []} />}
+          {/* WW-MEDIA — videos sit under the gallery in the same tab: they are
+              the same job (show the venue) and a separate tab would hide them. */}
+          {active === "images" && (
+            <div className="space-y-4">
+              <ImagesManager businessId={biz.id} images={biz.images || []} />
+              <VideosManager businessId={biz.id} videos={(biz as { videos?: string[] }).videos || []} />
+            </div>
+          )}
 
           {!tab.wired && tab.href && (
             <Section icon={tab.icon} title={tab.label} desc={tab.hint || ""}>
