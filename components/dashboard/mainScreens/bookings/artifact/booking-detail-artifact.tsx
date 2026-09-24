@@ -388,7 +388,7 @@ type RefundReq = {
   computed?: { refund?: number; forfeit?: number }
   settlementDue?: number | string | null
   vendorPaymentMethod?: string | null; vendorPaymentRef?: string | null
-  disputeNote?: string | null
+  disputeNote?: string | null; disputeCount?: number | null
   payoutMethod?: string | null; payoutAccountName?: string | null
   payoutAccountNumber?: string | null; payoutBankName?: string | null
 }
@@ -455,6 +455,11 @@ function refundRequestsCard(reqs: RefundReq[]): string {
         <div class="ir-nm">${rs(amt)}${forfeit > 0 ? ` <span style="color:var(--ink-4);font-weight:400">· ${rs(forfeit)} zabt</span>` : ""}</div>
         <div class="ir-d">${escHtml(STATE_LINE[r.state] || r.state)}</div>
         ${r.state === "DISPUTED" && r.disputeNote ? `<div class="ir-d" style="color:var(--bad)">&ldquo;${escHtml(r.disputeNote)}&rdquo;</div>` : ""}
+        ${Number(r.disputeCount || 0) > 0 && r.state !== "DISPUTED"
+          // The open complaint is cleared when the vendor pays again, so without
+          // this a re-paid or settled refund looks like it was never contested.
+          ? `<div class="ir-d" style="color:var(--warn)">Pehle ${Number(r.disputeCount)} dafa dispute ho chuka hai</div>`
+          : ""}
         ${dest}
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">${actions}</div>
