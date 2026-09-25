@@ -139,7 +139,41 @@ and has no rungs in the product.
 
 ---
 
-## 6. P3 — A recurring bug class worth a systematic sweep
+## 6. The recurring bug class — SWEPT, and now closed
+
+The pattern below repeated five times in this audit. So rather than leave it as
+advice, it was swept exhaustively. Results:
+
+**Unreachable routes: none.** All 313 `page.tsx` routes are linked from
+somewhere in the app. (The first two passes said otherwise; both were my
+extraction missing `href: "..."` object syntax. The instrument was wrong before
+the system was — twice.)
+
+**Never-imported files: 113.** Of those, every single one of the 34 view
+components has an `artifact/` sibling that replaced it — zero without a
+replacement. The rest are UI primitives and superseded booking-wizard steps.
+They are residue from the artifact-console migration, not hidden features.
+
+One was checked in detail because it looked like a live miss:
+`components/bookings/reminders-due-card.tsx`, a complete WhatsApp collections
+tool ("Yaad dilao", logs the nudge). It is superseded by `ReceivablesArtifact`
+on /dashboard/receivables, which does the same job with aging and CSV export.
+
+**Conclusion: the five doors found and fixed in this audit were the real ones.**
+There is no sixth. What remains is dead weight, and two of the worst offenders
+were deleted (§ dead code).
+
+### The five, for the record
+
+| Feature | Back end | Admin side | User entry point |
+|---|---|---|---|
+| Vendor claim | complete | complete | **missing** — fixed |
+| Refund approval | complete | n/a | **missing** — fixed |
+| Chat attachments | complete | renders | **missing** — fixed |
+| Vendor media send | complete | renders | **missing** — fixed |
+| KYC / verification | complete | complete | **missing** — fixed |
+
+### ~~Original note~~
 
 Three times now a feature has been implemented on **one** of several code paths:
 
