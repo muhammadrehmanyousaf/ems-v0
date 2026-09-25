@@ -22,6 +22,7 @@ import { EmptyState } from "@/components/dashboard/primitives/empty-state"
 import { DetailSkeleton } from "@/components/dashboard/primitives/skeletons"
 import { Icon, Spinner, type IconName } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 import { Switch } from "@/components/ui/switch"
 import { BankAccountsManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/bank-accounts-manager"
 import { PackagesManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/packages-manager"
@@ -98,7 +99,7 @@ const SETTLEMENT_FIELDS: {
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 
-type TabKey = "profile" | "pricing" | "amenities" | "listing" | "type-specific" | "images" | "packages" | "menus" | "bank" | "team" | "availability"
+type TabKey = "profile" | "pricing" | "amenities" | "listing" | "type-specific" | "images" | "packages" | "menus" | "bank" | "documents" | "team" | "availability"
 interface TabDef { key: TabKey; label: string; icon: IconName; wired: boolean; href?: string; hint?: string }
 const TABS: TabDef[] = [
   { key: "profile", label: "Profile", icon: "Building2", wired: true },
@@ -112,6 +113,11 @@ const TABS: TabDef[] = [
   { key: "packages", label: "Packages", icon: "Package", wired: false, hint: "Pricing packages & bundles." },
   { key: "menus", label: "Menus", icon: "ClipboardList", wired: false, hint: "Catering menus & per-head pricing." },
   { key: "bank", label: "Bank details", icon: "CreditCard", wired: false, hint: "Payout accounts for receivables." },
+  // WW-KYC — the verification page has existed and been mounted at
+  // /dashboard/business/[id]/documents the whole time, with nothing anywhere
+  // linking to it. A vendor could only reach it by typing the URL, which is a
+  // large part of why ~3,270 listings sit at verification tier 0.
+  { key: "documents", label: "Verification", icon: "ShieldCheck", wired: false, hint: "NTN, CNIC and ownership documents." },
   // "Team members" hidden at the founder's direction (2026-08-29). It was the
   // one row here that left the page entirely - `href: "/dashboard/staff"` - so
   // it was a door out of Settings dressed as a section of it. /dashboard/staff
@@ -1234,6 +1240,19 @@ export function BusinessSettingsHubView() {
             />
           )}
           {active === "bank" && <BankAccountsManager />}
+          {active === "documents" && (
+            <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+              <h2 className="text-sm font-semibold">Verification documents</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Couples see a verification badge on your listing. Send your NTN, CNIC or
+                ownership proof and our team will check it — it is the difference between
+                an unverified listing and one a family trusts with a deposit.
+              </p>
+              <Button asChild size="sm" className="mt-3">
+                <Link href={`/dashboard/business/${biz.id}/documents`}>Open verification</Link>
+              </Button>
+            </div>
+          )}
           {/* WW-RATECARD 9.5 — the packages and menus tabs each build half of
               one block on the listing, and neither showed the block. The
               preview renders the SAME component the public detail page uses, so

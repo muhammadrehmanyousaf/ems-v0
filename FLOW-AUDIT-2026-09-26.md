@@ -109,7 +109,25 @@ open those three bookings.
 
 ---
 
-## 5. P2 — Verification tiers are inert
+## 5. P2 — Verification: the ladder was fine, the door was missing  [CORRECTED]
+
+**My original finding here was wrong and is kept below, struck through, because
+being wrong in an audit is worth recording.**
+
+The ladder is fully built: `utils/vendorVerificationStatus.js` computes the
+tier, `verificationTierFromTimestamps` writes it, the admin queue reviews
+documents, vendors can enter an NTN in settings, and `KycUploadCard` is mounted
+at `/dashboard/business/[id]/documents`.
+
+What was missing was, again, the **door**: nothing anywhere linked to that page.
+A vendor could only reach verification by typing the URL. Fixed — a
+"Verification" tab now sits beside Bank details in business settings.
+
+That makes **five** separate instances in this one audit of the same failure:
+complete back end, complete admin side, no user-facing entry point. It is the
+single most reliable bug shape in this codebase.
+
+### ~~Original (incorrect) finding~~
 
 Nearly every imported listing sits at `verificationTier: 0` with no NTN, CNIC,
 address or visit check recorded. The "✓ Verified" badge bug was correctly fixed
