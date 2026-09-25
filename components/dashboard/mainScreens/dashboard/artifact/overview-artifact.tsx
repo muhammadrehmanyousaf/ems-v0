@@ -14,6 +14,7 @@
 
 import * as React from "react"
 import { useQuery } from "@tanstack/react-query"
+import { getActionSummary } from "@/lib/api/bookingOrder"
 import { useUser } from "@/context/UserContext"
 import { useBusiness } from "@/context/BusinessContext"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
@@ -95,6 +96,12 @@ interface ArtData {
   profile: { score: number; title: string; body: string; items: { label: string; pts: number }[]; remaining: number } | null
   rating: { avg: number; count: number; newThisMonth: number; quote: string; by: string; avatars: string[] } | null
   wapsi: { total: number; rows: { id: number; booking: number; amount: number; disputed: boolean; days: number }[]; oldestDays: number; oldestBooking: number } | null
+  /** WW-WORKLIST — events that happened and were never closed, and money owed after delivery. */
+  work: {
+    pastOpen: { id: number; customerName: string | null; bookingDate: string; status: string; balance: number }[]
+    unpaid: { id: number; customerName: string | null; bookingDate: string; balance: number }[]
+    unpaidTotal: number
+  } | null
 }
 
 /* ── content HTML built from live data ───────────────────────── */
@@ -155,6 +162,43 @@ function wapsiCard(w: ArtData["wapsi"]): string {
   return `<div class="card">${head}<div class="owe"><span class="o-cap">Kul baqaya wapsi</span><span class="o-val tnum">Rs ${pkNum(w.total)}</span></div><div class="list">${rows}</div>${foot}</div>`
 }
 
+/**
+ * WW-WORKLIST — the two states nothing surfaced anywhere.
+ *
+ * Nothing in this platform closes a booking once its date passes: no cron, no
+ * prompt. A live check found real bookings sitting past their event date in
+ * Pending / Awaiting Payment / Confirmed. The review request and the final
+ * balance chase are both triggered off completion, so neither ever happened.
+ *
+ * Deliberately a prompt, not automation. Completing a booking also settles
+ * money, and this codebase never closes money without a human saying so — the
+ * refund handshake is built on exactly that principle.
+ */
+function workCard(w: ArtData["work"]): string {
+  if (!w) return ""
+  const past = w.pastOpen || []
+  const unpaid = w.unpaid || []
+  if (!past.length && !unpaid.length) return ""
+
+  const row = (id: number, when: string, who: string | null, amt: number, tag: string) =>
+    `<div class="r" data-nav="/dashboard/bookings/${id}" role="button" style="cursor:pointer">
+      <div class="r-main"><div class="r-title">${esc(who || "Booking #" + id)} <span class="st warn"><i></i> ${esc(tag)}</span></div>
+      <div class="r-meta">${esc(when)}</div></div>
+      <div class="r-amt">${amt > 0 ? `<div class="a-val tnum">Rs ${pkNum(amt)}</div><div class="a-cap due">baqaya</div>` : ""}</div></div>`
+
+  const pastRows = past.slice(0, 4).map((b) => row(b.id, b.bookingDate, b.customerName, b.balance, "band karein")).join("")
+  const unpaidRows = unpaid.slice(0, 4).map((b) => row(b.id, b.bookingDate, b.customerName, b.balance, "paisa baqaya")).join("")
+
+  const head = `<div class="card-h"><div><h2>Tawajjo chahiye</h2><div class="sub">Ho chuke events aur baqaya raqam</div></div><a class="link" data-nav href="/dashboard/bookings">Sab bookings ${chevSvg}</a></div>`
+  const pastBlock = past.length
+    ? `<div class="owe"><span class="o-cap">${past.length} event ho chuke, band nahi hue</span></div><div class="list">${pastRows}</div>`
+    : ""
+  const unpaidBlock = unpaid.length
+    ? `<div class="owe"><span class="o-cap">Event ke baad baqaya</span><span class="o-val tnum">Rs ${pkNum(w.unpaidTotal)}</span></div><div class="list">${unpaidRows}</div>`
+    : ""
+  return `<div class="card">${head}${pastBlock}${unpaidBlock}</div>`
+}
+
 function buildContent(d: ArtData, greeting: string, todayStr: string): string {
   const k = d.kpis
   const dash = (x: string) => (d.moneyErr ? "—" : x)
@@ -206,6 +250,7 @@ function buildContent(d: ArtData, greeting: string, todayStr: string): string {
       <div class="card-h"><div><h2>Aane wale events</h2><div class="sub">Aapki bookings</div></div><a class="link" data-nav href="/dashboard/bookings">Sab dekhein ${chevSvg}</a></div>
       <div class="list">${eventsList}</div>
     </div>
+    ${workCard(d.work)}
     ${wapsiCard(d.wapsi)}
   </section>
   <section class="grid-half">
@@ -390,6 +435,8 @@ export function OverviewArtifact() {
   const bizId = activeBusinessId ?? (business as { id?: number } | null)?.id ?? null
   const reviewsQ = useQuery({ queryKey: ["art-reviews", bizId], enabled: !!bizId, queryFn: () => ReviewsAPI.getBusinessReviews(Number(bizId)).catch(() => null) })
   const refundQ = useQuery({ queryKey: ["art-refunds", bizId], queryFn: () => listRefundObligations(bizId ?? undefined).catch(() => null) })
+  // WW-WORKLIST — past-date bookings nobody closed + delivered-and-unpaid.
+  const workQ = useQuery({ queryKey: ["art-work", activeBusinessId], queryFn: () => getActionSummary(activeBusinessId ?? undefined).catch(() => null) })
 
   const data: ArtData = React.useMemo(() => {
     const k = kpisQ.data
@@ -465,8 +512,18 @@ export function OverviewArtifact() {
       foot: { total: totalRev, avg: avgRev, best },
       occ: { pct: occPct, bookedDays, emptyDays: Math.max(0, periodDays - bookedDays) },
       events, leads: leadRows, profile, rating, wapsi,
+      work: workQ.data
+        ? {
+            pastOpen: workQ.data.pastEventsOpen?.items ?? [],
+            unpaid: workQ.data.deliveredUnpaid?.items ?? [],
+            unpaidTotal: workQ.data.deliveredUnpaid?.total ?? 0,
+          }
+        : null,
     }
-  }, [kpisQ.data, kpisQ.isLoading, kpisQ.isError, revQ.data, bkTrQ.data, recentQ.data, leadsQ.data, bkdQ.data, compQ.data, reviewsQ.data, refundQ.data])
+    // workQ.data belongs here: without it the card renders once as empty and
+    // never updates when the data lands. That exact omission hid a whole card
+    // on the booking-detail screen earlier.
+  }, [kpisQ.data, kpisQ.isLoading, kpisQ.isError, revQ.data, bkTrQ.data, recentQ.data, leadsQ.data, bkdQ.data, compQ.data, reviewsQ.data, refundQ.data, workQ.data])
 
   const greeting = React.useMemo(() => {
     const full = (user as { fullName?: string } | null)?.fullName
