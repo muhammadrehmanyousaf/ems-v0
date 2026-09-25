@@ -24,6 +24,8 @@ export interface VendorDetail {
   images: string[]
   /** WW-MEDIA — walkthrough clips. Same shape as `images`. */
   videos: string[]
+  /** WW-CLAIM — true when this listing is an unclaimed public-directory import. */
+  claimable?: boolean
   rating: number
   reviewCount: number
   reviews: any[]
@@ -209,6 +211,7 @@ function normalize(raw: any): VendorDetail {
     imageUrl: pickFirstImage(raw),
     images: normalizeImages(raw),
     videos: normalizeVideos(raw),
+    claimable: raw?.claimable === true,
     rating: Number(raw?.rating ?? 0) || 0,
     reviewCount: Number(raw?.reviewCount ?? 0) || 0,
     reviews: Array.isArray(raw?.reviews) ? raw.reviews : [],

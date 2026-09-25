@@ -22,6 +22,7 @@ import Link from "next/link"
 import type { Metadata } from "next"
 import { notFound, redirect, permanentRedirect } from "next/navigation"
 import { VenueSpaceSelector } from "@/components/booking/venue-space-selector"
+import { ClaimListingCard } from "@/components/seo/claim-listing-card"
 import { fetchVendorHasMultiSpace } from "@/lib/seo/fetch-vendor"
 import VendorInquiryCta from "@/components/seo/vendor-inquiry-cta"
 import VendorOfferings from "@/components/seo/vendor-offerings"
@@ -418,6 +419,13 @@ export async function VendorDetailPage(input: PageInput) {
               ))}
             </ul>
           </section>
+        )}
+
+        {/* WW-CLAIM — the door to a flow that was fully built and unreachable.
+            Shown only on unclaimed imports, directly on the page a venue owner
+            reaches by googling themselves. */}
+        {vendor.claimable && (
+          <ClaimListingCard businessId={Number(vendor.id)} businessName={vendor.name} />
         )}
 
         {/* WW-MEDIA — walkthrough clips.
