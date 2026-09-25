@@ -12,7 +12,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Wallet, CalendarClock, Inbox, ChevronRight } from "lucide-react";
+import { Plus, Wallet, CalendarClock, Inbox, ChevronRight, TriangleAlert } from "lucide-react";
 import { useActiveBusinessId } from "@/lib/store/active-business-store";
 import { getActionSummary } from "@/lib/api/bookingOrder";
 import { Card, CardContent } from "@/components/ui/card";
@@ -95,6 +95,81 @@ export function ActionOverviewView() {
             )}
           </CardContent>
         </Card>
+
+        {/* WW-WORKLIST — three states that previously had no surface at all.
+
+            A booking whose event has passed is never closed by anything: no
+            cron, no prompt. The review request and the final balance chase are
+            both triggered off completion, so neither ever happened. Delivered-
+            and-unpaid and open refunds were the same — real money with nowhere
+            to see it. Shown as prompts, not automation: completing a booking
+            settles money, and this codebase deliberately never closes money
+            without a human. */}
+        {((data.pastEventsOpen?.count ?? 0) > 0 ||
+          (data.deliveredUnpaid?.count ?? 0) > 0 ||
+          (data.refundsOwed?.count ?? 0) > 0) && (
+          <Card className="border-amber-300/60 dark:border-amber-500/40">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <TriangleAlert className="size-4 text-amber-600 dark:text-amber-500" />
+                <h3 className="font-semibold text-sm">Tawajjo chahiye</h3>
+              </div>
+
+              {(data.pastEventsOpen?.count ?? 0) > 0 && (
+                <div className="rounded-lg border p-3">
+                  <div className="text-sm font-medium">
+                    {data.pastEventsOpen!.count} event ho chuke, band nahi hue
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Complete karein taake review request jaye aur baqaya raqam claim ho sake.
+                  </p>
+                  <div className="mt-2 space-y-1">
+                    {data.pastEventsOpen!.items.slice(0, 4).map((b) => (
+                      <Link key={b.id} href={`/dashboard/bookings/${b.id}`} className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-primary/5">
+                        <span className="text-xs tabular-nums text-muted-foreground w-20">{b.bookingDate}</span>
+                        <span className="min-w-0 flex-1 truncate text-sm">{b.customerName || `Booking #${b.id}`}</span>
+                        {b.balance > 0 && <span className="text-xs tabular-nums text-amber-600">{PKR(b.balance)}</span>}
+                        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(data.deliveredUnpaid?.count ?? 0) > 0 && (
+                <div className="rounded-lg border p-3">
+                  <div className="text-sm font-medium">
+                    {PKR(data.deliveredUnpaid!.total)} baqaya — event ho chuka
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {data.deliveredUnpaid!.count} booking complete hain lekin poori payment nahi aayi.
+                  </p>
+                  <div className="mt-2 space-y-1">
+                    {data.deliveredUnpaid!.items.slice(0, 4).map((b) => (
+                      <Link key={b.id} href={`/dashboard/bookings/${b.id}`} className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-primary/5">
+                        <span className="text-xs tabular-nums text-muted-foreground w-20">{b.bookingDate}</span>
+                        <span className="min-w-0 flex-1 truncate text-sm">{b.customerName || `Booking #${b.id}`}</span>
+                        <span className="text-xs tabular-nums text-amber-600">{PKR(b.balance)}</span>
+                        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(data.refundsOwed?.count ?? 0) > 0 && (
+                <Link href="/dashboard/bookings" className="block rounded-lg border p-3 hover:border-primary hover:bg-primary/5 transition-colors">
+                  <span className="text-sm font-medium">
+                    {PKR(data.refundsOwed!.total)} refund dena hai
+                  </span>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {data.refundsOwed!.count} customer ko wapas karna baqi hai.
+                  </p>
+                </Link>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardContent className="p-4 space-y-3">

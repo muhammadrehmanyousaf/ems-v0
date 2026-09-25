@@ -154,6 +154,10 @@ export interface ActionSummary {
   newEnquiries: number;
   calendarStrip: { date: string; freeSlots: number; bookedSlots: number }[];
   unreadWhatsApp: number;
+  /** WW-WORKLIST — states that previously had no surface anywhere. */
+  pastEventsOpen?: { count: number; items: { id: number; customerName: string | null; bookingDate: string; status: string; balance: number }[] };
+  deliveredUnpaid?: { count: number; total: number; items: { id: number; customerName: string | null; bookingDate: string; balance: number }[] };
+  refundsOwed?: { count: number; total: number };
 }
 
 // ── Report cards (Phase-2 EPIC 4) ──────────────────────────────────────────
