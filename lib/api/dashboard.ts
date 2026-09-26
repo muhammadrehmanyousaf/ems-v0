@@ -1447,6 +1447,26 @@ export class BookingsAPI {
   static async cancel(id: number, reason?: string): Promise<void> {
     await axiosInstance.patch(`/api/v1/bookings/${id}/cancel`, { reason });
   }
+
+  /**
+   * Close a booking after the event has happened.
+   *
+   * `PATCH /bookings/:id` with `status: "Completed"` has accepted this from a
+   * vendor or admin the whole time — the validator allows exactly that one
+   * value, and the write is routed through the BK-081 transition helper, so it
+   * is forward-only, idempotent and writes a BookingStatusHistories row. What
+   * was missing was any way to ask for it: 40 bookings platform-wide sat past
+   * their event date in an open state, with the dashboard worklist telling
+   * vendors to close them and no control anywhere that could.
+   *
+   * Note it does NOT touch money. A closed event can still carry an unpaid
+   * balance, and that is the point — "the event happened" and "we have been
+   * paid" are separate facts, which is why an automatic completion sweep would
+   * be wrong here.
+   */
+  static async markCompleted(id: number): Promise<void> {
+    await axiosInstance.patch(`/api/v1/bookings/${id}`, { status: "Completed" });
+  }
 }
 
 // ─── Packages ─────────────────────────────────────────────────
