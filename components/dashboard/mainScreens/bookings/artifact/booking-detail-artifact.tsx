@@ -30,7 +30,7 @@ import { bookingStatusLabel } from "@/lib/booking-status-label"
 import { spaceNameOf } from "@/lib/utils/booking-space"
 import { bookedOn, receivedOn, outstandingOn } from "@/lib/utils/booking-money"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
-import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 /* ── formatting ──────────────────────────────────────────────── */
 const rs = (n: number) => `<span class="rs">Rs</span> ${pkNum(n)}`
@@ -522,9 +522,45 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
   const confirmItem = `<div class="tl-item done"><span class="tl-dot">${svg(I.check, 2.6)}</span>
     <div class="tl-body"><div class="tl-title">Booking confirm<span class="tl-amt">—</span></div><div class="tl-meta">${fmtDateShort(booking.createdAt)} · booking bani</div></div></div>`
   const recAttrs = `data-rec="${booking.id}" data-rec-name="${escHtml(booking.customerName || "")}" data-rec-due="${Math.round(due)}"`
+  /**
+   * WW-CLOSE — "the event happened", the one transition nothing could make.
+   *
+   * `PATCH /bookings/:id` with status Completed has always been accepted from a
+   * vendor and routed through the BK-081 state machine. There was simply no
+   * control for it anywhere in the product, so 40 bookings sat past their event
+   * date in Confirmed or Awaiting Payment forever — and once the dashboard
+   * worklist started listing them as "band karein", it was pointing vendors at
+   * a job with no button.
+   *
+   * Only offered once the date has passed: completing a future event is either
+   * a mistake or a data-entry workaround, and the transition is forward-only so
+   * it cannot be undone from here.
+   */
+  const isPastEvent = (() => {
+    if (!booking.bookingDate) return false
+    const d = new Date(booking.bookingDate)
+    if (isNaN(d.getTime())) return false
+    return new Date(d).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0)
+  })()
+  /**
+   * Matched on the status itself, NOT via `isPending` — that flag is
+   * `/await|pending|request/`, so "Awaiting Payment" reads as pending to it,
+   * and gating on it hid the button from five of the nine past-open bookings on
+   * this one account.
+   *
+   * "Awaiting Payment" is rank 1 in the BK-081 machine: the vendor has already
+   * acted and is waiting for money, so the event can certainly have happened.
+   * Bare "Pending" is excluded on purpose — the vendor never responded to that
+   * request, so "the event happened" is not theirs to assert.
+   */
+  const closeable = /^(awaiting payment|confirmed)$/.test(st.trim())
+  const closeBtn =
+    isPastEvent && !isClosed && closeable
+      ? `<button class="btn btn-primary" data-bk-complete="${booking.id}">${svg(I.check, 2.4)} Event ho gaya — band karein</button>`
+      : ""
   const statusActions = isPending
-    ? `<button class="btn btn-primary" data-bk-approve="${booking.id}">${svg(I.check, 2.4)} Confirm karein</button><button class="btn btn-ghost" data-bk-cancel="${booking.id}">Reject</button>`
-    : (!isClosed ? `<button class="btn btn-ghost" data-bk-cancel="${booking.id}">${svg(I.clock)} Cancel booking</button>` : "")
+    ? `${closeBtn}<button class="btn ${closeBtn ? "btn-ghost" : "btn-primary"}" data-bk-approve="${booking.id}">${svg(I.check, 2.4)} Confirm karein</button><button class="btn btn-ghost" data-bk-cancel="${booking.id}">Reject</button>`
+    : (!isClosed ? `${closeBtn}<button class="btn btn-ghost" data-bk-cancel="${booking.id}">${svg(I.clock)} Cancel booking</button>` : "")
   const remindAttrs = `data-remind="${booking.id}" data-remind-phone="${escHtml(booking.customerPhone || "")}" data-remind-name="${escHtml(booking.customerName || "")}" data-remind-due="${Math.round(due)}" data-remind-date="${escHtml(booking.bookingDate || "")}"`
   const dueItem = (due > 0 && !isCancelled) ? `<div class="tl-item due"><span class="tl-dot">${svg(I.clock)}</span>
     <div class="tl-body"><div class="tl-title">Baqaya<span class="tl-amt due tnum">${rs(due)}</span></div><div class="tl-meta">Event se pehle lena hai</div>
@@ -787,6 +823,25 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
       // cancel / reject — open the reason drawer (money-sensitive, gated)
       const cx = t.closest("[data-bk-cancel]") as HTMLElement | null
       if (cx?.dataset.bkCancel) { openDrawer(s, "Booking cancel karein", cancelBookingHtml(Number(cx.dataset.bkCancel))); return }
+      // close a past event — forward-only, so confirm before committing
+      const done = t.closest("[data-bk-complete]") as HTMLButtonElement | null
+      if (done?.dataset.bkComplete) {
+        const id = Number(done.dataset.bkComplete)
+        openConfirm(s, {
+          title: "Event ho gaya?",
+          message: "Booking mukammal ho jayegi. Baqaya raqam khuli rehti hai — ye sirf event ka record band karta hai. Wapas nahi badla ja sakta.",
+          confirmLabel: "Haan, band karein",
+          danger: false,
+          onConfirm: async () => {
+            done.disabled = true
+            const o = done.innerHTML
+            done.textContent = "Band ho raha…"
+            try { await BookingsAPI.markCompleted(id); toast.success("Booking mukammal ho gayi"); invalidateAll() }
+            catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Band nahi hui"); done.disabled = false; done.innerHTML = o }
+          },
+        })
+        return
+      }
       const cxs = t.closest("[data-bk-cancel-save]") as HTMLButtonElement | null
       if (cxs?.dataset.bkCancelSave) {
         const reason = (s.getElementById("bc-reason") as HTMLTextAreaElement | null)?.value?.trim() || undefined
