@@ -33,6 +33,7 @@ import { OfferingsPreview } from "@/components/dashboard/mainScreens/businessSet
 import { AvailabilityManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/availability-manager"
 import { ImagesManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/images-manager"
 import { VideosManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/videos-manager"
+import { RecoverMediaCard } from "@/components/dashboard/mainScreens/businessSettings/redesigned/recover-media-card"
 import { TypeSpecificManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/type-specific-manager"
 import { ProfileContentManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/profile-content-manager"
 import { getVendorTypeConfig } from "@/lib/vendor-type-config"
@@ -1286,6 +1287,7 @@ export function BusinessSettingsHubView() {
             <div className="space-y-4">
               <ImagesManager businessId={biz.id} images={biz.images || []} />
               <VideosManager businessId={biz.id} videos={(biz as { videos?: string[] }).videos || []} />
+              <RecoverMediaCard businessId={biz.id} />
             </div>
           )}
 

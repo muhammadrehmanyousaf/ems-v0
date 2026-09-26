@@ -481,6 +481,20 @@ export default function BookingsPage() {
             const payKey = statusKey(booking.paymentStatus);
             const payCfg = PAYMENT_CONFIG[payKey] || PAYMENT_CONFIG.pending;
             const isCancellable = !["cancelled", "completed"].includes(sk);
+            // Same rule as the detail page: an open booking with anything still
+            // outstanding gets a way to pay. Previously only "awaiting payment"
+            // did, so a confirmed-but-unpaid or delivered-but-part-paid booking
+            // sat here with no prompt at all.
+            const outstanding = Math.max(
+              Number(booking.totalAmount || 0) - Number(booking.downPayment || 0),
+              0,
+            );
+            const showPay =
+              !["cancelled", "rejected", "declined", "refunded"].includes(sk) &&
+              payKey !== "paid" &&
+              outstanding > 0 &&
+              (["awaiting payment", "confirmed", "completed"].includes(sk) ||
+                payKey === "partial");
             const vendors = booking.bookingDetails || [];
             const primaryVendor = vendors[0];
 
@@ -636,14 +650,14 @@ export default function BookingsPage() {
                       )}
                     </div>
 
-                    {sk === "awaiting payment" && (
+                    {showPay && (
                       <Button
                         onClick={() => router.push(`/user/bookings/${booking.id}`)}
                         size="sm"
                         className="gap-1.5 w-full sm:w-auto"
                       >
                         <Wallet className="size-3.5" />
-                        Pay now
+                        {payKey === "partial" ? "Pay remaining" : "Pay now"}
                         <ChevronRight className="size-3" />
                       </Button>
                     )}

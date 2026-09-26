@@ -522,10 +522,34 @@ export default function BookingDetailPage() {
    * neither is sufficient on its own.)
    */
   const isClosedStatus = ["cancelled", "rejected", "declined", "refunded"].includes(statusKey);
-  const showPayCta = !isClosedStatus && !isFullyPaid && (isAwaitingPayment || isPartiallyPaid);
-  const dueAmount = isPartiallyPaid
-    ? Math.max(Number(booking?.totalAmount || 0) - Number(booking?.downPayment || 0), 0)
-    : Number(booking?.downPayment || booking?.totalAmount || 0);
+  /**
+   * ...and the mirror of that: an OPEN booking with money still outstanding has
+   * to offer a way to pay it.
+   *
+   * The old rule fired on `awaiting payment || partial`, which are the two
+   * states that happen to *name* money. A booking the vendor had confirmed but
+   * which had never been paid is `Confirmed` + `Pending` — it names no money, so
+   * the couple were shown Postpone, Change date and Cancel, and no way to pay
+   * at all. The same silence covered `Completed` + `Partial`: the event had
+   * happened, the balance was outstanding, and the only party who could settle
+   * it had no button. That is the customer half of the collections gap the
+   * vendor worklist now surfaces.
+   *
+   * So the question is the real one — is this booking open, and is anything
+   * still owed — with `Pending` deliberately excluded: until the vendor accepts,
+   * there is nothing to pay into.
+   */
+  const outstanding = Math.max(
+    Number(booking?.totalAmount || 0) - Number(booking?.downPayment || 0),
+    0,
+  );
+  const PAYABLE_STATUSES = ["awaiting payment", "confirmed", "completed"];
+  const showPayCta =
+    !isClosedStatus &&
+    !isFullyPaid &&
+    outstanding > 0 &&
+    (PAYABLE_STATUSES.includes(statusKey) || isPartiallyPaid);
+  const dueAmount = outstanding;
   const payLabel = isPartiallyPaid ? "Pay remaining" : "Pay now";
   const remaining =
     Number(booking.totalAmount || 0) - Number(booking.downPayment || 0);
