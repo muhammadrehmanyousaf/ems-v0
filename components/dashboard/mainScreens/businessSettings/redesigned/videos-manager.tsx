@@ -21,6 +21,7 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { showSuccessToast, showUndoToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
+import { pushLive } from "@/lib/seo/push-live"
 
 // Mirrors the server's multer config exactly (businessRouter.js "/upload-videos":
 // fileSize 60 MB, .array("videos", 5), fileFilter mimetype video/*). Keep these
@@ -49,7 +50,13 @@ function humanUploadError(e: any): string {
 export function VideosManager({ businessId, videos }: { businessId: number; videos: string[] }) {
   const qc = useQueryClient()
   const inputRef = React.useRef<HTMLInputElement | null>(null)
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["biz-settings-hub"] })
+  // Refresh the dashboard's own copy, then drop this vendor's public-page
+  // cache so the change is visible on the live listing straight away
+  // instead of up to an hour later.
+  const invalidate = () => {
+    void pushLive(businessId)
+    return qc.invalidateQueries({ queryKey: ["biz-settings-hub"] })
+  }
 
   // Same last-write-wins caveat as the images array: both mutations rewrite the
   // whole column from the prop captured at render.

@@ -96,6 +96,18 @@ export function buildVendorCanonicalPath(
 }
 
 /**
+ * The Next Data Cache tag for one vendor's public data.
+ *
+ * Every public page reads the backend through a 1-hour ISR window, and Vercel's
+ * Data Cache is keyed by fetch URL and shared across deployments — so a vendor
+ * who added a photo, a clip or a new price saw nothing change on their own
+ * listing for up to an hour, with no way to push it, and a redeploy did not
+ * help. Tagging the fetches lets one vendor's data be dropped on demand while
+ * leaving the hourly refresh in place for everyone else.
+ */
+export const vendorCacheTag = (id: number | string) => `vendor-${id}`
+
+/**
  * Fetch by id. Returns null if missing / network error / build-time
  * unreachable backend.
  */
@@ -104,7 +116,9 @@ export async function fetchVendorById(id: number): Promise<VendorDetail | null> 
   const url = `${BACKEND_URL}api/v1/businesses/${id}`
   try {
     const res = await fetch(url, {
-      next: { revalidate: 3600 },
+      // Tagged so a vendor edit can push itself live immediately instead of
+      // waiting out the hour — see app/api/revalidate/route.ts.
+      next: { revalidate: 3600, tags: [vendorCacheTag(id)] },
       headers: { Accept: "application/json" },
     })
     if (!res.ok) return null
@@ -126,7 +140,7 @@ export async function fetchVendorHasMultiSpace(id: number): Promise<boolean> {
   if (!Number.isFinite(id) || id <= 0) return false
   try {
     const res = await fetch(`${BACKEND_URL}api/v1/venue-spaces/public/business/${id}/tree`, {
-      next: { revalidate: 3600 },
+      next: { revalidate: 3600, tags: [vendorCacheTag(id)] },
       headers: { Accept: "application/json" },
     })
     if (!res.ok) return false

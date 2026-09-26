@@ -334,6 +334,37 @@ export interface ApiBusiness {
 }
 
 export class BusinessesAPI {
+  /**
+   * WW-MEDIA — photos and clips Cloudinary still holds but the listing no
+   * longer references, i.e. anything that was removed. Removal only rewrites
+   * the business's URL array, so the file itself survives and a delete is
+   * reversible long after the Undo toast has gone.
+   */
+  static async listOrphanMedia(
+    businessId: number | string,
+  ): Promise<Array<{ url: string; publicId: string }>> {
+    try {
+      const res = await axiosInstance.get(
+        `/api/v1/businesses/${businessId}/media/orphans`,
+      );
+      return res.data?.data?.orphans ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** Put one of those files back on the listing. */
+  static async restoreMedia(
+    businessId: number | string,
+    url: string,
+  ): Promise<boolean> {
+    const res = await axiosInstance.post(
+      `/api/v1/businesses/${businessId}/media/restore`,
+      { url },
+    );
+    return res.data?.status === true;
+  }
+
   // Issue #3 — super-admin profile review surface. Returns the business
   // attached to `userId` INCLUDING vendors with reviewProfile=false (the
   // public listing excludes them). Backend auth-gates this to
