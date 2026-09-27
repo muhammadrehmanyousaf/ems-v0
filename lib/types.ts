@@ -25,6 +25,17 @@ export interface Vendor {
   minimumPrice: number;
   type: string;
   subBusinessType?: string | string[];
+  // The backend attaches the owning vendor row to every business, and
+  // normalizeBusiness() spreads `...raw`, so it survives on the object the
+  // app holds. Readers use it to resolve the vendor category
+  // (`vendor.vendorType`) when the business row itself has none.
+  vendor?: {
+    id?: number;
+    vendorType?: string;
+    city?: string;
+    fullName?: string;
+    email?: string;
+  };
   capacity?: number;
   amenities: string[];
   cancellationPolicy: string;

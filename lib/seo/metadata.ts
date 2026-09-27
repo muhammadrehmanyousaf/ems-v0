@@ -31,7 +31,9 @@ export interface PageMetadataInput {
   /** Whether crawlers should follow links on the page. Defaults to true. */
   follow?: boolean;
   /** OG type — 'website' (default), 'article', 'product', 'profile'. */
-  ogType?: "website" | "article" | "product" | "profile";
+  // Next 14's OpenGraph union has no "product" — passing it would have been
+  // dropped from the rendered og:type. Only these three are emitted.
+  ogType?: "website" | "article" | "profile";
   /** Article-specific metadata (only used when ogType === 'article'). */
   article?: {
     publishedTime?: string;

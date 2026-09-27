@@ -24,7 +24,9 @@ interface Errors {
 
 interface BusinessDetailsProps {
     errors: Errors;
-    setErrors: React.Dispatch<React.SetStateAction<Errors>>;
+    // The wizard holds its error bag as Record<string, string> (same as
+    // store-profile-step.tsx), so declare the setter it actually receives.
+    setErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
 }
 
 const CITIES = ['Lahore', 'Karachi', 'Islamabad', 'Rawalpindi', 'Faisalabad', 'Multan', 'Peshawar', 'Quetta'];

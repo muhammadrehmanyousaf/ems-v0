@@ -807,6 +807,11 @@ export function BusinessRegistrationForm() {
         cancelationPolicy: formData.cancelationPolicy,
         covidComplaint: formData.covidComplaint,
         parking: formData.parking,
+        // Backend column is INTEGER; blank stays undefined rather than 0, so a
+        // vendor who skipped the question is not recorded as having no parking.
+        carParkingCapacity: formData.carParkingCapacity
+          ? Number(formData.carParkingCapacity)
+          : undefined,
         // Catering is two INDEPENDENT policies, so it needs two flags. Squeezing
         // it into the single `catering` boolean is what made "both" impossible to
         // register: true meant internal, false meant external, and a venue that
@@ -977,6 +982,7 @@ export function BusinessRegistrationForm() {
           carRentalPackages: [],
           amenities: [],
           maxCapacity: "",
+          carParkingCapacity: "",
           minCapacity: 0,
           catering: "",
           parking: false,

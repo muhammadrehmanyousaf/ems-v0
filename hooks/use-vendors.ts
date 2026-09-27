@@ -19,7 +19,17 @@ export const vendorKeys = {
 export function useVendors() {
   return useQuery({
     queryKey: vendorKeys.lists(),
-    queryFn: VendorAPI.getAllBusinesses,
+    // Wrapped, NOT passed by reference. React Query calls queryFn with its own
+    // context object, and `getAllBusinesses`'s first parameter is `availableOn`
+    // (a YYYY-MM-DD date) — so passing the reference sent the whole context
+    // down the wire as a date filter. Observed on the homepage:
+    //   /businesses?availableOn[client]=[object+Object]
+    //     &availableOn[queryKey][0]=vendors&availableOn[signal]=[object+AbortSignal]
+    // The backend ignores it (bookedBusinessIdsOn requires a string matching
+    // /^\d{4}-\d{2}-\d{2}$/), so nothing broke — but it also made `data`
+    // `unknown` for every caller, which is why the homepage hero and /search
+    // were full of untyped vendor loops.
+    queryFn: () => VendorAPI.getAllBusinesses(),
     staleTime: 10 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
   })
@@ -36,11 +46,20 @@ export function useVendorsByType(type: string) {
       // Try to use already-cached all-vendors data first
       const cached = queryClient.getQueryData<Vendor[]>(vendorKeys.lists())
       if (cached && cached.length > 0) {
-        return cached.filter(
-          (v) =>
-            v.vendor?.vendorType?.toLowerCase() === type.toLowerCase() ||
-            v.subBusinessType?.toLowerCase() === type.toLowerCase()
-        )
+        // `subBusinessType` is a Postgres TEXT[] (businessModel.js:147).
+        // normalizeBusiness() flattens it to a string, but this reads from the
+        // query cache, so tolerate both shapes rather than trusting that —
+        // calling .toLowerCase() on an array throws and would fail the whole
+        // queryFn. Same two-shape handling as the `catering` readers.
+        const want = type.toLowerCase()
+        return cached.filter((v) => {
+          const subRaw = v.subBusinessType
+          const subs = Array.isArray(subRaw) ? subRaw : subRaw ? [subRaw] : []
+          return (
+            v.vendor?.vendorType?.toLowerCase() === want ||
+            subs.some((s) => String(s).toLowerCase() === want)
+          )
+        })
       }
       // Fallback to dedicated API call
       return VendorAPI.getBusinessesByVendorType(type)

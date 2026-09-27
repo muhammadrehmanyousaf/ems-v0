@@ -82,6 +82,11 @@ export type FormType = {
   amenities: string[];
   maxCapacity: string;
   minCapacity: number;
+  // Asked by the venue wizard when parking === 'yes' (venueSteps business-details).
+  // The column exists (businessModel.js:186) and createBusinessWithVendor reads
+  // req.body.carParkingCapacity, but this was missing from the form type, so the
+  // answer was typed, held in state, and dropped at submit.
+  carParkingCapacity: string;
   // A venue can offer in-house catering, allow outside caterers, or BOTH, so
   // this is a list. `string` is kept in the union because drafts saved before
   // this change still hold the old single value ("internal" / "external") and
@@ -193,6 +198,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     carRentalPackages: [],
     amenities: [],
     maxCapacity: "",
+    carParkingCapacity: "",
     minCapacity: 0,
     catering: "",
     parking: false,

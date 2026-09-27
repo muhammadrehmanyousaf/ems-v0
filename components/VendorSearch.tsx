@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
+import { firstOf } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
@@ -273,8 +274,12 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
     if (filters.hasCatering)
       result = result.filter(v => v.catering === true)
 
+    // `provideFoodTesting` is the real column (businessModel.js:191) and what
+    // every other reader uses. This filtered on `provideFoodTasting`, which no
+    // vendor row has, so `undefined === true` was false for all of them and
+    // ticking "food tasting" emptied the results instead of narrowing them.
     if (filters.hasFoodTasting)
-      result = result.filter(v => v.provideFoodTasting === true)
+      result = result.filter(v => v.provideFoodTesting === true)
 
     if (filters.hasWaiter)
       result = result.filter(v => v.provideWaiter === true)
@@ -901,7 +906,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                           vendor.price ||
                           null
                         }
-                        type={vendor.type || vendor.subBusinessType}
+                        type={vendor.type || firstOf(vendor.subBusinessType)}
                         capacity={vendor.capacity}
                         amenities={vendor.amenities}
                         sponsored={vendor.sponsored}

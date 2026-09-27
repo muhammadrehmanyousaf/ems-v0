@@ -16,7 +16,13 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    // The repo reached zero type errors (see typecheck-baseline.json), so the
+    // compiler can finally gate the build. `scripts/typecheck-ratchet.mjs`
+    // still runs on prebuild — it reports WHICH file regressed, and it cannot
+    // be satisfied by an `as any`; this flag is the backstop that cannot be
+    // re-baselined away. Flip back to true only as a deliberate, temporary
+    // unblock, with the failing errors written down.
+    ignoreBuildErrors: false,
   },
   images: {
     // SEO: serve modern formats and responsive sizes via the Next.js

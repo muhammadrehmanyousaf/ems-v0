@@ -9,11 +9,15 @@ export const metadata: Metadata = {
 };
 
 /**
- * /dashboard/money?tab=receivables|payments|receipts|cheques|expenses
+ * /dashboard/money — the Khata ledger.
  *
- * Replaces five separate sidebar entries with one. The five underlying routes
- * still exist and still work — this composes them, it does not remove them, so
- * no bookmark or deep link breaks.
+ * This once rendered a tabbed hub and the doc here read
+ * "?tab=receivables|payments|receipts|cheques|expenses". That is no longer
+ * true: the hub (money-hub-view.tsx) is not rendered by anything, and
+ * KhataArtifact reads no search params — a `?tab=` on this URL is ignored.
+ * The five underlying routes (/dashboard/payments, /receipts, /receivables,
+ * /expenses, /pdcs) are each their own artifact screen and are what the Khata
+ * panel rows point at. Kept as `Suspense` because the artifact shell suspends.
  */
 export default function Page() {
   return (

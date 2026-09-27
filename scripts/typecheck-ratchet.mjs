@@ -2,15 +2,17 @@
 /**
  * TypeScript ratchet.
  *
- * `next.config.mjs` sets `typescript.ignoreBuildErrors: true`, so `next build`
- * never fails on a type error. That is not laziness — this repo carries 125
- * pre-existing errors in legacy registration/homepage components, and turning
- * the compiler on wholesale would block every deploy until they were fixed.
+ * `next.config.mjs` used to set `typescript.ignoreBuildErrors: true`, because
+ * the repo carried 125 pre-existing errors in legacy registration/homepage
+ * components and turning the compiler on wholesale would have blocked every
+ * deploy until they were fixed. That backlog is now zero — 37 were real fixes
+ * in live code, 84 went with 27 files no route could reach — so the build gates
+ * on the compiler again and this script's baseline is empty.
  *
- * The cost of leaving it off is that the compiler catches nothing. A payload
- * field was once added to a booking request without being added to its
- * interface; `tsc` flagged it, but only because someone ran `tsc` by hand.
- * Nothing in the repo would have caught the next one.
+ * It is kept because the two gates fail differently. The build says "type
+ * error"; this says WHICH file and code regressed, and it is what runs on
+ * prebuild. Keep the baseline at zero: re-baselining a real error away is the
+ * one thing this file exists to make visible.
  *
  * So: don't gate on "zero errors", gate on "no NEW errors". The baseline in
  * typecheck-baseline.json records how many errors of each code each file is

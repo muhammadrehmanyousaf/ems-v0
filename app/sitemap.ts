@@ -7,7 +7,11 @@ import {
   type VendorTypeSlug,
 } from "@/lib/seo"
 import { slugifyName } from "@/lib/seo/fetch-vendor"
-import { BACKEND_URL } from "@/lib/backend-url"
+import {
+  fetchAllBusinesses,
+  projectToCanonical,
+  type DynamicVendor,
+} from "@/lib/seo/vendor-inventory"
 import { CLUSTERS as BLOG_CLUSTERS, POSTS as BLOG_POSTS } from "@/lib/blog/posts"
 import { REAL_WEDDINGS } from "@/lib/real-weddings/recaps"
 import { GLOSSARY } from "@/lib/glossary/terms"
@@ -33,60 +37,6 @@ import {
  * Reference: docs/seo/00-master-seo-playbook.md §1 item 28 (split when >50k or >50MB)
  */
 
-/**
- * Fetch the FULL vendor inventory by paginating the backend — the old single
- * `?limit=2000` call silently capped coverage (we have >3k vendors). Dedupes by
- * id, stops on the last/empty page or when an endpoint ignores `page`, and is
- * bounded by MAX_PAGES so a misbehaving backend can't loop forever. Cached 1h
- * via the fetch `revalidate`, so the three shards share one set of requests.
- */
-async function fetchAllBusinesses(): Promise<any[]> {
-  // The backend CAPS `limit` at 200 (verified: ?limit=500 returns 200,
-  // pagination.totalPages reflects the capped size). The old code requested
-  // limit=500 and then `break`ed on `rows.length < PAGE` — so page 1 came back
-  // with 200 rows, 200 < 500 tripped the break, and only the FIRST 200 of 3,272
-  // vendors ever reached the sitemap. Every other vendor page was invisible to
-  // Google. Fix: request the real cap and walk `pagination.totalPages`.
-  const PAGE = 200
-  const MAX_PAGES = 100 // safety ceiling: 20,000 vendors
-  const seen = new Set<string>()
-  const all: any[] = []
-  let totalPages = 1
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    let rows: any[] = []
-    let pagination: { totalPages?: number } | undefined
-    try {
-      const res = await fetch(
-        `${BACKEND_URL}api/v1/businesses?page=${page}&limit=${PAGE}`,
-        { next: { revalidate: 3600 }, headers: { Accept: "application/json" } },
-      )
-      if (!res.ok) break
-      const json = (await res.json()) as { data?: any }
-      const result = json?.data
-      rows = Array.isArray(result) ? result : result?.data ?? []
-      pagination = Array.isArray(result) ? undefined : result?.pagination
-    } catch {
-      break
-    }
-    if (!rows.length) break
-    let added = 0
-    for (const r of rows) {
-      const id = String(r?.id ?? r?.businessId ?? "")
-      if (id && !seen.has(id)) {
-        seen.add(id)
-        all.push(r)
-        added++
-      }
-    }
-    if (typeof pagination?.totalPages === "number" && pagination.totalPages > 0) {
-      totalPages = pagination.totalPages
-    }
-    if (added === 0) break // endpoint ignored `page`, or no new rows
-    if (page >= totalPages) break // walked every page the backend reports
-  }
-  return all
-}
-
 // ─── Shard 0: core (static + hubs + legal + tools) ──────────────────────
 
 function buildCoreShard(): MetadataRoute.Sitemap {
@@ -97,7 +47,8 @@ function buildCoreShard(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/contact`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/help`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
-    { url: `${SITE_URL}/blog`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
+    // /blog is emitted by the blog block below, which owns the index and its
+    // clusters. Listing it here too put it in the sitemap twice.
     { url: `${SITE_URL}/search`, lastModified: now, changeFrequency: "weekly", priority: 0.6 },
     { url: `${SITE_URL}/vendor-guide`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/vendor-success`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
@@ -310,11 +261,6 @@ async function buildProgrammaticShard(): Promise<MetadataRoute.Sitemap> {
 
 // ─── Shard 2: vendors (dynamic, fetched from backend) ───────────────────
 
-interface DynamicVendor {
-  url: string
-  lastModified: Date
-}
-
 async function buildVendorsShard(): Promise<MetadataRoute.Sitemap> {
   const raws = await fetchAllBusinesses()
 
@@ -330,134 +276,43 @@ async function buildVendorsShard(): Promise<MetadataRoute.Sitemap> {
   }))
 }
 
-function projectToCanonical(raw: any): DynamicVendor | null {
-  const id = raw?.id ?? raw?.businessId
-  if (!id) return null
-
-  const vendor = raw?.vendor ?? {}
-  const backendType: string | undefined =
-    raw?.type || vendor?.vendorType || raw?.subBusinessType
-  if (!backendType) return null
-
-  const seoTypeSlug = backendToSeoSlug(backendType)
-  if (!seoTypeSlug) return null
-
-  const cityRaw: string = raw?.city ?? raw?.location ?? vendor?.city ?? ""
-  // Fallback so EVERY vendor is indexable: an unknown/unparseable city (null,
-  // Urdu that strips to empty, or a value not in CITIES) routes the vendor
-  // under the national "pakistan" catch-all instead of being dropped.
-  let citySlug = slugifyName(cityRaw)
-  if (!citySlug || !CITIES.some((c) => c.slug === citySlug)) citySlug = "pakistan"
-
-  const name: string = raw?.name ?? raw?.businessName ?? ""
-  if (!name) return null
-  const nameSlug = slugifyName(name)
-  if (!nameSlug) return null
-
-  const lastModifiedRaw = raw?.updatedAt ?? raw?.createdAt
-  const lastModified = lastModifiedRaw ? new Date(lastModifiedRaw) : new Date()
-
-  return {
-    url: `${SITE_URL}/${seoTypeSlug}/${citySlug}/${nameSlug}-${id}`,
-    lastModified,
-  }
-}
-
-// ─── Shard 3: images (image:image entries via Next.js sitemap field) ────
-
-/**
- * Build the image-sitemap shard. Each entry attaches up to N images to its
- * parent URL — Next.js's MetadataRoute.Sitemap supports an `images: string[]`
- * field per row, which it serialises into <image:image> child elements per
- * the Google image-sitemap protocol.
- *
- * Reference:
- *   - https://developers.google.com/search/docs/crawling-indexing/sitemaps/image-sitemaps
- *   - docs/seo/00-master-seo-playbook.md §11 item 447
- *
- * Why a separate shard: keeps the URL-shape sitemap (shard 0–2) clean while
- * still surfacing every image to Google Images and Pinterest.
- */
-async function buildImagesShard(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date()
-  const entries: MetadataRoute.Sitemap = []
-
-  // Real-wedding recap covers + galleries — high-leverage Pinterest content.
-  for (const r of REAL_WEDDINGS) {
-    const pageUrl = `${SITE_URL}/real-weddings/${r.slug}`
-    const imgs = [r.coverImage, ...r.gallery].filter(Boolean)
-    if (imgs.length === 0) continue
-    entries.push({
-      url: pageUrl,
-      lastModified: new Date(r.updatedAt ?? r.publishedAt),
-      changeFrequency: "monthly",
-      priority: 0.7,
-      images: imgs.slice(0, 50), // Google's per-URL image cap is ~1000; we self-limit to 50
-    })
-  }
-
-  // Blog post hero images.
-  for (const p of BLOG_POSTS) {
-    if (!p.imageUrl) continue
-    entries.push({
-      url: `${SITE_URL}/blog/${p.cluster}/${p.slug}`,
-      lastModified: new Date(p.updatedAt ?? p.publishedAt),
-      changeFrequency: "monthly",
-      priority: 0.6,
-      images: [p.imageUrl],
-    })
-  }
-
-  // Vendor leaf images — fetched once, attached to the canonical leaf URL.
-  // Reuses the dynamic-vendor fetch path; bounded to the same 1h ISR cache.
-  try {
-    const list = await fetchAllBusinesses()
-    for (const raw of list) {
-      const projected = projectToCanonical(raw)
-      if (!projected) continue
-      const img = pickFirstImage(raw)
-      if (!img) continue
-      entries.push({
-        url: projected.url,
-        lastModified: projected.lastModified,
-        changeFrequency: "weekly",
-        priority: 0.6,
-        images: [img],
-      })
-    }
-  } catch {
-    // Backend unreachable — vendor images skipped for this build, will
-    // appear on the next ISR revalidate.
-  }
-
-  return entries
-}
-
-function pickFirstImage(raw: any): string | undefined {
-  const imgs = raw?.images
-  if (Array.isArray(imgs) && imgs.length > 0) {
-    return typeof imgs[0] === "string" ? imgs[0] : imgs[0]?.url
-  }
-  if (typeof imgs === "string") {
-    try {
-      const parsed = JSON.parse(imgs)
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return typeof parsed[0] === "string" ? parsed[0] : parsed[0]?.url
-      }
-    } catch {
-      return imgs
-    }
-  }
-  return undefined
-}
+// ─── Images: see app/image-sitemap.xml/route.ts ──────────────────────────
+//
+// There used to be an image shard here that attached `images: string[]` to each
+// row, on the belief that Next serialised them as <image:image>. Next 14.2 does
+// not: its sitemap serialiser handles only loc / lastmod / changefreq / priority
+// / alternates, and MetadataRoute.Sitemap has no `images` key — so the shard
+// emitted zero images and, because every URL it listed was already in the core,
+// programmatic or vendor shard, 3,275 DUPLICATE <url> entries out of 7,087
+// (measured against the served /sitemap.xml). Real image entries are now served
+// from /image-sitemap.xml, advertised in robots.txt.
 
 // ─── Default export — single combined sitemap at /sitemap.xml ────────────
 
+/**
+ * One <url> per URL, keeping the highest priority claimed for it.
+ *
+ * Two pages reached the sitemap twice with different priority and changefreq:
+ * /blog (listed in the static block and again in the blog block) and
+ * /wedding-cost-in-pakistan (a CONTENT_PILLARS slug that is also in the
+ * hand-written flagship list). Telling a crawler two different things about one
+ * URL is worse than telling it nothing, and the shards are built independently
+ * enough that this will happen again — so it is caught here rather than by
+ * remembering not to do it.
+ */
+function dedupeByUrl(entries: MetadataRoute.Sitemap): MetadataRoute.Sitemap {
+  const byUrl = new Map<string, MetadataRoute.Sitemap[number]>()
+  for (const e of entries) {
+    const prev = byUrl.get(e.url)
+    if (!prev || (e.priority ?? 0) > (prev.priority ?? 0)) byUrl.set(e.url, e)
+  }
+  return [...byUrl.values()]
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [programmatic, vendors, images] = await Promise.all([
+  const [programmatic, vendors] = await Promise.all([
     buildProgrammaticShard(),
     buildVendorsShard(),
-    buildImagesShard(),
   ])
-  return [...buildCoreShard(), ...programmatic, ...vendors, ...images]
+  return dedupeByUrl([...buildCoreShard(), ...programmatic, ...vendors])
 }

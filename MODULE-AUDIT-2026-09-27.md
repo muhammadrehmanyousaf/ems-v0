@@ -466,3 +466,183 @@ dependencies honest), lean harder on the derived step list so a single-hall
 venue never asks "which hall?", add a genuine one-screen enquiry path for the
 many bookings that close on the phone anyway, and let a couple resume a draft —
 `lib/draftStorage/` exists and is create-mode only.
+
+
+# 2026-09-28 — the hardening list, finished
+
+## 12. The lead that never named its wedding
+
+Converting a lead created the booking, marked the lead won, and threw the new
+booking's id away. `LeadAPI.linkBooking` exists for exactly this moment — its
+own comment says it is "used by the convert-to-booking flow after the new
+booking lands" — and **neither** of the two convert doors called it: lead-detail
+called `transition`, the leads list wrote `status: "booked"` directly, and both
+ignored the argument `onSaved` handed them.
+
+Driven headed through the product's own convert flow, local frontend against the
+live backend:
+
+    lead 770: status=booked bookingId=766
+    PASS — the lead is won AND names the booking it became
+
+Mutation-tested: with the `linkBooking` call disabled, the same run gives
+`status=qualified bookingId=null`.
+
+**Caveat I want on the record.** Most won leads on production carry
+`bookingId: null`, and I earlier attributed that to this bug. Not all of it is:
+the lead screen also has a separate **"Jeeta mark karein"** button that
+legitimately wins a lead with no booking at all. This fixes the convert flow.
+It does not backfill the existing rows, and the existing nulls are not all
+defects.
+
+## 13. 121 type errors — what was actually hiding in them
+
+The count was never the point. Of 121:
+
+**37 were in live code, and four were real defects.**
+
+| # | Defect | Effect |
+|---|--------|--------|
+| 1 | `queryFn: VendorAPI.getAllBusinesses` passed by reference | React Query calls queryFn with its own context object, and that function's first parameter is `availableOn`, a date. Measured on the homepage: `/businesses?availableOn[client]=[object+Object]&availableOn[queryKey][0]=vendors&availableOn[signal]=[object+AbortSignal]` on 34 of 52 calls. The backend ignores it (`bookedBusinessIdsOn` requires `/^\d{4}-\d{2}-\d{2}$/`) so nothing broke — but `data` was `unknown` for every caller, which is why the homepage hero and /search carried 21 of the 121 errors. |
+| 2 | `VendorSearch` filtered on `provideFoodTasting` | The column is `provideFoodTesting` (businessModel.js:191). No row has the misspelt key, so `undefined === true` was false for every vendor: ticking "food tasting" emptied the results instead of narrowing them. |
+| 3 | `carParkingCapacity` never submitted | The venue wizard asks "Car Parking Capacity" when parking = yes, stores it in `formData`, and the submit payload never included it. The column exists, `createBusinessWithVendor` reads `req.body.carParkingCapacity`, and both the settings screen and the public vendor page display it — so every venue that registered lost the answer. Another finished back end behind a closed door. |
+| 4 | `app/sitemap.ts` shipped an image sitemap that was not one | See §14. |
+
+Also fixed, not defects but lies in the types: `Vendor` was missing the nested
+`vendor` row the API really returns; `subBusinessType` is a Postgres `TEXT[]` and
+one reader called `.toLowerCase()` on it; `CITY_EDITORIAL` claimed to cover 84
+cities and covers 11 (`getCityEditorial` already falls back, so `Partial` is the
+honest type); `ogType` offered `"product"`, which Next 14's OpenGraph union has
+no member for; `isValidImageUrl` returned `""` where it promised `boolean`.
+
+**84 were in 27 files no route can reach.** A duplicate registration wizard
+(`components/steps/*` — the live one is `components/VendorStepForms/*`), a
+duplicate `VenueSearch` and `VenueDetails` subtree, ten `homepage/Featured*`
+components, `VendorFilters`, `vendors-component`, `lib/vendor-utils`,
+`lib/store/vendor-store`. Deleted. Verified first by walking the import graph
+from all 379 entry points under `app/`, then by confirming the closure of those
+27 files has **zero** importers that are live or in a test — and finally by a
+full production build.
+
+The ratchet baseline is now `{"total": 0, "counts": {}}`, and
+`next.config.mjs` no longer sets `typescript.ignoreBuildErrors: true`: the
+compiler gates the build for the first time in this repo's history. The full
+build passes with it on.
+
+**What I did NOT delete.** The same graph walk finds **283** unreachable
+component/lib/hook files, the bulk of them the previous-generation dashboard
+(`*/redesigned/*`, `*/bookingListing/*`) that the artifact console replaced.
+None of them carry type errors, so none of them block anything. Removing half
+the components directory is the owner's call, not a side-effect of a type
+cleanup.
+
+## 14. The sitemap that advertised images and shipped none
+
+`buildImagesShard()` attached `images: string[]` to each row, and its comment
+stated that "Next.js's MetadataRoute.Sitemap supports an `images` field, which
+it serialises into `<image:image>`". It does not, in 14.2 — its serialiser
+(`next/dist/build/webpack/loaders/metadata/resolve-route-data.js`) handles only
+loc, lastmod, changefreq, priority and alternates, which is what tsc had been
+reporting for three lines.
+
+Measured on the served `/sitemap.xml` **before**:
+
+    loc entries: 7087   distinct: 3812   duplicates: 3275
+    <image: tags: 0     xmlns:image: 0
+
+So the shard shipped zero images and 3,275 duplicate `<url>` records — every
+vendor, blog and real-wedding URL a second time, with a different priority and
+changefreq from its real entry.
+
+**After**, measured on the production build output:
+
+| | before | after |
+|---|---|---|
+| `/sitemap.xml` loc entries | 7,087 | 3,814 |
+| duplicates | 3,275 | **0** |
+| `<image:loc>` served | 0 | **3,279** across 3,273 URLs |
+
+`/image-sitemap.xml` is a route handler that emits the real protocol, hourly
+revalidated, sharing `projectToCanonical` with the main sitemap through
+`lib/seo/vendor-inventory.ts` so the two can never disagree about a vendor's
+URL. Both are advertised in robots.txt.
+
+The last two duplicates were their own small defect: `/blog` was listed in the
+static block *and* in the blog block, and `/wedding-cost-in-pakistan` is a
+`CONTENT_PILLARS` slug that is also in the hand-written flagship list. Both
+fixed, plus `dedupeByUrl()` as a guard, because the shards are built
+independently enough that it will happen again.
+
+## 15. Venue-OS — and a door that was missed when the tabs were removed
+
+55 of 58 `venue-os/*` view files are unreachable. That is **not** a finding: the
+tabbed multi-view hub was deliberately rebuilt as one business-health view at
+the founder's direction, and `venue-os-artifact.tsx` says so. The 55 are the
+rejected enterprise pilot.
+
+What *is* a finding: when the tabs went, `nav-data.ts` was collapsed to point at
+pages that exist, and two other places were not.
+
+- `calendar/v2/calendar-slot-grid-view.tsx` — the empty-state link that tells a
+  vendor "No halls or time-slots set up yet → Set up halls & time-slots" pointed
+  at `/dashboard/venue-os?tab=spaces`. The one place that tells a vendor their
+  halls are not configured sent them to a profit summary. Now `/dashboard/spaces`.
+- `lib/nav/module-panels.ts` — "Halls & spaces" and "Event profit" both pointed
+  at `?tab=` URLs, so both rows opened the same page.
+
+Found by checking every literal `/dashboard/...` link emitted by a live file
+against the 319 routes that exist, rather than by clicking around.
+
+## 16. Six doors into the Khata, one room behind them
+
+The same sweep found the money panel doing what venue-OS had been doing. Six
+live rows — Payments, Receipts, Receivables, Expenses, Refunds owed, Cheque
+ledger — all pointed at `/dashboard/money?tab=…`. `KhataArtifact` contains no
+`useSearchParams` and no reference to `tab`, so every one of them opened the
+same combined ledger.
+
+The comment above those rows says they were *"real tabs the money hub reads.
+Verified against money-hub-view.tsx rather than assumed."* That verification was
+honest when written and has since expired: **nothing renders
+money-hub-view.tsx** any more. It is one of the 283 unreachable files. The same
+is true of the `isDefaultView` flag on Receivables, whose comment reads
+"/dashboard/money renders Receivables" — so a vendor on the Khata ledger saw the
+panel highlighting a different screen's name.
+
+What makes this cheap to fix properly: all five destinations already exist as
+their own artifact screens — `payments-artifact`, `receipts-artifact`,
+`receivables-artifact`, `expenses-artifact`, `pdcs-artifact` — and the module's
+`owns` list already contains every one of those paths, so the rail still reads
+Khata on all of them. Each row now points at its own screen; with no query
+params left, the panel highlight is exact rather than approximate.
+
+"Refunds owed" is the one that stays on `/dashboard/money`, and only
+approximately. There is no `/dashboard/refunds` route. The Khata ledger has a
+"Wapsi" filter tab, but that lists refund *receipts* — money already returned —
+which is not the same thing as money still owed. So the row lands one click from
+the nearest view that exists, and refunds owed remains, as its own comment says,
+the only kind of money out with no page of its own. Worth a screen; not worth
+pretending it has one.
+
+**Two things I nearly reported and did not.** `/dashboard/bookings?bucket=completed`
+and the seven `?tab=advanced&group=…` accounting rows are all commented out at
+the founder's direction, so they are not live doors. And `/dashboard/settings`
+*does* read `?tab=`, so the two links pointing there are fine.
+
+## 17. Venue-OS, driven
+
+| Check | Result |
+|---|---|
+| Money identity — cash − kharcha = munafa | Rs 2,44,19,131 − Rs 1,68,48,000 = Rs 75,71,131 ✓ |
+| Margin is the margin of CASH, not booked | shown 31%, computed 31% ✓ (the WW-BOOKEDVSCASH rewrite, verified live) |
+| Per-venue split sums to the booked total | Σ 47,001,250 = booked 47,001,250, exactly ✓ |
+| The three "Tafseel ke liye" cards | Reports → /dashboard/insights, Kharcha → /dashboard/expenses, Khata → /dashboard/money, all three land ✓ |
+| `/dashboard/spaces` is its own screen | "Halls & Spaces", with "Naya space" and "Spaces combine karein" ✓ |
+
+The per-venue check failed on the first run at Σ 4,542,625,100 against a booked
+total of 47,001,250 — roughly 100× over. That was my instrument: `.v-amt`
+contains a nested `.v-sub` reading "46% total ka", so taking the element's whole
+text glued the percentage digits onto the amount. Read the amount node alone and
+it reconciles to the rupee. Worth writing down because a 100× "discrepancy" on a
+money screen is exactly the kind of finding that gets reported before it is
+checked.

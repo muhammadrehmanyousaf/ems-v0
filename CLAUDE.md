@@ -137,7 +137,7 @@ The doc these were written down in (`03-url-conventions-LOCKED.md`) is **not in 
 - **Base URL** — [lib/backend-url.ts](lib/backend-url.ts) reads `NEXT_PUBLIC_BACKEND_URL` (fallback `http://localhost:3000/`). The **trailing slash is required** — callers concatenate as `${BACKEND_URL}api/v1/...`.
 - **API modules** — [lib/api/](lib/api/), one file per domain (~55 of them: `bookings`, `payments`, `quotes`, `weddingPlans`, `disputes`, `functionSheets`, `venueOs`, `staffPortal`, …). Add endpoints here, not inline in components.
 - **Server state** — TanStack Query, wrapped by `QueryProvider` in [lib/providers/query-provider.tsx](lib/providers/query-provider.tsx).
-- **Client state** — Zustand in [lib/store/](lib/store/) (`active-business-store`, `vendor-store`, `ui-store`, `theme-prefs`) + React contexts in [context/](context/) (`UserContext`, `BusinessContext`, `NotificationContext`, `ChatContext`, `FavoritesContext`).
+- **Client state** — Zustand in [lib/store/](lib/store/) (`active-business-store`, `ui-store`, `theme-prefs`) + React contexts in [context/](context/) (`UserContext`, `BusinessContext`, `NotificationContext`, `ChatContext`, `FavoritesContext`).
 - **Forms** — `react-hook-form` + zod schemas in [lib/formSchema/](lib/formSchema/). Draft persistence via [lib/draftStorage/](lib/draftStorage/) + `lib/hooks/useDraftSync.ts` + `useBeforeUnloadGuard.ts` (create-mode only).
 - **Realtime** — `socket.io-client` from `ChatContext` / `NotificationContext`, consuming the backend's `chat:*` and `notification:*` events.
 

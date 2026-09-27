@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense, useMemo } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
+import { firstOf } from "@/lib/utils"
 import {
   Search, MapPin, Star, Users, Filter, SortAsc, Award, Heart,
   DollarSign, ChevronLeft, ChevronRight,
@@ -543,7 +544,7 @@ function SearchContent() {
                           rating={vendor.rating}
                           reviews={Array.isArray(vendor.reviews) ? vendor.reviews.length : 0}
                           price={vendor.minimumPrice || vendor.price}
-                          type={vendor.type || vendor.subBusinessType}
+                          type={vendor.type || firstOf(vendor.subBusinessType)}
                           capacity={vendor.capacity}
                           amenities={vendor.amenities}
                           sponsored={vendor.sponsored}

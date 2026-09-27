@@ -27,7 +27,10 @@ export interface CityEditorial {
   priceContext: string
 }
 
-export const CITY_EDITORIAL: Record<CitySlug, CityEditorial> = {
+// Partial on purpose: only cities with real, checked copy are listed, and
+// getCityEditorial() falls back to generic copy for the rest. Typing it as a
+// full Record claimed 84 cities were covered when 11 are.
+export const CITY_EDITORIAL: Partial<Record<CitySlug, CityEditorial>> = {
   karachi: {
     intro:
       "Karachi weddings span everything from Clifton beachfront marquees to formal banquet halls in DHA and PECHS. The city's scale means more vendors, more variety, and more competitive pricing — but also longer lead times for premium dates.",
