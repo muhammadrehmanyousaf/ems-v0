@@ -52,6 +52,10 @@ interface BizRow {
 }
 
 interface OverviewResponse {
+  /** How many exist in total — the rollup below sums THIS PAGE, not the platform. */
+  total?: number;
+  limit?: number;
+  offset?: number;
   businesses: BizRow[];
   grandTotal: {
     bookings: number;
@@ -107,7 +111,12 @@ export default function BusinessesOverviewView() {
       <Card>
         <CardContent className="p-4">
           <div className="text-xs uppercase tracking-wide text-neutral-500 mb-2">
-            Across all {data.businesses.length} business{data.businesses.length === 1 ? '' : 'es'}
+            {typeof data.total === 'number' && data.total > data.businesses.length
+              ? /* The endpoint is capped for super admins, who otherwise pulled every
+                   listing on the platform — 3,298 rows and 929 KB in one response.
+                   Say what this rollup covers rather than implying it is everything. */
+                `Showing ${data.businesses.length} of ${data.total} businesses`
+              : `Across all ${data.businesses.length} business${data.businesses.length === 1 ? '' : 'es'}`}
           </div>
           <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
             <Total
