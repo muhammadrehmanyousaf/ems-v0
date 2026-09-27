@@ -292,6 +292,66 @@ positive both times before that.
 
 ---
 
+## 10. "If I block a date, nothing should be bookable on it" — every path
+
+Asked as a question about one button, and it turned out to be a question about
+nine paths. A blocked date DID stop a booking being created; four other ways
+onto a closed date had no lock at all, and the couple's own date picker at a
+slot-engine venue never even greyed the day out.
+
+| path onto a closed date | before | now |
+|---|---|---|
+| Vendor console form → create | refused, message mapped | + **warns before the form is filled** |
+| Customer flow → create | refused; picker greys the day (legacy venues) | unchanged |
+| Customer picker at a **slot-engine** venue | **offered three bookable slots on a closed day** | day closed |
+| Wedding-plan checkout, quote acceptance | refused (they route through the same core) | unchanged |
+| Vendor reschedule of an offline booking | refused (added earlier the same day) | unchanged |
+| **Customer reschedule, and postpone-then-resume** | **no check at all** | `date_blocked` 409 |
+| **Customer reschedule into vacation mode** | **no check** (create has had one for ever) | `vendor_on_vacation` 409 |
+| **`POST /bookings/hold`** | **no check** | `DATE_BLOCKED` 409 |
+| **"Closed every Monday" (recurring), legacy-mode create** | **booking went straight through** | `DATE_BLOCKED` 409 |
+| Blocking a day that is already sold | refused, 409 naming the booking | + **the calendar now shows that reason** |
+| Calendar "+ → Nayi booking" on a closed day | dead end: form, fill, refusal | says it is closed, offers Unblock |
+| Calendar block/unblock that the server refuses | **`.catch(() => {})` — nothing happened, nothing said** | the reason is shown |
+
+### 10.1 The two block tables, again
+
+`VendorBlockedDate` is what the calendar's "Poora din band" writes.
+`BusinessSlotBlock` + `BusinessRecurringBlock` are what the slot engine reads.
+Nothing read both, so each side enforced a rule the other could not see:
+
+- the slot engine's availability never mentioned the calendar's block — which
+  is why a couple was shown three open slots on a closed day (proven live on
+  the QA venue). Folded in, **on the display side only**: the same switch also
+  gates an existing booking's slot swap, and refusing that is a different
+  decision than the one being made here.
+- the core's create lock never read the recurring table — so "closed every
+  Monday" saved, showed on the availability card, and a Monday booking still
+  went through. Proven live: recurring Monday block, `POST /bookings` for that
+  Monday → **201**. Now 409, asked through `slotService.isBlocked` so the
+  weekday-mask rules cannot drift apart from the engine's.
+
+### 10.2 Left alone, on purpose
+
+- **Bulk import.** A vendor loading years of their own Excel register should not
+  have a row refused because of their own block. It reports per row.
+- **Per-slot blocks.** The slot engine's business; a whole-day closure is what
+  "we are shut" means.
+- **`minLeadDays` / `maxLeadDays` and capacity** are enforced on create and not
+  on reschedule. Same shape as the two fixed here, not yet done — the next thing
+  I would do on this thread.
+
+### 10.3 Verified
+
+Against the live database, every write cleaned up: hold on a blocked date 409 /
+open date 201; slot availability on a blocked date — all three slots shut;
+create on a blocked date 409; blocking a day that already has a booking 409
+naming it; recurring Monday 409 with the Tuesday after still booking. Unit
+tests for the reschedule lock and the recurring lock both fail with the guard
+disabled and pass with it. Backend suite: **4232 passed, 0 failed**.
+
+---
+
 ## Appendix — instalments, and the "one modal" question
 
 **Instalments.** The plumbing exists: `BookingInstallment` with sequence, label,

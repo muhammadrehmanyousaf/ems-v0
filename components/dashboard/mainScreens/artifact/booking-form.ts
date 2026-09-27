@@ -17,7 +17,7 @@
 
 import { toast } from "sonner"
 import {
-  BookingsAPI, PackagesAPI, MenusAPI,
+  BookingsAPI, BlockedDatesAPI, PackagesAPI, MenusAPI,
   type CreateBookingPayload, type CreateBookingVendor, type ApiPackage, type ApiMenu,
 } from "@/lib/api/dashboard"
 import { venueSpacesApi, type SubVenueNode } from "@/lib/api/venueSpaces"
@@ -53,6 +53,7 @@ function bookingFormBody(prefill?: BookingPrefill, businesses?: BizLite[], activ
 
     <div class="bf-sec">Event</div>
     <div class="dfield row2"><div><label class="dlabel">Tareekh <span class="req">*</span></label><input type="date" id="bf-date" value="${today}"/></div><div><label class="dlabel">Waqt <span class="req">*</span></label><input type="time" id="bf-time" value="${v(p.bookingTime) || "18:00"}"/></div></div>
+    <div id="bf-datewarn" style="font-size:12px;line-height:1.5;margin:-6px 0 12px"></div>
     <div class="dfield row2"><div><label class="dlabel">Mehmaan</label><input type="number" id="bf-guests" value="${p.guestCount != null ? p.guestCount : ""}" placeholder="e.g. 400"/></div><div><label class="dlabel">Gender mode</label><select id="bf-gender">${genderOpts}</select></div></div>
     <div class="dfield"><label class="dlabel">Event city <span style="color:var(--ink-4);font-weight:400">(agar doosre shehar mein)</span></label><input id="bf-city" placeholder="optional — travel surcharge"/></div>
 
@@ -161,12 +162,35 @@ function refreshAgreedHint(shadow: ShadowRoot, listEstimate?: number) {
       : `<span style="color:var(--ok)">Package ki qeemat ke barabar.</span>`
 }
 
+/**
+ * Tell the vendor a date is blocked BEFORE they fill the form.
+ *
+ * `createBookingCore` refuses a blocked date (DATE_BLOCKED) and the submit
+ * handler already says so — but only after the whole form is filled and sent,
+ * and the calendar's own "+ → Nayi booking" menu drops the vendor here with
+ * that very date prefilled. The block is the vendor's own, so this is a
+ * reminder, not a rejection: the field stays editable and Save still tries.
+ */
+async function refreshDateWarn(shadow: ShadowRoot): Promise<void> {
+  const box = shadow.getElementById("bf-datewarn")
+  if (!box) return
+  const date = val(shadow, "bf-date")
+  const biz = Number(val(shadow, "bf-biz")) || 0
+  if (!biz || !/^\d{4}-\d{2}-\d{2}$/.test(date)) { box.innerHTML = ""; return }
+  const rows = await BlockedDatesAPI.getAll(undefined, biz, { from: date, to: date }).catch(() => [])
+  if (val(shadow, "bf-date") !== date) return // a later pick won
+  if (!rows.length) { box.innerHTML = ""; return }
+  const why = (rows[0] as { reason?: string | null })?.reason
+  box.innerHTML = `<div style="color:var(--bad);background:var(--bad-wash);border-radius:8px;padding:9px 11px">🚫 Is din aap ne ye venue band kiya hua hai${why ? ` — ${escHtml(String(why))}` : ""}. Calendar se unblock karein, warna booking nahi banegi.</div>`
+}
+
 function ensureBound(shadow: ShadowRoot) {
   if (BF_BOUND.has(shadow)) return
   BF_BOUND.add(shadow)
   shadow.addEventListener("change", (e) => {
     const t = e.target as HTMLElement
-    if (t.id === "bf-biz") populateBookingDeps(shadow, Number((t as HTMLSelectElement).value))
+    if (t.id === "bf-biz") { populateBookingDeps(shadow, Number((t as HTMLSelectElement).value)); void refreshDateWarn(shadow) }
+    else if (t.id === "bf-date") void refreshDateWarn(shadow)
     else if (t.id === "bf-package" || t.id === "bf-menu") refreshPriceHint(shadow)
   })
   shadow.addEventListener("input", (e) => {
@@ -242,4 +266,6 @@ export function openBookingForm(shadow: ShadowRoot, opts: Opts = {}) {
   openDrawer(shadow, opts.prefill?.leadId ? "Lead → Booking" : "Nayi booking", bookingFormBody(opts.prefill, opts.businesses, opts.activeBiz))
   const biz = Number((shadow.getElementById("bf-biz") as HTMLSelectElement | null)?.value) || Number(opts.prefill?.businessId) || Number(opts.activeBiz) || 0
   void populateBookingDeps(shadow, biz, opts.prefill)
+  // the calendar can open this on a date it already knows is blocked
+  void refreshDateWarn(shadow)
 }

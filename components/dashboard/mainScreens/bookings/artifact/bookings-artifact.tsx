@@ -143,9 +143,16 @@ export function BookingsArtifact() {
     const s = shadowRef.current
     if (!s || !ready || autoOpened.current) return
     const nd = searchParams?.get("new")
-    if (nd) { autoOpened.current = true; openBookingForm(s, { prefill: { bookingDate: nd }, businesses: bizListRef.current, activeBiz: bizRef.current, onSaved: () => qc.invalidateQueries({ queryKey: ["/api/v1/bookings"] }) }) }
+    if (!nd) return
+    // The venue list arrives after the first render, and this effect used to fire
+    // without it: the drawer opened with a single empty option in "Venue", which
+    // is required, so the vendor had to close it and open it again. Waiting for
+    // the list costs nothing — the effect re-runs when it lands.
+    if (!bizListRef.current.length) return
+    autoOpened.current = true
+    openBookingForm(s, { prefill: { bookingDate: nd }, businesses: bizListRef.current, activeBiz: bizRef.current, onSaved: () => qc.invalidateQueries({ queryKey: ["/api/v1/bookings"] }) })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, searchParams])
+  }, [ready, searchParams, bizList.length])
 
   const tabsBound = React.useRef(false)
   React.useEffect(() => {
