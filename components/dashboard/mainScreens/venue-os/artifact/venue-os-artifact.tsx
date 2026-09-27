@@ -81,19 +81,30 @@ const EXTRA_CSS = String.raw`
  * named as booked, cash-in is shown beside it, and the verdict is computed on
  * CASH — profit you can actually spend.
  */
-function buildContent(booked: number, received: number, expenses: number, byVenue: { name: string; revenue: number }[]): string {
-  const profit = received - expenses
-  const margin = received > 0 ? Math.round((profit / received) * 100) : 0
-  const awaited = Math.max(0, booked - received)
+function buildContent(booked: number, received: number | null, expenses: number, byVenue: { name: string; revenue: number }[]): string {
+  /**
+   * `received === null` means the cash figure did not load — NOT that nothing
+   * came in. Treating the two the same made profit `0 - expenses`, so a failed
+   * request headlined "Business ghata mein ja raha hai" on a business that is
+   * profitable. That is the same class of lie as the booked-as-cash bug this
+   * screen was just fixed for, pointing the other way.
+   */
+  const cashKnown = received !== null
+  const cash = received ?? 0
+  const profit = cash - expenses
+  const margin = cash > 0 ? Math.round((profit / cash) * 100) : 0
+  const awaited = Math.max(0, booked - cash)
   const maxV = Math.max(1, ...byVenue.map((v) => v.revenue))
   const top = byVenue[0]
   const topLine = top ? `<div class="top-insight">Sab se zyada kamai <b>${escHtml(top.name)}</b> se — Rs ${pkNum(top.revenue)} (${booked > 0 ? Math.round((top.revenue / booked) * 100) : 0}% total)${byVenue.length > 1 ? `. ${byVenue.length} venues chal rahi hain.` : "."}</div>` : ""
   // Money still to collect is the headline risk, so it leads rather than hides
   // inside a percentage.
-  const awaitedLine = awaited > 0
+  const awaitedLine = cashKnown && awaited > 0
     ? `<div class="top-insight">Is saal ka <b>Rs ${pkNum(awaited)}</b> abhi aana baaki hai — munafa upar ke hisaab se sirf aye hue paise par hai.</div>`
     : ""
-  const vd = profit < 0
+  const vd = !cashKnown
+    ? { cls: "warn", ic: IC.pulse, t: "Cash ka hisaab abhi load nahi hua", s: `Is saal <b>Rs ${pkNum(booked)}</b> ki booking hui. Kitna paisa aaya, wo abhi nahi aa saka — isliye munafa neeche nahi dikhaya. Page refresh karein.` }
+    : profit < 0
     ? { cls: "bad", ic: IC.alert, t: "Business ghata mein ja raha hai", s: `Kharcha (Rs ${pkNum(expenses)}) aye hue paise (Rs ${pkNum(received)}) se <b>zyada</b> hai. Foran <b>Kharcha</b> review karein aur rates/booking barhayein.` }
     : margin >= 45
       ? { cls: "ok", ic: IC.trophy, t: "Business zabardast chal raha hai!", s: `Har Rs 100 revenue mein <b>Rs ${margin} bach</b> raha — ye bohat sehatmand munafa hai. Kharcha isi tarah control mein rakhein aur zyada bookings pe focus karein.` }
@@ -102,13 +113,13 @@ function buildContent(booked: number, received: number, expenses: number, byVenu
         : { cls: "warn", ic: IC.pulse, t: "Munafa patla hai — dhyan dein", s: `Revenue ka bara hissa kharcha kha raha (sirf <b>${margin}%</b> bach raha). <b>Kharcha</b> mein sab se bari category dekh kar cut karein.` }
   const hero = `<div class="verdict ${vd.cls}"><span class="vd-emoji">${svg(vd.ic, 1.8)}</span><div class="vd-body"><div class="vd-t">${vd.t}</div><div class="vd-s">${vd.s}</div>${topLine ? `<div style="margin-top:8px">${topLine}</div>` : ""}${awaitedLine ? `<div style="margin-top:6px">${awaitedLine}</div>` : ""}</div></div>`
   const pnl = `<div class="pnl">
-    <div class="pnl-cell"><div class="pnl-cap in">${svg(IC.in)} Aaya (cash)</div><div class="pnl-val pos tnum"><span class="rs">Rs</span> ${pkNum(received)}</div><div class="pnl-sub">is saal mila · booked Rs ${pkNum(booked)}</div></div>
+    <div class="pnl-cell"><div class="pnl-cap in">${svg(IC.in)} Aaya (cash)</div><div class="pnl-val pos tnum">${cashKnown ? `<span class="rs">Rs</span> ${pkNum(cash)}` : "—"}</div><div class="pnl-sub">${cashKnown ? `is saal mila · booked Rs ${pkNum(booked)}` : `load nahi hua · booked Rs ${pkNum(booked)}`}</div></div>
     <div class="pnl-op">−</div>
     <div class="pnl-cell"><div class="pnl-cap out">${svg(IC.out)} Kharcha</div><div class="pnl-val neg tnum"><span class="rs">Rs</span> ${pkNum(expenses)}</div><div class="pnl-sub">saara expense</div></div>
     <div class="pnl-op">=</div>
-    <div class="pnl-cell profit"><div class="pnl-cap pr">${svg(IC.scale)} Munafa</div><div class="pnl-val tnum" style="color:${profit >= 0 ? "var(--ok)" : "var(--bad)"}"><span class="rs">Rs</span> ${pkNum(profit)}</div><div class="pnl-sub">${margin}% margin</div></div>
+    <div class="pnl-cell profit"><div class="pnl-cap pr">${svg(IC.scale)} Munafa</div><div class="pnl-val tnum" style="color:${!cashKnown ? "var(--ink-3)" : profit >= 0 ? "var(--ok)" : "var(--bad)"}">${cashKnown ? `<span class="rs">Rs</span> ${pkNum(profit)}` : "—"}</div><div class="pnl-sub">${cashKnown ? `${margin}% margin` : "cash ke baghair nahi"}</div></div>
   </div>`
-  const marginCard = `<div class="card" style="margin-bottom:16px"><div class="card-h"><h2>Munafa ka margin</h2></div><div class="margin-bar"><span style="width:${Math.max(0, Math.min(100, margin))}%"></span></div><div class="margin-lbl"><span>Har Rs 100 <b>aye hue</b> par</span><b>Rs ${margin} bacha</b></div></div>`
+  const marginCard = !cashKnown ? "" : `<div class="card" style="margin-bottom:16px"><div class="card-h"><h2>Munafa ka margin</h2></div><div class="margin-bar"><span style="width:${Math.max(0, Math.min(100, margin))}%"></span></div><div class="margin-lbl"><span>Har Rs 100 <b>aye hue</b> par</span><b>Rs ${margin} bacha</b></div></div>`
   const venues = byVenue.length ? `<div class="card"><div class="card-h"><h2>Venue ke hisaab se booking value</h2></div>${byVenue.map((v) => `<div class="vrow"><span class="v-ic">${svg(IC.building, 1.8)}</span><div class="v-main"><div class="v-nm">${escHtml(v.name)}</div><div class="v-bar"><span style="width:${Math.round((v.revenue / maxV) * 100)}%"></span></div></div><div class="v-amt tnum"><span class="rs">Rs</span> ${pkNum(v.revenue)}<div class="v-sub">${booked > 0 ? Math.round((v.revenue / booked) * 100) : 0}% total ka</div></div></div>`).join("")}</div>` : ""
   const links = `<div class="sec-h">Tafseel ke liye</div><div class="links">
     <div class="linkcard" data-nav-btn="/dashboard/insights"><span class="lc-ic">${svg(IC.chart, 1.8)}</span><div><div class="lc-t">Reports</div><div class="lc-s">Revenue trends aur charts</div></div></div>
@@ -141,10 +152,12 @@ export function VenueOsArtifact() {
     const revenue = byBiz.reduce((a, b) => a + num(b.totalRevenue), 0)
     const expenses = num(expQ.data?.summary?.total)
     const byVenue = byBiz.map((b) => ({ name: b.businessName || "Venue", revenue: num(b.totalRevenue) })).filter((v) => v.revenue > 0).sort((a, b) => b.revenue - a.revenue)
-    const received = num((kpiQ.data as { totalRevenue?: { value?: number } } | null)?.totalRevenue?.value)
+    // null, not 0, when the cash figure is unavailable — see buildContent.
+    const kpi = kpiQ.data as { totalRevenue?: { value?: number } } | null | undefined
+    const received = kpiQ.isError || kpi == null ? null : num(kpi.totalRevenue?.value)
     wwc.innerHTML = buildContent(revenue, received, expenses, byVenue)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, revQ.data, expQ.data, kpiQ.data, revQ.isLoading, expQ.isLoading, isError])
+  }, [ready, revQ.data, expQ.data, kpiQ.data, kpiQ.isError, revQ.isLoading, expQ.isLoading, isError])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
