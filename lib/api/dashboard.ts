@@ -1478,6 +1478,57 @@ export class BookingsAPI {
    * paid" are separate facts, which is why an automatic completion sweep would
    * be wrong here.
    */
+  /**
+   * Move an OFFLINE booking to another date/time.
+   *
+   * `POST /bookings/:id/vendor-reschedule` has existed, guarded, with no
+   * caller: it refuses someone else's booking (403), anything that is not
+   * `bookingSource === "offline"` (online bookings move through the customer's
+   * change request instead), a Cancelled or Completed booking, and a past date.
+   * A hall clash comes back as SLOT_CONFLICT with the conflicting rows.
+   *
+   * Which left a vendor who wrote a walk-in on the wrong date with no way to
+   * correct it — only cancel and re-enter, losing the booking's history.
+   */
+  static async vendorReschedule(
+    id: number,
+    body: { newBookingDate: string; newBookingTime?: string | null },
+  ): Promise<unknown> {
+    const res = await axiosInstance.post(
+      `/api/v1/bookings/${id}/vendor-reschedule`,
+      body,
+    );
+    return res.data?.data;
+  }
+
+  /**
+   * What a venue already holds on one date.
+   *
+   * Read by the reschedule drawer so the vendor sees the day BEFORE they move a
+   * booking onto it — the create drawer has no such preview, it just posts and
+   * lets the server refuse, which is a worse experience to copy than to fix.
+   * `dateFrom`/`dateTo` already existed on the list endpoint (the mobile
+   * calendar needed them); nothing new is added server-side.
+   */
+  static async onDate(
+    businessId: number,
+    date: string,
+  ): Promise<
+    {
+      id: number;
+      bookingDate?: string;
+      bookingTime?: string | null;
+      status?: string;
+      offlineCustomerName?: string | null;
+      user?: { fullName?: string | null } | null;
+    }[]
+  > {
+    const res = await axiosInstance.get("/api/v1/bookings", {
+      params: { dateFrom: date, dateTo: date, businessId, limit: 50, page: 1 },
+    });
+    return res.data?.data?.data ?? [];
+  }
+
   static async markCompleted(id: number): Promise<void> {
     await axiosInstance.patch(`/api/v1/bookings/${id}`, { status: "Completed" });
   }

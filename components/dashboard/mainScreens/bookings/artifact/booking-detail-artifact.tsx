@@ -20,7 +20,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { listRefundRequests, decideRefundRequest, applyRefundRequest, markRefundPaid } from "@/lib/api/bookingOrder"
 import { toast } from "sonner"
 import { BookingAPI, type InstallmentsResponse, type SettlementPreview, type DepositPosition, type BookingChangeRequest } from "@/lib/api/bookings"
-import { BookingsAPI } from "@/lib/api/dashboard"
+import { BookingsAPI, BlockedDatesAPI } from "@/lib/api/dashboard"
 import { openRecordPaymentDrawer } from "@/components/dashboard/mainScreens/artifact/record-payment"
 import { PaymentAPI } from "@/lib/api/payments"
 import { ReceiptsAPI, type PaymentReceipt } from "@/lib/api/paymentReceipts"
@@ -28,6 +28,7 @@ import { FunctionSheetAPI, type FunctionSheet } from "@/lib/api/functionSheets"
 import type { BookingData } from "@/lib/dashboard-types"
 import { bookingStatusLabel } from "@/lib/booking-status-label"
 import { spaceNameOf } from "@/lib/utils/booking-space"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 import { bookedOn, receivedOn, outstandingOn } from "@/lib/utils/booking-money"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
 import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
@@ -574,9 +575,22 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
     isPastEvent && !isClosed && closeable
       ? `<button class="btn btn-primary" data-bk-complete="${booking.id}">${svg(I.check, 2.4)} Event ho gaya — band karein</button>`
       : ""
+  /**
+   * WW-RESCHED — move a booking the vendor entered themselves.
+   *
+   * Only offline bookings: the server refuses anything else, because an online
+   * booking moves through the couple's change request so they are told. Until
+   * now a walk-in written on the wrong date could only be cancelled and
+   * re-entered, losing its history and its receipts.
+   */
+  const isOffline = String(booking.bookingSource || "").toLowerCase() === "offline"
+  const reschedBtn =
+    isOffline && !isClosed
+      ? `<button class="btn btn-ghost" data-bk-resched="${booking.id}" data-bk-date="${escHtml(booking.bookingDate || "")}" data-bk-time="${escHtml(booking.bookingTime || "")}" data-bk-biz="${booking.bookingDetails?.[0]?.businessId ?? ""}">${svg(I.clock)} Taareekh badlein</button>`
+      : ""
   const statusActions = isPending
     ? `${closeBtn}<button class="btn ${closeBtn ? "btn-ghost" : "btn-primary"}" data-bk-approve="${booking.id}">${svg(I.check, 2.4)} Confirm karein</button><button class="btn btn-ghost" data-bk-cancel="${booking.id}">Reject</button>`
-    : (!isClosed ? `${closeBtn}<button class="btn btn-ghost" data-bk-cancel="${booking.id}">${svg(I.clock)} Cancel booking</button>` : "")
+    : (!isClosed ? `${closeBtn}${reschedBtn}<button class="btn btn-ghost" data-bk-cancel="${booking.id}">${svg(I.clock)} Cancel booking</button>` : "")
   const remindAttrs = `data-remind="${booking.id}" data-remind-phone="${escHtml(booking.customerPhone || "")}" data-remind-name="${escHtml(booking.customerName || "")}" data-remind-due="${Math.round(due)}" data-remind-date="${escHtml(booking.bookingDate || "")}"`
   const dueItem = (due > 0 && !isCancelled) ? `<div class="tl-item due"><span class="tl-dot">${svg(I.clock)}</span>
     <div class="tl-body"><div class="tl-title">Baqaya<span class="tl-amt due tnum">${rs(due)}</span></div><div class="tl-meta">Event se pehle lena hai</div>
@@ -837,6 +851,57 @@ function declineChangeHtml(reqId: number, bookingId: number, isCancel: boolean):
     <div class="dfield"><label class="dlabel">Wajah (optional)</label><textarea id="cr-note" placeholder="e.g. us din hall already booked hai"></textarea></div>
     <div class="ww-dfoot"><button class="btn btn-ghost" data-drawer-close type="button">Waapas</button><button class="btn btn-primary" data-cr-decline-save="${reqId}" data-cr-booking="${bookingId}" data-cr-cancelreq="${isCancel ? 1 : 0}" type="button">Inkaar karein</button></div>`
 }
+/**
+ * Move an offline booking.
+ *
+ * The server owns every rule: a blocked date is refused (DATE_BLOCKED), and
+ * `rebookAtNewSlot` can answer SLOT_CONFLICT — though in practice it returns
+ * early, because live bookings are almost never mapped to a sub-venue (WWL-569),
+ * so do not rely on a conflict being caught. What the vendor gets instead is the
+ * day preview below.
+ */
+function reschedHtml(id: number, date: string, time: string, today: string): string {
+  const hhmm = /^\d{2}:\d{2}/.test(time) ? time.slice(0, 5) : "18:00"
+  return `<div style="font-size:12px;color:var(--ink-3);margin-bottom:12px;line-height:1.5">Ye booking aap ne khud daali thi, is liye seedha move ho sakti hai. Customer ko khud bata dein.</div>
+    <div class="dfield row2">
+      <div><label class="dlabel">Nayi taareekh</label><input type="date" id="rs-date" value="${escHtml(date)}" min="${escHtml(today)}"/></div>
+      <div><label class="dlabel">Waqt</label><input type="time" id="rs-time" value="${hhmm}"/></div>
+    </div>
+    <div id="rs-day" style="font-size:12px;line-height:1.55;margin:-4px 0 14px"></div>
+    <div class="ww-dfoot"><button class="btn btn-ghost" data-drawer-close type="button">Waapas</button><button class="btn btn-primary" data-bk-resched-save="${id}" type="button">Move karein</button></div>`
+}
+
+/**
+ * Show what the venue already holds on the date being picked.
+ *
+ * The server refuses a date the vendor has blocked (DATE_BLOCKED) — same lock
+ * createBooking applies — so the vendor should see that before pressing Move,
+ * not after. A same-slot booking is NOT refused: a venue with two halls can
+ * legitimately run both at 6pm, so this reports it and lets the vendor decide.
+ */
+async function rsDayPreview(s: ShadowRoot, bizId: number, date: string, selfId: number): Promise<void> {
+  const box = s.getElementById("rs-day")
+  if (!box) return
+  if (!bizId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) { box.innerHTML = ""; return }
+  box.innerHTML = `<span style="color:var(--ink-3)">Us din ka hisaab dekh rahe hain…</span>`
+  const [blocked, sameDay] = await Promise.all([
+    BlockedDatesAPI.getAll(undefined, bizId, { from: date, to: date }).catch(() => []),
+    BookingsAPI.onDate(bizId, date).catch(() => []),
+  ])
+  if ((s.getElementById("rs-date") as HTMLInputElement | null)?.value !== date) return // a later pick won
+  const busy = sameDay.filter((b) => b.id !== selfId && !/cancel|complet/i.test(String(b.status || "")))
+  const lines: string[] = []
+  if (blocked.length > 0) {
+    const why = (blocked[0] as { reason?: string | null })?.reason
+    lines.push(`<div style="color:var(--bad);background:var(--bad-wash);border-radius:8px;padding:9px 11px">🚫 Is din aap ne venue band kiya hua hai${why ? ` — ${escHtml(String(why))}` : ""}. Pehle calendar se kholein, warna move nahi hoga.</div>`)
+  }
+  if (busy.length > 0) {
+    const who = busy.slice(0, 4).map((b) => `${escHtml(fmtTime(b.bookingTime))} · ${escHtml(b.offlineCustomerName || b.user?.fullName || "booking")}`).join(" · ")
+    lines.push(`<div style="color:var(--warn-ink,var(--ink-2));background:var(--warn-wash,var(--bg-2));border-radius:8px;padding:9px 11px">⚠️ Us din pehle se ${busy.length} booking hai: ${who}${busy.length > 4 ? " …" : ""}. Agar doosra hall hai to theek, warna taareekh badlein.</div>`)
+  }
+  if (!lines.length) lines.push(`<div style="color:var(--ok)">✓ Us din koi aur booking nahi hai.</div>`)
+  box.innerHTML = lines.join('<div style="height:6px"></div>')
+}
 function cancelBookingHtml(id: number): string {
   return `<div style="font-size:12px;color:var(--bad);background:var(--bad-wash);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.5">⚠️ Cancel karne par cancellation policy ke mutabiq refund ban sakta hai. Ye amal wapas nahi hoga.</div>
     <div class="dfield"><label class="dlabel">Cancel ki wajah</label><textarea id="bc-reason" placeholder="Optional — record ke liye"></textarea></div>
@@ -1023,6 +1088,44 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
         } catch (err: unknown) {
           toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Inkaar record nahi hua")
           crDS.disabled = false; crDS.textContent = "Inkaar karein"
+        }
+        return
+      }
+      const rs = t.closest("[data-bk-resched]") as HTMLElement | null
+      if (rs?.dataset.bkResched) {
+        const bkId = Number(rs.dataset.bkResched)
+        const biz = Number(rs.dataset.bkBiz) || 0
+        openDrawer(s, "Taareekh badlein", reschedHtml(bkId, rs.dataset.bkDate || "", rs.dataset.bkTime || "", todayInKarachi()))
+        const di = s.getElementById("rs-date") as HTMLInputElement | null
+        if (di) {
+          di.addEventListener("change", () => { void rsDayPreview(s, biz, di.value, bkId) })
+          void rsDayPreview(s, biz, di.value, bkId)
+        }
+        return
+      }
+      const rss = t.closest("[data-bk-resched-save]") as HTMLButtonElement | null
+      if (rss?.dataset.bkReschedSave) {
+        const d = (s.getElementById("rs-date") as HTMLInputElement | null)?.value || ""
+        const tm = (s.getElementById("rs-time") as HTMLInputElement | null)?.value || ""
+        if (!d) { toast.error("Nayi taareekh chunein"); return }
+        rss.disabled = true; rss.textContent = "Move ho raha…"
+        try {
+          await BookingsAPI.vendorReschedule(Number(rss.dataset.bkReschedSave), { newBookingDate: d, newBookingTime: tm || null })
+          toast.success("Booking move ho gayi"); closeDrawer(s); invalidateAll()
+        } catch (err: unknown) {
+          // The endpoint's refusals are written in English ("… is not taking
+          // bookings on 2027-03-19"). Every other word on this screen is Roman
+          // Urdu, so the known codes are said in Roman Urdu and anything
+          // unrecognised falls through to the server's own wording.
+          const res = (err as { response?: { data?: { message?: string; data?: { code?: string } } } })?.response?.data
+          const byCode: Record<string, string> = {
+            DATE_BLOCKED: "Us din aap ne venue band kiya hua hai — pehle calendar se kholein.",
+            SLOT_CONFLICT: "Us waqt wo hall pehle se booked hai — doosra waqt chunein.",
+            event_date_in_past: "Guzri hui taareekh par move nahi ho sakti.",
+            online_booking: "Ye customer ki online booking hai — is ki taareekh change request se badalti hai.",
+          }
+          toast.error(byCode[String(res?.data?.code || "")] || res?.message || "Move nahi hui")
+          rss.disabled = false; rss.textContent = "Move karein"
         }
         return
       }

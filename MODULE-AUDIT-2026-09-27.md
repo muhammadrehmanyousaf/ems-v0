@@ -27,7 +27,7 @@ errors. Nothing is broken. What follows is about *reach* and *honesty of state*.
 
 ## 1. The dominant defect: a finished back end behind a missing door
 
-Found **seven** times now. In each case the endpoint, the service and often the
+Found **nine** times now. In each case the endpoint, the service and often the
 admin screen were complete; nothing in the product could reach them.
 
 | feature | back end | user entry point |
@@ -39,6 +39,8 @@ admin screen were complete; nothing in the product could reach them.
 | KYC / verification | complete | missing → fixed |
 | Post-event completion | complete | missing → fixed |
 | **Mid-booking change requests** | complete | **missing → fixed in this pass** |
+| Lead contact logging | complete | missing → fixed |
+| **Vendor reschedule of an offline booking** | complete | **missing → fixed in this pass** |
 
 ### 1.1 Change requests were a dead end — and the customer half is live
 
@@ -193,6 +195,80 @@ an unsaved row from a local form builder.)
 5. Price change *after* creation, through history and the refund engine
 6. Take Leads / Quotes / Khata / Venue-OS apart properly
 7. Admin console, once I can sign in
+
+---
+
+## 9. Second pass, same day — what the first pass got wrong
+
+The first pass "fixed" error states on thirteen screens. Seven of those fixes
+**could never fire**, and the page rendered perfectly, which is why nothing
+looked wrong.
+
+### 9.1 The dead-branch trap
+
+Every artifact screen rebuilds its HTML inside a `useEffect`. A query's
+`isError` has to be in that effect's dependency array or the error branch is
+unreachable code that typechecks, ships and does nothing. I had added
+`if (q.isError) …` on seven screens and left `isError` out of the deps.
+
+Caught mechanically, not by reading: abort the screen's own request in
+Playwright and assert the banner *and* its retry button appear. Six of six
+re-tested screens now pass. **This trap is now the first entry in both
+CLAUDE.md files** — it is invisible to review and invisible to a happy-path
+test.
+
+### 9.2 Two screens were lying about money
+
+- **Venue-OS profit.** The P&L subtracted real expenses from *booked contract
+  value* and called the result cash profit: **Rs 3.01 crore at 64% margin**
+  where the truth is **Rs 64.1 lakh at 28%**. A 4.7× overstatement on the
+  screen a vendor would use to decide whether the business is worth running.
+  Now computed from receipts.
+  Then my own fix introduced the mirror-image lie: when the cash request
+  failed, `received` defaulted to `0`, so the screen announced *"Business ghata
+  mein ja raha hai"* on a profitable venue. `received` is now nullable — an
+  unknown number prints `—` and the verdict stays quiet.
+- **The pay page asked a customer for Rs 325,000 on a booking that was already
+  cancelled and refunded.** Now gated by a shared `isClosedBookingStatus()`.
+
+### 9.3 Reach, measured
+
+An endpoint-map scan (backend routes ∩ every frontend reference, template
+literals resolved) ended at **99 endpoints with no caller**, now **98** with the
+reschedule door added — down from a first reading of 366. All four corrections were instrument bugs: `${BACKEND_URL}api/v1/x`
+has no leading slash, `${BASE}/x` where `BASE` is a path const, a bare
+`const v1 = ${BACKEND_URL}api/v1`, and `${encodeURIComponent(...)}` inside a
+path. The scan now asserts seven known-reachable endpoints are *not* reported
+missing; if a control trips the numbers are void. Slots CRUD was a false
+positive both times before that.
+
+### 9.4 Fixed in this pass
+
+| what | why it mattered |
+|---|---|
+| Vendor reschedule of an offline booking | a walk-in written on the wrong date could only be cancelled and re-entered, losing its receipts and history |
+| Change requests answerable by the vendor | the customer half promises a reply; every request had expired unanswered |
+| Agreed price alongside a package | the vendor could not record the number they actually settled on |
+| Cash-flow forecast, seasonality, conversion | three computed analytics with no screen |
+| Admin vendor queue counts | the first tab was empty, hiding 3,232 waiting vendors |
+| Lead contact logged on WhatsApp / call hand-off | outreach left no trace, so "unanswered enquiries" was wrong |
+| Post-event closure button | gated on a status regex that also matched "Awaiting Payment" |
+| Chat at 360px | inbox and conversation shared one phone screen |
+| Vacation mode reachable, and per-venue | the card existed; nothing mounted it, and it kept the previous venue's state |
+| Dues KPI relabelled | "abhi tak pending" for a figure scoped to this year's events |
+
+### 9.5 Still open, and who has to do it
+
+- **The money backfill is yours to run.** 14 bookings, Rs 310,250, where a
+  refund left `downPayment` stale. The repair endpoint is deployed; the write
+  is on production data, so I stopped and left a paste-ready snippet on backend
+  PR #160 rather than run it.
+- **Calendar drag-to-move.** The reschedule endpoint was written for it
+  (`§M4`, "so the calendar can drag-drop those freely"); the calendar has no
+  drag code at all. The booking detail now has the door, which is the part a
+  vendor needs.
+- The **eight remaining analytics endpoints**, the ten lower-traffic screens
+  without error states, and instalment proposal (§ Appendix) are unchanged.
 
 ---
 
