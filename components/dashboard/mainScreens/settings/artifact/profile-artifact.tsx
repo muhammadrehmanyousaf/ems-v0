@@ -157,7 +157,7 @@ export function ProfileArtifact() {
     computeBaseline(user)
     wwc.innerHTML = buildContent(user)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, data])
+  }, [ready, data, isError])
 
   const bound = React.useRef(false)
   React.useEffect(() => {

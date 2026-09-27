@@ -11,7 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { GeneratorFuelAPI, type FuelEntry, type EntryType, type FuelType, type CreateEntryInput, type TankStatusRow } from "@/lib/api/generatorFuel"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
-import { useArtifactShell, pkNum, escHtml, initTablePager, loadPref, savePref, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, pkNum, escHtml, initTablePager, loadPref, savePref, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const TYPE_LABEL: Record<EntryType, string> = { delivery: "Fuel aaya", consumption: "Istemaal", tank_reading: "Tank reading", maintenance: "Maintenance" }
 const TYPE_TONE: Record<EntryType, string> = { delivery: "ok", consumption: "warn", tank_reading: "info", maintenance: "mut" }
@@ -95,7 +95,7 @@ export function GeneratorFuelArtifact() {
   const qc = useQueryClient()
   const activeBusinessId = useActiveBusinessId()
   const bizRef = React.useRef(activeBusinessId); bizRef.current = activeBusinessId
-  const { data } = useQuery({ queryKey: ["fuel-art", activeBusinessId], queryFn: () => GeneratorFuelAPI.list(activeBusinessId != null ? { businessId: activeBusinessId } : {}) })
+  const { data, isError, refetch } = useQuery({ queryKey: ["fuel-art", activeBusinessId], queryFn: () => GeneratorFuelAPI.list(activeBusinessId != null ? { businessId: activeBusinessId } : {}) })
   const tanksQ = useQuery({ queryKey: ["fuel-tanks", activeBusinessId], queryFn: () => GeneratorFuelAPI.tanks(activeBusinessId != null ? { businessId: activeBusinessId } : {}).catch(() => ({ tanks: [] })) })
   const list = React.useMemo(() => (data?.entries ?? []) as FuelEntry[], [data])
   const tanks = React.useMemo(() => (tanksQ.data?.tanks ?? []) as TankStatusRow[], [tanksQ.data])
@@ -105,11 +105,14 @@ export function GeneratorFuelArtifact() {
   React.useEffect(() => {
     const s = shadowRef.current; if (!s || !ready) return
     const wwc = s.getElementById("wwc"); if (!wwc) return
+    // A failed request rendered as an empty screen, which reads as
+    // "you have no data" rather than "we could not load it".
+    if (isError) { wwc.innerHTML = errorBannerHtml("Generator fuel record load nahi hue."); return }
     if (!data) { wwc.innerHTML = `<div class="loadwrap">Fuel log load ho raha hai…</div>`; return }
     wwc.innerHTML = buildContent(list, summary, tanks, filter)
     initTablePager(s, { pageSize: 25 })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, data, tanksQ.data, filter])
+  }, [ready, data, tanksQ.data, filter, isError])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
@@ -118,6 +121,8 @@ export function GeneratorFuelArtifact() {
     const refetch = () => { qc.invalidateQueries({ queryKey: ["fuel-art", bizRef.current] }); qc.invalidateQueries({ queryKey: ["fuel-tanks", bizRef.current] }) }
     const val = (id: string) => (s.getElementById(id) as HTMLInputElement | HTMLSelectElement | null)?.value?.trim() ?? ""
     s.addEventListener("click", async (e) => {
+      // the error banner ships a retry button; honour it
+      if ((e.target as HTMLElement).closest("[data-retry]")) { void refetch(); return }
       const t = e.target as HTMLElement
       const tab = t.closest(".tab") as HTMLElement | null
       if (tab?.dataset.f) { savePref("tab:generator-fuel", tab.dataset.f); setFilter(tab.dataset.f); return }

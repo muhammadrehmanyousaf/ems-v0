@@ -11,7 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { HalalCertAPI, type HalalCert, type CertStatus, type CreateCertInput, type IssuingAuthority, ISSUING_AUTHORITY_LABELS } from "@/lib/api/halalCerts"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
-import { useArtifactShell, escHtml, initTablePager, loadPref, savePref, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, escHtml, initTablePager, loadPref, savePref, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const ST_LABEL: Record<CertStatus, string> = { active: "Active", expiring_soon: "Jald khatam", expired: "Khatam", revoked: "Radd", pending_renewal: "Renewal baaki" }
 const ST_TONE: Record<CertStatus, string> = { active: "ok", expiring_soon: "warn", expired: "bad", revoked: "bad", pending_renewal: "warn" }
@@ -84,18 +84,21 @@ export function HalalCertsArtifact() {
   const qc = useQueryClient()
   const activeBusinessId = useActiveBusinessId()
   const bizRef = React.useRef(activeBusinessId); bizRef.current = activeBusinessId
-  const { data } = useQuery({ queryKey: ["halal-art", activeBusinessId], queryFn: () => HalalCertAPI.list(activeBusinessId != null ? { businessId: activeBusinessId } : {}) })
+  const { data, isError, refetch } = useQuery({ queryKey: ["halal-art", activeBusinessId], queryFn: () => HalalCertAPI.list(activeBusinessId != null ? { businessId: activeBusinessId } : {}) })
   const list = React.useMemo(() => (data?.certs ?? []) as HalalCert[], [data])
   const [filter, setFilter] = React.useState(() => loadPref("tab:halal-certs", "all"))
 
   React.useEffect(() => {
     const s = shadowRef.current; if (!s || !ready) return
     const wwc = s.getElementById("wwc"); if (!wwc) return
+    // A failed request rendered as an empty screen, which reads as
+    // "you have no data" rather than "we could not load it".
+    if (isError) { wwc.innerHTML = errorBannerHtml("Halal certificates load nahi hue."); return }
     if (!data) { wwc.innerHTML = `<div class="loadwrap">Certificates load ho rahe hain…</div>`; return }
     wwc.innerHTML = buildContent(list, filter)
     initTablePager(s, { pageSize: 25 })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, data, filter])
+  }, [ready, data, filter, isError])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
@@ -104,6 +107,8 @@ export function HalalCertsArtifact() {
     const refetch = () => qc.invalidateQueries({ queryKey: ["halal-art", bizRef.current] })
     const val = (id: string) => (s.getElementById(id) as HTMLInputElement | null)?.value?.trim() ?? ""
     s.addEventListener("click", async (e) => {
+      // the error banner ships a retry button; honour it
+      if ((e.target as HTMLElement).closest("[data-retry]")) { void refetch(); return }
       const t = e.target as HTMLElement
       const tab = t.closest(".tab") as HTMLElement | null
       if (tab?.dataset.f) { savePref("tab:halal-certs", tab.dataset.f); setFilter(tab.dataset.f); return }

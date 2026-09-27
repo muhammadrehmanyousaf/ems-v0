@@ -12,7 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { getCancellationPolicy, saveCancellationPolicy, type CancellationPolicyState, type ActivePolicy, type PolicyTemplate, type PolicySlab } from "@/lib/api/bookingOrder"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
-import { useArtifactShell, escHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, escHtml, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const svg = (p: string, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}">${p}</svg>`
 const IC = {
@@ -86,17 +86,20 @@ export function CancellationPolicyArtifact() {
   const qc = useQueryClient()
   const activeBusinessId = useActiveBusinessId()
   const bizRef = React.useRef(activeBusinessId); bizRef.current = activeBusinessId
-  const { data } = useQuery({ queryKey: ["cancelpolicy-art", activeBusinessId], queryFn: () => getCancellationPolicy(activeBusinessId) })
+  const { data, isError, refetch } = useQuery({ queryKey: ["cancelpolicy-art", activeBusinessId], queryFn: () => getCancellationPolicy(activeBusinessId) })
   const templatesRef = React.useRef<PolicyTemplate[]>([]); templatesRef.current = data?.templates ?? []
 
   React.useEffect(() => {
     const s = shadowRef.current
     if (!s || !ready) return
     const wwc = s.getElementById("wwc"); if (!wwc) return
+    // A failed request rendered as an empty screen, which reads as
+    // "you have no data" rather than "we could not load it".
+    if (isError) { wwc.innerHTML = errorBannerHtml("Cancellation policy load nahi hui."); return }
     if (!data) { wwc.innerHTML = `<div class="loadwrap">Policy load ho rahi hai…</div>`; return }
     wwc.innerHTML = buildContent(data)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, data])
+  }, [ready, data, isError])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
@@ -104,6 +107,8 @@ export function CancellationPolicyArtifact() {
     if (!s || !ready || bound.current) return
     bound.current = true
     s.addEventListener("click", async (e) => {
+      // the error banner ships a retry button; honour it
+      if ((e.target as HTMLElement).closest("[data-retry]")) { void refetch(); return }
       const ap = (e.target as HTMLElement).closest("[data-apply]") as HTMLElement | null
       if (!ap?.dataset.apply) return
       const tpl = templatesRef.current.find((t) => t.key === ap.dataset.apply)
