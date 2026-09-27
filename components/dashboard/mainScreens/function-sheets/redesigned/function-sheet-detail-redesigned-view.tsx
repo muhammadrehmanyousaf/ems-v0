@@ -135,7 +135,16 @@ export function FunctionSheetDetailRedesignedView({ id }: { id?: number } = {}) 
   if (isLoading) {
     return <div className="p-4 md:p-6"><DetailSkeleton /></div>
   }
-  if (isError || !sheet) {
+  // A failed request is not a missing sheet — see the composer view.
+  if (isError) {
+    return (
+      <div className="p-4 md:p-6">
+        <EmptyState icon="AlertTriangle" title="Couldn't load this function sheet"
+          description="Something went wrong on the way — it is still there. Check your connection and refresh." />
+      </div>
+    )
+  }
+  if (!sheet) {
     return (
       <div className="p-4 md:p-6">
         <EmptyState icon="FileText" title="No function sheet to show"

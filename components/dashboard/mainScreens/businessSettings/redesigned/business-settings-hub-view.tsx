@@ -212,7 +212,7 @@ function amenitiesFor(vendorType: string | null | undefined, form: Record<string
 
 export function BusinessSettingsHubView() {
   const qc = useQueryClient()
-  const { data: businesses, isLoading, isError } = useQuery<ApiBusiness[]>({
+  const { data: businesses, isLoading, isError, refetch } = useQuery<ApiBusiness[]>({
     queryKey: ["biz-settings-hub"],
     queryFn: () => BusinessesAPI.getUserBusinesses(),
   })
@@ -741,7 +741,29 @@ export function BusinessSettingsHubView() {
   })
 
   if (isLoading) return <div className="p-4 md:p-6"><DetailSkeleton /></div>
-  if (isError || !biz) {
+  /**
+   * A failed request is not an empty account.
+   *
+   * These two were one branch, so a dropped connection told a vendor with five
+   * venues "No business found — Create your business profile first." That is
+   * false, and it points them at creating a duplicate listing to fix a problem
+   * that is really a flaky network.
+   */
+  if (isError) {
+    return (
+      <div className="p-4 md:p-6">
+        <EmptyState
+          icon="AlertTriangle"
+          title="Couldn't load your businesses"
+          description="Something went wrong on the way — your listings are safe. Check your connection and try again."
+        />
+        <div className="mt-4 flex justify-center">
+          <Button size="sm" onClick={() => void refetch()}>Try again</Button>
+        </div>
+      </div>
+    )
+  }
+  if (!biz) {
     return <div className="p-4 md:p-6"><EmptyState icon="Building2" title="No business found" description="Create your business profile first." /></div>
   }
 
