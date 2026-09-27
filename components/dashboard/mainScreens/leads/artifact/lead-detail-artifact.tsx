@@ -19,7 +19,7 @@ import { toast } from "sonner"
 import {
   LeadAPI, type Lead, type LeadStatus, type LeadSource, type LeadEventType,
 } from "@/lib/api/leads"
-import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
+import { waDigits, logContact } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
 import { openBookingForm } from "@/components/dashboard/mainScreens/artifact/booking-form"
 import { useBusiness } from "@/context/BusinessContext"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
@@ -325,7 +325,7 @@ export function LeadDetailArtifact({ leadId }: { leadId: number }) {
       const t = e.target as HTMLElement
       if (t.closest("[data-retry]")) { qc.invalidateQueries({ queryKey: ["lead-detail", leadId] }); return }
       const wa = t.closest("[data-wa]") as HTMLElement | null
-      if (wa) { const p = waDigits(wa.dataset.wa); if (p) window.open(`https://wa.me/${p}?text=${encodeURIComponent("Assalam-o-Alaikum! Aap ki puchh-gichh ka shukriya.")}`, "_blank", "noopener"); return }
+      if (wa) { const p = waDigits(wa.dataset.wa); if (p) window.open(`https://wa.me/${p}?text=${encodeURIComponent("Assalam-o-Alaikum! Aap ki puchh-gichh ka shukriya.")}`, "_blank", "noopener"); void logContact(leadId, "whatsapp"); return }
       const tel = t.closest("[data-tel]") as HTMLElement | null
       if (tel?.dataset.tel) { window.location.href = `tel:${tel.dataset.tel.replace(/\s/g, "")}`; return }
       // advance the lead's stage in place

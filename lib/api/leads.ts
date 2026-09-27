@@ -291,6 +291,27 @@ export class LeadAPI {
     return res.data?.data;
   }
 
+  /**
+   * POST /api/v1/leads/:id/contacted — LOG ONLY, sends nothing.
+   *
+   * Call this after handing off to wa.me or the dialer. It stamps
+   * `lastActivityAt` and, on the first reply, `respondedAt` — which is what
+   * clears the lead from "unanswered enquiries" and feeds response-time
+   * analytics.
+   *
+   * Deliberately NOT `sendWhatsapp`: that one always invokes the active
+   * provider, so calling it after a wa.me hand-off sends the message twice.
+   * The endpoint exists precisely for this split and nothing was calling it —
+   * which is why 62 leads read as unanswered, the oldest at 116 days, on an
+   * account whose vendor had been replying on WhatsApp the whole time.
+   */
+  static async markContacted(
+    id: number,
+    channel: "whatsapp" | "call" | "email" | "other" = "whatsapp",
+  ): Promise<void> {
+    await axiosInstance.post(`/api/v1/leads/${id}/contacted`, { channel });
+  }
+
   /** DELETE /api/v1/leads/:id — soft delete. */
   static async remove(id: number): Promise<void> {
     await axiosInstance.delete(`/api/v1/leads/${id}`);

@@ -79,6 +79,29 @@ const EXTRA_CSS = String.raw`
 const waSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 20l1.2-5.6A8.4 8.4 0 1 1 21 11.5z"/></svg>`
 const callSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>`
 
+/**
+ * WW-LEADREPLY — record that the vendor reached this lead.
+ *
+ * Both lead screens hand off to wa.me or the dialer and, until now, told the
+ * server nothing. `respondedAt` is stamped on the first transition off "new",
+ * on POST /leads/:id/whatsapp, and on POST /leads/:id/contacted — none of which
+ * a wa.me hand-off triggers. So a vendor could answer every enquiry on WhatsApp
+ * and the platform still counted them all unanswered: 62 on the test account,
+ * the oldest 116 days, with response-time analytics reading zero.
+ *
+ * `contacted` is the right endpoint and exists for exactly this: it logs and
+ * stamps WITHOUT sending, where `sendWhatsapp` would fire the provider a second
+ * time and double-message the customer.
+ *
+ * Best-effort and silent: the vendor's WhatsApp is already open, and a failed
+ * log is not worth a toast on top of it.
+ */
+export async function logContact(leadId: string | number | undefined, channel: "whatsapp" | "call") {
+  const id = Number(leadId)
+  if (!Number.isFinite(id) || id <= 0) return
+  try { await LeadAPI.markContacted(id, channel) } catch { /* best effort */ }
+}
+
 /** PK number → wa.me digits: strip non-digits, drop a leading 0, ensure 92. */
 export function waDigits(phone?: string | null): string {
   let d = (phone || "").replace(/\D/g, "")
@@ -95,7 +118,7 @@ function rowHtml(l: Lead): string {
   const editBtn = `<button class="iconbtn" data-lead-edit="${l.id}" title="Edit" aria-label="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`
   const canBook = !["booked", "lost", "archived"].includes(l.status || "")
   const bookBtn = canBook ? `<button class="iconbtn book" data-lead-book="${l.id}" title="Booking banayein" aria-label="Booking banayein"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M12 13v4M10 15h4"/></svg></button>` : ""
-  const telWa = phone ? `<button class="iconbtn" data-tel="${escHtml(phone)}" title="Call" aria-label="Call">${callSvg}</button><button class="iconbtn wa" data-wa="${escHtml(phone)}" title="WhatsApp" aria-label="WhatsApp">${waSvg}</button>` : ""
+  const telWa = phone ? `<button class="iconbtn" data-tel="${escHtml(phone)}" data-lead-id="${l.id}" title="Call" aria-label="Call">${callSvg}</button><button class="iconbtn wa" data-wa="${escHtml(phone)}" data-lead-id="${l.id}" title="WhatsApp" aria-label="WhatsApp">${waSvg}</button>` : ""
   const acts = `<div class="lead-acts">${telWa}${bookBtn}${editBtn}</div>`
   return `<tr data-status="${st.tab}">
     <td><div class="c-couple" data-lead-view="${l.id}" style="cursor:pointer"><span class="ava">${escHtml(initialsOf(name))}</span><div><div class="cc-nm">${escHtml(name)}</div><div class="cc-ev">${escHtml(phone || "—")}</div></div></div></td>
@@ -120,7 +143,7 @@ function leadQuickViewHtml(l: Lead, businesses?: BizLite[]): string {
   const fuTxt = fu && !isNaN(fu.getTime()) ? fu.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) : "—"
   const item = (k: string, v: string) => `<div class="qv-item"><div class="k">${k}</div><div class="v">${escHtml(v || "—")}</div></div>`
   const telWa = phone
-    ? `<button class="btn btn-ghost sm" data-tel="${escHtml(phone)}">${callSvg} Call</button><button class="btn btn-ghost sm" data-wa="${escHtml(phone)}">${waSvg} WhatsApp</button>`
+    ? `<button class="btn btn-ghost sm" data-tel="${escHtml(phone)}" data-lead-id="${l.id}">${callSvg} Call</button><button class="btn btn-ghost sm" data-wa="${escHtml(phone)}" data-lead-id="${l.id}">${waSvg} WhatsApp</button>`
     : `<span style="font-size:12px;color:var(--ink-3)">Koi phone nahi</span>`
   const canBook = !["booked", "lost", "archived"].includes(l.status || "")
   const nx = nextStageOf(l.status)
@@ -271,9 +294,9 @@ export function LeadsArtifact() {
         const t = e.target as HTMLElement
         if (t.closest("[data-retry]")) { qc.invalidateQueries({ queryKey: ["leads-artifact"] }); return }
         const wa = t.closest("[data-wa]") as HTMLElement | null
-        if (wa) { const p = waDigits(wa.dataset.wa); if (p) window.open(`https://wa.me/${p}?text=${encodeURIComponent("Assalam-o-Alaikum! Aap ki puchh-gichh ka shukriya.")}`, "_blank", "noopener"); return }
+        if (wa) { const p = waDigits(wa.dataset.wa); if (p) window.open(`https://wa.me/${p}?text=${encodeURIComponent("Assalam-o-Alaikum! Aap ki puchh-gichh ka shukriya.")}`, "_blank", "noopener"); void logContact(wa.dataset.leadId, "whatsapp"); return }
         const tel = t.closest("[data-tel]") as HTMLElement | null
-        if (tel) { if (tel.dataset.tel) window.location.href = `tel:${tel.dataset.tel.replace(/\s/g, "")}`; return }
+        if (tel) { if (tel.dataset.tel) { window.location.href = `tel:${tel.dataset.tel.replace(/\s/g, "")}`; void logContact(tel.dataset.leadId, "call") } return }
         // ── right-side drawer: create / edit ──
         // quick-view drawer (row click)
         const lv = t.closest("[data-lead-view]") as HTMLElement | null
