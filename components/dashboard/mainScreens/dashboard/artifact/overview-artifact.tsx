@@ -221,13 +221,24 @@ function workCard(w: ArtData["work"]): string {
   return `<div class="card">${head}${leadBlock}${pastBlock}${unpaidBlock}</div>`
 }
 
+/**
+ * WW-DUESCOPE — the two "baqaya" figures are different questions.
+ *
+ * The KPI below counts what is outstanding on bookings whose EVENT falls in
+ * the selected range (this year). Receivables sums every open instalment
+ * whatever the date, including next season's. On the test account that is
+ * Rs 2,37,41,619 here and Rs 2,73,21,489 there — and the "chase" chip links
+ * straight from one to the other, so a vendor saw the number change as they
+ * clicked. Both are correct; calling this one "abhi tak pending" is what made
+ * them read as a contradiction, so it now names its own scope.
+ */
 function buildContent(d: ArtData, greeting: string, todayStr: string): string {
   const k = d.kpis
   const dash = (x: string) => (d.moneyErr ? "—" : x)
   const kpiRow = `<section class="kpis" aria-label="Key figures">
     ${kpiCard("Is mahine bookings", dash(String(k.bookings)), "is saal", 0, chip(k.bookingsDelta))}
     ${kpiCard("Khata — aya paisa", dash(`<span class="rs">Rs</span>${pkNum(k.revenue)}`), "is saal received", 1, chip(k.revenueDelta))}
-    ${kpiCard("Baqaya — vasool karna", dash(`<span class="rs">Rs</span>${pkNum(k.due)}`), "abhi tak pending", 2, `<span class="chip">chase</span>`, "/dashboard/receivables")}
+    ${kpiCard("Baqaya — vasool karna", dash(`<span class="rs">Rs</span>${pkNum(k.due)}`), "is saal ke events ka", 2, `<span class="chip">chase</span>`, "/dashboard/receivables")}
     ${kpiCard("Aane wale (7 din)", dash(String(k.upcoming)), "agle hafte ki bookings", 3, `<span class="chip">7d</span>`, "/dashboard/calendar")}
   </section>`
 
