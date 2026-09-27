@@ -276,9 +276,16 @@ positive both times before that.
   vendor needs.
 - Instalment proposal (§ Appendix) and price-change-after-creation are
   unchanged — both are features, not gaps.
-- Of the eight analytics endpoints with no home, five now have one. What is left
-  is `getTodaysBookings` / `getUpcomingBookings7Days` (the overview already
-  answers both from another source) and response times.
+- The eight analytics endpoints with no home are now down to two:
+  `getTodaysBookings` and `getUpcomingBookings7Days`, and the overview already
+  answers both from the KPI endpoint (`upcomingBookings.value` feeds the
+  "Aane wale (7 din)" card), so they are duplicates rather than gaps.
+  **Response times got a card**, and it is the bluntest number in the product:
+  on the reference vendor, 25 leads, **4 answered, 21 never** — median 56 days.
+  The endpoint scopes by vendor rather than by business, so the card says
+  "saari venues" instead of implying one; its buckets and hours are re-said in
+  Roman Urdu (the endpoint answers in English hours, and "1350 ghante" reads as
+  a glitch).
 
 ---
 
