@@ -1,267 +1,222 @@
-# Module audit — weddingwala.pk, 2026-09-27 (pass 1)
+# Module audit — weddingwala.pk, 2026-09-27
 
-Every claim below was checked against **live production** — the console driven
-headed in Playwright as the vendor, and the API probed with a real session.
-Where I am proposing rather than reporting, it says so.
-
-**Scope of this pass:** all 48 vendor-console screens loaded and inventoried;
-the Bookings module taken apart in depth because that is where your three
-questions live. Remaining modules are queued at the end — I have not yet given
-Leads, Quotes, Khata, Venue-OS or the customer surface the same treatment, and
-I would rather say so than imply coverage I have not done.
+Every claim was checked against **live production** — the console driven headed
+in Playwright, the API probed with a real session, and the whole frontend read
+by two static scans. Where I am proposing rather than reporting, it says so.
+Where I could not verify something, it says that too.
 
 ---
 
-## 0. The health baseline — so the problems below are read correctly
+## 0. Coverage — what I actually looked at
 
-All 48 console screens load without an error banner. None is blank, none 500s,
-none is a legacy shell. That is a genuinely good starting point and it is worth
-saying before a long list of gaps.
-
-What the sweep found is not breakage. It is **reach**: things that are built,
-correct, and that nobody can get to.
-
----
-
-## 1. Your three questions, answered
-
-### 1.1 Installments — the schedule exists, the negotiation does not
-
-**What is already there** (`src/services/bookingInstallmentService.js`, BK-042):
-
-- `BookingInstallment` with `sequence`, `label`, `amount`, `amountPaid`, `dueAt`, `status`, `paidAt`
-- a schedule **seeded automatically at booking creation** — exactly 2 rows: advance, then balance
-- balance due date = event day minus `INSTALLMENT_BALANCE_DAYS_BEFORE` (default 7), anchored at Pakistan midnight (+05:00)
-- `GET /bookings/:id/installments` returns `{ installments, totals }` — live, 200
-- a daily sweeper flips past-due `pending` rows to `overdue`
-- the three payment paths mark rows paid as money lands
-- `UNIQUE(bookingId, sequence)` makes seeding idempotent
-
-**What is missing — and it is the whole of what you asked for:**
-
-| | |
+| surface | depth |
 |---|---|
-| Customer proposes a plan | **no** — the 2 rows are fixed, nobody chooses them |
-| Custom number of instalments | **no** — hardcoded advance + balance |
-| Vendor sees a proposed plan | **no** |
-| Vendor approves / counters / declines | **no** |
-| Either side edits an agreed plan | **no** |
-| Any UI at all for instalments | **no** — the read endpoint has no consumer on the vendor booking screen |
+| 48 vendor-console screens | **rendered + inventoried** (276 actions, 40 drawers, 20 confirms, 99 fields) |
+| Bookings module | **taken apart** — every action, drawer, field, endpoint |
+| Every unreferenced API export | **probed against production** |
+| All 682 components | **import-graph reachability** from 373 route entries |
+| Customer surface, 13 routes | rendered clean, not taken apart |
+| Admin console, 14 routes | **NOT VERIFIED** — the AdminGuard blocks a vendor account; I have no admin login |
+| 360px mobile, 8 key screens | checked; one real finding |
+| Leads/Quotes/Khata/Venue-OS internals | rendered + inventoried, **not** taken apart |
 
-So the object model is roughly right and the lifecycle plumbing (due dates,
-overdue sweeper, payment matching) already works. What is absent is the
-*conversation*.
-
-**Proposed design.** Keep the seeded 2-row plan as the default — never make a
-couple design a payment plan to book a hall. Add a request on top:
-
-```
-customer proposes  →  PROPOSED   (n rows, amounts + dates, must sum to total)
-vendor counters    →  COUNTERED  (vendor's rows, customer accepts or walks)
-vendor approves    →  ACTIVE     (replaces the seeded rows atomically)
-vendor declines    →  DECLINED   (seeded plan stands)
-```
-
-Constraints that matter in Pakistan specifically:
-
-- **The last instalment must clear before the event**, not on the day. A venue
-  that lets the balance ride to the morning of the barat is carrying the risk
-  for a wedding it cannot un-cater. Default the final row to event − 7 days
-  (the existing `INSTALLMENT_BALANCE_DAYS_BEFORE`) and refuse a plan that
-  pushes past it without an explicit vendor override.
-- **Salary-day alignment.** Most Pakistani households are paid on the 1st.
-  When suggesting dates, snap to the 1st–5th rather than "every 30 days" — it
-  is the difference between a plan that is kept and one that is chased.
-- **3 instalments is the realistic ceiling** for a 3–6 month booking horizon.
-  Offer 2 / 3 / custom, not a free-form builder.
-- **Show the plan as a ladder with what is paid, due, and overdue** — the data
-  is already there; nothing renders it.
-- Reuse the existing overdue sweeper rather than inventing reminders: it
-  already flips rows, and `/dashboard/receivables` already ages money.
-
-This is a **new** capability, not a missing door. It needs backend work
-(a proposal table or a status on the existing rows) and UI on both sides.
-
-### 1.2 Vendor changing the price — three ways in, none reachable
-
-This is the more urgent of the two, because the negotiation is how business is
-actually done here and the product currently refuses to record it.
-
-**What I found, in order of severity:**
-
-**(a) A negotiated price on a package is impossible to record.**
-The vendor's booking drawer has a "Tay raqam" (agreed amount) field — but it is
-labelled *"sirf agar package select nahi"* and the code is explicit:
-
-```ts
-const agreed = Number(val(shadow, "bf-agreed"))
-if (!pkg && agreed) vendor.agreedAmount = agreed     // ← only when NO package
-```
-
-So a vendor who picks *Gold — Barat Package* at Rs 760,000 and settles at
-Rs 700,000 — which is an ordinary Tuesday in this market — has two bad options:
-book at the list price and let the khata lie, or drop the package and lose the
-menu and package linkage with it. **This is the single highest-value small fix
-in this audit.**
-
-**(b) After creation, there is no price edit at all.**
-`PATCH /bookings/:id` accepts `totalAmount` from a vendor (the controller
-explicitly pushes it into `allowedFields` for non-customers). Nothing in the
-console calls it. The booking detail screen's money controls are
-`data-settle-*`, and those are **final-headcount settlement** (per-head
-billing), not a price change — a different thing entirely.
-
-**(c) The order builder — a whole pricing engine with no screen.**
-`PUT /bookings/:id/order-lines` + `computeOrderTotals` exist and work;
-`GET /bookings/:id/order` returns `{ lines, totals, deposit, profit,
-advanceTransfer, spaceChecks }` — I called it on production, 200. The frontend
-wrapper `lib/api/bookingOrder.ts` is written. **No component imports it.**
-This is the seventh instance of the missing-door pattern.
-
-**Proposed design.** Do not build a new pricing system — surface the one that
-exists:
-
-1. Let `agreedAmount` override a package price (drop the `!pkg` condition),
-   and record the delta as a discount with a reason. Every venue gives
-   "shadi season discount" or a family rate; the khata should show it as a
-   discount, not a fictional list price.
-2. Add a **"Rate change karein"** drawer on the booking detail: new total,
-   reason, and — critically — what it does to the instalment plan and the
-   outstanding balance, shown before saving.
-3. Price changes are money history. Write them through a transition that
-   appends a row, the way `BookingStatusHistories` does for status. A price
-   that changed with no record is how disputes become unwinnable.
-4. When the couple has already paid, a reduction below what they have paid
-   must produce a refund obligation, not a negative balance. The refund
-   engine already handles that — route into it rather than around it.
-
-### 1.3 "One modal for the whole booking" — you already have it, and it should stay one-sided
-
-**On the vendor side it exists.** `openBookingForm` is a single drawer
-(195 lines) collecting: venue, city, date, time, hall/sub-venue, package,
-menu, guests, gender mode, customer name/email/phone, agreed price, advance,
-payment method, special requests. That is the fast path you are describing, and
-it is live on `/dashboard/bookings`.
-
-**On the customer side I would not do it**, and I want to give you the real
-reason rather than just agreeing:
-
-The public booking flow is 7 steps because four things in it are genuinely
-sequential — each answer changes what the next question even is:
-
-- the hall you pick changes the capacity ceiling, and a venue models halls in
-  **two mutually exclusive ways** (`subVenueSpaces` vs `spaces`)
-- the package you pick changes which menus exist
-- the menu enforces the one-dish rule
-- the date drives a **three-state** availability check (free / partial /
-  unknown — where "unknown" deliberately stays permissive so a network blip
-  does not refuse every date) and a 48-hour server-owned hold
-
-Collapsing that into one modal means showing a couple every field at once,
-most of them disabled or wrong until earlier ones are answered. On a 360px
-phone — which is most of your traffic — that is worse, not faster.
-
-**What I would do instead**, and I think it gets you the speed you actually
-want:
-
-- **Keep the steps, kill the page loads.** One sheet, steps sliding inside it,
-  progress visible, state preserved. It feels like one modal without lying
-  about the dependencies.
-- **Collapse steps that are already decided.** The flow derives its step list
-  (a venue with no menus renders no Menu step) — lean on that harder. A venue
-  with one hall should never ask "which hall?".
-- **Add a genuine one-screen express path for the common case**: enquiry with
-  date + guests + phone, vendor calls back. In this market a large share of
-  bookings are closed on the phone anyway; the product should stop pretending
-  every booking is self-serve.
-- **Let the couple leave and come back.** Draft persistence exists
-  (`lib/draftStorage/`, `useDraftSync`) — it is create-mode only. A 7-step form
-  a bride abandons at step 5 on a patchy connection should still be there.
-
-So: yes to one surface, no to one form.
+**44/44 console screens and 13/13 customer screens render clean** with zero JS
+errors. Nothing is broken. What follows is about *reach* and *honesty of state*.
 
 ---
 
-## 2. Found while sweeping — things nobody can reach
+## 1. The dominant defect: a finished back end behind a missing door
 
-### 2.1 Change requests are a dead end, and it is live
+Found **seven** times now. In each case the endpoint, the service and often the
+admin screen were complete; nothing in the product could reach them.
 
-The customer's booking page renders **"Change requests — Need to add guests,
-swap a slot, or change a package? Send a request to the vendor."** with a
-working *Request change* button. The backend is complete:
-`POST /bookings/:id/change-requests`, `…/approve`, `…/decline`,
-`…/initiate-topup`.
+| feature | back end | user entry point |
+|---|---|---|
+| Vendor claim | complete | missing → fixed |
+| Refund approval | complete | missing → fixed |
+| Chat attachments | complete | missing → fixed |
+| Vendor media | complete | missing → fixed |
+| KYC / verification | complete | missing → fixed |
+| Post-event completion | complete | missing → fixed |
+| **Mid-booking change requests** | complete | **missing → fixed in this pass** |
 
-**The vendor can never see them.** `VendorChangeRequestsCard` is imported only
-by `booking-detail-view.tsx` and `booking-detail-sheet.tsx`; those are reached
-only from `bookings-redesigned-view.tsx`, which **nothing imports**. The live
-screen is `booking-detail-artifact.tsx`, whose only controls are navigate,
-cancel, withdraw-claim, contact, settle, and (as of yesterday) complete.
+### 1.1 Change requests were a dead end — and the customer half is live
 
-Evidence from production — every change request this vendor has ever received:
+The couple's page has always offered *"Send a request to the vendor"*. The back
+end has always had approve, decline and a separate path for a cancellation
+request. The answering card hung off `bookings-redesigned-view`, which nothing
+has imported since the artifact port.
+
+Every request expired unanswered:
 
 | booking | type | status | raised |
 |---|---|---|---|
-| 688 | guest_count | **expired** | 2026-08-26 |
-| 673 | guest_count | **expired** | 2026-08-26 |
-| 563 | guest_count | **expired** | 2026-08-26 |
-| 548 | guest_count | **expired** | 2026-08-26 |
+| 688, 673, 563, 548 | `guest_count` | **expired** | 2026-08-26 |
 
-Four couples asked to change their guest count. All four requests expired
-unanswered, because the answer screen does not exist. This is worse than the
-other missing doors: the customer-facing half is live and **promises a reply**.
+Worse than the other six, because the customer-facing half **promises a reply**.
+`cancel_request` rides the same queue, so a couple asking to cancel inside the
+notice period was equally invisible.
 
-**Fix:** a change-requests card on the booking-detail artifact with
-approve / decline / counter, plus a count on the bookings list so it is visible
-without opening each booking. Until then, consider hiding the customer CTA —
-a button that silently expires is worse than no button.
-
-### 2.2 `GET /packages` returns zero for everything
-
-`/api/v1/packages` and `/api/v1/packages?businessId=3358` both return **0**,
-anonymously and authenticated, while `/packages/vendor-packages` returns the
-real three (Silver Rs 325,000, Gold Rs 760,000, and one at Rs 1,320,000) and
-`/businesses/3358` embeds 4.
-
-No customer-facing damage today — the public vendor page reads packages from
-the business payload, not this endpoint. But it is a public listing endpoint
-that silently returns nothing, and anything built on it later will appear to
-work and show an empty list. Worth fixing or deleting rather than leaving as a
-trap.
+**Fixed and verified**: raised as the customer, answered as the vendor both ways
+— declined with a note (status `declined`, note persisted) and approved
+(guests 250 → 262, total correctly unchanged on a flat package).
 
 ---
 
-## 3. What I have NOT done yet
+## 2. A whole analytics layer, computed and unreachable
 
-Stated plainly so you can judge the coverage:
+Nine endpoints, all returning **real data on production**, none rendered
+anywhere. `/dashboard/insights` fetches only KPIs and revenue trends.
 
-- **Leads, Quotes, Calendar, Customers, Chat, Function sheets** — loaded and
-  inventoried, not taken apart. Quotes in particular: `FEAT_QUOTE_NEGOTIATION`
-  exists and I have not checked whether the negotiation loop is reachable.
-- **Khata / money cluster** (payments, receipts, receivables, PDCs, expenses,
-  money, revenue, reports, tax, billing) — loaded; `/revenue` and `/reports`
-  render 0 rows, which I have not yet established as "no data" vs "broken".
-- **Venue-OS cluster** (inventory, kitchen-prep, generator-fuel, halal-certs,
-  drone-NOC, field, reliability, staff, suppliers) — loaded, all render.
-- **The whole customer surface** — only the booking detail and bookings list
-  were examined, during the pay-CTA work.
-- **Admin console** (12 routes) — not touched.
-- **Mobile at 360px** — not checked this pass, and the CLAUDE.md notes two
-  past cases where a fixed overlay made a primary button unreachable.
+| endpoint | what it returns today |
+|---|---|
+| `/analytics/health-signals` | **62 unanswered enquiries, oldest 116 days** |
+| `/analytics/cash-flow-forecast` | Rs 27.3M total, Rs 5.4M in horizon, peak Oct 2026 Rs 2.6M |
+| `/leads/conversion-analytics` | 80 leads → 10 booked, 12.5% |
+| `/analytics/response-times` | responded vs unresponded, by source |
+| `/analytics/seasonality` | months, YoY, peaks |
+| `/expenses/booking/:id/pnl` | per-booking profit |
+| `/businesses/:id/pricing-rules` | rules, bounds, engine flag |
+| `/staff/team-calendar` | shifts by day |
+| `/analytics/whatsapp-templates` | template performance |
+
+**62 enquiries unanswered, the oldest waiting 116 days**, is the worst number on
+this platform. Its only consumer was the React overview the artifact port
+replaced — leaving two dead imports behind and the number going nowhere.
+
+**Fixed**: it is now the first row of *Tawajjo chahiye*, styled as a warning,
+because it is the one line there still *losing* business rather than recording
+it. The other eight remain unbuilt — they need a decision about where they live,
+not a bug fix.
 
 ---
 
-## 4. Order I would do this in
+## 3. The vendor could not record the price they agreed
 
-1. **Change-requests card on the vendor booking detail** — live customers are
-   being ignored today. Smallest fix, worst current harm.
-2. **Agreed price on a package** — drop the `!pkg` condition, record the
-   discount. One-line shape, unblocks how business is actually done.
-3. **Price change after creation**, routed through history and the refund
-   engine.
-4. **Instalment proposal + approval** — the real new build of the three.
-5. Booking flow: one sheet, derived steps, express enquiry path, draft resume.
-6. Continue the module sweep at this depth (§3).
+A marquee lists Gold at Rs 760,000 and closes at Rs 700,000. Ordinary here, and
+impossible to record.
 
-Items 1–3 are days, not weeks, because in each case the engine is already
-written and tested — what is missing is the screen.
+`agreedAmount` looks like the field and is not — pricing treats it as a Rs 0
+rescue for an unpriced listing and refuses to override a package. The form's own
+label said so (*"sirf agar package select nahi"*). After creation there was **no
+price edit at all**: the `data-settle-*` controls are final-headcount
+settlement, a different thing. And `PUT /bookings/:id/order-lines` — a complete
+pricing engine with its API wrapper written — is imported by nothing.
+
+**Fixed** via `negotiatedAmount`, which routes to the map that genuinely
+replaces the catalogue price, under the same ownership check the quote map uses.
+Verified six ways including that a customer sending it is ignored.
+
+**One consequence to decide on:** a vendor can now book **below their own
+minimumPrice** (Rs 300,000 against a Rs 350,000 floor was accepted). That is the
+documented semantics of this map, and the floor is a listing guard rather than a
+legal minimum — but it is a real change in what the system permits.
+
+---
+
+## 4. Honesty of state — 13 screens lied when a request failed
+
+The console canon says `isError → errorBannerHtml`. Thirteen screens fetch data
+and handle no error at all. Two were worse than empty:
+
+- **Settings** and **Profile** showed *"load ho rahi hain…"* **forever** on a
+  failed request — a permanent loading state with nothing to click.
+- **Booking detail** showed *"Ye booking nahi mili"* — telling a vendor their
+  customer's booking **does not exist** when the network had simply dropped.
+
+**Fixed** those three, each with the shell's retry button wired. The remaining
+ten are lower-traffic venue-OS screens (drone-NOC, halal-certs, generator-fuel,
+trade-ops, automation, slots, calendar, chat, cancellation-policy, onboarding)
+and are listed here rather than silently left.
+
+Also fixed: **collaborations "Cancel"** withdrew an invite from another vendor's
+inbox on one click, with no confirm — the one survivor of the un-gated-action
+sweep. (`kitchen-prep delrow` looked like a second one and is **not**: it removes
+an unsaved row from a local form builder.)
+
+---
+
+## 5. Mobile, 360px
+
+- **No page-level horizontal overflow on any screen** — the main risk, clean.
+- Every "covered control" my first sweep reported was **my own instrument**: the
+  TanStack Query devtools button (z-index 100000, bottom-right) on the dev
+  server. It is correctly gated to `NODE_ENV === "development"`; on production
+  the chat Send button is fully visible. Reported here because a false "7 of 8
+  screens broken" is worse than no data.
+- **One real finding:** at 360px `/dashboard/chat` stacks the inbox list *and*
+  the open conversation on one screen, clipping the second inbox row. A phone
+  should show list → tap → conversation with a back button. Pakistan is a
+  mobile-first market; this is the screen a vendor uses most.
+
+---
+
+## 6. Smaller findings
+
+- **`GET /packages` returns 0 for everything**, anonymously and authenticated,
+  while `/packages/vendor-packages` returns the real three. No damage today —
+  the public page reads packages off the business payload — but it is a public
+  listing endpoint that silently returns nothing, and anything built on it later
+  will look like it works.
+- **Cancelled bookings appear under "Aane wale events"** (upcoming) on the
+  dashboard. They carry a Cancelled chip, so it is clutter rather than a lie.
+- **48 unreferenced API exports** in total; the Stripe client
+  (`lib/api/payments.ts`, 6 functions) is dead weight from a removed integration
+  and can be deleted.
+- **260 unreachable components**, 110 of them known artifact-migration residue.
+
+---
+
+## 7. What I have NOT done
+
+- **Admin console (14 routes) is unverified.** The guard blocks a vendor
+  account; every route returned the same shell. I need an admin login.
+- **Leads, Quotes, Khata cluster, Venue-OS cluster** are rendered and
+  inventoried but not taken apart the way Bookings was.
+- **Customer surface** beyond bookings — quotes, plan, umbrellas, complaints,
+  payments — rendered clean, logic not traced.
+- The **eight remaining analytics endpoints** have no home yet.
+
+---
+
+## 8. Order I would work in
+
+1. The eight unreachable analytics surfaces — cash flow and lead response first
+2. Chat at 360px (list → conversation navigation)
+3. Error states on the remaining ten screens
+4. Instalment proposal + vendor approval (§ see the design below)
+5. Price change *after* creation, through history and the refund engine
+6. Take Leads / Quotes / Khata / Venue-OS apart properly
+7. Admin console, once I can sign in
+
+---
+
+## Appendix — instalments, and the "one modal" question
+
+**Instalments.** The plumbing exists: `BookingInstallment` with sequence, label,
+amount, due date and status; a schedule seeded at creation; due dates anchored
+at Pakistan midnight; an overdue sweeper; payment matching; and the schedule
+*is* rendered on the booking (the "Qist schedule" block). What does not exist is
+the **conversation**: the plan is a hardcoded two rows (advance + balance),
+nobody proposes it, nobody approves it.
+
+Proposed: keep the seeded plan as the default, add
+`PROPOSED → COUNTERED → ACTIVE / DECLINED` on top. Pakistan-specific
+constraints: cap at 3 instalments; snap dates to the 1st–5th (salary day — the
+difference between a plan kept and a plan chased); refuse a final instalment
+later than event − 7 days without an explicit override.
+
+**"One modal for the whole booking."** The vendor already has it —
+`openBookingForm` collects venue, hall, date, package, menu, guests, contact,
+agreed price and advance in a single drawer. For **customers** I would not: the
+seven steps are sequential because each answer changes the next question (hall →
+capacity, and a venue models halls in two mutually exclusive ways; package →
+which menus; menu → the one-dish rule; date → three-state availability and a
+48-hour server-owned hold). One modal on a 360px phone means most fields
+disabled or wrong.
+
+Better: **one sheet with sliding steps** (feels like one modal, keeps the
+dependencies honest), lean harder on the derived step list so a single-hall
+venue never asks "which hall?", add a genuine one-screen enquiry path for the
+many bookings that close on the phone anyway, and let a couple resume a draft —
+`lib/draftStorage/` exists and is create-mode only.

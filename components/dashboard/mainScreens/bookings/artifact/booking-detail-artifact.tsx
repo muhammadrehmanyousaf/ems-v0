@@ -30,7 +30,7 @@ import { bookingStatusLabel } from "@/lib/booking-status-label"
 import { spaceNameOf } from "@/lib/utils/booking-space"
 import { bookedOn, receivedOn, outstandingOn } from "@/lib/utils/booking-money"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
-import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 /* ── formatting ──────────────────────────────────────────────── */
 const rs = (n: number) => `<span class="rs">Rs</span> ${pkNum(n)}`
@@ -881,6 +881,19 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
     const wwc = s.getElementById("wwc"); if (!wwc) return
     const booking = bookingQ.data?.booking
     if (bookingQ.isLoading) { wwc.innerHTML = `<div class="loadwrap">Booking load ho rahi hai…</div>`; return }
+    /**
+     * A failed request is not a missing booking.
+     *
+     * Both used to land on "Ye booking nahi mili" — so a dropped connection
+     * told a vendor their customer's booking did not exist. On a venue laptop
+     * on patchy wifi that is the difference between "try again" and a phone
+     * call to support. The shell's banner carries a retry, so say the true
+     * thing and offer the button.
+     */
+    if (bookingQ.isError) {
+      wwc.innerHTML = `<button class="back" data-nav-btn="/dashboard/bookings">${svg(I.back, 2.2)} Sab bookings</button>${errorBannerHtml("Booking load nahi hui — internet check karke dobara koshish karein.")}`
+      return
+    }
     if (!booking) { wwc.innerHTML = `<button class="back" data-nav-btn="/dashboard/bookings">${svg(I.back, 2.2)} Sab bookings</button><div class="loadwrap">Ye booking nahi mili.</div>`; return }
     wwc.innerHTML = buildDetail(
       booking,
@@ -900,7 +913,7 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
     // update the crumb with the real customer name
     const crumb = s.querySelector(".crumb b"); if (crumb) crumb.textContent = booking.customerName || "Booking"
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, bookingQ.data, bookingQ.isLoading, payQ.data, rcQ.data, histQ.data, sheetsQ.data, instQ.data, settleQ.data, depQ.data, refundQ.data, crQ.data])
+  }, [ready, bookingQ.data, bookingQ.isLoading, bookingQ.isError, payQ.data, rcQ.data, histQ.data, sheetsQ.data, instQ.data, settleQ.data, depQ.data, refundQ.data, crQ.data])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
@@ -955,6 +968,9 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
         return
       }
       // cancel / reject — open the reason drawer (money-sensitive, gated)
+
+      // the error banner ships a retry button; the caller has to honour it
+      if (t.closest("[data-retry]")) { invalidateAll(); return }
 
       // ── customer change requests ───────────────────────────────────────
       // Approving a cancel_request ENDS the booking and refunds in full, so it

@@ -16,7 +16,7 @@ import { UsersAPI, type ApiUser } from "@/lib/api/dashboard"
 import { useUser } from "@/context/UserContext"
 import { CITIES } from "@/lib/seo/constants"
 import { validatePkPhone, normalizePkPhone, validateEmail, normalizeEmail } from "@/lib/validation/pk-fields"
-import { useArtifactShell, escHtml, initialsOf } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, escHtml, initialsOf, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const STR_FIELDS = ["fullName", "phoneNumber", "city", "subArea", "bookingEmail", "primaryContactNumber", "secondaryContactNumber", "website", "officeAddress"] as const
 
@@ -136,7 +136,7 @@ export function ProfileArtifact() {
   })
   const qc = useQueryClient()
   const { refreshUser } = useUser()
-  const { data } = useQuery({ queryKey: ["profile-me"], queryFn: () => UsersAPI.getMyProfile() })
+  const { data, isError, refetch } = useQuery({ queryKey: ["profile-me"], queryFn: () => UsersAPI.getMyProfile() })
   const user = (data?.user ?? null) as (ApiUser & Record<string, unknown>) | null
   const baseline = React.useRef<Record<string, string>>({})
   const userRef = React.useRef(user); userRef.current = user
@@ -151,6 +151,7 @@ export function ProfileArtifact() {
     const s = shadowRef.current
     if (!s || !ready) return
     const wwc = s.getElementById("wwc"); if (!wwc) return
+    if (isError) { wwc.innerHTML = errorBannerHtml("Account load nahi hua — dobara koshish karein."); return }
     if (!data) { wwc.innerHTML = `<div style="padding:80px 16px;text-align:center;color:var(--ink-3)">Account load ho raha hai…</div>`; return }
     if (!user) { wwc.innerHTML = `<div style="padding:80px 16px;text-align:center;color:var(--ink-3)">Account nahi mila.</div>`; return }
     computeBaseline(user)
@@ -208,6 +209,8 @@ export function ProfileArtifact() {
     }
 
     s.addEventListener("click", (e) => {
+      // the error banner ships a retry button; honour it
+      if ((e.target as HTMLElement).closest("[data-retry]")) { void refetch(); return }
       const t = e.target as HTMLElement
       if (t.closest("#pwtoggle")) { s.getElementById("pwform")?.classList.toggle("on"); return }
       if (t.closest("#pwsave")) { doPassword(); return }
