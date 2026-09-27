@@ -1266,6 +1266,20 @@ export interface CreateBookingVendor {
    * customer's request must never send this; it would simply be ignored.
    */
   agreedAmount?: number;
+  /**
+   * WW-NEGOTIATED — the price the venue actually settled on, which REPLACES the
+   * catalogue price for this line, minimumPrice floor included.
+   *
+   * Distinct from `agreedAmount` above, which is a Rs 0 rescue for an unpriced
+   * listing and is refused the moment a package, menu or floor exists. That
+   * left no way to record the ordinary case here: a marquee lists Gold at
+   * Rs 760,000 and closes at Rs 700,000. The vendor had to either book a price
+   * nobody agreed to, or drop the package and lose the menu linkage with it.
+   *
+   * Honoured only for a caller who OWNS the listing (or a super admin). A
+   * customer's request cannot reach it.
+   */
+  negotiatedAmount?: number;
   packageId?: number | null;
   menuId?: number | null;
   vehicleQuantity?: number;

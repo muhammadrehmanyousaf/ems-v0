@@ -143,6 +143,39 @@ The doc these were written down in (`03-url-conventions-LOCKED.md`) is **not in 
 
 Provider order in [app/layout.tsx](app/layout.tsx): `QueryProvider > UserProvider > NotificationProvider > ChatProvider`. Notification and Chat need the user loaded, so keep them inside `UserProvider`.
 
+### The vendor console is a shadow-DOM "artifact" shell — not ordinary React
+
+All **48** screens under `/dashboard` are artifact screens: `components/dashboard/mainScreens/<module>/artifact/<name>-artifact.tsx`. Each owns a host `<div>`, calls `useArtifactShell(hostRef, opts)` from [components/dashboard/mainScreens/artifact/artifact-shell.tsx](components/dashboard/mainScreens/artifact/artifact-shell.tsx) to get an isolated shadow root, and renders **a string of HTML** into it. Interaction is event delegation on `data-*` attributes, not JSX handlers.
+
+This exists because the design is locked (`docs/design-samples/`) and the shadow root keeps Tailwind and the app's global CSS out. The consequences are not optional:
+
+- **Build markup with the shell's helpers**, never by hand: `escHtml` (every interpolated string), `pkNum` (every figure), `initialsOf`, `errorBannerHtml` for `isError`, `venuePickerHtml`, `initTablePager` / `setPagerFilter`, `savePref` / `loadPref` / `restoreTab`.
+- **Forms go in `openDrawer`/`closeDrawer`; state changes and deletes go through `openConfirm`.** Never `window.confirm` — it breaks the champagne look, and one-click deletes were swept out deliberately.
+- **Playwright locators pierce open shadow roots; `document.querySelectorAll` inside `page.evaluate` does not.** A verification script that reads the DOM directly sees only the nav and reports a perfectly-rendered screen as empty. Take a screenshot before believing an "element missing" result.
+- **React-Query data must be in the effect's dependency array.** The screen re-renders by rebuilding its HTML string inside an effect; omitting `someQuery.data` means the card renders once as empty and never updates. That silently hid an entire refund card on the booking-detail screen, and then nearly hid the dashboard worklist the same way. When adding a query, add its `.data` to the deps.
+
+`overview-artifact.tsx` is the one screen still off `useArtifactShell`.
+
+### Money, and the refund lifecycle (WW-DIRECT-PAY)
+
+The platform **never holds the customer's money.** Payment is vendor-direct (bank transfer / JazzCash / Easypaisa / cash), so a refund is a *vendor obligation the system tracks*, not a gateway instruction it issues.
+
+The state machine (`../ems-v0-backend/src/services/refundRequestService.js`):
+
+```
+RAISED → APPROVED → APPLIED → PAID_BY_VENDOR → ACKNOWLEDGED
+exits:  REJECTED · WITHDRAWN · DISPUTED
+```
+
+**Only the customer can reach ACKNOWLEDGED.** There is no cron and no vendor shortcut — the vendor marking it paid is a *claim*, and the couple confirms or disputes it. `DISPUTED` keeps the obligation open and shows the vendor the complaint verbatim.
+
+Two rules that have each caused real bugs:
+
+- **`downPayment` is money RECEIVED, and every refund writes a NEGATIVE `PaymentReceipt`.** After any money mutation the booking must be re-summed from the ledger via `_syncBookingFromReceipts`. Server paths that skipped it left `downPayment` claiming money the couple had already been given back — 14 bookings on production, Rs 310,250. `GET /bookings/:id/paisa-reconcile` is the check: it returns `reconciled` and a `delta`.
+- **`GET /payments/booking-status` reports the wrong paid/remaining on Completed and Cancelled bookings.** Read money through `lib/booking-money.ts` (client) / `bookingMoney.js` (server) instead.
+
+Booking status is its own forward-only machine (`utils/bookingStatusTransition.js`, BK-081): `Pending(0) → Awaiting Payment(1) → Confirmed(2) → Completed(3)`, with `Cancelled` a separate terminal track. Every transition appends a `BookingStatusHistories` row. It is idempotent — do not write `Booking.status` directly.
+
 ### Design system — the Bridal palette
 
 Tailwind + shadcn/ui (Radix). The revamp palette lives under `theme.extend.colors.bridal` in [tailwind.config.ts](tailwind.config.ts) and is the source of truth the mobile app ports from:
@@ -197,7 +230,12 @@ Four traps that cost real time here:
 
 ## Conventions and traps
 
+- **The most reliable bug shape in this codebase: a finished back end behind a missing door.** Found **six** times in the 2026-09-26 audit — vendor claim, refund approval, chat attachments, vendor media, KYC/verification, and post-event completion. In each case the endpoint, the service, the state machine and often the admin screen were complete and correct, and nothing anywhere in the product could reach them. The claim flow had 4 claims raised against 3,268 claimable listings; `PATCH /bookings/:id` had accepted `status: "Completed"` from day one while 40 bookings sat past their event date with no way to close them. **Before building a feature, grep the backend for it — it is very often already there.** And when you add one, add the entry point in the same change.
 - **Live production.** Every change ships to a system with real vendors and real money. Additive, backward-compatible, zero-downtime. Migrations run on prod *before* the frontend that depends on them.
+- **Public pages cache backend data for an hour.** Every SEO fetch uses `next: { revalidate: 3600 }`, and Vercel's Data Cache is keyed by fetch URL and **shared across deployments** — so a redeploy does not clear it. A newly shipped public-page feature can look undeployed, and a vendor's edit can look lost. `lib/seo/fetch-vendor.ts` tags those fetches (`vendorCacheTag`), `POST /api/revalidate` drops one vendor's tag, and `lib/seo/push-live.ts` is called after a successful vendor media save. To confirm a deploy, grep the served `/_next/static/chunks/*.js` for a string from the new component rather than trusting a stale page.
+- **The public gallery renders at most 9 images** (`images[0]` + `images.slice(1, 9)`). A 10th photo existing and not appearing is the cap, not a cache bug.
+- **Verifying against production: two traps that produce green runs on broken checks.** (1) Vercel **preview** URLs cannot reach the production backend — CORS blocks `/auth/login`, the login page shows *no error*, and Playwright then walks every authenticated page as an anonymous visitor, so every "element absent" assertion passes. Verify authed flows on `localhost:3001` against the production backend; use the preview only to confirm the build. Always assert the session (`localStorage.auth_token`, URL not `/login`) and abort if it is missing. (2) `npx next build 2>&1 | tail -n` reports **tail's** exit code, so it is always 0 — redirect to a file, or read the Vercel deployment status from the GitHub deployments API.
+- **Scope a confirm click to its own dialog.** Chaining a generic `getByRole("button", {name: /confirm|yes|remove|delete/i}).last()` after a remove click matches the *other* remove buttons on a gallery and deletes a second item. That destroyed a live vendor photo during verification. (It was recoverable — see `media/orphans` + `media/restore` — but only because the file itself survives in Cloudinary.)
 - **Feature flags.** The `FEAT_*` gates remaining in `lib/` (`FEAT_PK_PAYMENTS`, `FEAT_PHONE_OTP`, `FEAT_CASH_BOOKING`, `FEAT_WEDDING_PLAN`, `FEAT_QUOTE_NEGOTIATION`, `FEAT_OFFLINE_OUTBOX`, `FEAT_PRIMITIVE_ROUTING`) are the survivors of a deliberate sweep — a portal full of flags defaulting OFF is why it "felt empty". Do not add new ones; ship the feature on.
 - **A flag's frontend state is not what's live.** `FeatureFlagOverrides` in the DB is not authoritative for prod behaviour. Probe the route: 200 = feature absent/open, 401 = present and gated.
 - **Money is already `NUMERIC`** in Postgres. Do not write a money-type migration.

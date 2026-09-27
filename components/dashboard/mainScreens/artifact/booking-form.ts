@@ -62,7 +62,7 @@ function bookingFormBody(prefill?: BookingPrefill, businesses?: BizLite[], activ
     <div class="bf-sec">Package &amp; menu</div>
     <div class="dfield row2"><div><label class="dlabel">Package</label><select id="bf-package"><option value="">— koi nahi —</option></select></div><div><label class="dlabel">Menu</label><select id="bf-menu"><option value="">— koi nahi —</option></select></div></div>
     <div class="bf-hint" id="bf-pricehint">Server final qeemat calculate karega (package/menu/guests/add-ons se).</div>
-    <div class="dfield"><label class="dlabel">Tay raqam <span style="color:var(--ink-4);font-weight:400">(sirf agar package select nahi)</span></label><input type="number" id="bf-agreed" placeholder="agreed price (unpriced venue)"/></div>
+    <div class="dfield"><label class="dlabel">Tay raqam <span style="color:var(--ink-4);font-weight:400">(jo customer se tay hui)</span></label><input type="number" id="bf-agreed" placeholder="e.g. 700000"/><div id="bf-agreed-hint" class="dhint" style="font-size:11.5px;color:var(--ink-3);margin-top:4px"></div></div>
 
     <div class="bf-sec">Paisa</div>
     <div class="dfield row2"><div><label class="dlabel">Advance (mila)</label><input type="number" id="bf-advance" placeholder="booking advance"/></div><div><label class="dlabel">Tareeqa</label><select id="bf-method">${methodOpts}</select></div></div>
@@ -119,6 +119,46 @@ function refreshPriceHint(shadow: ShadowRoot) {
   hint.innerHTML = parts.length
     ? `${parts.join(" · ")}${est ? ` &nbsp;≈&nbsp; <b>Rs ${est.toLocaleString("en-PK")}</b>` : ""} <span style="color:var(--ink-4)">— server final calculate karega</span>`
     : "Server final qeemat calculate karega (package/menu/guests/add-ons se)."
+  refreshAgreedHint(shadow, est)
+}
+
+/**
+ * Say plainly what the agreed figure is about to do, because the same box means
+ * two different things: with nothing priced selected it IS the price; with a
+ * package selected it OVERRIDES the package price. A vendor typing 700000
+ * against a Rs 760,000 package should see "Rs 60,000 kam" before saving, not
+ * discover it in the khata afterwards.
+ */
+function refreshAgreedHint(shadow: ShadowRoot, listEstimate?: number) {
+  const hint = shadow.getElementById("bf-agreed-hint"); if (!hint) return
+  const agreed = Number((shadow.getElementById("bf-agreed") as HTMLInputElement)?.value) || 0
+  const pkg = (shadow.getElementById("bf-package") as HTMLSelectElement)?.value
+  let est = listEstimate
+  if (est === undefined) {
+    est = 0
+    const guests = Number((shadow.getElementById("bf-guests") as HTMLInputElement)?.value) || 0
+    for (const id of ["bf-package", "bf-menu"]) {
+      const opt = (shadow.getElementById(id) as HTMLSelectElement | null)?.selectedOptions?.[0]
+      if (opt && opt.value) {
+        const price = Number(opt.dataset.price) || 0
+        est += opt.dataset.unit === "per_head" ? price * guests : price
+      }
+    }
+  }
+  if (!agreed) {
+    hint.innerHTML = pkg
+      ? `<span style="color:var(--ink-4)">Khaali chhoron to package ki qeemat lagegi.</span>`
+      : `<span style="color:var(--ink-4)">Is venue ki koi qeemat set nahi — yahan tay raqam likhein.</span>`
+    return
+  }
+  if (!pkg) { hint.innerHTML = `<span style="color:var(--ok)">Booking ka total: <b>Rs ${agreed.toLocaleString("en-PK")}</b></span>`; return }
+  const diff = (est || 0) - agreed
+  if (!est) { hint.innerHTML = `<span style="color:var(--ok)">Package ki jagah <b>Rs ${agreed.toLocaleString("en-PK")}</b> lagega.</span>`; return }
+  hint.innerHTML = diff > 0
+    ? `<span style="color:var(--warn)">Package Rs ${est.toLocaleString("en-PK")} — aap <b>Rs ${diff.toLocaleString("en-PK")} kam</b> le rahe hain.</span>`
+    : diff < 0
+      ? `<span style="color:var(--warn)">Package Rs ${est.toLocaleString("en-PK")} — aap <b>Rs ${Math.abs(diff).toLocaleString("en-PK")} zyada</b> le rahe hain.</span>`
+      : `<span style="color:var(--ok)">Package ki qeemat ke barabar.</span>`
 }
 
 function ensureBound(shadow: ShadowRoot) {
@@ -130,7 +170,9 @@ function ensureBound(shadow: ShadowRoot) {
     else if (t.id === "bf-package" || t.id === "bf-menu") refreshPriceHint(shadow)
   })
   shadow.addEventListener("input", (e) => {
-    if ((e.target as HTMLElement).id === "bf-guests") refreshPriceHint(shadow)
+    const id = (e.target as HTMLElement).id
+    if (id === "bf-guests") refreshPriceHint(shadow)
+    else if (id === "bf-agreed") refreshAgreedHint(shadow)
   })
   shadow.addEventListener("click", (e) => {
     if ((e.target as HTMLElement).closest("[data-bf-save]")) { void submitBookingForm(shadow) }
@@ -152,7 +194,15 @@ async function submitBookingForm(shadow: ShadowRoot) {
   const sub = Number(val(shadow, "bf-subvenue")); if (sub) vendor.subVenueId = sub
   const pkg = Number(val(shadow, "bf-package")); if (pkg) vendor.packageId = pkg
   const menu = Number(val(shadow, "bf-menu")); if (menu) vendor.menuId = menu
-  const agreed = Number(val(shadow, "bf-agreed")); if (!pkg && agreed) vendor.agreedAmount = agreed
+  /**
+   * One field, two server behaviours, because they are genuinely different
+   * facts. With nothing priced selected this is the ONLY price the booking has
+   * (`agreedAmount`, the unpriced-venue rescue). With a package selected it is
+   * a negotiated price that REPLACES the package price (`negotiatedAmount`) —
+   * which is how business is actually done here, and was impossible to record.
+   */
+  const agreed = Number(val(shadow, "bf-agreed"))
+  if (agreed > 0) { if (pkg) vendor.negotiatedAmount = agreed; else vendor.agreedAmount = agreed }
   const adv = Number(val(shadow, "bf-advance")); if (adv) vendor.downPayment = adv
   const special = val(shadow, "bf-special"); if (special) vendor.specialRequests = special
 

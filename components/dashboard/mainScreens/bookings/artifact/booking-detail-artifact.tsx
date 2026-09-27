@@ -19,7 +19,7 @@ import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { listRefundRequests, decideRefundRequest, applyRefundRequest, markRefundPaid } from "@/lib/api/bookingOrder"
 import { toast } from "sonner"
-import { BookingAPI, type InstallmentsResponse, type SettlementPreview, type DepositPosition } from "@/lib/api/bookings"
+import { BookingAPI, type InstallmentsResponse, type SettlementPreview, type DepositPosition, type BookingChangeRequest } from "@/lib/api/bookings"
 import { BookingsAPI } from "@/lib/api/dashboard"
 import { openRecordPaymentDrawer } from "@/components/dashboard/mainScreens/artifact/record-payment"
 import { PaymentAPI } from "@/lib/api/payments"
@@ -151,6 +151,22 @@ const EXTRA_CSS = String.raw`
 .inst-row .ir-l{ flex:1; } .inst-row .ir-nm{ font-weight:600; font-size:13px; } .inst-row .ir-d{ font-size:11.5px; color:var(--ink-3); margin-top:1px; }
 .inst-row .ir-amt{ font-weight:660; font-size:13px; font-variant-numeric:tabular-nums; text-align:right; } .inst-row .ir-amt .sub{ display:block; font-size:10.5px; color:var(--ok); font-weight:500; }
 .settle-why{ font-size:11.5px; color:var(--ink-3); line-height:1.5; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:8px 10px; }
+/* WW-CHANGEREQ — the couple's requests. A cancel request is the only one that
+   ends the booking, so it is the only one that gets the alarming colour. */
+.cr-card .cr-row{ display:flex; align-items:flex-start; gap:12px; padding:13px 16px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+.cr-card .cr-row:last-of-type{ border-bottom:0; }
+.cr-card .cr-row.urgent{ background:var(--bad-wash); }
+.cr-main{ flex:1; min-width:200px; }
+.cr-title{ font-weight:640; font-size:13.5px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.cr-meta{ font-size:11.5px; color:var(--ink-3); margin-top:3px; }
+.cr-reason{ font-size:12px; color:var(--ink-2); margin-top:5px; font-style:italic; }
+.cr-money{ margin-top:6px; font-size:12px; font-weight:560; }
+.cr-money.up{ color:var(--warn); } .cr-money.down{ color:var(--bad); }
+.cr-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.cr-actions .btn{ height:32px; padding:0 12px; font-size:12.5px; }
+.cr-past-wrap{ border-top:1px solid var(--border); padding:8px 16px 12px; display:flex; flex-direction:column; gap:5px; }
+.cr-past{ display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--ink-3); }
+@media (max-width:560px){ .cr-actions{ width:100%; } .cr-actions .btn{ flex:1; } }
 .settle-actions{ display:flex; gap:8px; flex-wrap:wrap; padding:12px 16px 16px; border-top:1px solid var(--border); }
 .dep-cacts{ display:inline-flex; gap:6px; margin-left:8px; }
 .sl-btn2{ height:28px; padding:0 10px; border-radius:7px; border:1px solid var(--bad); background:var(--bad-wash); color:var(--bad); font-size:11.5px; font-weight:600; } .sl-btn2:hover{ filter:brightness(.97); } .sl-btn2.ghost{ border-color:var(--border-2); background:var(--surface); color:var(--ink-2); } .sl-btn2.ghost:hover{ background:var(--surface-3); color:var(--ink); }
@@ -484,7 +500,7 @@ function refundOwedCard(refunds: CashRefundOwed[], payout: RefundPayout = null):
     </div>`
 }
 
-function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmount?: number; remainingAmount?: number; cashRefundOwedTotal?: number; cashRefundsOwed?: CashRefundOwed[]; refundPayout?: RefundPayout } | null, receipts: PaymentReceipt[], history: any[], sheets: FunctionSheet[], installments: InstallmentsResponse | null, settlement: SettlementPreview | null, deposit: DepositPosition | null, refundReqs: RefundReq[] = []): string {
+function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmount?: number; remainingAmount?: number; cashRefundOwedTotal?: number; cashRefundsOwed?: CashRefundOwed[]; refundPayout?: RefundPayout } | null, receipts: PaymentReceipt[], history: any[], sheets: FunctionSheet[], installments: InstallmentsResponse | null, settlement: SettlementPreview | null, deposit: DepositPosition | null, refundReqs: RefundReq[] = [], changeReqs: BookingChangeRequest[] = []): string {
   const statusLabel = bookingStatusLabel(booking) || "Booking"
   const tone = toneOf(statusLabel)
   const st = (booking.status || "").toLowerCase()
@@ -647,6 +663,8 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
         <div class="pay-tl"><div class="tl-h">Payment history</div>${confirmItem}${rcItems}${dueItem}${isCancelled ? cancelledItem : settleItem}</div>
       </div>
 
+      ${changeRequestsCard(booking.id, changeReqs)}
+
       ${refundRequestsCard(refundReqs)}
       ${refundOwedCard(pay?.cashRefundsOwed ?? [], pay?.refundPayout ?? null)}
 
@@ -715,6 +733,110 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
 }
 
 /** Cancel confirmation (money-sensitive): a refund warning + optional reason. */
+/**
+ * WW-CHANGEREQ — what the couple has asked to change, and the two buttons that
+ * answer them.
+ *
+ * `cancel_request` is deliberately NOT treated like the others. Approving it
+ * ends the booking and returns the money in full, so it gets its own colour,
+ * its own wording and its own endpoint — the generic approve route refuses the
+ * type outright.
+ */
+const CR_LABEL: Record<string, string> = {
+  guest_count: "Mehmaan ki tadaad",
+  slot_swap: "Waqt / slot badalna",
+  package_change: "Package badalna",
+  add_extras: "Extra cheezein",
+  custom: "Custom darkhwast",
+  cancel_request: "Booking cancel karne ki darkhwast",
+}
+
+function crDiffLine(cr: BookingChangeRequest): string {
+  /**
+   * The server stores the diff as `{ from?: {...}, to: {...} }` — that is the
+   * shape `_buildLineOverrides` validates (`diff.to.guestCount` and friends).
+   * Reading flat keys off the top level renders an empty dash on every real
+   * request, which is exactly what a first pass here did.
+   */
+  const d = (cr.diffJson || {}) as { from?: Record<string, unknown>; to?: Record<string, unknown> } & Record<string, unknown>
+  const to = (d.to && typeof d.to === "object" ? d.to : d) as Record<string, unknown>
+  const from = (d.from && typeof d.from === "object" ? d.from : {}) as Record<string, unknown>
+  const LABELS: Record<string, string> = {
+    guestCount: "Mehmaan", bookingTime: "Waqt", bookingDate: "Taareekh",
+    slotTemplateId: "Slot", packageId: "Package", menuId: "Menu", detailsId: "Line",
+  }
+  const bits: string[] = []
+  for (const k of Object.keys(to).slice(0, 4)) {
+    const label = LABELS[k] || k
+    const v = to[k]
+    if (v === null || v === undefined) continue
+    const prev = from[k]
+    bits.push(prev !== undefined && prev !== null
+      ? `${escHtml(label)}: ${escHtml(String(prev))} → <b>${escHtml(String(v))}</b>`
+      : `${escHtml(label)}: <b>${escHtml(String(v))}</b>`)
+  }
+  return bits.join(" · ") || "—"
+}
+
+function changeRequestsCard(bookingId: number, reqs: BookingChangeRequest[]): string {
+  if (!reqs || !reqs.length) return ""
+  const pending = reqs.filter((r) => r.status === "pending")
+  // Answered ones stay visible but collapsed to one line: a vendor asked
+  // "did I reply to that?" should be able to see the answer without digging.
+  const past = reqs.filter((r) => r.status !== "pending").slice(0, 4)
+
+  const row = (cr: BookingChangeRequest) => {
+    const isCancel = cr.changeType === "cancel_request"
+    const pi = cr.priceImpactJson || {}
+    const diff = Number(pi.diff ?? 0)
+    const money = diff
+      ? `<div class="cr-money ${diff > 0 ? "up" : "down"}">${diff > 0 ? "Customer ko dena hoga" : "Customer ko wapas"} <b class="tnum">${rs(Math.abs(diff))}</b></div>`
+      : (isCancel ? `<div class="cr-money down">Poora refund banega</div>` : "")
+    // Both dates on one line with no labels read as a range. Say which is which.
+    const expiry = cr.expiresAt
+      ? (new Date(cr.expiresAt).getTime() < Date.now()
+          ? `<span class="mi" style="color:var(--bad)">Expire ho chuki</span>`
+          : `<span class="mi">${fmtDateShort(cr.expiresAt)} tak jawab dein</span>`)
+      : ""
+    return `<div class="cr-row${isCancel ? " urgent" : ""}">
+      <div class="cr-main">
+        <div class="cr-title">${escHtml(CR_LABEL[cr.changeType] || cr.changeType)}
+          <span class="st ${isCancel ? "bad" : "warn"}"><i></i> jawab chahiye</span></div>
+        <div class="cr-meta">${crDiffLine(cr)}</div>
+        ${cr.reason ? `<div class="cr-reason">“${escHtml(cr.reason)}”</div>` : ""}
+        <div class="cr-meta">Bheji: ${fmtDateShort(cr.createdAt)}${expiry ? ` · ${expiry}` : ""}</div>
+        ${money}
+      </div>
+      <div class="cr-actions">
+        <button class="btn btn-primary" data-cr-approve="${cr.id}" data-cr-booking="${bookingId}" data-cr-cancelreq="${isCancel ? 1 : 0}" data-cr-label="${escHtml(CR_LABEL[cr.changeType] || cr.changeType)}"${isCancel ? ' style="background:var(--bad);border-color:transparent"' : ""}>${isCancel ? "Cancel manzoor karein" : "Manzoor karein"}</button>
+        <button class="btn btn-ghost" data-cr-decline="${cr.id}" data-cr-booking="${bookingId}" data-cr-cancelreq="${isCancel ? 1 : 0}">Inkaar</button>
+      </div>
+    </div>`
+  }
+
+  const pastRow = (cr: BookingChangeRequest) => {
+    const tone = cr.status === "approved" ? "ok" : cr.status === "expired" ? "mut" : "bad"
+    const word = cr.status === "approved" ? "manzoor" : cr.status === "declined" ? "inkaar" : cr.status === "expired" ? "expire ho gayi" : cr.status
+    return `<div class="cr-past"><span class="st ${tone}"><i></i> ${escHtml(word)}</span>
+      <span class="mi">${escHtml(CR_LABEL[cr.changeType] || cr.changeType)}</span>
+      <span class="mi">· ${fmtDateShort(cr.decidedAt || cr.createdAt)}</span></div>`
+  }
+
+  const head = `<div class="card-h"><div><h2>Customer ki darkhwastein</h2><div class="sub">${pending.length ? `${pending.length} ka jawab baaki hai` : "Sab ka jawab de diya"}</div></div></div>`
+  return `<div class="card cr-card">${head}
+    ${pending.map(row).join("")}
+    ${past.length ? `<div class="cr-past-wrap">${past.map(pastRow).join("")}</div>` : ""}
+  </div>`
+}
+/** Decline a change request — a reason is optional but worth capturing, since
+ *  the customer sees that this was answered rather than ignored. */
+function declineChangeHtml(reqId: number, bookingId: number, isCancel: boolean): string {
+  return `<div style="font-size:12px;color:var(--ink-3);margin-bottom:12px;line-height:1.5">${isCancel
+    ? "Customer ki cancel darkhwast par inkaar. Booking chalti rahegi."
+    : "Customer ko bata diya jayega ke ye tabdeeli nahi ho sakti."}</div>
+    <div class="dfield"><label class="dlabel">Wajah (optional)</label><textarea id="cr-note" placeholder="e.g. us din hall already booked hai"></textarea></div>
+    <div class="ww-dfoot"><button class="btn btn-ghost" data-drawer-close type="button">Waapas</button><button class="btn btn-primary" data-cr-decline-save="${reqId}" data-cr-booking="${bookingId}" data-cr-cancelreq="${isCancel ? 1 : 0}" type="button">Inkaar karein</button></div>`
+}
 function cancelBookingHtml(id: number): string {
   return `<div style="font-size:12px;color:var(--bad);background:var(--bad-wash);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.5">⚠️ Cancel karne par cancellation policy ke mutabiq refund ban sakta hai. Ye amal wapas nahi hoga.</div>
     <div class="dfield"><label class="dlabel">Cancel ki wajah</label><textarea id="bc-reason" placeholder="Optional — record ke liye"></textarea></div>
@@ -741,6 +863,17 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
   // WW-REFUNDUI — 404s when the refund engine is dark for this vendor, which is
   // a normal answer, not an error: the card simply does not render.
   const refundQ = useQuery({ queryKey: ["bk-detail-refunds", bookingId], queryFn: () => listRefundRequests(bookingId).catch(() => null), enabled: valid })
+  /**
+   * WW-CHANGEREQ — the couple's mid-booking requests.
+   *
+   * The customer's booking page has offered "Send a request to the vendor"
+   * the whole time, and the back end has had approve / decline / counter and a
+   * separate path for a cancellation request. The card that answered them hung
+   * off `bookings-redesigned-view`, which nothing imports any more — so every
+   * request a customer sent simply expired unanswered. Four had, on the test
+   * account alone, all of them asking to change the guest count.
+   */
+  const crQ = useQuery({ queryKey: ["bk-detail-cr", bookingId], queryFn: () => BookingAPI.getChangeRequests(bookingId).then((r) => r?.requests ?? []).catch(() => [] as BookingChangeRequest[]), enabled: valid })
 
   React.useEffect(() => {
     const s = shadowRef.current
@@ -759,6 +892,7 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
       settleQ.data ?? null,
       depQ.data ?? null,
       (refundQ.data?.requests ?? []) as unknown as RefundReq[],
+      crQ.data ?? [],
     )
     // restore the vendor's private per-booking note (persisted locally)
     const vn = s.getElementById("vendor-note") as HTMLTextAreaElement | null
@@ -766,14 +900,14 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
     // update the crumb with the real customer name
     const crumb = s.querySelector(".crumb b"); if (crumb) crumb.textContent = booking.customerName || "Booking"
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, bookingQ.data, bookingQ.isLoading, payQ.data, rcQ.data, histQ.data, sheetsQ.data, instQ.data, settleQ.data, depQ.data, refundQ.data])
+  }, [ready, bookingQ.data, bookingQ.isLoading, payQ.data, rcQ.data, histQ.data, sheetsQ.data, instQ.data, settleQ.data, depQ.data, refundQ.data, crQ.data])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
     const s = shadowRef.current
     if (!s || !ready || bound.current) return
     bound.current = true
-    const invalidateAll = () => ["bk-detail", "bk-detail-pay", "bk-detail-rc", "bk-detail-hist", "bk-detail-inst", "bk-detail-settle", "bk-detail-deposit", "bk-detail-refunds"].forEach((k) => qc.invalidateQueries({ queryKey: [k, bookingId] }))
+    const invalidateAll = () => ["bk-detail", "bk-detail-pay", "bk-detail-rc", "bk-detail-hist", "bk-detail-inst", "bk-detail-settle", "bk-detail-deposit", "bk-detail-refunds", "bk-detail-cr"].forEach((k) => qc.invalidateQueries({ queryKey: [k, bookingId] }))
     s.addEventListener("click", async (e) => {
       const t = e.target as HTMLElement
       // inline record payment (header button + timeline "Baqaya record karein")
@@ -821,6 +955,61 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
         return
       }
       // cancel / reject — open the reason drawer (money-sensitive, gated)
+
+      // ── customer change requests ───────────────────────────────────────
+      // Approving a cancel_request ENDS the booking and refunds in full, so it
+      // goes to its own endpoint and says so before it fires.
+      const crA = t.closest("[data-cr-approve]") as HTMLButtonElement | null
+      if (crA?.dataset.crApprove) {
+        const reqId = Number(crA.dataset.crApprove)
+        const bId = Number(crA.dataset.crBooking)
+        const isCancel = crA.dataset.crCancelreq === "1"
+        openConfirm(s, {
+          title: isCancel ? "Booking cancel karein?" : "Darkhwast manzoor karein?",
+          message: isCancel
+            ? "Booking khatam ho jayegi aur customer ka poora paisa wapas dena hoga. Ye wapas nahi hota."
+            : `${crA.dataset.crLabel || "Ye tabdeeli"} booking par lag jayegi. Raqam farq hui to booking ka total update ho jayega.`,
+          confirmLabel: isCancel ? "Haan, cancel karein" : "Haan, manzoor",
+          danger: isCancel,
+          onConfirm: async () => {
+            crA.disabled = true
+            const o = crA.innerHTML
+            crA.textContent = "Ho raha…"
+            try {
+              if (isCancel) await BookingAPI.decideCancellationRequest(bId, reqId, true)
+              else await BookingAPI.approveChangeRequest(bId, reqId)
+              toast.success(isCancel ? "Booking cancel ho gayi" : "Darkhwast manzoor ho gayi")
+              invalidateAll()
+            } catch (err: unknown) {
+              toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Manzoor nahi hui")
+              crA.disabled = false; crA.innerHTML = o
+            }
+          },
+        })
+        return
+      }
+      const crD = t.closest("[data-cr-decline]") as HTMLElement | null
+      if (crD?.dataset.crDecline) {
+        openDrawer(s, "Darkhwast par inkaar", declineChangeHtml(Number(crD.dataset.crDecline), Number(crD.dataset.crBooking), crD.dataset.crCancelreq === "1"))
+        return
+      }
+      const crDS = t.closest("[data-cr-decline-save]") as HTMLButtonElement | null
+      if (crDS?.dataset.crDeclineSave) {
+        const reqId = Number(crDS.dataset.crDeclineSave)
+        const bId = Number(crDS.dataset.crBooking)
+        const isCancel = crDS.dataset.crCancelreq === "1"
+        const note = (s.getElementById("cr-note") as HTMLTextAreaElement | null)?.value?.trim() || undefined
+        crDS.disabled = true; crDS.textContent = "Ho raha…"
+        try {
+          if (isCancel) await BookingAPI.decideCancellationRequest(bId, reqId, false, note)
+          else await BookingAPI.declineChangeRequest(bId, reqId, note)
+          toast.success("Inkaar record ho gaya"); closeDrawer(s); invalidateAll()
+        } catch (err: unknown) {
+          toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Inkaar record nahi hua")
+          crDS.disabled = false; crDS.textContent = "Inkaar karein"
+        }
+        return
+      }
       const cx = t.closest("[data-bk-cancel]") as HTMLElement | null
       if (cx?.dataset.bkCancel) { openDrawer(s, "Booking cancel karein", cancelBookingHtml(Number(cx.dataset.bkCancel))); return }
       // close a past event — forward-only, so confirm before committing

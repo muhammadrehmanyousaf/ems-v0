@@ -24,6 +24,7 @@ import { BusinessesAPI, ReviewsAPI } from "@/lib/api/dashboard"
 import { LeadAPI, type Lead } from "@/lib/api/leads"
 import { CompletenessAPI, type BusinessCompleteness } from "@/lib/api/completeness"
 import { listRefundObligations } from "@/lib/api/bookingOrder"
+import { BusinessHealthAPI } from "@/lib/api/businessHealth"
 
 /* ── helpers ─────────────────────────────────────────────────── */
 const n = (v: unknown) => (v == null ? 0 : Number(v) || 0)
@@ -101,6 +102,9 @@ interface ArtData {
     pastOpen: { id: number; customerName: string | null; bookingDate: string; status: string; balance: number }[]
     unpaid: { id: number; customerName: string | null; bookingDate: string; balance: number }[]
     unpaidTotal: number
+    /** WW-HEALTH — enquiries nobody has replied to, and how long the oldest has waited. */
+    unanswered: number
+    oldestUnansweredHours: number
   } | null
 }
 
@@ -178,7 +182,8 @@ function workCard(w: ArtData["work"]): string {
   if (!w) return ""
   const past = w.pastOpen || []
   const unpaid = w.unpaid || []
-  if (!past.length && !unpaid.length) return ""
+  const unanswered = w.unanswered || 0
+  if (!past.length && !unpaid.length && !unanswered) return ""
 
   const row = (id: number, when: string, who: string | null, amt: number, tag: string) =>
     `<div class="r" data-nav="/dashboard/bookings/${id}" role="button" style="cursor:pointer">
@@ -189,14 +194,31 @@ function workCard(w: ArtData["work"]): string {
   const pastRows = past.slice(0, 4).map((b) => row(b.id, b.bookingDate, b.customerName, b.balance, "band karein")).join("")
   const unpaidRows = unpaid.slice(0, 4).map((b) => row(b.id, b.bookingDate, b.customerName, b.balance, "paisa baqaya")).join("")
 
-  const head = `<div class="card-h"><div><h2>Tawajjo chahiye</h2><div class="sub">Ho chuke events aur baqaya raqam</div></div><a class="link" data-nav href="/dashboard/bookings">Sab bookings ${chevSvg}</a></div>`
+  /**
+   * WW-HEALTH — unanswered enquiries, first, because it is the only row here
+   * that is still losing business rather than merely recording it.
+   *
+   * `/analytics/health-signals` has computed this the whole time. Its only
+   * consumer was a React view that the artifact port replaced, so the number
+   * went nowhere: 62 enquiries unanswered on the test account, the oldest
+   * waiting 116 days. A couple who does not hear back books someone else.
+   */
+  const waited =
+    w.oldestUnansweredHours >= 48
+      ? `${Math.floor(w.oldestUnansweredHours / 24)} din`
+      : `${Math.max(1, Math.round(w.oldestUnansweredHours))} ghante`
+  const leadBlock = unanswered
+    ? `<div class="owe urgent"><span class="o-cap">${unanswered} poochh-gichh ka jawab nahi diya${w.oldestUnansweredHours > 0 ? ` — sab se purani ${esc(waited)} se` : ""}</span><a class="link" data-nav href="/dashboard/leads">Leads kholein ${chevSvg}</a></div>`
+    : ""
+
+  const head = `<div class="card-h"><div><h2>Tawajjo chahiye</h2><div class="sub">Jawab, ho chuke events aur baqaya raqam</div></div><a class="link" data-nav href="/dashboard/bookings">Sab bookings ${chevSvg}</a></div>`
   const pastBlock = past.length
     ? `<div class="owe"><span class="o-cap">${past.length} event ho chuke, band nahi hue</span></div><div class="list">${pastRows}</div>`
     : ""
   const unpaidBlock = unpaid.length
     ? `<div class="owe"><span class="o-cap">Event ke baad baqaya</span><span class="o-val tnum">Rs ${pkNum(w.unpaidTotal)}</span></div><div class="list">${unpaidRows}</div>`
     : ""
-  return `<div class="card">${head}${pastBlock}${unpaidBlock}</div>`
+  return `<div class="card">${head}${leadBlock}${pastBlock}${unpaidBlock}</div>`
 }
 
 function buildContent(d: ArtData, greeting: string, todayStr: string): string {
@@ -370,6 +392,11 @@ svg .axis-lbl{ fill:var(--ink-3); font-size:10.5px; }
 .owe{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 16px 6px; padding:11px 13px; border-radius:var(--r-sm); background:var(--surface-3); border:1px solid var(--border); }
 .owe .o-cap{ font-size:12px; color:var(--ink-2); font-weight:500; }
 .owe .o-val{ font-size:18px; font-weight:680; color:var(--ink); letter-spacing:-.02em; }
+/* WW-HEALTH — unanswered enquiries are the one row here that is still losing
+   business, so it reads as a warning rather than a statement of fact. */
+.owe.urgent{ background:var(--bad-wash); border-color:var(--bad); }
+.owe.urgent .o-cap{ color:var(--bad); font-weight:600; }
+.owe.urgent .link{ color:var(--bad); white-space:nowrap; }
 .occ-in{ display:flex; align-items:center; gap:18px; padding:4px 16px 16px; }
 .ring{ position:relative; width:104px; height:104px; flex:none; }
 .ring .r-mid{ position:absolute; inset:0; display:grid; place-items:center; text-align:center; }
@@ -437,6 +464,7 @@ export function OverviewArtifact() {
   const refundQ = useQuery({ queryKey: ["art-refunds", bizId], queryFn: () => listRefundObligations(bizId ?? undefined).catch(() => null) })
   // WW-WORKLIST — past-date bookings nobody closed + delivered-and-unpaid.
   const workQ = useQuery({ queryKey: ["art-work", activeBusinessId], queryFn: () => getActionSummary(activeBusinessId ?? undefined).catch(() => null) })
+  const healthQ = useQuery({ queryKey: ["art-health", activeBusinessId], queryFn: () => BusinessHealthAPI.getSignals(activeBusinessId ?? undefined).catch(() => null) })
 
   const data: ArtData = React.useMemo(() => {
     const k = kpisQ.data
@@ -512,18 +540,20 @@ export function OverviewArtifact() {
       foot: { total: totalRev, avg: avgRev, best },
       occ: { pct: occPct, bookedDays, emptyDays: Math.max(0, periodDays - bookedDays) },
       events, leads: leadRows, profile, rating, wapsi,
-      work: workQ.data
+      work: (workQ.data || healthQ.data)
         ? {
-            pastOpen: workQ.data.pastEventsOpen?.items ?? [],
-            unpaid: workQ.data.deliveredUnpaid?.items ?? [],
-            unpaidTotal: workQ.data.deliveredUnpaid?.total ?? 0,
+            pastOpen: workQ.data?.pastEventsOpen?.items ?? [],
+            unpaid: workQ.data?.deliveredUnpaid?.items ?? [],
+            unpaidTotal: workQ.data?.deliveredUnpaid?.total ?? 0,
+            unanswered: healthQ.data?.unansweredEnquiries ?? 0,
+            oldestUnansweredHours: healthQ.data?.oldestUnansweredHours ?? 0,
           }
         : null,
     }
     // workQ.data belongs here: without it the card renders once as empty and
     // never updates when the data lands. That exact omission hid a whole card
     // on the booking-detail screen earlier.
-  }, [kpisQ.data, kpisQ.isLoading, kpisQ.isError, revQ.data, bkTrQ.data, recentQ.data, leadsQ.data, bkdQ.data, compQ.data, reviewsQ.data, refundQ.data, workQ.data])
+  }, [kpisQ.data, kpisQ.isLoading, kpisQ.isError, revQ.data, bkTrQ.data, recentQ.data, leadsQ.data, bkdQ.data, compQ.data, reviewsQ.data, refundQ.data, workQ.data, healthQ.data])
 
   const greeting = React.useMemo(() => {
     const full = (user as { fullName?: string } | null)?.fullName
