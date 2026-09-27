@@ -194,12 +194,27 @@ const EXTRA_CSS = String.raw`
 .ci-empty{ padding:14px 18px; color:var(--ink-3); font-size:12px; }
 
 @media (max-width:1180px){ .cinfo{ display:none; } }
-@media (max-width:820px){ .chat{ flex-direction:column; } .clist{ width:100%; flex:none; max-height:42vh; border-right:0; border-bottom:1px solid var(--border); } .thread{ min-height:58vh; } }
+/* WW-CHATMOBILE — a phone shows ONE pane, not both.
+   Stacking the inbox above the thread gave each about half a 740px screen:
+   the list was clipped mid-row and the conversation had a few messages of
+   room. A data-pane attribute on .chat switches between them, and the
+   back button, which is the pattern every messaging app on a phone uses. */
+@media (max-width:820px){
+  .chat{ flex-direction:column; }
+  .clist{ width:100%; flex:none; max-height:none; border-right:0; border-bottom:1px solid var(--border); }
+  .thread{ min-height:0; }
+  .chat[data-pane="list"] .thread{ display:none; }
+  .chat[data-pane="thread"] .clist{ display:none; }
+  .chat[data-pane="thread"] .thread{ min-height:calc(100vh - 120px); }
+  .th-back{ display:inline-grid !important; }
+}
+.th-back{ display:none; place-items:center; width:34px; height:34px; margin-right:2px; border-radius:var(--r-xs); border:1px solid var(--border); background:var(--surface); color:var(--ink-2); cursor:pointer; flex:none; }
+.th-back:hover{ background:var(--surface-3); }
 `
 
 /* ── skeleton (built once) ───────────────────────────────────── */
 const SKELETON = `
-<div class="chat">
+<div class="chat" data-pane="list">
   <div class="clist">
     <div class="clist-head">
       <div class="ct-row"><h2>Inbox</h2><button class="newchat" data-nav-btn="/dashboard/leads" title="Nayi puchh-gichh — leads" aria-label="Nayi chat">${svg('<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>')}</button></div>
@@ -353,8 +368,16 @@ export function ChatArtifact() {
     s.addEventListener("click", (e) => {
       const t = e.target as HTMLElement
       if (t.closest("#cattach")) { (s.getElementById("cfile") as HTMLInputElement | null)?.click(); return }
+      // On a phone, opening a conversation replaces the list rather than
+      // sharing the screen with it; the back button returns. On a desktop the
+      // attribute is inert because both panes are always visible.
+      if (t.closest("[data-chat-back]")) { s.querySelector(".chat")?.setAttribute("data-pane", "list"); return }
       const conv = t.closest(".conv") as HTMLElement | null
-      if (conv?.dataset.id) { api.current.setActiveConversation(Number(conv.dataset.id)); return }
+      if (conv?.dataset.id) {
+        api.current.setActiveConversation(Number(conv.dataset.id))
+        s.querySelector(".chat")?.setAttribute("data-pane", "thread")
+        return
+      }
       const tab = t.closest(".ctab") as HTMLElement | null
       if (tab?.dataset.f) { setFilter(tab.dataset.f as "all" | "unread" | "lead" | "book"); return }
       const q = t.closest(".qchip") as HTMLElement | null
@@ -461,6 +484,7 @@ export function ChatArtifact() {
       const online = !!onlineStatuses[active.otherUser?.id]
       const presTxt = typing ? "likh rahe hain…" : online ? "online" : "offline"
       if (thHead) thHead.innerHTML = `
+        <button class="th-back" data-chat-back aria-label="Inbox par wapas">${svg('<path d="M15 18l-6-6 6-6"/>')}</button>
         <span class="avatar" style="width:40px;height:40px;font-size:12px">${escHtml(initialsOf(nm))}<span class="src ${srcOf(active)}"></span></span>
         <div class="th-id"><div class="th-nm">${escHtml(nm)}</div>
           <div class="th-pres ${typing || online ? "" : "off"}">${typing || online ? "<i></i>" : ""}${escHtml(presTxt)}</div></div>
