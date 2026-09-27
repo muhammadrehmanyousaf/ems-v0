@@ -141,6 +141,15 @@ export type ChangeRequestType =
   | "add_extras"
   | "custom"
   /**
+   * WW-QIST — the couple proposes a payment schedule for what is still
+   * outstanding, and the vendor answers it in the same queue as every other
+   * request. `diff.to.installments` carries `{ label, amount, dueAt }` rows;
+   * `diff.to.override` is the vendor-agreed escape from the "nothing due inside
+   * 7 days of the event" rule. At most three, and they must add up to the
+   * outstanding amount exactly.
+   */
+  | "installment_plan"
+  /**
    * WW-CANCELWINDOW — a customer asking to cancel from inside the venue's
    * notice period, where they cannot cancel themselves.
    *

@@ -48,6 +48,9 @@ const TYPE_LABEL: Record<ChangeRequestType, string> = {
   add_extras: "Add extras",
   custom: "Other change",
   cancel_request: "Cancel this booking",
+  // WW-QIST — from the vendor's side this is a schedule to agree to, not a
+  // change to their contract: the total does not move, only how it is paid.
+  installment_plan: "Instalment plan proposed",
 };
 
 /**

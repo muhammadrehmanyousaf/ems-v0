@@ -352,6 +352,91 @@ disabled and pass with it. Backend suite: **4232 passed, 0 failed**.
 
 ---
 
+## 11. The three things §10 left open
+
+All three are now done. What follows is what they actually were, since two of
+them were features and one was a guard I had described as "the next thing".
+
+### 11.1 Lead time and capacity on reschedule
+
+`createBookingCore` refuses a date inside `minLeadDays`, beyond `maxLeadDays`
+(BK-026) and a guest count over the hall's `maxCapacity` (BK-072). The move
+checked none of the three, so "we need 14 days' notice" was avoided by booking a
+far date and moving it to next Tuesday, and `newGuestCount` was written onto the
+booking with no cap at all — a 300-guest hall talked up to 900 after the fact.
+Both mirrored exactly, BK-072's carve-out included: a makeup artist's "guest
+count" means service units, and a venue cap means nothing against it.
+
+### 11.2 A price that can change after the contract
+
+The price could be negotiated at creation (`agreedAmountByBusinessId`) and never
+again — which is not how a Pakistani wedding works. The family drops the sweet
+counter a month out; the hall throws in the mehndi stage to close the deal. With
+no way to say so, vendors did it in two dishonest ways: carry the difference in
+their head (which is how `baqaya` stops matching reality), or cancel and
+re-enter the booking, losing its receipts, its history and its number.
+
+`PATCH /bookings/:id/price` rewrites **one line and the header together**, so the
+two can never drift. Money received is untouched — a price change is not a
+payment. Where the new price is **below** what has already been received, the
+customer has overpaid, and that runs through the same engine a cheaper reschedule
+uses: the shortfall is written down as a `pending` cash refund the vendor owes.
+An obligation nobody recorded is the one outcome that must never happen. The
+listing floor is **not** enforced — it is not enforced at creation either, it is a
+listing guard rather than a legal minimum — but `belowFloor` goes on the audit
+row so the decision stays visible.
+
+The vendor's door is **"Qeemat badlein"** on the package card. It says what the
+number does before it is saved: with money in, dropping below it is not a
+discount, it is cash owed back, and it names the figure.
+
+### 11.3 Instalments: the plumbing was there, the conversation was not
+
+`BookingInstallment` had rows, sequences, labels, amounts, due dates anchored at
+Pakistan midnight, an overdue sweeper, payment matching, and the schedule on
+screen. The plan itself was **two hardcoded rows** — advance, then balance —
+nobody proposed and nobody agreed to. In practice a family asks *"teen qiston
+mein kar dein?"* on the phone, the vendor says haan, and the system never hears
+about it, so every reminder and overdue flag it sends is about a schedule that
+was superseded in a WhatsApp message.
+
+The plan now rides `BookingChangeRequest` rather than getting a table of its own.
+That queue already has raise / approve / decline / expire, a reason, a decision
+note — and, since the change-request card shipped in §1.1, a vendor screen that
+answers it. A parallel state machine would have been a second thing to keep
+honest.
+
+The rules are Pakistan-shaped, not generic:
+
+| rule | why |
+|---|---|
+| At most **3** instalments | beyond that it stops being a wedding payment and becomes informal credit nobody can chase |
+| Must add up to the outstanding **to the rupee** | a plan that does not is what makes `baqaya` a fiction. Money already received is not re-planned |
+| Nothing due inside **event − 7 days** | a balance due the morning of the baraat is not a plan. One explicit `override` exists, because vendors sometimes genuinely agree |
+| The **1st–5th** is the salary window | reported, not refused — a plan landing on the 20th is the difference between a plan kept and a plan chased, but it is the couple's money |
+
+Approving replaces only the **unpaid** rows and renumbers after whatever
+survives: a paid instalment is a receipt, not a schedule entry.
+
+### 11.4 Two things the live run caught that the unit tests could not
+
+- **The audit row used column names `AuditLog` does not have** (`entityType` /
+  `entityId` / `details` instead of `targetType` / `targetId` / `before` / `after`).
+  Every price change 500'd on a notNull violation the moment it met a real
+  database. Fifteen mocked tests passed straight through it, because a mock
+  accepts any shape. The test now asserts the column names for that reason.
+- **Three of my own "PASS" lines were 403s from authorization**, not agreement:
+  the instrument drove customer-only endpoints with the vendor's token. Re-run
+  with both sessions, each on the endpoints that belong to it.
+
+Also finished here: the bulk importer now **reports** rows landing on a date the
+vendor has blocked (`blockedDateWarnings`), rather than importing them in
+silence. It still does not refuse them — a vendor loading years of their own
+register should not have a true row rejected by their own calendar — but two
+records that disagree have to say so.
+
+---
+
 ## Appendix — instalments, and the "one modal" question
 
 **Instalments.** The plumbing exists: `BookingInstallment` with sequence, label,

@@ -54,6 +54,9 @@ const TYPE_LABEL: Record<ChangeRequestType, string> = {
   // WW-CANCELWINDOW — worded from the customer's side: this is their own ask,
   // sitting with the venue, and "Cancel this booking" would read as a button.
   cancel_request: "Cancellation requested",
+  // WW-QIST — the couple's own words for it. "Instalment plan" is what the
+  // schedule is called on the rest of the page (Qist schedule).
+  installment_plan: "Instalment plan",
 };
 
 function formatDate(iso: string | null): string {
@@ -235,17 +238,59 @@ interface CreateChangeRequestFormProps {
   bookingId: number;
   onCreated: () => void;
   onClose: () => void;
+  /** WW-QIST — what is still owed; the plan must add up to exactly this. */
+  outstanding?: number;
+  /** WW-QIST — nothing may fall due inside 7 days of this, unless agreed. */
+  eventDate?: string | null;
+}
+
+/**
+ * WW-QIST — a default schedule to start from.
+ *
+ * Two instalments, on the 1st of the next two months in which they can fall,
+ * because the 1st-5th is when salaries land in Pakistan and a plan that lands
+ * on the 20th is the difference between a plan kept and a plan chased. The last
+ * one is pulled back if it would fall inside the seven days before the event,
+ * which is the one date nobody should be paying on.
+ */
+function suggestPlan(outstanding: number, eventDate?: string | null): { label: string; amount: string; dueAt: string }[] {
+  const salaryDay = (monthsAhead: number): string => {
+    const now = new Date();
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + monthsAhead, 1));
+    return d.toISOString().slice(0, 10);
+  };
+  const cap = (() => {
+    if (!eventDate) return null;
+    const ms = new Date(String(eventDate).slice(0, 10) + "T00:00:00+05:00").getTime();
+    if (!Number.isFinite(ms)) return null;
+    return new Date(ms - 8 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  })();
+  const clampDate = (iso: string) => (cap && iso > cap ? cap : iso);
+  const half = Math.round(outstanding / 2);
+  return [
+    { label: "Qist 1", amount: String(half), dueAt: clampDate(salaryDay(1)) },
+    { label: "Balance", amount: String(Math.max(0, outstanding - half)), dueAt: clampDate(salaryDay(2)) },
+  ];
 }
 
 function CreateChangeRequestForm({
   bookingId,
   onCreated,
   onClose,
+  outstanding = 0,
+  eventDate = null,
 }: CreateChangeRequestFormProps) {
   const [changeType, setChangeType] = useState<ChangeRequestType>("guest_count");
   const [reason, setReason] = useState("");
   const [guestCount, setGuestCount] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+  // WW-QIST
+  const [rows, setRows] = useState<{ label: string; amount: string; dueAt: string }[]>(() =>
+    suggestPlan(outstanding, eventDate),
+  );
+  const [override, setOverride] = useState(false);
+  const planTotal = rows.reduce((sum, r) => sum + (parseInt(r.amount, 10) || 0), 0);
+  const addsUp = outstanding > 0 && planTotal === Math.round(outstanding);
 
   const submit = async () => {
     if (!reason.trim() || reason.trim().length < 5) {
@@ -270,6 +315,25 @@ function CreateChangeRequestForm({
       // flat key — a flat `newGuestCount` was rejected as `invalid_diff` (400),
       // which is exactly the "Change Request throws an error" ticket.
       diff = { to: { guestCount: n } };
+    } else if (changeType === "installment_plan") {
+      if (!addsUp) {
+        toast({
+          title: "The plan has to add up",
+          description: `Your instalments come to Rs ${planTotal.toLocaleString("en-PK")}; Rs ${Math.round(outstanding).toLocaleString("en-PK")} is outstanding.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      diff = {
+        to: {
+          installments: rows.map((r, i) => ({
+            label: r.label.trim() || `Qist ${i + 1}`,
+            amount: parseInt(r.amount, 10) || 0,
+            dueAt: r.dueAt,
+          })),
+          ...(override ? { override: true } : {}),
+        },
+      };
     }
     setSubmitting(true);
     try {
@@ -306,6 +370,11 @@ function CreateChangeRequestForm({
               change is handled via the Reschedule flow). guest_count + custom
               are the two that work today. */}
           <option value="guest_count">Change guest count</option>
+          {/* WW-QIST — only offered when something is actually outstanding;
+              there is nothing to schedule on a fully paid booking. */}
+          {outstanding > 0 ? (
+            <option value="installment_plan">Propose an instalment plan</option>
+          ) : null}
           <option value="custom">Other request</option>
         </select>
       </div>
@@ -319,6 +388,83 @@ function CreateChangeRequestForm({
             placeholder="e.g. 350"
             min={1}
           />
+        </div>
+      ) : null}
+      {changeType === "installment_plan" ? (
+        <div className="grid gap-2">
+          <div className="flex items-baseline justify-between">
+            <Label className="text-[12px]">Your instalments</Label>
+            <span className={`text-[11px] ${addsUp ? "text-muted-foreground" : "text-destructive"}`}>
+              Rs {planTotal.toLocaleString("en-PK")} of Rs {Math.round(outstanding).toLocaleString("en-PK")} outstanding
+            </span>
+          </div>
+          {rows.map((r, i) => (
+            <div key={i} className="grid grid-cols-[1fr_7.5rem_2rem] gap-2 items-center">
+              <Input
+                type="date"
+                value={r.dueAt}
+                onChange={(e) =>
+                  setRows((prev) => prev.map((x, j) => (j === i ? { ...x, dueAt: e.target.value } : x)))
+                }
+              />
+              <Input
+                type="number"
+                min={1}
+                value={r.amount}
+                placeholder="Amount"
+                onChange={(e) =>
+                  setRows((prev) => prev.map((x, j) => (j === i ? { ...x, amount: e.target.value } : x)))
+                }
+              />
+              {rows.length > 1 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-muted-foreground"
+                  onClick={() => setRows((prev) => prev.filter((_, j) => j !== i))}
+                  aria-label={`Remove instalment ${i + 1}`}
+                >
+                  ×
+                </Button>
+              ) : (
+                <span />
+              )}
+            </div>
+          ))}
+          {/* Three is the cap: past that a wedding payment becomes informal
+              credit the vendor cannot chase. */}
+          {rows.length < 3 ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 justify-self-start text-[12px]"
+              onClick={() =>
+                setRows((prev) => [...prev, { label: `Qist ${prev.length + 1}`, amount: "", dueAt: "" }])
+              }
+            >
+              + Add an instalment
+            </Button>
+          ) : (
+            <p className="text-[11px] text-muted-foreground">Three instalments is the maximum.</p>
+          )}
+          <label className="flex items-start gap-2 text-[11px] text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={override}
+              onChange={(e) => setOverride(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              The last payment falls inside the 7 days before the event, and the vendor has agreed to
+              that. Leave this unticked unless you have already discussed it.
+            </span>
+          </label>
+          <p className="text-[11px] text-muted-foreground">
+            Dates in the 1st–5th of a month are easiest to keep. The plan has to add up to exactly
+            what is outstanding.
+          </p>
         </div>
       ) : null}
       <div className="grid gap-2">
@@ -350,6 +496,14 @@ interface ChangeRequestsCardProps {
   bookingId: number | string;
   /** When false, hides the "Request a change" CTA (e.g. completed/cancelled bookings). */
   canRequest?: boolean;
+  /**
+   * WW-QIST — what is still owed, and the event date. Both optional so the card
+   * keeps working where they are not to hand; without the outstanding amount the
+   * instalment-plan option is simply not offered, because a plan has to add up
+   * to a number and guessing it is worse than not asking.
+   */
+  outstanding?: number;
+  eventDate?: string | null;
 }
 
 /**
@@ -360,6 +514,8 @@ interface ChangeRequestsCardProps {
 export function ChangeRequestsCard({
   bookingId,
   canRequest = true,
+  outstanding = 0,
+  eventDate = null,
 }: ChangeRequestsCardProps) {
   const [requests, setRequests] = useState<BookingChangeRequest[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -442,6 +598,8 @@ export function ChangeRequestsCard({
           bookingId={Number(bookingId)}
           onCreated={load}
           onClose={() => setShowForm(false)}
+          outstanding={outstanding}
+          eventDate={eventDate}
         />
       ) : null}
     </SectionCard>

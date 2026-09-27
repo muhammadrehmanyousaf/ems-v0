@@ -1529,6 +1529,31 @@ export class BookingsAPI {
     return res.data?.data?.data ?? [];
   }
 
+  /**
+   * WW-PRICEADJ — set a new agreed price on a booking that already exists.
+   *
+   * The price could be negotiated at creation and never again, so a number that
+   * moved after signing was either carried in the vendor's head or "fixed" by
+   * cancelling and re-entering the booking, which loses its receipts and its
+   * history. The server syncs the line and the header together, records an
+   * overpayment as a cash refund the vendor owes, and audits the change.
+   */
+  static async adjustPrice(
+    id: number,
+    body: { newTotalAmount: number; businessId?: number | null; reason?: string | null },
+  ): Promise<{
+    from: number;
+    to: number;
+    delta: number;
+    received: number;
+    outstanding: number;
+    cashRefundOwed: number;
+    belowFloor: boolean;
+  }> {
+    const res = await axiosInstance.patch(`/api/v1/bookings/${id}/price`, body);
+    return res.data?.data;
+  }
+
   static async markCompleted(id: number): Promise<void> {
     await axiosInstance.patch(`/api/v1/bookings/${id}`, { status: "Completed" });
   }
