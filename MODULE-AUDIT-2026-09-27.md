@@ -153,11 +153,16 @@ an unsaved row from a local form builder.)
 
 ## 6. Smaller findings
 
-- **`GET /packages` returns 0 for everything**, anonymously and authenticated,
-  while `/packages/vendor-packages` returns the real three. No damage today —
-  the public page reads packages off the business payload — but it is a public
-  listing endpoint that silently returns nothing, and anything built on it later
-  will look like it works.
+- ~~`GET /packages` returns 0 for everything~~ — **WRONG, retracted.** It
+  returns `{ results, meta }`; my counter looked for `rows`/`items`/`data` and
+  not `results`, so it read 4 packages as 0. The endpoint is fine, the frontend
+  reads `.results` correctly, and `/dashboard/packages` does render the vendor's
+  packages (verified on production: "Silver — Nikah Package" and
+  "Gold — Barat Package" both on screen). The same key assumption also made my
+  first sweep report `rows=0` on several admin screens that render cards.
+  Recorded rather than deleted, because the shape of the mistake — a probe that
+  only knows some response envelopes — produced three separate false alarms in
+  this audit.
 - **Cancelled bookings appear under "Aane wale events"** (upcoming) on the
   dashboard. They carry a Cancelled chip, so it is clutter rather than a lie.
 - **48 unreferenced API exports** in total; the Stripe client
