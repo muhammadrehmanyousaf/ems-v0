@@ -20,7 +20,7 @@ import {
   LeadAPI, type Lead, type LeadStatus, type LeadSource, type LeadEventType,
 } from "@/lib/api/leads"
 import { waDigits, logContact } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
-import { openBookingForm } from "@/components/dashboard/mainScreens/artifact/booking-form"
+import { openBookingForm, bookingIdFromSaved } from "@/components/dashboard/mainScreens/artifact/booking-form"
 import { useBusiness } from "@/context/BusinessContext"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useArtifactShell, pkNum, escHtml, initialsOf, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
@@ -342,7 +342,32 @@ export function LeadDetailArtifact({ leadId }: { leadId: number }) {
         openBookingForm(s, {
           prefill: { customerName: lb.dataset.lbName || undefined, customerPhone: lb.dataset.lbPhone || undefined, customerEmail: lb.dataset.lbEmail || undefined, bookingDate: lb.dataset.lbDate || undefined, guestCount: lb.dataset.lbGuests ? Number(lb.dataset.lbGuests) : null, businessId: lb.dataset.lbBiz ? Number(lb.dataset.lbBiz) : null, subVenueId: lb.dataset.lbSub ? Number(lb.dataset.lbSub) : undefined, leadId },
           businesses: bizRef.current, activeBiz: activeBizRef.current,
-          onSaved: () => { LeadAPI.transition(leadId, { to: "booked" as LeadStatus }).catch(() => {}); qc.invalidateQueries({ queryKey: ["lead-detail", leadId] }) },
+          /**
+           * WW-LEADLINK — link the lead to the booking it BECAME.
+           *
+           * This marked the lead "booked" and threw the new booking's id away,
+           * so a converted lead never named its wedding: the vendor could not
+           * get from a won lead to the booking, and anything joining the two
+           * found nothing. (Most won leads on production carry `bookingId:
+           * null`, but not all of that is this bug — the separate "Jeeta mark
+           * karein" button legitimately wins a lead with no booking at all.)
+           * `linkBooking` exists for exactly this
+           * moment — its own comment says "used by the convert-to-booking flow
+           * after the new booking lands" — and this flow called `transition`.
+           *
+           * The failure is no longer swallowed either: a booking was created, so
+           * a lead left in the wrong stage is something the vendor must hear.
+           */
+          onSaved: async (res) => {
+            const newBookingId = bookingIdFromSaved(res)
+            try {
+              if (newBookingId) await LeadAPI.linkBooking(leadId, newBookingId)
+              else await LeadAPI.transition(leadId, { to: "booked" as LeadStatus })
+            } catch {
+              toast.error("Booking ban gayi, lekin lead 'jeeta' mark nahi hui — lead khol kar stage badal dein")
+            }
+            qc.invalidateQueries({ queryKey: ["lead-detail", leadId] })
+          },
         })
         return
       }

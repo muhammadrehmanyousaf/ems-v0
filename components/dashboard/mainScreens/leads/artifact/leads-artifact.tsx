@@ -12,7 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { LeadAPI, type Lead, type LeadStatus, type LeadSource, type LeadEventType, type CreateLeadInput, type UpdateLeadInput } from "@/lib/api/leads"
 import { venueSpacesApi, type SubVenueNode } from "@/lib/api/venueSpaces"
-import { openBookingForm } from "@/components/dashboard/mainScreens/artifact/booking-form"
+import { openBookingForm, bookingIdFromSaved } from "@/components/dashboard/mainScreens/artifact/booking-form"
 import { StaffAPI } from "@/lib/api/staff"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useBusiness } from "@/context/BusinessContext"
@@ -321,7 +321,21 @@ export function LeadsArtifact() {
           openBookingForm(s, {
             prefill: { customerName: l.contactName || undefined, customerPhone: l.contactPhone || undefined, customerEmail: l.contactEmail || undefined, bookingDate: l.eventDate ? String(l.eventDate).slice(0, 10) : undefined, guestCount: l.estimatedGuests ?? undefined, businessId: lx.businessId ?? Number(bizRef.current), subVenueId: lx.subVenueId ?? undefined, leadId: l.id },
             businesses: bizListRef.current, activeBiz: bizRef.current,
-            onSaved: async () => { try { await LeadAPI.update(l.id, { status: "booked" } as UpdateLeadInput) } catch { /* non-fatal */ } qc.invalidateQueries({ queryKey: ["leads-artifact"] }) },
+            // WW-LEADLINK — same fix as the lead-detail screen: record WHICH
+            // booking the lead became, and say so if the link fails. This wrote
+            // status="booked" with no booking id at all, so a converted lead
+            // never named its wedding. (Won leads with no booking id also come
+            // from "Jeeta mark karein", which legitimately makes them.)
+            onSaved: async (res) => {
+              const newBookingId = bookingIdFromSaved(res)
+              try {
+                if (newBookingId) await LeadAPI.linkBooking(l.id, newBookingId)
+                else await LeadAPI.update(l.id, { status: "booked" } as UpdateLeadInput)
+              } catch {
+                toast.error("Booking ban gayi, lekin lead 'jeeta' mark nahi hui — lead khol kar stage badal dein")
+              }
+              qc.invalidateQueries({ queryKey: ["leads-artifact"] })
+            },
           })
           return
         }

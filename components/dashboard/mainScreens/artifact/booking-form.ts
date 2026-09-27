@@ -23,6 +23,29 @@ import {
 import { venueSpacesApi, type SubVenueNode } from "@/lib/api/venueSpaces"
 import { openDrawer, closeDrawer, escHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
+/**
+ * WW-LEADLINK — dig the new booking's id out of whatever `onSaved` was handed.
+ *
+ * `BookingsAPI.create` returns the whole envelope, and the id sits at
+ * `data.booking.id` on some paths and `data.id` on others. The lead→booking
+ * callers need it to link the lead to the booking it became, and both of them
+ * were ignoring the argument entirely.
+ */
+export function bookingIdFromSaved(res: unknown): number | null {
+  const env = res as { data?: { booking?: { id?: unknown }; id?: unknown }; booking?: { id?: unknown }; id?: unknown } | null
+  const candidates = [
+    env?.data?.booking?.id,
+    env?.data?.id,
+    env?.booking?.id,
+    env?.id,
+  ]
+  for (const c of candidates) {
+    const n = Number(c)
+    if (Number.isFinite(n) && n > 0) return n
+  }
+  return null
+}
+
 export type BizLite = { id: number; name?: string | null }
 export type BookingPrefill = {
   customerName?: string; customerPhone?: string; customerEmail?: string
