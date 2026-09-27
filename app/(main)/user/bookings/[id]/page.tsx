@@ -71,7 +71,7 @@ import { RefundSettlementCard } from "@/components/bookings/refund-settlement-ca
 // QA #4 — show the refund the customer would get back inside the cancel dialog.
 import { getRefundPreview, requestCancellation, type RefundPreview } from "@/lib/api/bookingOrder";
 import { slotText, slotFromBooking } from "@/lib/booking/slot-vocabulary";
-import { cancelRouteFor, cancelErrorMessage, isPaymentAlreadyReceived } from "@/lib/bookings/cancel-route";
+import { cancelRouteFor, cancelErrorMessage, isPaymentAlreadyReceived, isClosedBookingStatus } from "@/lib/bookings/cancel-route";
 
 interface BookingDetail {
   id: number;
@@ -521,7 +521,8 @@ export default function BookingDetailPage() {
    * path read booking status and ignored paymentStatus. Both facts matter, and
    * neither is sufficient on its own.)
    */
-  const isClosedStatus = ["cancelled", "rejected", "declined", "refunded"].includes(statusKey);
+  // Shared with /pay so the two screens cannot disagree about "closed".
+  const isClosedStatus = isClosedBookingStatus(statusKey);
   /**
    * ...and the mirror of that: an OPEN booking with money still outstanding has
    * to offer a way to pay it.
