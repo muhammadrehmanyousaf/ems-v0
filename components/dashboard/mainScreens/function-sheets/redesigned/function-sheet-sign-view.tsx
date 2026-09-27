@@ -80,7 +80,10 @@ export function FunctionSheetSignView() {
   })
 
   if (isLoading) return <div className="p-4 md:p-6"><DetailSkeleton /></div>
-  if (isError || !sheet) return <div className="p-4 md:p-6"><EmptyState icon="FileText" title="No function sheet" description="Create a function sheet first to sign it." /></div>
+  // A failed request is not a missing sheet. This screen signs a contract, so
+  // "create one first" is the worst possible thing to say on a network blip.
+  if (isError) return <div className="p-4 md:p-6"><EmptyState icon="AlertTriangle" title="Couldn't load this function sheet" description="Something went wrong on the way — it is still there. Check your connection and refresh." /></div>
+  if (!sheet) return <div className="p-4 md:p-6"><EmptyState icon="FileText" title="No function sheet" description="Create a function sheet first to sign it." /></div>
 
   const bothSigned = Boolean(vendorSig?.signedAt && customerSig?.signedAt)
   const canAdvance = sheet.state === "contract_pending" && bothSigned

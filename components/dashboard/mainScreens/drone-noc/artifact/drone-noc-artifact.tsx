@@ -11,7 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { DroneNocAPI, type DroneNOC, type PermitStatus, type PermitType, type IssuingAuthority, type CreatePermitInput } from "@/lib/api/droneNoc"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
-import { useArtifactShell, escHtml, initTablePager, loadPref, savePref, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, escHtml, initTablePager, loadPref, savePref, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const ST_LABEL: Record<PermitStatus, string> = { pending: "Zeer-e-ghaur", approved: "Manzoor", rejected: "Radd", cancelled: "Cancel", expired: "Khatam", expiring_soon: "Jald khatam" }
 const ST_TONE: Record<PermitStatus, string> = { pending: "warn", approved: "ok", rejected: "bad", cancelled: "mut", expired: "mut", expiring_soon: "warn" }
@@ -103,18 +103,21 @@ export function DroneNocArtifact() {
   const qc = useQueryClient()
   const activeBusinessId = useActiveBusinessId()
   const bizRef = React.useRef(activeBusinessId); bizRef.current = activeBusinessId
-  const { data } = useQuery({ queryKey: ["drone-art", activeBusinessId], queryFn: () => DroneNocAPI.list(activeBusinessId != null ? { businessId: activeBusinessId } : {}) })
+  const { data, isError, refetch } = useQuery({ queryKey: ["drone-art", activeBusinessId], queryFn: () => DroneNocAPI.list(activeBusinessId != null ? { businessId: activeBusinessId } : {}) })
   const list = React.useMemo(() => (data?.permits ?? []) as DroneNOC[], [data])
   const [filter, setFilter] = React.useState(() => loadPref("tab:drone-noc", "all"))
 
   React.useEffect(() => {
     const s = shadowRef.current; if (!s || !ready) return
     const wwc = s.getElementById("wwc"); if (!wwc) return
+    // A failed request rendered as an empty screen, which reads as
+    // "you have no data" rather than "we could not load it".
+    if (isError) { wwc.innerHTML = errorBannerHtml("Drone NOC record load nahi hue."); return }
     if (!data) { wwc.innerHTML = `<div class="loadwrap">Permits load ho rahe hain…</div>`; return }
     wwc.innerHTML = buildContent(list, filter)
     initTablePager(s, { pageSize: 25 })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, data, filter])
+  }, [ready, data, filter, isError])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
@@ -123,6 +126,8 @@ export function DroneNocArtifact() {
     const refetch = () => qc.invalidateQueries({ queryKey: ["drone-art", bizRef.current] })
     const val = (id: string) => (s.getElementById(id) as HTMLInputElement | HTMLSelectElement | null)?.value?.trim() ?? ""
     s.addEventListener("click", async (e) => {
+      // the error banner ships a retry button; honour it
+      if ((e.target as HTMLElement).closest("[data-retry]")) { void refetch(); return }
       const t = e.target as HTMLElement
       const tab = t.closest(".tab") as HTMLElement | null
       if (tab?.dataset.f) { savePref("tab:drone-noc", tab.dataset.f); setFilter(tab.dataset.f); return }

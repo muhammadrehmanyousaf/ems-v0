@@ -16,7 +16,7 @@ import { toast } from "sonner"
 import { SlotTemplatesAPI, type SlotTemplate, type UpsertSlotTemplateInput } from "@/lib/api/businessAvailability"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useBusiness } from "@/context/BusinessContext"
-import { useArtifactShell, escHtml, openDrawer, closeDrawer, venuePickerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, escHtml, openDrawer, closeDrawer, venuePickerHtml, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 /* Mon=1, Tue=2, … Sun=64 (mirrors BusinessSlotTemplate.weekdayMask). */
 const DAYS: [string, number][] = [["Pir", 1], ["Man", 2], ["Bud", 4], ["Jum", 8], ["Jum'a", 16], ["Haf", 32], ["Itw", 64]]
@@ -132,9 +132,13 @@ export function SlotsArtifact() {
     const wwc = s.getElementById("wwc"); if (!wwc) return
     if (!activeBusinessId) { wwc.innerHTML = venuePickerHtml((businesses || []) as { id: number; name?: string }[], { title: "Kaunsi venue ke slots?", sub: "Bookable slots ek venue ke liye set hote hain — neeche se chunein." }); return }
     if (tplQ.isLoading) { wwc.innerHTML = `<div class="loadwrap">Slots load ho rahe hain…</div>`; return }
+    // On a failed request `data` is undefined, so `templates` is [] and the
+    // screen drew the "no slots yet" empty state — telling a venue that sells
+    // three sessions a day that it has none. `isError` must stay in the deps.
+    if (tplQ.isError) { wwc.innerHTML = errorBannerHtml("Slots load nahi hue — internet check karke dobara koshish karein."); return }
     wwc.innerHTML = buildContent(templates)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, tplQ.data, tplQ.isLoading, activeBusinessId, businesses])
+  }, [ready, tplQ.data, tplQ.isLoading, tplQ.isError, activeBusinessId, businesses])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
@@ -161,6 +165,8 @@ export function SlotsArtifact() {
 
     s.addEventListener("click", async (e) => {
       const t = e.target as HTMLElement
+      // the error banner ships a retry button; honour it before the venue guard
+      if (t.closest("[data-retry]")) { qc.invalidateQueries({ queryKey: ["slots-setup"] }); return }
       const biz = bizRef.current; if (!biz) return
 
       if (t.closest("[data-slot-new]")) { openDrawer(s, "Naya slot", slotFormBody(null)); return }

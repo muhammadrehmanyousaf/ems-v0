@@ -17,7 +17,7 @@ import {
   CompletenessAPI, nextBestOf, remainingOf,
   type BusinessCompleteness, type CompletenessCategory,
 } from "@/lib/api/completeness"
-import { useArtifactShell, escHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, escHtml, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 /* ── status from score ───────────────────────────────────────── */
 function statusOf(score: number): { label: string; tone: string; title: string; body: string } {
@@ -198,7 +198,7 @@ export function OnboardingArtifact() {
   const { shadowRef, ready } = useArtifactShell(hostRef, {
     activeHref: "/dashboard/onboarding", crumbBold: "Set up", crumbSub: "Listing mukammal karein", extraCss: EXTRA_CSS,
   })
-  const { data } = useQuery({ queryKey: ["onboarding-completeness"], queryFn: () => CompletenessAPI.listMine() })
+  const { data, isError, refetch } = useQuery({ queryKey: ["onboarding-completeness"], queryFn: () => CompletenessAPI.listMine() })
   const all = React.useMemo(() => (data ?? []) as BusinessCompleteness[], [data])
   const [sel, setSel] = React.useState<number | null>(null)
   const active = all.find((b) => b.businessId === sel) || all[0] || null
@@ -207,11 +207,14 @@ export function OnboardingArtifact() {
     const s = shadowRef.current
     if (!s || !ready) return
     const wwc = s.getElementById("wwc"); if (!wwc) return
+    // A failed request rendered as an empty screen, which reads as
+    // "you have no data" rather than "we could not load it".
+    if (isError) { wwc.innerHTML = errorBannerHtml("Setup status load nahi hua."); return }
     if (!data) { wwc.innerHTML = `<div class="loadwrap">Aapki listing ka score load ho raha hai…</div>`; return }
     if (!active) { wwc.innerHTML = `<div class="loadwrap">Abhi koi business nahi. Pehle ek venue add karein.</div>`; return }
     wwc.innerHTML = buildContent(active, all)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, data, sel, active])
+  }, [ready, data, sel, active, isError])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
@@ -219,6 +222,8 @@ export function OnboardingArtifact() {
     if (!s || !ready || bound.current) return
     bound.current = true
     s.addEventListener("click", (e) => {
+      // the error banner ships a retry button; honour it
+      if ((e.target as HTMLElement).closest("[data-retry]")) { void refetch(); return }
       const t = e.target as HTMLElement
       const tab = t.closest("[data-biz]") as HTMLElement | null
       if (tab?.dataset.biz) setSel(Number(tab.dataset.biz))

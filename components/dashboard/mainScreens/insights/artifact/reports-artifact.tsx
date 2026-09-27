@@ -11,8 +11,8 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { AnalyticsAPI } from "@/lib/api/analytics"
-import { LeadAPI, type Lead, type LeadSource } from "@/lib/api/leads"
+import { AnalyticsAPI, type CashFlowForecastData, type SeasonalityData, type ResponseTimesData } from "@/lib/api/analytics"
+import { LeadAPI, type Lead, type LeadSource, type ConversionAnalytics } from "@/lib/api/leads"
 import { useFetchData } from "@/hooks/use-fetch-data"
 import { useActiveBusinessId, useActiveBusinessStore } from "@/lib/store/active-business-store"
 import type { BookingData } from "@/lib/dashboard-types"
@@ -27,6 +27,46 @@ const SRC: Record<string, { label: string; color: string }> = {
 }
 
 const EXTRA_CSS = String.raw`
+/* WW-FORECAST — cash-flow, seasonality and lead-conversion cards. */
+.cf-alert{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:0 0 12px; padding:10px 12px; border-radius:var(--r-sm); background:var(--bad-wash); border:1px solid var(--bad); font-size:12.5px; color:var(--bad); }
+.cf-alert b{ font-weight:700; } .cf-alert span{ color:var(--bad); opacity:.85; }
+.cf-alert .link{ color:var(--bad); white-space:nowrap; font-weight:600; }
+.cf-row{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.cf-stat{ flex:1; min-width:140px; padding:9px 11px; border-radius:var(--r-sm); background:var(--surface-3); border:1px solid var(--border); display:flex; flex-direction:column; gap:3px; }
+.cf-stat .k{ font-size:11px; color:var(--ink-3); } .cf-stat .v{ font-size:16px; font-weight:680; letter-spacing:-.02em; }
+.sea-key{ display:flex; gap:12px; font-size:11px; color:var(--ink-3); align-items:center; }
+.sea-key i{ display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:4px; vertical-align:-1px; }
+.sea-key i.this{ background:var(--accent); } .sea-key i.last{ background:var(--border-2); }
+.occ.sea .sea-col{ flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; min-width:0; }
+.sea-track{ position:relative; width:100%; height:96px; display:flex; align-items:flex-end; justify-content:center; gap:2px; }
+.sea-last{ width:42%; background:var(--border-2); border-radius:3px 3px 0 0; }
+.sea-this{ width:42%; background:var(--accent); border-radius:3px 3px 0 0; }
+.cv-bar{ display:flex; height:12px; border-radius:6px; overflow:hidden; background:var(--surface-3); margin:4px 0 8px; }
+.cv-seg.won{ background:var(--ok); } .cv-seg.open{ background:var(--accent); } .cv-seg.lost{ background:var(--bad); }
+.cv-key{ display:flex; gap:14px; flex-wrap:wrap; font-size:11.5px; color:var(--ink-3); margin-bottom:10px; }
+.cv-key i{ display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:5px; vertical-align:-1px; }
+.cv-key i.won{ background:var(--ok); } .cv-key i.open{ background:var(--accent); } .cv-key i.lost{ background:var(--bad); }
+.cv-srcs{ display:flex; flex-direction:column; gap:7px; border-top:1px solid var(--border); padding-top:10px; }
+.cv-src{ display:grid; grid-template-columns:1fr 34px 70px 36px; align-items:center; gap:8px; font-size:12px; }
+.cv-src .nm{ text-transform:capitalize; color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cv-src .ct{ color:var(--ink-3); text-align:right; }
+.cv-src .mini{ display:block; height:6px; border-radius:3px; background:var(--surface-3); overflow:hidden; }
+.cv-src .mini span{ display:block; height:100%; background:var(--accent); }
+.cv-src b{ text-align:right; font-size:11.5px; }
+/* response times */
+.rt-warn{ font-size:12px; color:var(--ink-2); background:var(--surface-2); border-radius:8px; padding:9px 11px; margin-bottom:10px; line-height:1.45; }
+.rt-warn.bad{ color:var(--bad); background:var(--bad-wash); }
+.rt-list{ display:flex; flex-direction:column; gap:7px; }
+.rt-list.rt-src{ border-top:1px solid var(--border); padding-top:10px; margin-top:10px; }
+.rt-cap{ font-size:10.5px; font-weight:600; color:var(--ink-3); text-transform:uppercase; letter-spacing:.03em; margin-bottom:2px; }
+.rt-row{ display:grid; grid-template-columns:1fr 70px 56px; align-items:center; gap:8px; font-size:12px; }
+.rt-row .nm{ text-transform:capitalize; color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rt-row .nm.plain{ text-transform:none; }
+.rt-row .ct{ color:var(--ink-3); text-align:right; }
+.rt-row .mini{ display:block; height:6px; border-radius:3px; background:var(--surface-3); overflow:hidden; }
+.rt-row .mini span{ display:block; height:100%; background:var(--accent); }
+.rt-row b{ text-align:right; font-size:11.5px; font-variant-numeric:tabular-nums; }
+@media (max-width:560px){ .cf-stat{ min-width:100%; } .cv-src{ grid-template-columns:1fr 30px 50px 32px; } }
 .kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px; }
 @media (max-width:820px){ .kpis{ grid-template-columns:1fr 1fr; } } @media (max-width:520px){ .kpis{ grid-template-columns:1fr; } }
 .kpi{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow-xs); padding:15px 16px; }
@@ -51,7 +91,7 @@ const EXTRA_CSS = String.raw`
 .htbl .hn.pick{ cursor:pointer; transition:color .12s; } .htbl .hn.pick:hover{ color:var(--accent-ink); }
 `
 
-interface RData { revenue: number; bookings: number; avg: number; occ: number; series: { m: string; v: number }[]; monthly: { m: string; n: number }[]; statusMix: { key: string; label: string; count: number; color: string }[]; sources: { label: string; count: number; color: string }[]; halls: { name: string; businessId: number; bookings: number; revenue: number; occ: number | null }[] }
+interface RData { revenue: number; bookings: number; avg: number; occ: number; series: { m: string; v: number }[]; monthly: { m: string; n: number }[]; statusMix: { key: string; label: string; count: number; color: string }[]; sources: { label: string; count: number; color: string }[]; halls: { name: string; businessId: number; bookings: number; revenue: number; occ: number | null }[]; cashflow: CashFlowForecastData | null; seasonality: SeasonalityData | null; conversion: ConversionAnalytics | null; response: ResponseTimesData | null }
 
 function spark(vals: number[]): string {
   if (vals.length < 2) return ""
@@ -74,6 +114,134 @@ function exportHallsCsv(halls: RData["halls"], name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+/**
+ * WW-FORECAST — three surfaces the back end has always computed and nothing
+ * rendered.
+ *
+ * `/analytics/cash-flow-forecast`, `/analytics/seasonality` and
+ * `/leads/conversion-analytics` were live, typed and wrapped in lib/api — with
+ * no caller anywhere. On this account that hid Rs 2.73 crore of expected
+ * income, Rs 1.93 crore of it already overdue, and the fact that 80 leads had
+ * produced 10 bookings.
+ *
+ * Reports is the right home: it is already the "kaarobaar ka jaiza" screen and
+ * already carries the money and lead charts these sit beside.
+ */
+function cashflowCard(cf: CashFlowForecastData | null): string {
+  if (!cf || !Array.isArray(cf.months) || !cf.months.length) return ""
+  const months = cf.months
+  const max = Math.max(...months.map((m: CashFlowForecastData["months"][number]) => Number(m.expectedIn) || 0), 1)
+  const overdueTotal = Number(cf.overdue?.total) || 0
+  const overdueCount = Number(cf.overdue?.count) || 0
+
+  const bars = months.map((m: CashFlowForecastData["months"][number]) => {
+    const v = Number(m.expectedIn) || 0
+    const h = Math.max(4, Math.round((v / max) * 100))
+    return `<div class="occ-col" title="${escHtml(m.label)} — Rs ${pkNum(v)}${m.installmentCount ? ` · ${m.installmentCount} qist` : ""}">
+      <div class="occ-track"><div class="occ-fill ${m.isCurrentMonth ? "on" : ""}" style="height:${h}%"></div></div>
+      <div class="occ-lbl">${escHtml(String(m.label || "").split(" ")[0])}</div></div>`
+  }).join("")
+
+  // Overdue leads the card: it is money already late, not money forecast.
+  const overdue = overdueTotal > 0
+    ? `<div class="cf-alert"><div><b>Rs ${pkNum(overdueTotal)}</b> pehle hi late hai<span> · ${overdueCount} qist</span></div><a class="link" data-nav href="/dashboard/receivables">Vasooli kholein</a></div>`
+    : ""
+
+  return `<div class="chart-card">
+    <div class="cc-head"><div><div class="cc-title">Paisa kab aayega</div><div class="cc-sub">Agle ${months.length} mahine ki tay-shuda qisten</div></div></div>
+    ${overdue}
+    <div class="cf-row">
+      <div class="cf-stat"><span class="k">${months.length} mahine mein</span><span class="v tnum"><span class="rs">Rs</span> ${pkNum(Number(cf.totals?.horizonTotal) || 0)}</span></div>
+      <div class="cf-stat"><span class="k">Kul baqaya pipeline</span><span class="v tnum"><span class="rs">Rs</span> ${pkNum(Number(cf.totals?.grandTotal) || 0)}</span></div>
+      <div class="cf-stat"><span class="k">Sab se bara mahina</span><span class="v tnum">${escHtml(cf.biggestMonth?.label || "—")}</span></div>
+    </div>
+    <div class="occ">${bars}</div></div>`
+}
+
+function seasonalityCard(se: SeasonalityData | null): string {
+  // The this-year/last-year pairs live on `yoy`, not `months` — `months` is a
+  // flat per-month series across the whole window.
+  if (!se || !Array.isArray(se.yoy) || !se.yoy.length) return ""
+  const rows = se.yoy
+  const max = Math.max(...rows.map((m: SeasonalityData["yoy"][number]) => Math.max(Number(m.thisYear?.revenue) || 0, Number(m.lastYear?.revenue) || 0)), 1)
+  const bars = rows.map((m: SeasonalityData["yoy"][number]) => {
+    const t = Number(m.thisYear?.revenue) || 0
+    const l = Number(m.lastYear?.revenue) || 0
+    return `<div class="sea-col" title="${escHtml(m.monthLabel)} — is saal Rs ${pkNum(t)}, pichle saal Rs ${pkNum(l)}">
+      <div class="sea-track">
+        <div class="sea-last" style="height:${Math.max(2, Math.round((l / max) * 100))}%"></div>
+        <div class="sea-this" style="height:${Math.max(2, Math.round((t / max) * 100))}%"></div>
+      </div><div class="occ-lbl">${escHtml(m.monthLabel)}</div></div>`
+  }).join("")
+  const peak = se.peaks?.byRevenue ?? se.peaks?.byCount ?? null
+  return `<div class="chart-card">
+    <div class="cc-head"><div><div class="cc-title">Season ka rujhan</div><div class="cc-sub">Is saal aur pichla saal${peak ? ` · sab se bara <b>${escHtml(peak.label || "")}</b>` : ""}</div></div>
+      <div class="sea-key"><span><i class="this"></i> is saal</span><span><i class="last"></i> pichla</span></div></div>
+    <div class="occ sea">${bars}</div></div>`
+}
+
+function conversionCard(cv: ConversionAnalytics | null): string {
+  if (!cv || !Number(cv.totalLeads)) return ""
+  const total = Number(cv.totalLeads) || 0
+  const booked = Number(cv.totalBooked) || 0
+  const lost = Number(cv.totalLost) || 0
+  const open = Math.max(0, total - booked - lost)
+  const rate = Number(cv.overallConversionRate) || 0
+  const seg = (n: number, cls: string, label: string) =>
+    n > 0 ? `<div class="cv-seg ${cls}" style="flex:${n}" title="${escHtml(label)}: ${n}"></div>` : ""
+  const sources = (cv.perSource || []).slice(0, 5).map((s) => {
+    const st = (s.byStatus || {}) as Record<string, number>
+    const bk = Number(st.booked) || 0
+    const n = Number(s.total) || 0
+    const pct = n ? Math.round((bk / n) * 100) : 0
+    return `<div class="cv-src"><span class="nm">${escHtml(String(s.source || "").replace(/_/g, " "))}</span>
+      <span class="ct tnum">${n}</span>
+      <span class="mini"><span style="width:${pct}%"></span></span>
+      <b class="tnum">${pct}%</b></div>`
+  }).join("")
+  return `<div class="chart-card">
+    <div class="cc-head"><div><div class="cc-title">Leads se bookings</div><div class="cc-sub">${total} poochh-gichh se <b>${booked}</b> booking — ${rate}%</div></div>
+      <a class="link" data-nav href="/dashboard/leads">Leads ${""}</a></div>
+    <div class="cv-bar">${seg(booked, "won", "Booked")}${seg(open, "open", "Abhi khuli")}${seg(lost, "lost", "Lost")}</div>
+    <div class="cv-key"><span><i class="won"></i> booked ${booked}</span><span><i class="open"></i> khuli ${open}</span><span><i class="lost"></i> lost ${lost}</span></div>
+    ${sources ? `<div class="cv-srcs">${sources}</div>` : ""}</div>`
+}
+/**
+ * How fast the vendor answers a lead, and how many they never answer.
+ *
+ * The endpoint reports every duration in HOURS, and this vendor's median is
+ * 1350 — 56 days. Printing "1350 ghante" would read as a glitch, so anything
+ * past two days is said in days.
+ */
+function respHours(h: number): string {
+  if (!isFinite(h) || h < 0) return "—"
+  if (h < 1) return `${Math.round(h * 60)} minute`
+  if (h < 48) return `${h < 10 ? h.toFixed(1) : Math.round(h)} ghante`
+  return `${Math.round(h / 24)} din`
+}
+const RT_BUCKET: Record<string, string> = {
+  lt_1h: "1 ghante se kam", "1_4h": "1–4 ghante", "4_24h": "4–24 ghante", "1_3d": "1–3 din", gt_3d: "3 din se zyada",
+}
+function responseCard(rt: ResponseTimesData | null): string {
+  if (!rt) return ""
+  const answered = Number(rt.totalLeadsResponded) || 0
+  const never = Number(rt.totalLeadsUnresponded) || 0
+  if (!answered && !never) return ""
+  const total = answered + never
+  const med = rt.stats?.median
+  const buckets = (rt.distribution || []).filter((b) => b.count > 0)
+  const bars = buckets.map((b) => `<div class="rt-row"><span class="nm plain">${escHtml(RT_BUCKET[String(b.key)] || b.label)}</span><span class="mini"><span style="width:${Math.min(100, Number(b.pct) || 0)}%"></span></span><b class="tnum">${b.count}</b></div>`).join("")
+  const srcs = (rt.bySource || []).slice(0, 4).map((x) => `<div class="rt-row"><span class="nm">${escHtml(String(x.source || "").replace(/_/g, " "))}</span><span class="ct tnum">${x.count}</span><b class="tnum">${escHtml(respHours(Number(x.median)))}</b></div>`).join("")
+  // The unanswered count is the headline when it is the bigger number — a median
+  // computed from the few that were answered flatters a vendor who ignores most.
+  const bad = never > answered
+  return `<div class="chart-card">
+    <div class="cc-head"><div><div class="cc-title">Jawab dene ki raftaar</div><div class="cc-sub">${total} leads mein se <b>${answered}</b> ko jawab diya${med != null ? ` · median ${escHtml(respHours(Number(med)))}` : ""} · saari venues</div></div>
+      <a class="link" data-nav href="/dashboard/leads">Leads</a></div>
+    ${never > 0 ? `<div class="rt-warn${bad ? " bad" : ""}">${bad ? "⚠️" : "•"} <b>${never}</b> leads ka aaj tak koi jawab nahi gaya${bad ? " — inhi mein se bookings nikalti hain." : "."}</div>` : ""}
+    ${bars ? `<div class="rt-list">${bars}</div>` : ""}
+    ${srcs ? `<div class="rt-list rt-src"><div class="rt-cap">Zariye ke hisaab se median</div>${srcs}</div>` : ""}</div>`
+}
 function buildContent(d: RData): string {
   const bkSeries = d.monthly.map((x) => x.n)
   const revSeries = d.series.map((x) => x.v)
@@ -101,7 +269,9 @@ function buildContent(d: RData): string {
   const hallMax = Math.max(...d.halls.map((h) => h.revenue), 1)
   const halls = `<div class="chart-card"><div class="cc-head"><div class="cc-title">Halls ki kaarkardagi</div><div class="cc-sub">Kaunsa hall zyada kamaya</div></div><table class="htbl"><thead><tr><th>Hall</th><th class="r">Bookings</th><th class="r">Kamaai</th><th class="r">Occupancy</th></tr></thead><tbody>${d.halls.map((h) => `<tr><td><span class="hn pick" data-hall-biz="${h.businessId}" role="button" tabindex="0" title="${escHtml(h.name)} ki bookings dekhein"><i></i> ${escHtml(h.name)}</span></td><td class="r tnum">${h.bookings}</td><td class="r"><span style="color:var(--ink-3);font-weight:600;font-size:11px">Rs</span> ${pkNum(h.revenue)}</td><td class="r"><span class="occp">${h.occ != null ? `<span class="mini"><span style="width:${Math.min(100, h.occ)}%"></span></span><b>${h.occ}%</b>` : "<b>—</b>"}</span></td></tr>`).join("") || `<tr><td colspan="4" style="color:var(--ink-3);padding:16px 4px">Abhi koi data nahi.</td></tr>`}</tbody></table></div>`
 
-  return `${kpis}${chart}<div class="grid2">${bars}${donut}</div><div class="grid2">${occ}${halls}</div>`
+  const resp = responseCard(d.response)
+  const tail = resp ? `<div class="grid2">${resp}${occ}</div>${halls}` : `<div class="grid2">${occ}${halls}</div>`
+  return `${kpis}${chart}${cashflowCard(d.cashflow)}<div class="grid2">${bars}${donut}</div><div class="grid2">${seasonalityCard(d.seasonality)}${conversionCard(d.conversion)}</div>${tail}`
 }
 
 function drawChart(root: ShadowRoot, series: { m: string; v: number }[]) {
@@ -144,6 +314,17 @@ export function ReportsArtifact() {
   const bkTrQ = useQuery({ queryKey: ["rep-bk"], queryFn: () => AnalyticsAPI.getBookingTrends("this_year") })
   const bkdQ = useQuery({ queryKey: ["rep-bkd"], queryFn: () => AnalyticsAPI.getRevenueBreakdowns("this_year") })
   const leadsQ = useQuery({ queryKey: ["rep-leads"], queryFn: () => LeadAPI.list({}) })
+  // All three were already typed and wrapped in lib/api with no caller
+  // anywhere. `.catch(() => null)` so one slow analytic never blanks the page —
+  // each card renders nothing when its data is missing.
+  const cashQ = useQuery({ queryKey: ["rep-cash", activeBusinessId], queryFn: () => AnalyticsAPI.getCashFlowForecast(6).catch(() => null) })
+  const seasonQ = useQuery({ queryKey: ["rep-season", activeBusinessId], queryFn: () => AnalyticsAPI.getSeasonality(24).catch(() => null) })
+  const convQ = useQuery({ queryKey: ["rep-conv", activeBusinessId], queryFn: () => LeadAPI.conversionAnalytics(activeBusinessId ? { businessId: activeBusinessId } : {}).catch(() => null) })
+  // GET /analytics/response-times computed median/buckets/per-source from
+  // Lead.respondedAt and had no screen. On this vendor it answers 4 leads
+  // answered against 21 never answered — the single most actionable number the
+  // analytics layer holds, and nothing was showing it.
+  const respQ = useQuery({ queryKey: ["rep-resp"], queryFn: () => AnalyticsAPI.getResponseTimes("this_year").catch(() => null) })
   const isError = kpiQ.isError || revQ.isError || bkTrQ.isError || bkdQ.isError
   const { data: bkData } = useFetchData({ endpoint: "/api/v1/bookings", queryKey: ["rep-bookings"], Params: { page: 1, limit: 100 } })
 
@@ -163,8 +344,9 @@ export function ReportsArtifact() {
     ;((leadsQ.data?.leads ?? []) as Lead[]).forEach((l) => { const s = (l.source || "other") as LeadSource; const meta = SRC[s] || SRC.other; if (!srcMap[meta.label]) srcMap[meta.label] = { label: meta.label, count: 0, color: meta.color }; srcMap[meta.label].count++ })
     const sources = Object.values(srcMap).sort((a, b) => b.count - a.count).slice(0, 5)
     const halls = [...byBiz].sort((a, b) => num(b.totalRevenue) - num(a.totalRevenue)).slice(0, 5).map((h) => ({ name: h.businessName, businessId: num(h.businessId), bookings: num(h.bookingCount), revenue: num(h.totalRevenue), occ: typeof h.occupancyPct === "number" ? h.occupancyPct : null }))
-    return { revenue, bookings, avg: bookings ? Math.round(revenue / bookings) : 0, occ, series, monthly, statusMix, sources, halls }
-  }, [kpiQ.data, revQ.data, bkTrQ.data, bkdQ.data, leadsQ.data, bkData])
+    return { revenue, bookings, avg: bookings ? Math.round(revenue / bookings) : 0, occ, series, monthly, statusMix, sources, halls,
+             cashflow: cashQ.data ?? null, seasonality: seasonQ.data ?? null, conversion: convQ.data ?? null, response: respQ.data ?? null }
+  }, [kpiQ.data, revQ.data, bkTrQ.data, bkdQ.data, leadsQ.data, bkData, cashQ.data, seasonQ.data, convQ.data, respQ.data])
 
   // Latest snapshots for the once-bound click listener below.
   const dRef = React.useRef(d); dRef.current = d
@@ -200,7 +382,7 @@ export function ReportsArtifact() {
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, kpiQ.data, revQ.data, bkTrQ.data, bkdQ.data, leadsQ.data, bkData, isError])
+  }, [ready, kpiQ.data, revQ.data, bkTrQ.data, bkdQ.data, leadsQ.data, bkData, isError, cashQ.data, seasonQ.data, convQ.data, respQ.data])
 
   return <div ref={hostRef} />
 }

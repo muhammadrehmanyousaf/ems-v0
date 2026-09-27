@@ -31,6 +31,7 @@
 
 import React, { useEffect, useState } from "react";
 import { errorMessage } from "@/lib/utils/api-error";
+import { isClosedBookingStatus } from "@/lib/bookings/cancel-route";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -121,6 +122,45 @@ export default function PayBookingPage() {
    * booking the venue may still decline is the failure that flag exists to
    * prevent — it would then have to be refunded by hand.
    */
+  /**
+   * The booking is over, so nothing is owed.
+   *
+   * The mirror of the check below, and the one that was missing. A cancelled —
+   * even a cancelled AND fully refunded — booking still rendered "SECURE YOUR
+   * DATE", "AMOUNT TO TRANSFER Rs 325,000" and a payment reference, because
+   * this page only ever asked the server what was due and never whether the
+   * booking was alive. `/pay` is reachable directly: an old email, browser
+   * history, or a typed URL all land here.
+   *
+   * A transfer taken in this state is money into a dead booking, refunded by
+   * hand — exactly the failure the approval guard below exists to prevent.
+   */
+  if (isClosedBookingStatus(instructions.bookingStatus)) {
+    return (
+      <div className="mx-auto w-full max-w-[1100px] px-4 sm:px-6 lg:px-8 py-10">
+        {back}
+        <div className="rounded-md border border-bridal-beige bg-bridal-cream p-6 text-center">
+          <Clock className="mx-auto mb-3 h-6 w-6 text-bridal-gold-dark" />
+          <p className="font-display italic text-[20px] text-bridal-charcoal mb-1.5">
+            This booking is closed
+          </p>
+          <p className="font-bridal text-[13px] text-bridal-text-soft">
+            Booking #{bookingId} was {String(instructions.bookingStatus || "closed").toLowerCase()},
+            so there is nothing to pay. If you were expecting a refund, you can
+            follow it on the booking itself.
+          </p>
+          <Button
+            size="sm"
+            className="mt-4"
+            onClick={() => router.push(`/user/bookings/${bookingId}`)}
+          >
+            Open the booking
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (instructions.awaitingVendorApproval) {
     return (
       <div className="mx-auto w-full max-w-[1100px] px-4 sm:px-6 lg:px-8 py-10">

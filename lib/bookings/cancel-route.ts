@@ -39,6 +39,23 @@ function norm(value?: string | null): string {
     .replace(/[\s_-]+/g, " ");
 }
 
+/**
+ * Booking states in which the booking is over and no further money is owed.
+ *
+ * Lives here, beside the cancel routing, so every screen that asks a customer
+ * for money agrees on what "closed" means. The booking detail hid its pay CTA
+ * on these and the /pay page did not check at all — so a cancelled, fully
+ * refunded booking still rendered "SECURE YOUR DATE · AMOUNT TO TRANSFER
+ * Rs 325,000" to anyone who opened the link from an old email.
+ */
+export const CLOSED_BOOKING_STATUSES = ["cancelled", "rejected", "declined", "refunded"] as const;
+
+/** Is this booking over? Accepts the raw server string in any casing. */
+export function isClosedBookingStatus(status?: string | null): boolean {
+  const s = String(status || "").trim().toLowerCase();
+  return (CLOSED_BOOKING_STATUSES as readonly string[]).includes(s);
+}
+
 /** Payment states that mean nothing has been collected yet. */
 const NO_MONEY = new Set(["", "pending", "unpaid", "none", "awaiting payment", "not paid"]);
 

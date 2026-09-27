@@ -168,7 +168,17 @@ export function FunctionSheetComposerView() {
   })
 
   if (isLoading) return <div className="p-4 md:p-6"><DetailSkeleton /></div>
-  if (isError || !sheet) {
+  /**
+   * A failed request is not a missing sheet.
+   *
+   * Collapsed, this told a vendor whose connection dropped that the function
+   * sheet they were editing does not exist and they should create one — which
+   * is both false and an invitation to make a duplicate.
+   */
+  if (isError) {
+    return <div className="p-4 md:p-6"><EmptyState icon="AlertTriangle" title="Couldn't load this function sheet" description="Something went wrong on the way — it is still there. Check your connection and refresh." /></div>
+  }
+  if (!sheet) {
     return <div className="p-4 md:p-6"><EmptyState icon="FileText" title="No function sheet to edit" description="Create a function sheet first, then edit it here." /></div>
   }
 

@@ -148,6 +148,48 @@ export function VendorQueueRedesignedView() {
     queryFn: () => listVendorQueue(statusTab, 50, 0, debouncedSearch),
   })
 
+  /**
+   * WW-QUEUECOUNT — how many are waiting behind each tab.
+   *
+   * The default tab is `pending_review` and the reasoning above is sound: a
+   * vendor who typed their details in is waiting on a human, and the import
+   * backlog is not. But on production `pending_review` holds **0** and
+   * `submitted` holds **3,232**. So an admin opened "Vendor queue", saw an
+   * empty screen, and had no way to know that three thousand applications sat
+   * one tab away with nothing indicating it.
+   *
+   * Counts on the tabs fix the invisibility; landing on the first tab that has
+   * work fixes the empty screen — without overriding the priority order, and
+   * only on the very first render, so a deliberate click is never undone.
+   */
+  const countsQ = useQuery({
+    queryKey: ["vendor-queue-counts"],
+    queryFn: async () => {
+      const entries = await Promise.all(
+        STATUS_TABS.map(async (t) => {
+          try {
+            const r = await listVendorQueue(t.value, 1, 0, "")
+            return [t.value, r?.count ?? 0] as const
+          } catch {
+            return [t.value, null] as const
+          }
+        }),
+      )
+      return Object.fromEntries(entries) as Record<BusinessStatus, number | null>
+    },
+    staleTime: 60_000,
+  })
+
+  const landed = React.useRef(false)
+  React.useEffect(() => {
+    if (landed.current || !countsQ.data) return
+    landed.current = true
+    if ((countsQ.data[statusTab] ?? 0) > 0) return
+    const firstWithWork = STATUS_TABS.find((t) => (countsQ.data?.[t.value] ?? 0) > 0)
+    if (firstWithWork) setStatusTab(firstWithWork.value)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [countsQ.data])
+
   const actionMut = useMutation({
     mutationFn: ({ kind, id, notes }: { kind: ActionKind; id: number; notes?: string }) =>
       runAction(kind, id, notes),
@@ -313,6 +355,20 @@ export function VendorQueueRedesignedView() {
               }
             >
               {t.label}
+              {(() => {
+                const n = countsQ.data?.[t.value]
+                if (n == null || n === 0) return null
+                return (
+                  <span
+                    className={
+                      "ml-1.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums " +
+                      (active ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground")
+                    }
+                  >
+                    {n > 999 ? `${Math.floor(n / 1000)}k+` : n}
+                  </span>
+                )
+              })()}
             </button>
           )
         })}

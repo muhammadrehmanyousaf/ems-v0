@@ -16,7 +16,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { BusinessesAPI, type ApiBusiness } from "@/lib/api/dashboard"
 import { CITIES } from "@/lib/seo/constants"
-import { useArtifactShell, escHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, escHtml, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 type FT = "str" | "num" | "bool"
 const FIELD_TYPE: Record<string, FT> = {
@@ -222,7 +222,7 @@ export function SettingsArtifact() {
     activeHref: "/dashboard/settings", crumbBold: "Set up", crumbSub: "Settings", extraCss: EXTRA_CSS,
   })
   const qc = useQueryClient()
-  const { data } = useQuery({ queryKey: ["settings-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
+  const { data, isError, refetch } = useQuery({ queryKey: ["settings-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
   const all = React.useMemo(() => (data ?? []) as ApiBusiness[], [data])
   const [sel, setSel] = React.useState<number | null>(null)
   const active = all.find((b) => b.id === sel) || all[0] || null
@@ -247,6 +247,9 @@ export function SettingsArtifact() {
     const s = shadowRef.current
     if (!s || !ready) return
     const wwc = s.getElementById("wwc"); if (!wwc) return
+    // A failed request is not a slow one: without this the vendor sat on
+    // "load ho rahi hain" forever with nothing to click.
+    if (isError) { wwc.innerHTML = errorBannerHtml("Settings load nahi hueen — dobara koshish karein."); return }
     if (!data) { wwc.innerHTML = `<div style="padding:80px 16px;text-align:center;color:var(--ink-3)">Settings load ho rahi hain…</div>`; return }
     if (!active) { wwc.innerHTML = `<div style="padding:80px 16px;text-align:center;color:var(--ink-3)">Abhi koi business nahi.</div>`; return }
     computeBaseline(active)
@@ -279,6 +282,8 @@ export function SettingsArtifact() {
     }
 
     s.addEventListener("click", (e) => {
+      // the error banner ships a retry button; honour it
+      if ((e.target as HTMLElement).closest("[data-retry]")) { void refetch(); return }
       const t = e.target as HTMLElement
       const biz = t.closest("[data-biz]") as HTMLElement | null
       if (biz?.dataset.biz) { setSel(Number(biz.dataset.biz)); return }

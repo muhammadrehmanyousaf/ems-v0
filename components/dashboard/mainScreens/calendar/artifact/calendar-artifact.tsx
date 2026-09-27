@@ -20,7 +20,7 @@ import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useBusiness } from "@/context/BusinessContext"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
 import type { BookingData } from "@/lib/dashboard-types"
-import { useArtifactShell, escHtml, openDrawer } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, escHtml, openDrawer, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const WD = ["Itwar", "Peer", "Mangal", "Budh", "Jumeraat", "Juma", "Hafta"]
 const MO = ["Janwari", "Farwari", "March", "April", "Mai", "Joon", "Julai", "Agast", "Sitambar", "Aktoobar", "Navambar", "Disambar"]
@@ -56,7 +56,8 @@ const EXTRA_CSS = String.raw`
 .blk-note{ display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:600; color:var(--bad); background:var(--bad-wash); border-radius:5px; padding:2px 6px; align-self:flex-start; margin-top:auto; } .blk-note svg{ width:11px; height:11px; }
 .cellmenu{ position:fixed; z-index:60; min-width:196px; background:var(--surface); border:1px solid var(--border-2); border-radius:11px; box-shadow:var(--shadow-md); padding:5px; }
 .cm-date{ font-size:11px; color:var(--ink-3); font-weight:600; padding:6px 9px; border-bottom:1px solid var(--border); margin-bottom:4px; }
-.cm-item{ display:flex; align-items:center; gap:10px; width:100%; padding:9px; border-radius:8px; border:0; background:transparent; color:var(--ink); font-size:12.5px; font-weight:500; text-align:left; } .cm-item:hover{ background:var(--surface-3); } .cm-item svg{ width:15px; height:15px; color:var(--ink-3); flex:none; } .cm-item.danger{ color:var(--bad); } .cm-item.danger svg{ color:var(--bad); } .cm-sep{ height:1px; background:var(--border); margin:4px 6px; }
+.cm-item{ display:flex; align-items:center; gap:10px; width:100%; padding:9px; border-radius:8px; border:0; background:transparent; color:var(--ink); font-size:12.5px; font-weight:500; text-align:left; } .cm-item:hover{ background:var(--surface-3); } .cm-item svg{ width:15px; height:15px; color:var(--ink-3); flex:none; } .cm-item.danger{ color:var(--bad); } .cm-item.danger svg{ color:var(--bad); } .cm-blocked{ font-size:11.5px; line-height:1.45; color:var(--bad); background:var(--bad-wash); border-radius:7px; padding:7px 9px; margin:0 6px 4px; }
+.cm-sep{ height:1px; background:var(--border); margin:4px 6px; }
 .rail{ display:flex; flex-direction:column; gap:14px; overflow-y:auto; min-height:0; padding-right:2px; }
 .rcard{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow-xs); padding:16px; } .rcard h3{ font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-3); margin-bottom:12px; }
 .rday{ display:flex; align-items:flex-end; gap:11px; } .rday .rd-num{ font-size:32px; font-weight:660; letter-spacing:-.03em; line-height:.9; } .rday .rd-mo{ font-size:12.5px; color:var(--ink-2); font-weight:600; } .rday .rd-wd{ font-size:12px; color:var(--ink-3); } .rday .rd-cnt{ margin-left:auto; font-size:11px; font-weight:600; color:var(--ink-2); background:var(--surface-3); border:1px solid var(--border); border-radius:20px; padding:2px 9px; }
@@ -163,7 +164,7 @@ export function CalendarArtifact() {
   const { businesses } = useBusiness()
   const bizList = React.useMemo(() => ((businesses ?? []) as { id: number; name?: string | null }[]).map((b) => ({ id: b.id, name: b.name })), [businesses])
   const qc = useQueryClient()
-  const { data } = useFetchData({ endpoint: "/api/v1/bookings", queryKey: ["cal-art-bookings"], Params: { page: 1, limit: 100, sortBy: "bookingDate", sortOrder: "ASC" } })
+  const { data, isError: bookingsErr } = useFetchData({ endpoint: "/api/v1/bookings", queryKey: ["cal-art-bookings"], Params: { page: 1, limit: 100, sortBy: "bookingDate", sortOrder: "ASC" } })
   const blockedQ = useQuery({ queryKey: ["cal-art-blocked", activeBusinessId], queryFn: () => BlockedDatesAPI.getAll(undefined, activeBusinessId) })
   const rows: BookingData[] = data?.data?.data ?? []
 
@@ -256,7 +257,8 @@ export function CalendarArtifact() {
   React.useEffect(() => {
     const s = shadowRef.current
     if (!s || !ready) return
-    const wwc = s.getElementById("wwc"); if (wwc) wwc.innerHTML = render()
+    const wwc = s.getElementById("wwc")
+    if (wwc) wwc.innerHTML = (bookingsErr ? errorBannerHtml("Events load nahi hue — ye calendar adhoora hai, khaali dinon par bharosa na karein.") : "") + render()
     // Open (and re-render) the slot-block drawer for one date. `wholeDay` can be
     // passed after a whole-day toggle so the redraw doesn't wait for the blocked
     // query to refetch (blockedSetRef would still be stale for one tick).
@@ -340,6 +342,7 @@ export function CalendarArtifact() {
           } catch (err) { toast.error(conflictMsg(err)); db.disabled = false; db.textContent = was ? "Kholein" : "Poora din band" }
           return
         }
+        if (t.closest("[data-retry]")) { qc.invalidateQueries({ queryKey: ["/api/v1/bookings"] }); qc.invalidateQueries({ queryKey: ["cal-art-blocked"] }); return }
         const view2 = t.closest("[data-view]") as HTMLElement | null
         if (view2) { setView(view2.dataset.view as "month" | "week" | "agenda"); closeMenu(); return }
         const cal = t.closest("[data-cal]") as HTMLElement | null
@@ -347,9 +350,18 @@ export function CalendarArtifact() {
         const tab = t.closest(".tab") as HTMLElement | null
         if (tab) { setFilter(tab.dataset.f || "all"); return }
         const add = t.closest("[data-add]") as HTMLElement | null
-        if (add) { e.stopPropagation(); closeMenu(); const k = add.dataset.add!; const d = parseKey(k); const menu = document.createElement("div"); menu.id = "cellMenu"; menu.className = "cellmenu"; menu.innerHTML = `<div class="cm-date">${d.getDate()} ${MO[d.getMonth()]}, ${WD[d.getDay()]}</div><button class="cm-item" data-nav-btn="/dashboard/bookings?new=${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg> Nayi booking</button><button class="cm-item" data-nav-btn="/dashboard/leads?new=${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.2 2.7-5 6-5s6 1.8 6 5"/></svg> Naya lead</button><div class="cm-sep"></div><button class="cm-item danger" data-slots="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg> Slots band/khula karein</button>`; s.appendChild(menu); const r = add.getBoundingClientRect(); menu.style.left = Math.max(8, r.right - 196) + "px"; menu.style.top = r.bottom + 6 + "px"; return }
+        if (add) { e.stopPropagation(); closeMenu(); const k = add.dataset.add!; const d = parseKey(k); const menu = document.createElement("div"); menu.id = "cellMenu"; menu.className = "cellmenu"; const isBlockedDay = blockedSetRef.current.has(k); menu.innerHTML = `<div class="cm-date">${d.getDate()} ${MO[d.getMonth()]}, ${WD[d.getDay()]}</div>${isBlockedDay ? `<div class="cm-blocked">Ye din band hai — booking nahi ban sakti. Pehle din kholein.</div><button class="cm-item" data-block="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg> Din kholein (unblock)</button><div class="cm-sep"></div>` : `<button class="cm-item" data-nav-btn="/dashboard/bookings?new=${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg> Nayi booking</button>`}<button class="cm-item" data-nav-btn="/dashboard/leads?new=${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.2 2.7-5 6-5s6 1.8 6 5"/></svg> Naya lead</button><div class="cm-sep"></div><button class="cm-item danger" data-slots="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg> Slots band/khula karein</button>`; s.appendChild(menu); const r = add.getBoundingClientRect(); menu.style.left = Math.max(8, r.right - 196) + "px"; menu.style.top = r.bottom + 6 + "px"; return }
         const blk = t.closest("[data-block]") as HTMLElement | null
-        if (blk) { e.stopPropagation(); closeMenu(); const k = blk.dataset.block!; const was = blockedSetRef.current.has(k); const p = was ? BlockedDatesAPI.unblock(k, activeBizRef.current) : BlockedDatesAPI.block(k, undefined, activeBizRef.current); Promise.resolve(p).then(() => qc.invalidateQueries({ queryKey: ["cal-art-blocked"] })).catch(() => {}); return }
+        if (blk) {
+          e.stopPropagation(); closeMenu()
+          const k = blk.dataset.block!
+          const was = blockedSetRef.current.has(k)
+          const p = was ? BlockedDatesAPI.unblock(k, activeBizRef.current) : BlockedDatesAPI.block(k, undefined, activeBizRef.current)
+          Promise.resolve(p)
+            .then(() => { toast.success(was ? "Din khul gaya" : "Din band ho gaya"); qc.invalidateQueries({ queryKey: ["cal-art-blocked"] }) })
+            .catch((err) => toast.error(conflictMsg(err)))
+          return
+        }
         const cell = t.closest(".cell") as HTMLElement | null
         if (cell && !t.closest(".cell-tools") && cell.dataset.day) { setSelKey(cell.dataset.day); closeMenu(); return }
         closeMenu()
@@ -361,7 +373,7 @@ export function CalendarArtifact() {
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, data, blockedQ.data, offset, selKey, view, filter])
+  }, [ready, data, bookingsErr, blockedQ.data, offset, selKey, view, filter])
 
   return <div ref={hostRef} />
 }

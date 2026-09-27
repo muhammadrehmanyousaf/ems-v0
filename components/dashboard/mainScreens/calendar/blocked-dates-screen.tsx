@@ -23,6 +23,7 @@ import { useQuery } from "@tanstack/react-query"
 import { BusinessesAPI } from "@/lib/api/dashboard"
 import { AvailabilityManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/availability-manager"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
+import { AvailabilitySettingsCard } from "@/components/bookings/availability-settings-card"
 import { EmptyState } from "@/components/dashboard/primitives/empty-state"
 import { Spinner } from "@/components/dashboard/shared/icon"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
@@ -45,7 +46,7 @@ export function BlockedDatesScreen() {
    * live on an account owning 3361 + 3362.
    */
   const activeBusinessId = useActiveBusinessId()
-  const { data: businesses, isLoading, isError } = useQuery({
+  const { data: businesses, isLoading, isError, refetch } = useQuery({
     queryKey: ["blocked-dates-businesses"],
     queryFn: () => BusinessesAPI.getUserBusinesses(),
   })
@@ -114,6 +115,42 @@ export function BlockedDatesScreen() {
           )}
 
           <AvailabilityManager businessId={biz.id} />
+
+          {/*
+            WW-VACATION — closing the venue for a period, and recurring weekly
+            closures.
+
+            `AvailabilitySettingsCard` was written for this and its own comment
+            says so: "Vendor-side availability settings: BK-048 vacation mode +
+            BK-011 recurring blocks. Drop into a business edit page." It was
+            only ever mounted inside the ADMIN businesses dialog, so a venue
+            owner closing for Muharram, Ramadan or a renovation had to block
+            every date by hand.
+
+            It belongs here rather than in Settings: this is already the screen
+            for "when am I not taking bookings", and the two controls answer the
+            same question at different granularities.
+          */}
+          <AvailabilitySettingsCard
+            /*
+              The card seeds its state with `useState(initial)`, which reads
+              only on first mount. Without a key it keeps the FIRST venue's
+              vacation settings when the owner switches venue above — showing
+              "off" for a venue that is actually closed. Keying on the venue
+              remounts it, so what is on screen is that venue's real state.
+            */
+            key={biz.id}
+            businessId={biz.id}
+            // Refresh the cached business row, or switching venue and back
+            // reseeds this card from the pre-save value.
+            onSaved={() => { void refetch() }}
+            initial={{
+              vacationMode: (biz as { vacationMode?: boolean }).vacationMode,
+              vacationStartsAt: (biz as { vacationStartsAt?: string | null }).vacationStartsAt,
+              vacationEndsAt: (biz as { vacationEndsAt?: string | null }).vacationEndsAt,
+              vacationMessage: (biz as { vacationMessage?: string | null }).vacationMessage,
+            }}
+          />
         </>
       )}
     </div>

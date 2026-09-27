@@ -11,7 +11,7 @@ import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { CollaborationsAPI, type CollabInvite, type CollabStatus } from "@/lib/api/collaborations"
-import { useArtifactShell, escHtml, initialsOf, pkNum, initTablePager, loadPref, savePref, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, escHtml, initialsOf, pkNum, initTablePager, loadPref, savePref, errorBannerHtml, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const STATUS_UI: Record<CollabStatus, { label: string; tone: string }> = {
   pending: { label: "Intezar mein", tone: "warn" }, accepted: { label: "Judi hui", tone: "ok" }, declined: { label: "Mana", tone: "bad" }, cancelled: { label: "Cancel", tone: "mut" },
@@ -131,7 +131,18 @@ export function CollaborationsArtifact() {
       const dc = t.closest("[data-decline]") as HTMLButtonElement | null
       if (dc?.dataset.decline) { act(dc, () => CollaborationsAPI.decline(Number(dc.dataset.decline)), "Invite mana kar diya"); return }
       const cn = t.closest("[data-cancel]") as HTMLButtonElement | null
-      if (cn?.dataset.cancel) { act(cn, () => CollaborationsAPI.cancel(Number(cn.dataset.cancel)), "Invite cancel kar diya"); return }
+      if (cn?.dataset.cancel) {
+        // One click withdrew an invite already sitting in another vendor's
+        // inbox. Recoverable (resend exists) but not something to fire on a
+        // mis-tap — the console gates every other server-side undo this way.
+        openConfirm(s, {
+          title: "Invite cancel karein?",
+          message: "Doosre vendor ke paas se ye invite hat jayega. Aap baad mein dobara bhej sakte hain.",
+          confirmLabel: "Haan, cancel karein",
+          onConfirm: () => act(cn, () => CollaborationsAPI.cancel(Number(cn.dataset.cancel)), "Invite cancel kar diya"),
+        })
+        return
+      }
       const rs = t.closest("[data-resend]") as HTMLButtonElement | null
       if (rs?.dataset.resend) { act(rs, () => CollaborationsAPI.resend(Number(rs.dataset.resend)), "Invite dobara bhej diya"); return }
     })
