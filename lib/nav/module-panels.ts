@@ -327,22 +327,41 @@ export const NAV_MODULES: NavModule[] = [
     panelTitle: "Khata",
     groups: [
       {
-        // These four are real tabs the money hub reads. Verified against
-        // money-hub-view.tsx rather than assumed.
+        /**
+         * These were `/dashboard/money?tab=…`, "verified against
+         * money-hub-view.tsx rather than assumed" — and that verification is
+         * what expired. Nothing renders money-hub-view.tsx any more:
+         * /dashboard/money mounts KhataArtifact, which reads no search params
+         * at all. So all five money rows opened the same combined ledger, and
+         * `isDefaultView` lit "Receivables" on a page showing Khata.
+         *
+         * Each row now points at its own screen. They exist, they are artifact
+         * screens in the same design system (payments-artifact,
+         * receipts-artifact, receivables-artifact, expenses-artifact,
+         * pdcs-artifact), and `owns` already lists every one of these paths, so
+         * the rail still reads Khata on all of them. With no query params left,
+         * the panel highlight is exact: a row lights on its own path only.
+         */
         label: "Money in",
         items: [
-          { label: "Payments", href: "/dashboard/money?tab=payments", icon: CircleDollarSign, i18nKey: "nav.payments" },
-          { label: "Receipts", href: "/dashboard/money?tab=receipts", icon: Receipt, i18nKey: "nav.receipts" },
-          { label: "Receivables", href: "/dashboard/money?tab=receivables", icon: AlertCircle, i18nKey: "nav.receivables", isDefaultView: true },
+          { label: "Payments", href: "/dashboard/payments", icon: CircleDollarSign, i18nKey: "nav.payments" },
+          { label: "Receipts", href: "/dashboard/receipts", icon: Receipt, i18nKey: "nav.receipts" },
+          { label: "Receivables", href: "/dashboard/receivables", icon: AlertCircle, i18nKey: "nav.receivables" },
         ],
       },
       {
         label: "Money out",
         items: [
-          { label: "Expenses", href: "/dashboard/money?tab=expenses", icon: Wallet, i18nKey: "nav.expenses" },
+          { label: "Expenses", href: "/dashboard/expenses", icon: Wallet, i18nKey: "nav.expenses" },
           // WW-SETTLE — refunds a cancelled booking owes back. Money out, and
-          // until now the only kind with no page of its own.
-          { label: "Refunds owed", href: "/dashboard/money?tab=refunds", icon: Undo2, i18nKey: "nav.refunds_owed" },
+          // still the only kind with no page of its own: there is no
+          // /dashboard/refunds route, and `?tab=refunds` was never read by
+          // anything. Nearest real destination is the Khata ledger, whose
+          // "Wapsi" filter tab lists refund receipts — money already returned,
+          // which is not the same as money still owed. So this row lands one
+          // click from the closest view there is, and refunds OWED still wants
+          // a screen of its own.
+          { label: "Refunds owed", href: "/dashboard/money", icon: Undo2, i18nKey: "nav.refunds_owed" },
           { label: "Staff & payroll", href: "/dashboard/staff", icon: HandCoins, i18nKey: "nav.staff" },
           { label: "Suppliers", href: "/dashboard/suppliers", icon: Truck, i18nKey: "nav.suppliers" },
         ],
@@ -351,23 +370,17 @@ export const NAV_MODULES: NavModule[] = [
         label: "Records",
         items: [
           /**
-           * Through the hub, like the other four money views.
+           * Back to `/dashboard/pdcs`, with the other money rows.
            *
-           * This pointed at `/dashboard/pdcs` while Payments, Receipts,
-           * Receivables and Expenses all went to `/dashboard/money?tab=…`. It
-           * did not matter while the money screen carried its own tab row —
-           * `?tab=cheques` was reachable from there. With that duplicate tab
-           * row removed, Cheques would have been the one money view the panel
-           * could not reach OR highlight: a vendor on `?tab=cheques` would see
-           * nothing lit in the panel, and clicking Cheque ledger would jump
-           * them out of the hub to a different URL rendering the same screen.
-           *
-           * `/dashboard/pdcs` still exists and still works — both routes mount
-           * the identical `PdcsRedesignedView`, verified — so every existing
-           * bookmark and deep link is unaffected. This only makes the panel
-           * consistent with itself.
+           * This was routed "through the hub" so it could be highlighted
+           * alongside Payments / Receipts / Receivables / Expenses when they
+           * all pointed at `?tab=…`. That hub is gone — /dashboard/money mounts
+           * KhataArtifact, which reads no params — so routing through it meant
+           * Cheque ledger opened the ledger screen instead of the cheque
+           * register. /dashboard/pdcs mounts pdcs-artifact and is in `owns`, so
+           * the rail still reads Khata here.
            */
-          { label: "Cheque ledger", href: "/dashboard/money?tab=cheques", icon: Wallet, i18nKey: "nav.cheque_ledger" },
+          { label: "Cheque ledger", href: "/dashboard/pdcs", icon: Wallet, i18nKey: "nav.cheque_ledger" },
           { label: "Tax report", href: "/dashboard/tax", icon: Receipt, i18nKey: "nav.tax" },
           { label: "Reports", href: "/dashboard/reports", icon: BarChart3, i18nKey: "nav.reports" },
         ],
@@ -505,9 +518,15 @@ export const NAV_MODULES: NavModule[] = [
           // back to the FIRST surviving tab when no ?tab is present, and that
           // is now profit. Leaving the marker on a hidden row would light
           // nothing on a bare /dashboard/venue-os.
-          { label: "Halls & spaces", href: "/dashboard/venue-os?tab=spaces", icon: Building2 },
+          // These two pointed at `?tab=spaces` and `?tab=profit`. The tabbed
+          // hub they addressed (venue-os-hub-view.tsx) is no longer rendered by
+          // any route — venue-os/page.tsx renders venue-os-artifact.tsx, one
+          // business-health view that ignores `?tab=`. So both rows opened the
+          // same page, and "Halls & spaces" never reached the spaces editor.
+          // nav-data.ts was collapsed for this in 2026-09; this file was not.
+          { label: "Halls & spaces", href: "/dashboard/spaces", icon: Building2 },
           // { label: "Venue money", href: "/dashboard/venue-os?tab=money", icon: Wallet },
-          { label: "Event profit", href: "/dashboard/venue-os?tab=profit", icon: CircleDollarSign, isDefaultView: true },
+          { label: "Event profit", href: "/dashboard/venue-os", icon: CircleDollarSign, isDefaultView: true },
           // { label: "Cash & cheques", href: "/dashboard/venue-os?tab=cash", icon: CreditCard },
           // { label: "Kitchen & suppliers", href: "/dashboard/venue-os?tab=kitchen", icon: Utensils },
         ],

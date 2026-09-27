@@ -188,12 +188,19 @@ export function CalendarSlotGridView() {
         ) : !data || rows.length === 0 ? (
           /* This used to send vendors to "Settings → Availability", which is a
              blocked-dates editor with no space or slot control in it. The real
-             editor is Venue-OS → Halls & spaces, and a vendor following the old
-             instruction landed on a date blocker and had no way to reach it. */
+             editor is Halls & spaces, and a vendor following the old
+             instruction landed on a date blocker and had no way to reach it.
+
+             It then pointed at `/dashboard/venue-os?tab=spaces`, which stopped
+             working when the tabbed Venue-OS hub was rebuilt as one
+             business-health view that ignores `?tab=` (see nav-data.ts). The
+             rail entries were collapsed to `/dashboard/spaces` at the time;
+             this link was missed, so the one place that tells a vendor their
+             halls are not set up sent them to a profit summary instead. */
           <div className="py-4 text-sm text-muted-foreground">
             <p>No halls or time-slots set up yet.</p>
             <Link
-              href="/dashboard/venue-os?tab=spaces"
+              href="/dashboard/spaces"
               className="mt-2 inline-flex items-center gap-1.5 rounded-md font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               Set up halls &amp; time-slots

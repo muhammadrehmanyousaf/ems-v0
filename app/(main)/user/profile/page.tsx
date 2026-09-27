@@ -389,6 +389,11 @@ const ProfilePage = () => {
     </div>
   );
 
+  // One source for the avatar. Read inline as `imagePreview || profile.profileImage`
+  // it stayed `string | undefined` inside the guard, and next/image throws when
+  // `src` is undefined — so the guard and the value are now the same expression.
+  const avatarSrc = imagePreview || profile.profileImage || "";
+
   return (
     <PageContainer>
       <PageHeader
@@ -419,7 +424,7 @@ const ProfilePage = () => {
                 disabled={isUploadingImage}
                 className="relative h-20 w-20 rounded-full overflow-hidden border-2 border-border hover:border-bridal-gold/55 transition-colors block"
               >
-                {imagePreview || profile.profileImage ? (
+                {avatarSrc ? (
                   /*
                     Avatar image source can be either a blob: URL (from a
                     fresh upload preview) or a remote URL (from the backend).
@@ -430,13 +435,13 @@ const ProfilePage = () => {
                   (imagePreview || "").startsWith("blob:") ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={imagePreview || profile.profileImage}
+                      src={avatarSrc}
                       alt="Profile"
                       className="w-full h-full object-cover"
                     />
                   ) : (
                     <Image
-                      src={imagePreview || profile.profileImage}
+                      src={avatarSrc}
                       alt="Profile"
                       fill
                       sizes="80px"

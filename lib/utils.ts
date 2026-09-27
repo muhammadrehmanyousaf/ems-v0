@@ -179,3 +179,17 @@ export function formatColumnId(id: string): string {
     // capitalize first letter of each word
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
+
+/**
+ * First usable string out of a value the backend may hand back as a scalar or
+ * as a Postgres array. `subBusinessType` is a TEXT[] (businessModel.js:147) and
+ * `catering` can be either shape, so display code that needs one string uses
+ * this instead of assuming.
+ */
+export function firstOf(v: string | string[] | null | undefined): string {
+  if (Array.isArray(v)) {
+    for (const x of v) { const s = String(x ?? "").trim(); if (s) return s }
+    return ""
+  }
+  return String(v ?? "").trim()
+}

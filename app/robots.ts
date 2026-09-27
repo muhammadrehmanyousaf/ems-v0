@@ -61,10 +61,13 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/api/', '/dashboard/', '/user/', '/login', '/register'],
       })),
     ],
-    // Only /sitemap.xml exists (a flat sitemap). The sharded /sitemap/N.xml
+    // Two sitemaps, both of which actually resolve — the sharded /sitemap/N.xml
     // URLs were planned but never generated, so advertising them made crawlers
-    // fetch 4 dead URLs. Re-add shards here only once they actually resolve.
-    sitemap: `${SITE_URL}/sitemap.xml`,
+    // fetch 4 dead URLs. Add an entry here only once it really serves.
+    //   /sitemap.xml        — every indexable URL
+    //   /image-sitemap.xml  — <image:image> entries (Next 14's sitemap
+    //                         serialiser cannot emit these, so it is a route)
+    sitemap: [`${SITE_URL}/sitemap.xml`, `${SITE_URL}/image-sitemap.xml`],
     host: SITE_URL,
   }
 }

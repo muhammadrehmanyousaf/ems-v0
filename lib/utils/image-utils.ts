@@ -44,7 +44,7 @@ export function getImageUrls(images: string[] | null | undefined): string[] {
 
 // Check if an image URL is valid
 export function isValidImageUrl(url: string): boolean {
-  return url && url !== '/placeholder.svg' && (
+  return !!url && url !== '/placeholder.svg' && (
     url.startsWith('http://') || 
     url.startsWith('https://') || 
     url.startsWith('/')

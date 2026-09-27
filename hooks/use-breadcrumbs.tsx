@@ -10,16 +10,11 @@ type BreadcrumbItem = {
 
 // This allows to add custom title as well
 const routeMapping: Record<string, BreadcrumbItem[]> = {
-  '/dashboard': [{ title: 'Dashboard', link: '/dashboard' }],
-  '/dashboard/employee': [
-    { title: 'Dashboard', link: '/dashboard' },
-    { title: 'Employee', link: '/dashboard/employee' }
-  ],
-  '/dashboard/product': [
-    { title: 'Dashboard', link: '/dashboard' },
-    { title: 'Product', link: '/dashboard/product' }
-  ]
-  // Add more custom mappings as needed
+  '/dashboard': [{ title: 'Dashboard', link: '/dashboard' }]
+  // The '/dashboard/employee' and '/dashboard/product' entries that shipped with
+  // the dashboard template were removed: neither route exists, so neither key
+  // could ever match a pathname, and a breadcrumb naming a page the app does not
+  // have is worse than no entry. Add real mappings here as needed.
 };
 
 // Human labels for route slugs that don't read well when naively title-cased
