@@ -263,6 +263,9 @@ positive both times before that.
 | Chat at 360px | inbox and conversation shared one phone screen |
 | Vacation mode reachable, and per-venue | the card existed; nothing mounted it, and it kept the previous venue's state |
 | Dues KPI relabelled | "abhi tak pending" for a figure scoped to this year's events |
+| Error states on the last five screens | automation and trade-ops hung on "load ho rahi hai…" for ever; slots claimed a three-session venue had none; chat called a failed inbox empty |
+| Response-time card | 21 of 25 leads never answered, and nothing in the product said so |
+| Blocked-date lock on the reschedule endpoint | the new door would otherwise have been a route around the lock `createBooking` enforces |
 
 ### 9.5 Still open, and who has to do it
 
