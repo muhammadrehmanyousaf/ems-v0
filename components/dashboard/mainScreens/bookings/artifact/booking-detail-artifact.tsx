@@ -161,6 +161,10 @@ const EXTRA_CSS = String.raw`
 .cr-title{ font-weight:640; font-size:13.5px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .cr-meta{ font-size:11.5px; color:var(--ink-3); margin-top:3px; }
 .cr-reason{ font-size:12px; color:var(--ink-2); margin-top:5px; font-style:italic; }
+/* WW-QIST — the proposed schedule, as a row of dates the vendor can scan. */
+.cr-qists{ display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 4px; }
+.cr-qist{ font-size:11.5px; background:var(--surface-2); border:1px solid var(--border); border-radius:999px; padding:3px 9px; white-space:nowrap; }
+.cr-qist b{ font-variant-numeric:tabular-nums; }
 .cr-money{ margin-top:6px; font-size:12px; font-weight:560; }
 .cr-money.up{ color:var(--warn); } .cr-money.down{ color:var(--bad); }
 .cr-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
@@ -588,6 +592,16 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
     isOffline && !isClosed
       ? `<button class="btn btn-ghost" data-bk-resched="${booking.id}" data-bk-date="${escHtml(booking.bookingDate || "")}" data-bk-time="${escHtml(booking.bookingTime || "")}" data-bk-biz="${booking.bookingDetails?.[0]?.businessId ?? ""}">${svg(I.clock)} Taareekh badlein</button>`
       : ""
+  /**
+   * WW-PRICEADJ — the agreed number moves after signing all the time (the
+   * family drops the sweet counter, the hall throws in the mehndi stage). It
+   * could only be set at creation, so vendors either carried the difference in
+   * their head or cancelled and re-entered the booking, losing its receipts.
+   * Open bookings only; a closed one is history.
+   */
+  const priceEditBtn = !isClosed
+    ? `<button class="link" data-bk-price="${booking.id}" data-bk-price-total="${Math.round(total)}" data-bk-price-biz="${booking.bookingDetails?.[0]?.businessId ?? ""}" data-bk-price-paid="${Math.round(paid)}">${svg(I.edit, 1.9)} Qeemat badlein</button>`
+    : ""
   const statusActions = isPending
     ? `${closeBtn}<button class="btn ${closeBtn ? "btn-ghost" : "btn-primary"}" data-bk-approve="${booking.id}">${svg(I.check, 2.4)} Confirm karein</button><button class="btn btn-ghost" data-bk-cancel="${booking.id}">Reject</button>`
     : (!isClosed ? `${closeBtn}${reschedBtn}<button class="btn btn-ghost" data-bk-cancel="${booking.id}">${svg(I.clock)} Cancel booking</button>` : "")
@@ -689,7 +703,7 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
       ${depositCard(deposit)}
 
       <div class="card">
-        <div class="card-h"><div><h2>Package — kya shamil hai</h2><div class="sub">${escHtml(service)}${space ? ` · ${escHtml(space)}` : ""}</div></div></div>
+        <div class="card-h"><div><h2>Package — kya shamil hai</h2><div class="sub">${escHtml(service)}${space ? ` · ${escHtml(space)}` : ""}</div></div>${priceEditBtn}</div>
         <div class="pkg">${pkgRows}</div>
         <div class="pkg-total"><span class="t-cap">Kul package</span><span class="t-val tnum">${rs(total)}</span></div>
       </div>
@@ -775,6 +789,23 @@ function crDiffLine(cr: BookingChangeRequest): string {
   const d = (cr.diffJson || {}) as { from?: Record<string, unknown>; to?: Record<string, unknown> } & Record<string, unknown>
   const to = (d.to && typeof d.to === "object" ? d.to : d) as Record<string, unknown>
   const from = (d.from && typeof d.from === "object" ? d.from : {}) as Record<string, unknown>
+  /**
+   * WW-QIST — a proposed payment plan is a list, not a field, and the generic
+   * key/value line renders it as "installments: [object Object]". The vendor is
+   * deciding whether to accept these dates and amounts, so they are the thing
+   * to show.
+   */
+  if (cr.changeType === "installment_plan" && Array.isArray((to as { installments?: unknown[] }).installments)) {
+    const rows = ((to as { installments?: { label?: string; amount?: number; dueAt?: string }[] }).installments || []).slice(0, 3)
+    const sum = rows.reduce((a, r) => a + (Number(r.amount) || 0), 0)
+    const list = rows
+      .map((r) => `<span class="cr-qist"><b>${rs(Number(r.amount) || 0)}</b> · ${escHtml(fmtDateShort(r.dueAt || ""))}</span>`)
+      .join("")
+    const over = (to as { override?: boolean }).override === true
+      ? `<div class="cr-meta" style="color:var(--warn)">Event se 7 din ke andar aakhri qist — customer kehta hai aap raazi hain.</div>`
+      : ""
+    return `<div class="cr-qists">${list}</div><div class="cr-meta">Kul ${rs(sum)} · ${rows.length} qist</div>${over}`
+  }
   const LABELS: Record<string, string> = {
     guestCount: "Mehmaan", bookingTime: "Waqt", bookingDate: "Taareekh",
     slotTemplateId: "Slot", packageId: "Package", menuId: "Menu", detailsId: "Line",
@@ -902,6 +933,36 @@ async function rsDayPreview(s: ShadowRoot, bizId: number, date: string, selfId: 
   if (!lines.length) lines.push(`<div style="color:var(--ok)">✓ Us din koi aur booking nahi hai.</div>`)
   box.innerHTML = lines.join('<div style="height:6px"></div>')
 }
+/**
+ * Change the agreed price on a booking that already exists.
+ *
+ * The one thing the vendor must see before they press save is what happens to
+ * money already received: dropping the price below it does not delete the
+ * difference, it turns it into cash the vendor owes back. The server writes that
+ * obligation down as a pending refund, so the number is stated here rather than
+ * discovered later.
+ */
+function priceEditHtml(id: number, current: number, paid: number, bizId: number): string {
+  return `<div style="font-size:12px;color:var(--ink-3);margin-bottom:12px;line-height:1.5">Abhi ka total <b>Rs ${pkNum(current)}</b>${paid > 0 ? ` · mila hua <b>Rs ${pkNum(paid)}</b>` : ""}. Nayi qeemat likhein — package aur booking dono update ho jayenge.</div>
+    <div class="dfield"><label class="dlabel">Nayi qeemat (Rs) <span class="req">*</span></label><input type="number" min="1" inputmode="numeric" id="pe-amount" value="${Math.round(current)}"/></div>
+    <div id="pe-warn" style="font-size:12px;line-height:1.5;margin:-4px 0 12px"></div>
+    <div class="dfield"><label class="dlabel">Wajah</label><input id="pe-reason" placeholder="e.g. mithai counter nikal diya"/></div>
+    <div class="ww-dfoot"><button class="btn btn-ghost" data-drawer-close type="button">Waapas</button><button class="btn btn-primary" data-bk-price-save="${id}" data-bk-price-biz="${bizId || ""}" data-bk-price-paid="${Math.round(paid)}" type="button">Qeemat update karein</button></div>`
+}
+
+/** Say what the new number does to money already received, as it is typed. */
+function priceEditWarn(s: ShadowRoot, paid: number): void {
+  const box = s.getElementById("pe-warn")
+  if (!box) return
+  const v = Number((s.getElementById("pe-amount") as HTMLInputElement | null)?.value || 0)
+  if (!v || v <= 0) { box.innerHTML = "" ; return }
+  if (paid > 0 && v < paid) {
+    box.innerHTML = `<div style="color:var(--bad);background:var(--bad-wash);border-radius:8px;padding:9px 11px">⚠️ Ye qeemat mile hue paise se <b>Rs ${pkNum(paid - v)}</b> kam hai — itna customer ko wapas karna hoga. Wo "wapsi" mein pending record ho jayega.</div>`
+  } else {
+    box.innerHTML = `<div style="color:var(--ink-3)">Baqaya ho jayega <b>Rs ${pkNum(Math.max(0, v - paid))}</b>.</div>`
+  }
+}
+
 function cancelBookingHtml(id: number): string {
   return `<div style="font-size:12px;color:var(--bad);background:var(--bad-wash);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.5">⚠️ Cancel karne par cancellation policy ke mutabiq refund ban sakta hai. Ye amal wapas nahi hoga.</div>
     <div class="dfield"><label class="dlabel">Cancel ki wajah</label><textarea id="bc-reason" placeholder="Optional — record ke liye"></textarea></div>
@@ -1088,6 +1149,39 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
         } catch (err: unknown) {
           toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Inkaar record nahi hua")
           crDS.disabled = false; crDS.textContent = "Inkaar karein"
+        }
+        return
+      }
+      const pe = t.closest("[data-bk-price]") as HTMLElement | null
+      if (pe?.dataset.bkPrice) {
+        const paid = Number(pe.dataset.bkPricePaid) || 0
+        openDrawer(s, "Qeemat badlein", priceEditHtml(Number(pe.dataset.bkPrice), Number(pe.dataset.bkPriceTotal) || 0, paid, Number(pe.dataset.bkPriceBiz) || 0))
+        const inp = s.getElementById("pe-amount") as HTMLInputElement | null
+        if (inp) { inp.addEventListener("input", () => priceEditWarn(s, paid)); priceEditWarn(s, paid) }
+        return
+      }
+      const pes = t.closest("[data-bk-price-save]") as HTMLButtonElement | null
+      if (pes?.dataset.bkPriceSave) {
+        const amount = Number((s.getElementById("pe-amount") as HTMLInputElement | null)?.value || 0)
+        const reason = (s.getElementById("pe-reason") as HTMLInputElement | null)?.value?.trim() || undefined
+        if (!amount || amount <= 0) { toast.error("Nayi qeemat likhein"); return }
+        const bizId = Number(pes.dataset.bkPriceBiz) || undefined
+        pes.disabled = true; pes.textContent = "Update ho raha…"
+        try {
+          const out = await BookingsAPI.adjustPrice(Number(pes.dataset.bkPriceSave), { newTotalAmount: amount, businessId: bizId, reason })
+          toast.success(out?.cashRefundOwed ? `Qeemat update ho gayi — Rs ${pkNum(out.cashRefundOwed)} wapsi pending hai` : "Qeemat update ho gayi")
+          closeDrawer(s); invalidateAll()
+        } catch (err: unknown) {
+          const res = (err as { response?: { data?: { message?: string; data?: { code?: string } } } })?.response?.data
+          const byCode: Record<string, string> = {
+            booking_not_adjustable: "Band booking ki qeemat nahi badalti.",
+            not_your_business: "Ye booking aap ki venue ki nahi hai.",
+            business_required: "Is booking mein ek se zyada vendor hain — venue chunein.",
+            no_change: "Qeemat wahi hai — koi tabdeeli nahi.",
+            invalid_amount: "Qeemat theek likhein.",
+          }
+          toast.error(byCode[String(res?.data?.code || "")] || res?.message || "Qeemat update nahi hui")
+          pes.disabled = false; pes.textContent = "Qeemat update karein"
         }
         return
       }

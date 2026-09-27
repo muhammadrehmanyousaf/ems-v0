@@ -1010,6 +1010,10 @@ export default function BookingDetailPage() {
             canRequest={
               statusKey !== "cancelled" && statusKey !== "completed"
             }
+            /* WW-QIST — an instalment plan has to add up to what is still owed,
+               so the card is given the number rather than guessing it. */
+            outstanding={outstanding}
+            eventDate={booking.bookingDate}
           />
 
           {/* BK-067 — post-completion dispute window (default 7d). */}
