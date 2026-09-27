@@ -126,10 +126,17 @@ and handle no error at all. Two were worse than empty:
 - **Booking detail** showed *"Ye booking nahi mili"* — telling a vendor their
   customer's booking **does not exist** when the network had simply dropped.
 
-**Fixed** those three, each with the shell's retry button wired. The remaining
-ten are lower-traffic venue-OS screens (drone-NOC, halal-certs, generator-fuel,
-trade-ops, automation, slots, calendar, chat, cancellation-policy, onboarding)
-and are listed here rather than silently left.
+**Fixed** those three, each with the shell's retry button wired. The other ten
+(drone-NOC, halal-certs, generator-fuel, cancellation-policy, onboarding, then
+trade-ops, automation, slots, calendar, chat) were finished in the same day's
+second pass — **all thirteen now say "could not load" and offer a retry**, each
+proven by aborting that screen's own request. Two were worth more than a banner:
+the **calendar** keeps its grid and carries the warning above it, because a
+vendor still needs to block dates on a blip and an empty-looking month is how a
+hall gets double-booked (WWL-569); **chat** already had `conversationsError` and
+`messagesError` in its context from WWL-019 and read neither, so a failed inbox
+said "Abhi koi conversation nahi" — an empty inbox is the one thing nobody
+chases.
 
 Also fixed: **collaborations "Cancel"** withdrew an invite from another vendor's
 inbox on one click, with no confirm — the one survivor of the un-gated-action
@@ -190,7 +197,7 @@ an unsaved row from a local form builder.)
 
 1. The eight unreachable analytics surfaces — cash flow and lead response first
 2. Chat at 360px (list → conversation navigation)
-3. Error states on the remaining ten screens
+3. ~~Error states on the remaining ten screens~~ — done, see §9
 4. Instalment proposal + vendor approval (§ see the design below)
 5. Price change *after* creation, through history and the refund engine
 6. Take Leads / Quotes / Khata / Venue-OS apart properly
@@ -267,8 +274,11 @@ positive both times before that.
   (`§M4`, "so the calendar can drag-drop those freely"); the calendar has no
   drag code at all. The booking detail now has the door, which is the part a
   vendor needs.
-- The **eight remaining analytics endpoints**, the ten lower-traffic screens
-  without error states, and instalment proposal (§ Appendix) are unchanged.
+- Instalment proposal (§ Appendix) and price-change-after-creation are
+  unchanged — both are features, not gaps.
+- Of the eight analytics endpoints with no home, five now have one. What is left
+  is `getTodaysBookings` / `getUpcomingBookings7Days` (the overview already
+  answers both from another source) and response times.
 
 ---
 

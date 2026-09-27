@@ -263,6 +263,10 @@ export function ChatArtifact() {
   const {
     conversations, activeConversationId, messages, typingUsers, onlineStatuses,
     setActiveConversation, sendMessage, isLoadingConversations,
+    // WWL-019 gave the context these two; this screen never read them, so a
+    // failed inbox load still read as "Abhi koi conversation nahi" — an empty
+    // inbox is the one thing a vendor will not chase.
+    conversationsError, messagesError, refreshConversations,
   } = useChat()
 
   const [filter, setFilter] = React.useState<"all" | "unread" | "lead" | "book">("all")
@@ -372,6 +376,7 @@ export function ChatArtifact() {
       // sharing the screen with it; the back button returns. On a desktop the
       // attribute is inert because both panes are always visible.
       if (t.closest("[data-chat-back]")) { s.querySelector(".chat")?.setAttribute("data-pane", "list"); return }
+      if (t.closest("[data-chat-retry]")) { void refreshConversations(); return }
       const conv = t.closest(".conv") as HTMLElement | null
       if (conv?.dataset.id) {
         api.current.setActiveConversation(Number(conv.dataset.id))
@@ -463,7 +468,9 @@ export function ChatArtifact() {
             <div class="cv-bot">${prev}${c.unreadCount ? `<span class="cv-badge">${c.unreadCount}</span>` : ""}</div>
             ${ctx}
           </div></div>`
-      }).join("") : `<div class="clist-empty">${isLoadingConversations ? "Load ho raha hai…" : term ? "Koi chat nahi mili." : "Abhi koi conversation nahi."}</div>`
+      }).join("") : conversationsError
+        ? `<div class="clist-empty" role="alert"><b style="color:var(--bad);display:block;margin-bottom:6px">Inbox load nahi hua</b>Ye khaali inbox nahi hai — request fail hui. <button class="btn btn-ghost sm" data-chat-retry type="button" style="margin-top:10px">Dobara koshish</button></div>`
+        : `<div class="clist-empty">${isLoadingConversations ? "Load ho raha hai…" : term ? "Koi chat nahi mili." : "Abhi koi conversation nahi."}</div>`
     }
 
     const active = conversations.find((c) => c.id === activeConversationId)
@@ -476,7 +483,9 @@ export function ChatArtifact() {
     const quick = s.getElementById("quick")
     if (!active) {
       if (thHead) thHead.innerHTML = ""
-      if (thBody) thBody.innerHTML = `<div class="th-empty">Ek conversation chunein — messages yahan khulenge.</div>`
+      if (thBody) thBody.innerHTML = conversationsError
+        ? `<div class="th-empty">Conversations load nahi hue.</div>`
+        : `<div class="th-empty">Ek conversation chunein — messages yahan khulenge.</div>`
       if (quick) quick.innerHTML = ""
     } else {
       const nm = active.otherUser?.fullName || "Customer"
@@ -520,7 +529,12 @@ export function ChatArtifact() {
           html += `<div class="msg ${t}${first}">${body}<span class="mt">${escHtml(hhmm(m.createdAt))}${tick}</span></div>`
         })
         if (typing) html += `<div class="typing-b"><i></i><i></i><i></i></div>`
-        if (!html) html = `<div class="th-empty">Abhi koi message nahi — pehla message bhejein.</div>`
+        // A failed message load also produces no rows, and "pehla message
+        // bhejein" on a thread that already has history is how a vendor replies
+        // twice to something they never saw.
+        if (!html) html = messagesError
+          ? `<div class="th-empty" role="alert"><b style="color:var(--bad);display:block;margin-bottom:6px">Messages load nahi hue</b>Purane messages abhi nahi aa sake — dobara koshish karein.</div>`
+          : `<div class="th-empty">Abhi koi message nahi — pehla message bhejein.</div>`
         thBody.innerHTML = html
         thBody.scrollTop = thBody.scrollHeight
       }
@@ -571,7 +585,7 @@ export function ChatArtifact() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, conversations, activeConversationId, messages, typingUsers, onlineStatuses, filter, search, myId, contactPhone, leadId])
+  }, [ready, conversations, activeConversationId, messages, typingUsers, onlineStatuses, filter, search, myId, contactPhone, leadId, conversationsError, messagesError])
 
   return <div ref={hostRef} />
 }

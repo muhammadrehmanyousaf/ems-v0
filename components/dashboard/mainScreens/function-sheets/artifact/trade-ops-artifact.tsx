@@ -13,7 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { FunctionSheetAPI, type FunctionSheet } from "@/lib/api/functionSheets"
 import { TRADE_OPS, type TradeOpsTrade, type TradeOpsSection, type TradeOpsColumn } from "@/lib/dashboard/trade-ops-config"
-import { useArtifactShell, escHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, escHtml, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 type Row = Record<string, unknown> & { _rid: string }
 let ridSeq = 0
@@ -65,7 +65,7 @@ export function TradeOpsArtifact() {
   const hostRef = React.useRef<HTMLDivElement | null>(null)
   const { shadowRef, ready } = useArtifactShell(hostRef, { activeHref: "/dashboard/trade-ops", crumbBold: "Ops", crumbSub: "Trade operations", extraCss: EXTRA_CSS })
   const qc = useQueryClient()
-  const { data: sheet } = useQuery({
+  const { data: sheet, isError: sheetErr } = useQuery({
     queryKey: ["tradeops-sheet"],
     queryFn: async () => { const list = await FunctionSheetAPI.list(); const first = list?.functionSheets?.[0]; return first ? FunctionSheetAPI.get(first.id) : null },
   })
@@ -95,6 +95,9 @@ export function TradeOpsArtifact() {
   const renderContent = React.useCallback(() => {
     const s = shadowRef.current; if (!s || !ready) return
     const wwc = s.getElementById("wwc"); if (!wwc) return
+    // A failed request also leaves `sheet` undefined, so this screen used to sit
+    // on "load ho rahi hain…" for ever. `sheetErr` must stay in the dep array.
+    if (sheetErr) { wwc.innerHTML = errorBannerHtml("Trade operations load nahi hui — internet check karke dobara koshish karein."); return }
     if (sheet === undefined) { wwc.innerHTML = `<div class="loadwrap">Trade operations load ho rahi hain…</div>`; return }
     if (!sheet) { wwc.innerHTML = `<div class="loadwrap">Koi function sheet nahi mili — pehle ek booking ka function sheet banayein.</div>`; return }
     const t = trades.find((x) => x.trade === activeTrade) || trades[0]
@@ -106,7 +109,7 @@ export function TradeOpsArtifact() {
     ${tabs}${secs}
     <div class="savebar" id="savebar"><span class="sb-txt" id="sbtxt">${dirty.current.size ? "Badla hua hai — save karein" : "Sab mehfooz"}</span><span class="sb-sp"></span><button class="btn btn-primary" id="sbsave">${svg(IC.check)} Save changes</button></div>
     <div class="foot">WeddingWala vendor console · Trade operations</div>`
-  }, [shadowRef, ready, sheet, trades, activeTrade])
+  }, [shadowRef, ready, sheet, sheetErr, trades, activeTrade])
 
   React.useEffect(() => { renderContent() }, [renderContent])
 
@@ -127,6 +130,8 @@ export function TradeOpsArtifact() {
     s.addEventListener("change", (e) => { const el = e.target as HTMLElement; if (el.hasAttribute?.("data-cell")) setCell(el.dataset.sec!, el.dataset.rid!, el.dataset.col!, (el as HTMLInputElement).value) })
     s.addEventListener("click", async (e) => {
       const t = e.target as HTMLElement
+      // the error banner ships a retry button; honour it
+      if (t.closest("[data-retry]")) { qc.invalidateQueries({ queryKey: ["tradeops-sheet"] }); return }
       const tab = t.closest("[data-trade]") as HTMLElement | null
       if (tab?.dataset.trade) { setActiveTrade(tab.dataset.trade); return }
       const add = t.closest("[data-addrow]") as HTMLElement | null

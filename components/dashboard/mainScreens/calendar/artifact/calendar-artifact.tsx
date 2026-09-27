@@ -20,7 +20,7 @@ import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useBusiness } from "@/context/BusinessContext"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
 import type { BookingData } from "@/lib/dashboard-types"
-import { useArtifactShell, escHtml, openDrawer } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, escHtml, openDrawer, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const WD = ["Itwar", "Peer", "Mangal", "Budh", "Jumeraat", "Juma", "Hafta"]
 const MO = ["Janwari", "Farwari", "March", "April", "Mai", "Joon", "Julai", "Agast", "Sitambar", "Aktoobar", "Navambar", "Disambar"]
@@ -163,7 +163,7 @@ export function CalendarArtifact() {
   const { businesses } = useBusiness()
   const bizList = React.useMemo(() => ((businesses ?? []) as { id: number; name?: string | null }[]).map((b) => ({ id: b.id, name: b.name })), [businesses])
   const qc = useQueryClient()
-  const { data } = useFetchData({ endpoint: "/api/v1/bookings", queryKey: ["cal-art-bookings"], Params: { page: 1, limit: 100, sortBy: "bookingDate", sortOrder: "ASC" } })
+  const { data, isError: bookingsErr } = useFetchData({ endpoint: "/api/v1/bookings", queryKey: ["cal-art-bookings"], Params: { page: 1, limit: 100, sortBy: "bookingDate", sortOrder: "ASC" } })
   const blockedQ = useQuery({ queryKey: ["cal-art-blocked", activeBusinessId], queryFn: () => BlockedDatesAPI.getAll(undefined, activeBusinessId) })
   const rows: BookingData[] = data?.data?.data ?? []
 
@@ -256,7 +256,8 @@ export function CalendarArtifact() {
   React.useEffect(() => {
     const s = shadowRef.current
     if (!s || !ready) return
-    const wwc = s.getElementById("wwc"); if (wwc) wwc.innerHTML = render()
+    const wwc = s.getElementById("wwc")
+    if (wwc) wwc.innerHTML = (bookingsErr ? errorBannerHtml("Events load nahi hue — ye calendar adhoora hai, khaali dinon par bharosa na karein.") : "") + render()
     // Open (and re-render) the slot-block drawer for one date. `wholeDay` can be
     // passed after a whole-day toggle so the redraw doesn't wait for the blocked
     // query to refetch (blockedSetRef would still be stale for one tick).
@@ -340,6 +341,7 @@ export function CalendarArtifact() {
           } catch (err) { toast.error(conflictMsg(err)); db.disabled = false; db.textContent = was ? "Kholein" : "Poora din band" }
           return
         }
+        if (t.closest("[data-retry]")) { qc.invalidateQueries({ queryKey: ["/api/v1/bookings"] }); qc.invalidateQueries({ queryKey: ["cal-art-blocked"] }); return }
         const view2 = t.closest("[data-view]") as HTMLElement | null
         if (view2) { setView(view2.dataset.view as "month" | "week" | "agenda"); closeMenu(); return }
         const cal = t.closest("[data-cal]") as HTMLElement | null
@@ -361,7 +363,7 @@ export function CalendarArtifact() {
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, data, blockedQ.data, offset, selKey, view, filter])
+  }, [ready, data, bookingsErr, blockedQ.data, offset, selKey, view, filter])
 
   return <div ref={hostRef} />
 }

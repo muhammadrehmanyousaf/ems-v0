@@ -13,7 +13,7 @@ import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { AutomationRulesAPI, type AutomationRule, type TriggerType, type CreateRuleInput, type AutomationStatus, type BuiltInReminder } from "@/lib/api/automationRules"
-import { useArtifactShell, escHtml, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, escHtml, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 function triggerLabel(t: TriggerType, days: number) {
   return t === "days_after_event" ? `${days} din baad event ke` : `${days} din pehle event se`
@@ -115,10 +115,15 @@ export function AutomationArtifact() {
     const s = shadowRef.current
     if (!s || !ready) return
     const wwc = s.getElementById("wwc"); if (!wwc) return
+    // A failed rules request left `data` undefined, so this screen sat on
+    // "Automation load ho rahi hai…" for ever — a permanent loading state with
+    // nothing to click. `isError` MUST stay in the dep array below or this
+    // branch is unreachable code.
+    if (rulesQ.isError) { wwc.innerHTML = errorBannerHtml("Automation load nahi hui — internet check karke dobara koshish karein."); return }
     if (!rulesQ.data && !statusQ.data) { wwc.innerHTML = `<div class="loadwrap">Automation load ho rahi hai…</div>`; return }
     wwc.innerHTML = buildContent(statusQ.data ?? null, rules)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, rulesQ.data, statusQ.data])
+  }, [ready, rulesQ.data, statusQ.data, rulesQ.isError])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
@@ -136,6 +141,8 @@ export function AutomationArtifact() {
     }
     s.addEventListener("click", async (e) => {
       const t = e.target as HTMLElement
+      // the error banner ships a retry button; honour it
+      if (t.closest("[data-retry]")) { refetch(); refetchStatus(); return }
       // built-in reminder toggle
       const pref = t.closest("[data-pref]") as HTMLElement | null
       if (pref?.dataset.pref) {
