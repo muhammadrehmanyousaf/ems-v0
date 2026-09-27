@@ -541,6 +541,13 @@ function RecurringBlocksSection({ businessId }: RecurringBlocksSectionProps) {
 interface AvailabilitySettingsCardProps {
   businessId: number;
   initial?: BusinessAvailabilityFields;
+  /**
+   * Fired after vacation mode is saved, so a parent holding the business row
+   * can refresh it. Without this the parent's cached copy stays stale, and a
+   * screen that remounts this card per venue reseeds it with the old value —
+   * showing "off" for a venue that is actually closed.
+   */
+  onSaved?: (fields: BusinessAvailabilityFields) => void;
 }
 
 /**
@@ -551,6 +558,7 @@ interface AvailabilitySettingsCardProps {
 export function AvailabilitySettingsCard({
   businessId,
   initial = {},
+  onSaved,
 }: AvailabilitySettingsCardProps) {
   const [vacFields, setVacFields] = useState<BusinessAvailabilityFields>(initial);
 
@@ -571,7 +579,7 @@ export function AvailabilitySettingsCard({
         <VacationModeSection
           businessId={businessId}
           initial={vacFields}
-          onSaved={setVacFields}
+          onSaved={(f) => { setVacFields(f); onSaved?.(f) }}
         />
         <RecurringBlocksSection businessId={businessId} />
       </div>
