@@ -1124,7 +1124,7 @@ export function BusinessRegistrationForm() {
               <BridalCard className="p-5 sm:p-6">
                 <div className="flex items-center justify-between mb-2.5">
                   <span className="bridal-label">Your Progress</span>
-                  <span className="font-display italic text-bridal-gold text-[18px] leading-none">
+                  <span className="font-display italic text-bridal-gold-dark text-[18px] leading-none">
                     {getProgressPercentage()}%
                   </span>
                 </div>
@@ -1157,7 +1157,7 @@ export function BusinessRegistrationForm() {
                   </div>
                   <h3 className="font-display italic text-[18px] text-bridal-charcoal leading-tight">
                     Join Pakistan&apos;s most{" "}
-                    <span className="text-bridal-gold">trusted network</span>
+                    <span className="text-bridal-gold-dark">trusted network</span>
                   </h3>
                   <p className="font-bridal text-[12.5px] text-bridal-text-soft mt-1.5 leading-snug">
                     Connect with couples planning the biggest day of their
@@ -1195,14 +1195,14 @@ export function BusinessRegistrationForm() {
                   <div className="rounded-md border border-bridal-beige bg-bridal-ivory/50 p-2.5 text-center">
                     <div className="font-display italic text-[22px] leading-none text-bridal-charcoal">
                       {stats ? stats.vendors : 0}
-                      <span className="text-bridal-gold">+</span>
+                      <span className="text-bridal-gold-dark">+</span>
                     </div>
                     <div className="bridal-label mt-0.5">Active Vendors</div>
                   </div>
                   <div className="rounded-md border border-bridal-beige bg-bridal-blush/40 p-2.5 text-center">
                     <div className="font-display italic text-[22px] leading-none text-bridal-charcoal">
                       {stats ? stats.couplesServed : 0}
-                      <span className="text-bridal-gold">+</span>
+                      <span className="text-bridal-gold-dark">+</span>
                     </div>
                     <div className="bridal-label mt-0.5">Happy Couples</div>
                   </div>
@@ -1288,7 +1288,7 @@ export function BusinessRegistrationForm() {
                       </BridalCrown>
                       <BridalTitle size="h3" className="mb-1.5">
                         Choose your{" "}
-                        <span className="text-bridal-gold">business type</span>
+                        <span className="text-bridal-gold-dark">business type</span>
                       </BridalTitle>
                       <p className="font-bridal text-bridal-text-soft text-[12.5px] leading-snug max-w-sm mx-auto">
                         Select the category that best describes your wedding

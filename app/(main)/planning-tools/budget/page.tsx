@@ -193,10 +193,10 @@ export default function BudgetPage() {
           {/* Mobile Actions */}
           {isMobile && (
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => setIsAddDialogOpen(true)}>
+              <Button size="sm" variant="outline" aria-label="Add budget item" onClick={() => setIsAddDialogOpen(true)}>
                 <Plus className="w-4 h-4" />
               </Button>
-              <Button size="sm" variant="outline" onClick={exportBudget}>
+              <Button size="sm" variant="outline" aria-label="Export budget" onClick={exportBudget}>
                 <Download className="w-4 h-4" />
               </Button>
             </div>
@@ -302,7 +302,7 @@ export default function BudgetPage() {
           )}
         </div>
         
-        <Progress value={budgetUsage} className="h-3" />
+        <Progress value={budgetUsage} className="h-3" aria-label="Budget used" />
         <div className="flex justify-between text-sm text-neutral-600 mt-2">
           <span>Rs. 0</span>
           <span>Rs. {totalBudget.toLocaleString()}</span>
@@ -344,6 +344,7 @@ export default function BudgetPage() {
                     
                     <button
                       onClick={() => deleteItem(item.id)}
+                      aria-label={`Delete ${item.item}`}
                       className="flex-shrink-0 p-1 text-neutral-400 hover:text-red-500 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -357,8 +358,10 @@ export default function BudgetPage() {
                 
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <div className="flex flex-col">
-                    <label className="text-xs text-neutral-500 mb-1">Estimated</label>
+                    <label className="text-xs text-neutral-500 mb-1" htmlFor={`est-${item.id}`}>Estimated</label>
                     <Input
+                      id={`est-${item.id}`}
+                      aria-label={`Estimated cost for ${item.item}`}
                       type="number"
                       value={item.estimated}
                       onChange={(e) => updateItem(item.id, 'estimated', parseFloat(e.target.value) || 0)}
@@ -367,8 +370,10 @@ export default function BudgetPage() {
                   </div>
                   
                   <div className="flex flex-col">
-                    <label className="text-xs text-neutral-500 mb-1">Actual</label>
+                    <label className="text-xs text-neutral-500 mb-1" htmlFor={`act-${item.id}`}>Actual</label>
                     <Input
+                      id={`act-${item.id}`}
+                      aria-label={`Actual cost for ${item.item}`}
                       type="number"
                       value={item.actual}
                       onChange={(e) => updateItem(item.id, 'actual', parseFloat(e.target.value) || 0)}
@@ -423,8 +428,9 @@ export default function BudgetPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-neutral-700 mb-2 block">Item Name</label>
+              <label className="text-sm font-medium text-neutral-700 mb-2 block" htmlFor="new-item-name">Item Name</label>
               <Input
+                id="new-item-name"
                 placeholder="e.g., Wedding Dress"
                 value={newItem.item}
                 onChange={(e) => setNewItem({ ...newItem, item: e.target.value })}
@@ -465,8 +471,9 @@ export default function BudgetPage() {
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-neutral-700 mb-2 block">Estimated Cost</label>
+                <label className="text-sm font-medium text-neutral-700 mb-2 block" htmlFor="new-item-estimated">Estimated Cost</label>
                 <Input
+                  id="new-item-estimated"
                   type="number"
                   placeholder="0"
                   value={newItem.estimated}
@@ -475,8 +482,9 @@ export default function BudgetPage() {
               </div>
               
               <div>
-                <label className="text-sm font-medium text-neutral-700 mb-2 block">Actual Cost</label>
+                <label className="text-sm font-medium text-neutral-700 mb-2 block" htmlFor="new-item-actual">Actual Cost</label>
                 <Input
+                  id="new-item-actual"
                   type="number"
                   placeholder="0"
                   value={newItem.actual}
