@@ -50,9 +50,17 @@ import Script from "next/script"
  * scripts/perf/perf-3p.cjs should show the with/without gap has closed.
  */
 
-// The earliest we will consider loading, once the largest paint has happened.
-// Short, because the real gate below is the paint, not the clock.
+// Quiet required AFTER the last largest-paint candidate before we load.
 const IDLE_DELAY_MS = 1500
+
+// A floor, measured from mount. The paint gate replaced a flat 3,500ms delay,
+// and on a page whose paint settles early that made gtag load SOONER than
+// before: measured on the homepage after that change, Google Tag Manager went
+// from 0ms of blocking to 214ms, with a 204ms long task, and the median score
+// fell from 65 to 58. The paint gate is right for a slow page and wrong for a
+// fast one on its own — so it is a floor plus a gate, and whichever is later
+// wins.
+const MIN_DELAY_MS = 3500
 
 // Hard backstop. A page that never reports a largest paint -- no image, no big
 // text block, or a browser without the entry type -- still gets counted.
@@ -91,15 +99,21 @@ export function GoogleAnalytics() {
     // first one is not the largest -- on /vendors the hero text lands early and
     // the card image, which is the real LCP, arrives seconds later. Waiting for
     // the candidates to STOP is what "after the largest paint" actually means.
+    const mountedAt = Date.now()
     const armIdleLoad = () => {
       if (timer) clearTimeout(timer)
+      // Whichever is later: a quiet gap after the last paint candidate, or the
+      // floor since mount. On a slow page the paint decides; on a fast one the
+      // floor does, which is what the flat delay used to give us.
+      const sinceMount = Date.now() - mountedAt
+      const wait = Math.max(IDLE_DELAY_MS, MIN_DELAY_MS - sinceMount)
       timer = setTimeout(() => {
         if ("requestIdleCallback" in window) {
           idle = (window as any).requestIdleCallback(fire, { timeout: 2000 })
         } else {
           fire()
         }
-      }, IDLE_DELAY_MS)
+      }, wait)
     }
 
     let observer: PerformanceObserver | undefined
