@@ -27,8 +27,16 @@ import Script from "next/script"
  *   - a real interaction (pointer, key, touch, scroll) — by which point the
  *     visitor has engaged and a few hundred ms of script no longer costs them
  *     their first impression, or
- *   - IDLE_DELAY_MS of quiet, via requestIdleCallback — so a visitor who reads
- *     without touching anything is still counted.
+ *   - the LARGEST PAINT having happened, then a short idle.
+ *
+ * WHY THE PAINT AND NOT A FIXED DELAY. The fixed delay was 3,500ms, and on a
+ * page whose LCP is later than that the script loads BEFORE the thing being
+ * measured: /vendors measured LCP 7.8s, and Lighthouse attributed 173ms of
+ * blocking and 173kb of transfer to Google Tag Manager inside that window. A
+ * clock cannot know when the page has finished painting; the paint can.
+ *
+ * Gating on the LCP entry means the script can never compete with the largest
+ * paint, on a fast page or a slow one, without guessing a number.
  *
  * WHAT THIS COSTS IN DATA. A visitor who leaves within IDLE_DELAY_MS without
  * touching the page is not counted. That was already partly true under
@@ -42,9 +50,13 @@ import Script from "next/script"
  * scripts/perf/perf-3p.cjs should show the with/without gap has closed.
  */
 
-// Long enough to be clear of hydration and the LCP image on a slow phone,
-// short enough that an average reader is still on the page.
-const IDLE_DELAY_MS = 3500
+// The earliest we will consider loading, once the largest paint has happened.
+// Short, because the real gate below is the paint, not the clock.
+const IDLE_DELAY_MS = 1500
+
+// Hard backstop. A page that never reports a largest paint -- no image, no big
+// text block, or a browser without the entry type -- still gets counted.
+const BACKSTOP_MS = 8000
 
 const TRIGGERS = ["pointerdown", "keydown", "touchstart", "scroll", "wheel"] as const
 
@@ -69,18 +81,44 @@ export function GoogleAnalytics() {
     }
     for (const t of TRIGGERS) window.addEventListener(t, fire, opts)
 
-    // requestIdleCallback so the load lands in a gap rather than competing with
-    // hydration; the timeout is the backstop for a page that never goes idle.
+    // Load once the largest paint has happened and the browser is idle.
+    // requestIdleCallback so it lands in a gap rather than competing with
+    // hydration; the backstop covers a page that reports no paint at all.
     let idle: number | undefined
-    const timer = setTimeout(() => {
-      if ("requestIdleCallback" in window) {
-        idle = (window as any).requestIdleCallback(fire, { timeout: 2000 })
-      } else {
-        fire()
-      }
-    }, IDLE_DELAY_MS)
+    let timer: ReturnType<typeof setTimeout> | undefined
+    // Restarted on every new largest-paint candidate, NOT just the first.
+    // The browser reports a candidate each time something bigger paints, so the
+    // first one is not the largest -- on /vendors the hero text lands early and
+    // the card image, which is the real LCP, arrives seconds later. Waiting for
+    // the candidates to STOP is what "after the largest paint" actually means.
+    const armIdleLoad = () => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => {
+        if ("requestIdleCallback" in window) {
+          idle = (window as any).requestIdleCallback(fire, { timeout: 2000 })
+        } else {
+          fire()
+        }
+      }, IDLE_DELAY_MS)
+    }
 
-    return cleanup
+    let observer: PerformanceObserver | undefined
+    try {
+      observer = new PerformanceObserver(armIdleLoad)
+      observer.observe({ type: "largest-contentful-paint", buffered: true })
+    } catch {
+      // No LCP entry type (Safari before 16, mostly). Fall back to the clock.
+    }
+    // Also arm it immediately, so a page that paints nothing large enough to
+    // report a candidate is not left waiting for the backstop alone.
+    armIdleLoad()
+    const backstop = setTimeout(fire, BACKSTOP_MS)
+
+    return () => {
+      observer?.disconnect()
+      clearTimeout(backstop)
+      cleanup()
+    }
   }, [load])
 
   if (!load) return null
