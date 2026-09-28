@@ -258,6 +258,42 @@ export class VendorAPI {
   }
 
   /**
+   * WW-PERF — every homepage section in ONE request.
+   *
+   * The homepage renders five section components, three of which ask for a
+   * different vendor type each, so the browser made ELEVEN /businesses requests
+   * to fill strips of at most eight cards. On a phone on 4G that is eleven
+   * round-trips before the page settles. The fan-out now happens on the server,
+   * where the queries run in parallel against a database on the private network
+   * that answers each in single-digit milliseconds.
+   *
+   * Returns a map keyed by vendor type. A type that is not a real enum member
+   * comes back as an empty array rather than missing, so a caller can render its
+   * section either way.
+   */
+  static async getByTypes(
+    types: string[],
+    perType = 8,
+    signal?: AbortSignal
+  ): Promise<Record<string, Vendor[]>> {
+    try {
+      const res = await axiosInstance.get(`${BASE}/by-types`, {
+        params: { types: types.join(','), perType: String(perType) },
+        signal,
+      })
+      const d = res?.data?.data || {}
+      const out: Record<string, Vendor[]> = {}
+      for (const [k, v] of Object.entries(d)) {
+        out[k] = Array.isArray(v) ? (v as any[]).map(normalizeBusiness) : []
+      }
+      return out
+    } catch (e: any) {
+      if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED') throw e
+      return {}
+    }
+  }
+
+  /**
    * WW-PERF — counts without the catalog.
    *
    * The homepage hero walked all 17 pages of `/businesses` and counted cities in

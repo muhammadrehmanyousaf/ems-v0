@@ -14,7 +14,7 @@ const SITE = "https://www.weddingwala.pk";
 
 const INIT = `
   window.__perf = { long: [], lcp: 0, cls: 0, fcp: 0 };
-  try { new PerformanceObserver((l)=>{for(const e of l.getEntries()) window.__perf.long.push(Math.round(e.duration));}).observe({type:"longtask",buffered:true}); } catch {}
+  try { new PerformanceObserver((l)=>{for(const e of l.getEntries()) window.__perf.long.push({d:Math.round(e.duration), t:Math.round(e.startTime)});}).observe({type:"longtask",buffered:true}); } catch {}
   try { new PerformanceObserver((l)=>{const es=l.getEntries(); window.__perf.lcp=Math.round(es[es.length-1].startTime);}).observe({type:"largest-contentful-paint",buffered:true}); } catch {}
   try { new PerformanceObserver((l)=>{for(const e of l.getEntries()) if(!e.hadRecentInput) window.__perf.cls+=e.value;}).observe({type:"layout-shift",buffered:true}); } catch {}
   try { new PerformanceObserver((l)=>{for(const e of l.getEntries()) if(e.name==="first-contentful-paint") window.__perf.fcp=Math.round(e.startTime);}).observe({type:"paint",buffered:true}); } catch {}
@@ -52,14 +52,32 @@ async function run(b, label, path) {
     return { ttfb: Math.round(nav.responseStart || 0), load: Math.round(nav.loadEventEnd || 0), ...window.__perf };
   });
   const long = m.long || [];
-  const tbt = long.filter((d) => d > 50).reduce((a, d) => a + (d - 50), 0);
+  /**
+   * TWO blocking numbers, because they answer different questions and the gap
+   * between them is the entire point of deferring work.
+   *
+   * `tbt` counts only long tasks STARTING within 5s of FCP — roughly
+   * Lighthouse's FCP-to-interactive window, i.e. the blocking a visitor
+   * actually waits through. `tbtAll` counts every long task in the ~30s
+   * observation.
+   *
+   * Measured on the venue page after Google Analytics was deferred: the total
+   * barely moved (2,229 -> 2,209ms) because gtag still runs, just at 4.8s
+   * instead of at load. Reporting only the total said the change did nothing,
+   * which was this instrument being wrong about what "blocked" means.
+   */
+  const blocking = (tasks) => tasks.filter((x) => x.d > 50).reduce((a, x) => a + (x.d - 50), 0);
+  const inWindow = long.filter((x) => x.t <= (m.fcp || 0) + 5000);
+  const tbt = blocking(inWindow);
+  const tbtAll = blocking(long);
+  const worst = long.length ? Math.max(...long.map((x) => x.d)) : 0;
   console.log(`\n══ ${label}  ${path}   [mid-range Android, 4G, CPU 4x slower]`);
   console.log(`   TTFB ${m.ttfb}ms · FCP ${m.fcp}ms · LCP ${m.lcp}ms · load ${m.load}ms`);
-  console.log(`   long tasks ${long.length}, worst ${long.length ? Math.max(...long) : 0}ms, TOTAL BLOCKING ${tbt}ms · CLS ${m.cls.toFixed(3)}`);
+  console.log(`   BLOCKING first 5s after FCP: ${tbt}ms (${inWindow.length} tasks)  ·  whole window: ${tbtAll}ms (${long.length} tasks, worst ${worst}ms) · CLS ${m.cls.toFixed(3)}`);
   console.log(`   API calls ${apiCalls}, slowest ${apiMs}ms   (page settled by ${total}ms)`);
   const verdict = [];
   if (m.lcp > 2500) verdict.push(`LCP ${m.lcp}ms fails Google's 2500ms threshold`);
-  if (tbt > 300) verdict.push(`TBT ${tbt}ms is over the 300ms "needs improvement" line`);
+  if (tbt > 300) verdict.push(`blocking ${tbt}ms in the first 5s is over the 300ms line`);
   if (m.cls > 0.1) verdict.push(`CLS ${m.cls.toFixed(3)} fails 0.1`);
   console.log(`   ${verdict.length ? "** " + verdict.join("; ") : "within Core Web Vitals thresholds"}`);
   await ctx.close();
