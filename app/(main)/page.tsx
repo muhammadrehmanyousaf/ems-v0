@@ -3,6 +3,7 @@ import dynamic from "next/dynamic"
 import { SITE_NAME, SITE_TITLE, SITE_DESCRIPTION, SITE_URL } from "@/lib/seo"
 // Hero stays EAGER — it holds the LCP element (above the fold).
 import { HeroSection } from "@/components/homepage/hero-section"
+import { HeroBackdrop } from "@/components/homepage/hero-backdrop"
 import { BelowFold } from "@/components/homepage/below-fold"
 
 export const metadata: Metadata = {
@@ -61,7 +62,7 @@ export default function Home() {
   return (
     <>
       {/* 1 · Hero — cinematic photography + Playfair italic + bridal search */}
-      <HeroSection />
+      <HeroSection backdrop={<HeroBackdrop />} />
 
       {/* 2 · Featured Categories — single-line carousel, 9 categories */}
       <BelowFold minHeight={420}>

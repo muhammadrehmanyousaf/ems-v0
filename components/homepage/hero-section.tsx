@@ -53,7 +53,7 @@ const venueTypes = [
   { value: "outdoor", label: "Outdoor Venues", icon: "🌳" },
 ]
 
-export function HeroSection() {
+export function HeroSection({ backdrop }: { backdrop?: React.ReactNode }) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("vendors")
   const [selectedCategory, setSelectedCategory] = useState("all")
@@ -514,16 +514,6 @@ export function HeroSection() {
   // Self-hosted, hand-curated for a Pakistani Muslim audience — modest
   // subjects only (mehndi, decor, jewellery, solo bride). See
   // public/images/home/credits.md for Pexels provenance (free commercial use).
-  const heroImages = [
-    "/images/home/spotlight/spotlight.jpg", // grand floral stage (modest, no religious iconography)
-    "/images/home/hero/h2.jpg", // mehndi hands + bangles
-    "/images/home/hero/h3.jpg", // floral stage decor
-    "/images/home/hero/h4.jpg", // henna + jewellery hands
-    "/images/home/partners/venue.jpg", // modest bride at decorated venue
-    "/images/home/hero/h6.jpg", // modest bride, gold veil
-    "/images/home/hero/h7.jpg", // draped stage, red & gold flowers
-  ]
-
   return (
     <section className="relative min-h-[760px] h-[100vh] max-h-[980px] flex flex-col justify-center overflow-hidden bridal-surface">
       {/* ── Background: cinematic Pakistani wedding photography ── */}
@@ -532,37 +522,12 @@ export function HeroSection() {
             client Swiper, so the page's largest paint isn't gated by carousel
             JS hydration (the single biggest CWV lever here). The Swiper's
             matching first slide covers it seamlessly once mounted. */}
-        {/* WW-PERF — the hero crossfade is CSS, not Swiper.
-            Lighthouse on the deployed page: LCP 8.0s, of which 5,129ms (64%)
-            was RENDER DELAY — the hero image had downloaded and was waiting on
-            a busy main thread. Swiper sat in the middle of that: a carousel
-            library, its CSS, and its hydration, all to crossfade seven
-            decorative background images that nobody clicks.
-            Seven stacked <Image>s on one staggered keyframe do the same thing
-            with no JavaScript. The first keeps `priority` + `fetchPriority`
-            (it IS the LCP element); the rest are lazy and fade in later. */}
-        {heroImages.map((src, i) => (
-          <Image
-            key={src}
-            src={src}
-            alt=""
-            fill
-            priority={i === 0}
-            fetchPriority={i === 0 ? "high" : "low"}
-            loading={i === 0 ? "eager" : "lazy"}
-            sizes="100vw"
-            className={
-              i === 0
-                ? "object-cover"
-                : "object-cover animate-hero-fade opacity-0 motion-reduce:hidden"
-            }
-            style={
-              i === 0
-                ? undefined
-                : { animationDelay: `${i * 5.5}s` }
-            }
-          />
-        ))}
+        {/* The backdrop images are rendered by a SERVER component and passed
+            in (see components/homepage/hero-backdrop.tsx). They used to live
+            here, inside this client component, which meant `priority` never
+            emitted a <link rel="preload"> and the browser discovered the LCP
+            image 1,801ms late. */}
+        {backdrop}
 
         {/* ── Bridal layered veils ── */}
         {/* 1. Mughal jaal motif at very low opacity — cultural watermark. */}
