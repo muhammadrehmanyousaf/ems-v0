@@ -203,13 +203,13 @@ export default function AboutPage() {
             <article>
               <div className="flex items-start gap-4">
                 <div className="w-14 h-14 rounded-full bg-bridal-cream border border-bridal-gold/45 flex items-center justify-center flex-shrink-0">
-                  <span className="font-display italic text-[24px] text-bridal-gold">W</span>
+                  <span className="font-display italic text-[24px] text-bridal-gold-dark">W</span>
                 </div>
                 <div>
                   <p className="font-display italic text-[20px] text-bridal-charcoal">
                     Waheed
                   </p>
-                  <p className="font-bridal text-[12.5px] uppercase tracking-[0.18em] text-bridal-gold mt-0.5">
+                  <p className="font-bridal text-[12.5px] uppercase tracking-[0.18em] text-bridal-gold-dark mt-0.5">
                     Founder
                   </p>
                   <p className="mt-3 font-bridal text-[13.5px] text-bridal-text leading-relaxed">
@@ -218,7 +218,7 @@ export default function AboutPage() {
                     end-to-end. Reachable directly at{" "}
                     <a
                       href="mailto:waheed@weddingwala.pk"
-                      className="text-bridal-gold hover:underline"
+                      className="text-bridal-gold-dark underline"
                     >
                       waheed@weddingwala.pk
                     </a>
@@ -231,13 +231,13 @@ export default function AboutPage() {
             <article>
               <div className="flex items-start gap-4">
                 <div className="w-14 h-14 rounded-full bg-bridal-cream border border-bridal-gold/45 flex items-center justify-center flex-shrink-0">
-                  <span className="font-display italic text-[24px] text-bridal-gold">E</span>
+                  <span className="font-display italic text-[24px] text-bridal-gold-dark">E</span>
                 </div>
                 <div>
                   <p className="font-display italic text-[20px] text-bridal-charcoal">
                     Editorial team
                   </p>
-                  <p className="font-bridal text-[12.5px] uppercase tracking-[0.18em] text-bridal-gold mt-0.5">
+                  <p className="font-bridal text-[12.5px] uppercase tracking-[0.18em] text-bridal-gold-dark mt-0.5">
                     Editorial
                   </p>
                   <p className="mt-3 font-bridal text-[13.5px] text-bridal-text leading-relaxed">
@@ -246,7 +246,7 @@ export default function AboutPage() {
                     no generic copy, no AI fill. Pitch a story to{" "}
                     <a
                       href="mailto:info@weddingwala.pk"
-                      className="text-bridal-gold hover:underline"
+                      className="text-bridal-gold-dark underline"
                     >
                       info@weddingwala.pk
                     </a>
@@ -259,7 +259,7 @@ export default function AboutPage() {
 
           <p className="mt-10 font-bridal text-[12.5px] text-bridal-text-soft max-w-2xl">
             Hiring across Pakistan — see{" "}
-            <Link href="/careers" className="text-bridal-gold hover:underline">
+            <Link href="/careers" className="text-bridal-gold-dark underline">
               Careers
             </Link>
             .
@@ -275,7 +275,7 @@ export default function AboutPage() {
           </h2>
           <dl className="grid sm:grid-cols-2 gap-y-4 gap-x-8 max-w-2xl">
             <div>
-              <dt className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-gold font-medium mb-1">
+              <dt className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-gold-dark font-medium mb-1">
                 Brand
               </dt>
               <dd className="font-bridal text-[14.5px] text-bridal-charcoal">
@@ -283,7 +283,7 @@ export default function AboutPage() {
               </dd>
             </div>
             <div>
-              <dt className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-gold font-medium mb-1">
+              <dt className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-gold-dark font-medium mb-1">
                 Domain
               </dt>
               <dd className="font-bridal text-[14.5px] text-bridal-charcoal">
@@ -291,7 +291,7 @@ export default function AboutPage() {
               </dd>
             </div>
             <div>
-              <dt className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-gold font-medium mb-1">
+              <dt className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-gold-dark font-medium mb-1">
                 Country
               </dt>
               <dd className="font-bridal text-[14.5px] text-bridal-charcoal">
@@ -299,7 +299,7 @@ export default function AboutPage() {
               </dd>
             </div>
             <div>
-              <dt className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-gold font-medium mb-1">
+              <dt className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-gold-dark font-medium mb-1">
                 Languages
               </dt>
               <dd className="font-bridal text-[14.5px] text-bridal-charcoal">
@@ -307,13 +307,13 @@ export default function AboutPage() {
               </dd>
             </div>
             <div>
-              <dt className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-gold font-medium mb-1">
+              <dt className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-gold-dark font-medium mb-1">
                 Customer support
               </dt>
               <dd className="font-bridal text-[14.5px]">
                 <a
                   href={`mailto:${SUPPORT_EMAIL}`}
-                  className="text-bridal-charcoal hover:text-bridal-gold inline-flex items-center gap-1.5"
+                  className="text-bridal-charcoal hover:text-bridal-gold-dark inline-flex items-center gap-1.5"
                 >
                   <Mail className="w-3.5 h-3.5" />
                   {SUPPORT_EMAIL}
@@ -321,7 +321,7 @@ export default function AboutPage() {
                 <br />
                 <a
                   href={SUPPORT_PHONE_TEL}
-                  className="text-bridal-charcoal hover:text-bridal-gold inline-flex items-center gap-1.5 mt-1"
+                  className="text-bridal-charcoal hover:text-bridal-gold-dark inline-flex items-center gap-1.5 mt-1"
                 >
                   <Phone className="w-3.5 h-3.5" />
                   {SUPPORT_PHONE_DISPLAY}
@@ -329,13 +329,13 @@ export default function AboutPage() {
               </dd>
             </div>
             <div>
-              <dt className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-gold font-medium mb-1">
+              <dt className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-gold-dark font-medium mb-1">
                 Vendor onboarding
               </dt>
               <dd className="font-bridal text-[14.5px]">
                 <a
                   href="mailto:onboarding@weddingwala.pk"
-                  className="text-bridal-charcoal hover:text-bridal-gold inline-flex items-center gap-1.5"
+                  className="text-bridal-charcoal hover:text-bridal-gold-dark inline-flex items-center gap-1.5"
                 >
                   <Mail className="w-3.5 h-3.5" />
                   onboarding@weddingwala.pk
@@ -355,15 +355,15 @@ export default function AboutPage() {
             Wedding Wala is a marketplace. Wedding services on this platform
             are delivered by independent vendors, and couples pay them
             directly — Wedding Wala never takes or holds that money. Read{" "}
-            <Link href="/how-it-works" className="text-bridal-gold hover:underline">
+            <Link href="/how-it-works" className="text-bridal-gold-dark underline">
               How it works
             </Link>
             ,{" "}
-            <Link href="/terms" className="text-bridal-gold hover:underline">
+            <Link href="/terms" className="text-bridal-gold-dark underline">
               Terms
             </Link>
             , and our{" "}
-            <Link href="/privacy" className="text-bridal-gold hover:underline">
+            <Link href="/privacy" className="text-bridal-gold-dark underline">
               Privacy Policy
             </Link>
             .

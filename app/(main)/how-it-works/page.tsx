@@ -162,11 +162,11 @@ export default function HowItWorksPage() {
             Read the policies
           </h2>
           <ul className="font-bridal text-[14px] text-bridal-text space-y-1">
-            <li><Link href="/terms" className="text-bridal-gold hover:underline">Terms of Service</Link></li>
-            <li><Link href="/refund-policy" className="text-bridal-gold hover:underline">Refund Policy</Link></li>
-            <li><Link href="/cancellation-policy" className="text-bridal-gold hover:underline">Cancellation Policy</Link></li>
-            <li><Link href="/service-delivery-policy" className="text-bridal-gold hover:underline">Service Delivery Policy</Link></li>
-            <li><Link href="/privacy" className="text-bridal-gold hover:underline">Privacy Policy</Link></li>
+            <li><Link href="/terms" className="text-bridal-gold-dark underline">Terms of Service</Link></li>
+            <li><Link href="/refund-policy" className="text-bridal-gold-dark underline">Refund Policy</Link></li>
+            <li><Link href="/cancellation-policy" className="text-bridal-gold-dark underline">Cancellation Policy</Link></li>
+            <li><Link href="/service-delivery-policy" className="text-bridal-gold-dark underline">Service Delivery Policy</Link></li>
+            <li><Link href="/privacy" className="text-bridal-gold-dark underline">Privacy Policy</Link></li>
           </ul>
         </section>
       </div>
