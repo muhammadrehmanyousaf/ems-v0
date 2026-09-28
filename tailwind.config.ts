@@ -175,6 +175,16 @@ const config: Config = {
   				'0%': { opacity: '0', transform: 'translateX(20px)' },
   				'100%': { opacity: '1', transform: 'translateX(0)' }
   			},
+  			/* WW-PERF — hero crossfade, replacing Swiper.
+  			   Seven stacked images, each visible for 1/7 of the cycle with a
+  			   fade at each end. `--n` is set per image so one keyframe set
+  			   serves all of them. Pure CSS: the hero paints and animates with
+  			   no JavaScript, which is what took Swiper off the critical path. */
+  			'hero-fade': {
+  				'0%,   12%': { opacity: '1' },
+  				'14.3%, 98%': { opacity: '0' },
+  				'100%': { opacity: '1' },
+  			},
   			'ken-burns': {
   				'0%': { transform: 'scale(1) translate(0, 0)' },
   				'50%': { transform: 'scale(1.12) translate(-1%, -1%)' },
@@ -230,6 +240,7 @@ const config: Config = {
   			'scale-in': 'scale-in 0.3s ease-out forwards',
   			'slide-in-right': 'slide-in-right 0.4s ease-out forwards',
   			'ken-burns': 'ken-burns 20s ease-in-out infinite',
+  			'hero-fade': 'hero-fade 38.5s linear infinite',
   			'gradient-shift': 'gradient-shift 6s ease infinite',
   			'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
   			'blur-in': 'blur-in 0.6s ease-out forwards',
