@@ -173,10 +173,10 @@ export default function ChecklistPage() {
           {/* Mobile Actions */}
           {isMobile && (
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => setIsAddDialogOpen(true)}>
+              <Button size="sm" variant="outline" aria-label="Add checklist task" onClick={() => setIsAddDialogOpen(true)}>
                 <Plus className="w-4 h-4" />
               </Button>
-              <Button size="sm" variant="outline" onClick={exportChecklist}>
+              <Button size="sm" variant="outline" aria-label="Export checklist" onClick={exportChecklist}>
                 <Download className="w-4 h-4" />
               </Button>
             </div>
@@ -199,7 +199,7 @@ export default function ChecklistPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Progress value={progress} className="w-24 sm:w-32 h-2" />
+            <Progress value={progress} className="w-24 sm:w-32 h-2" aria-label="Tasks completed" />
             <span className="text-sm font-medium text-neutral-700">{Math.round(progress)}%</span>
           </div>
         </div>
@@ -252,7 +252,7 @@ export default function ChecklistPage() {
           
           {/* Category Filter */}
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-full sm:w-48">
+            <SelectTrigger aria-label="Filter tasks" className="w-full sm:w-48">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
@@ -293,6 +293,8 @@ export default function ChecklistPage() {
               <div className="flex items-start gap-3">
                 <button
                   onClick={() => toggleItem(item.id)}
+                  aria-label={`${item.completed ? "Mark incomplete" : "Mark complete"}: ${item.title}`}
+                  aria-pressed={item.completed}
                   className="flex-shrink-0 mt-1"
                 >
                   {item.completed ? (
@@ -326,6 +328,7 @@ export default function ChecklistPage() {
                     
                     <button
                       onClick={() => deleteItem(item.id)}
+                      aria-label={`Delete ${item.title}`}
                       className="flex-shrink-0 p-1 text-neutral-400 hover:text-red-500 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />

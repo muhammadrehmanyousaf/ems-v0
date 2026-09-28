@@ -15,6 +15,21 @@ export function getImageUrl(imagePath: string | null | undefined): string {
     return imagePath
   }
 
+  // The placeholder is OUR asset, in /public. Every other branch here returns it
+  // literally; this one used to prefix BACKEND_URL and point at a file the
+  // backend has never had. It answers 404 for it, and sets
+  // `cross-origin-resource-policy: same-origin`, so the browser blocks even that
+  // 404 -- which is why /venues logged `ERR_BLOCKED_BY_RESPONSE.NotSameOrigin`
+  // and lost 7 points of best-practices.
+  //
+  // It was broken before that too, just invisibly: the request went through
+  // /_next/image, which 400s because the backend host is not in remotePatterns.
+  // Routing SVGs straight to their source is what made a long-standing broken
+  // image finally say so.
+  if (imagePath.startsWith('/placeholder.')) {
+    return imagePath
+  }
+
   // If it's a relative path, construct the full URL
   if (imagePath.startsWith('/')) {
     return `${BACKEND_URL.replace(/\/$/, '')}${imagePath}`
