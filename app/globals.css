@@ -185,7 +185,16 @@ html[data-locale="ur"] body {
   font-weight: 500;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #C9956A;
+  /* WCAG. This was #C9956A (bridal-gold), which is 2.52:1 on cream -- at 11px
+     that is a contrast failure everywhere the class appears, and axe reports it
+     ten times on /business-registration alone. #955E39 is the palette's own
+     `bridal-text-label`, named for exactly this job, and measures 5.11:1 on
+     cream and 5.33:1 on white.
+
+     It is only correct on a LIGHT surface: on charcoal it is 3.16:1 where the
+     light gold was 6.42:1. All fifteen current usages are on light surfaces; a
+     dark-surface label needs its own colour, not this class. */
+  color: #955E39;
 }
 
 /* Crown rule — short gold gradient line + caps label, used above titles. */
