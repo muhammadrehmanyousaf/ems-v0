@@ -11,8 +11,8 @@ import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMyBusinesses } from "@/hooks/use-my-businesses"
 import { GeneratorFuelAPI, type FuelEntry, type EntryType } from "@/lib/api/generatorFuel"
-import { BusinessesAPI } from "@/lib/api/dashboard"
 import { FuelEntryFormDialog } from "@/components/dashboard/mainScreens/generator-fuel/redesigned/fuel-entry-form-dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { showSuccessToast } from "@/lib/toast/undo"
@@ -101,7 +101,7 @@ export function GeneratorFuelRedesignedView() {
     queryFn: () => GeneratorFuelAPI.list(serverFilters),
     placeholderData: (prev) => prev,
   })
-  const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
+  const { data: businesses } = useMyBusinesses()
   /**
    * WWL-293/311/332/350 — this was `businesses?.[0]?.id`, so under "All venues"
    * a new record landed on whichever venue happened to be first in the array,

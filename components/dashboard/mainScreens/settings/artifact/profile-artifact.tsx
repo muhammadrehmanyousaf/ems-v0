@@ -11,6 +11,7 @@
 
 import * as React from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMyProfile, myProfileKey } from "@/hooks/use-my-profile"
 import { toast } from "sonner"
 import { UsersAPI, type ApiUser } from "@/lib/api/dashboard"
 import { useUser } from "@/context/UserContext"
@@ -136,7 +137,7 @@ export function ProfileArtifact() {
   })
   const qc = useQueryClient()
   const { refreshUser } = useUser()
-  const { data, isError, refetch } = useQuery({ queryKey: ["profile-me"], queryFn: () => UsersAPI.getMyProfile() })
+  const { data, isError, refetch } = useMyProfile()
   const user = (data?.user ?? null) as (ApiUser & Record<string, unknown>) | null
   const baseline = React.useRef<Record<string, string>>({})
   const userRef = React.useRef(user); userRef.current = user
@@ -184,7 +185,7 @@ export function ProfileArtifact() {
         await UsersAPI.updateMyProfile(patch)
         Object.keys(patch).forEach((f) => { baseline.current[f] = patch[f] })
         toast.success("Profile update ho gaya")
-        qc.invalidateQueries({ queryKey: ["profile-me"] })
+        qc.invalidateQueries({ queryKey: myProfileKey })
         await refreshUser()
         refreshDirty()
       } catch { toast.error("Save nahi hua — dobara koshish karein") }

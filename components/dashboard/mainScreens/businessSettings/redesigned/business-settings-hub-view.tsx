@@ -15,6 +15,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { CITIES } from "@/lib/seo/constants"
 import { useBeforeUnloadGuard } from "@/lib/hooks/useBeforeUnloadGuard"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMyBusinesses } from "@/hooks/use-my-businesses"
 import { BusinessesAPI, type ApiBusiness } from "@/lib/api/dashboard"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
@@ -212,10 +213,7 @@ function amenitiesFor(vendorType: string | null | undefined, form: Record<string
 
 export function BusinessSettingsHubView() {
   const qc = useQueryClient()
-  const { data: businesses, isLoading, isError, refetch } = useQuery<ApiBusiness[]>({
-    queryKey: ["biz-settings-hub"],
-    queryFn: () => BusinessesAPI.getUserBusinesses(),
-  })
+  const { data: businesses, isLoading, isError, refetch } = useMyBusinesses()
   // Deep-link: sidebar sub-items navigate to /dashboard/settings?tab=<id>.
   // Resolve that id → the matching hub tab so each link opens its own section
   // (previously the param was ignored and everything opened on Profile).

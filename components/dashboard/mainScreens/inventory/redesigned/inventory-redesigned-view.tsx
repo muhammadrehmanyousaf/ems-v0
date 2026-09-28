@@ -10,8 +10,8 @@ import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMyBusinesses } from "@/hooks/use-my-businesses"
 import { InventoryAPI, INVENTORY_CATEGORY_LABELS, type InventoryItem, type InventoryCategory } from "@/lib/api/inventory"
-import { BusinessesAPI } from "@/lib/api/dashboard"
 import { InventoryFormDialog } from "@/components/dashboard/mainScreens/inventory/redesigned/inventory-form-dialog"
 import { InventoryMovementDialog } from "@/components/dashboard/mainScreens/inventory/redesigned/inventory-movement-dialog"
 import { InventoryHistoryDialog } from "@/components/dashboard/mainScreens/inventory/redesigned/inventory-history-dialog"
@@ -55,7 +55,7 @@ export function InventoryRedesignedView() {
     queryKey: ["inventory-redesigned"],
     queryFn: () => InventoryAPI.listItems(),
   })
-  const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
+  const { data: businesses } = useMyBusinesses()
   /**
    * WWL-293/311/332/350 — this was `businesses?.[0]?.id`, so under "All venues"
    * a new record landed on whichever venue happened to be first in the array,

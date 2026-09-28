@@ -13,6 +13,8 @@
 
 import * as React from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { invalidateBusinessData } from "@/lib/query/business-keys"
+import { useMyBusinesses } from "@/hooks/use-my-businesses"
 import { toast } from "sonner"
 import { BusinessesAPI, type ApiBusiness } from "@/lib/api/dashboard"
 import { CITIES } from "@/lib/seo/constants"
@@ -222,7 +224,7 @@ export function SettingsArtifact() {
     activeHref: "/dashboard/settings", crumbBold: "Set up", crumbSub: "Settings", extraCss: EXTRA_CSS,
   })
   const qc = useQueryClient()
-  const { data, isError, refetch } = useQuery({ queryKey: ["settings-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
+  const { data, isError, refetch } = useMyBusinesses()
   const all = React.useMemo(() => (data ?? []) as ApiBusiness[], [data])
   const [sel, setSel] = React.useState<number | null>(null)
   const active = all.find((b) => b.id === sel) || all[0] || null
@@ -232,7 +234,7 @@ export function SettingsArtifact() {
 
   const save = useMutation({
     mutationFn: (patch: Partial<ApiBusiness>) => BusinessesAPI.update(activeRef.current!.id, patch),
-    onSuccess: () => { toast.success("Changes save ho gaye"); qc.invalidateQueries({ queryKey: ["settings-businesses"] }); qc.invalidateQueries({ queryKey: ["onboarding-completeness"] }) },
+    onSuccess: () => { toast.success("Changes save ho gaye"); invalidateBusinessData(qc); qc.invalidateQueries({ queryKey: ["onboarding-completeness"] }) },
     onError: () => toast.error("Save nahi hua — dobara koshish karein"),
   })
 

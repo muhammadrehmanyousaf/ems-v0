@@ -16,7 +16,7 @@ import { Icon } from "@/components/dashboard/shared/icon"
 import { bulkImportApi, type ImportPreview, type ImportTarget } from "@/lib/api/bulkImport"
 import { cn } from "@/lib/utils"
 import { useActiveBusinessStore } from "@/lib/store/active-business-store"
-import { BusinessesAPI } from "@/lib/api/dashboard"
+import { useMyBusinesses } from "@/hooks/use-my-businesses"
 
 export function ImportButton({
   target,
@@ -35,12 +35,13 @@ export function ImportButton({
   const activeBusinessId = useActiveBusinessStore((s) => s.activeBusinessId)
   const [bizId, setBizId] = React.useState<number | null>(activeBusinessId)
 
+  // WW-PERF — reads the one business-list cache instead of fetching its own copy
+  // every time this button mounts (it mounts on most list screens).
+  const { data: myBusinesses } = useMyBusinesses()
   React.useEffect(() => {
     if (activeBusinessId != null) { setBizId(activeBusinessId); return }
-    BusinessesAPI.getUserBusinesses()
-      .then((list) => { if (list?.length) setBizId(list[0].id) })
-      .catch(() => {})
-  }, [activeBusinessId, open])
+    if (myBusinesses?.length) setBizId(myBusinesses[0].id)
+  }, [activeBusinessId, myBusinesses, open])
 
   const reset = () => { setContent(""); setPreview(null); setErr(null) }
   const onFile = (f?: File) => {

@@ -20,7 +20,7 @@
 
 import * as React from "react"
 import { useQuery } from "@tanstack/react-query"
-import { BusinessesAPI } from "@/lib/api/dashboard"
+import { useMyBusinesses } from "@/hooks/use-my-businesses"
 import { AvailabilityManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/availability-manager"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { AvailabilitySettingsCard } from "@/components/bookings/availability-settings-card"
@@ -46,10 +46,7 @@ export function BlockedDatesScreen() {
    * live on an account owning 3361 + 3362.
    */
   const activeBusinessId = useActiveBusinessId()
-  const { data: businesses, isLoading, isError, refetch } = useQuery({
-    queryKey: ["blocked-dates-businesses"],
-    queryFn: () => BusinessesAPI.getUserBusinesses(),
-  })
+  const { data: businesses, isLoading, isError, refetch } = useMyBusinesses()
   const list = businesses ?? []
   const [pickedId, setPickedId] = React.useState<number | null>(null)
   const biz =

@@ -10,8 +10,8 @@ import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMyBusinesses } from "@/hooks/use-my-businesses"
 import { LeadAPI, type Lead, type LeadStatus } from "@/lib/api/leads"
-import { BusinessesAPI } from "@/lib/api/dashboard"
 import { LeadFormDialog, type LeadPrefill } from "@/components/dashboard/mainScreens/leads/redesigned/lead-form-dialog"
 import { OutboxStatus } from "@/components/dashboard/shared/outbox-status"
 import { OutboxConflicts } from "@/components/dashboard/shared/outbox-conflicts"
@@ -93,7 +93,7 @@ export function LeadsRedesignedView() {
     queryKey: ["leads-redesigned"],
     queryFn: () => LeadAPI.list(),
   })
-  const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
+  const { data: businesses } = useMyBusinesses()
   /**
    * WWL-293/311/332/350 — this was `businesses?.[0]?.id`, so under "All venues"
    * a new record landed on whichever venue happened to be first in the array,

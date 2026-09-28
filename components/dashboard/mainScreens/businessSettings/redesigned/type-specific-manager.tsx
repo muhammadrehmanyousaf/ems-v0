@@ -20,6 +20,7 @@
 import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { invalidateBusinessData } from "@/lib/query/business-keys"
 import { BusinessesAPI, type ApiBusiness } from "@/lib/api/dashboard"
 import { type VendorTypeConfig, type TypeSpecificFieldDef } from "@/lib/vendor-type-config"
 import { EmptyState } from "@/components/dashboard/primitives/empty-state"
@@ -156,7 +157,7 @@ export function TypeSpecificManager({ business, config, onSaved }: Props) {
     onSuccess: () => {
       showSuccessToast("Settings updated")
       setDirty(false)
-      qc.invalidateQueries({ queryKey: ["biz-settings-hub"] })
+      invalidateBusinessData(qc)
       onSaved?.()
     },
     onError: (e: any) => toast.error(errorMessage(e, "Failed to update settings")),

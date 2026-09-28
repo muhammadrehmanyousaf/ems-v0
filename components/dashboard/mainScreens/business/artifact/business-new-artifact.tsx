@@ -9,6 +9,7 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
+import { invalidateBusinessData } from "@/lib/query/business-keys"
 import { toast } from "sonner"
 import { BusinessesAPI, type NewBusinessInput } from "@/lib/api/dashboard"
 import { CITIES } from "@/lib/seo/constants"
@@ -124,7 +125,7 @@ export function BusinessNewArtifact() {
       try {
         await BusinessesAPI.addMyBusiness(payload)
         toast.success("Venue register ho gaya — review ke baad live hoga")
-        qc.invalidateQueries({ queryKey: ["settings-businesses"] })
+        invalidateBusinessData(qc)
         qc.invalidateQueries({ queryKey: ["onboarding-completeness"] })
         router.push("/dashboard/settings")
       } catch (e: unknown) {

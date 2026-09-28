@@ -22,6 +22,7 @@ import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import { todayInKarachi } from "@/lib/utils/pk-date"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMyBusinesses } from "@/hooks/use-my-businesses"
 import {
   SupplierAPI,
   INVOICE_STATUS_LABELS,
@@ -30,7 +31,6 @@ import {
   type InvoiceStatus,
   type AgingReport,
 } from "@/lib/api/suppliers"
-import { BusinessesAPI } from "@/lib/api/dashboard"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
@@ -109,7 +109,7 @@ export function SuppliersRedesignedView() {
     router.replace(q ? `?${q}` : "?", { scroll: false })
   }
 
-  const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
+  const { data: businesses } = useMyBusinesses()
   const businessOptions: VendorBusinessOption[] = React.useMemo(
     () => (businesses ?? []).map((b) => ({ id: b.id, name: b.name || `Business #${b.id}` })),
     [businesses],

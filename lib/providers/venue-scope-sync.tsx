@@ -36,6 +36,11 @@ import { useActiveBusinessId } from "@/lib/store/active-business-store"
 
 /** Query-key prefixes that are the same whichever venue is selected. */
 const VENUE_AGNOSTIC = new Set([
+  // The vendor's own list of venues, and their own profile. Both are the same
+  // whichever venue is selected — dropping them on a switch would refetch the
+  // shell's two biggest requests on every click of the venue picker.
+  "businesses",   // ["businesses","mine"] — see lib/query/business-keys
+  "users",        // ["users","profile","me"] — see hooks/use-my-profile
   "my-businesses",
   "user",
   "profile",
