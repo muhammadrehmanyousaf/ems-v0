@@ -22,6 +22,10 @@ const config: Config = {
   				rose: '#F2B5C0',
   				gold: '#C9956A',
   				'gold-dark': '#916539',
+  				// WCAG. #C9956A is 2.52:1 on cream and 2.63:1 under white text — it
+  				// cannot carry small text or a white label. gold-dark is 4.88 / 5.09;
+  				// gold-deep is the hover step, so a hover does not drop back under AA.
+  				'gold-deep': '#7E5630',
   				mauve: '#8B5A72',
   				sage: '#A8C4A2',
   				coral: '#E8917A',
