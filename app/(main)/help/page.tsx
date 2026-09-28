@@ -239,11 +239,11 @@ export default function HelpPage() {
                   {cat.items.map((item) => (
                     <li key={item.q}>
                       <details className="group rounded-md border border-bridal-beige bg-white open:bg-bridal-cream/40 transition-colors">
-                        <summary className="cursor-pointer list-none flex items-center justify-between gap-4 p-4 font-bridal text-[14.5px] font-medium text-bridal-charcoal hover:text-bridal-gold transition-colors">
+                        <summary className="cursor-pointer list-none flex items-center justify-between gap-4 p-4 font-bridal text-[14.5px] font-medium text-bridal-charcoal hover:text-bridal-gold-dark transition-colors">
                           <span>{item.q}</span>
                           <span
                             aria-hidden
-                            className="flex-shrink-0 text-bridal-gold transition-transform group-open:rotate-180"
+                            className="flex-shrink-0 text-bridal-gold-dark transition-transform group-open:rotate-180"
                           >
                             ▾
                           </span>

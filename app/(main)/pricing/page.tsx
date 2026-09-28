@@ -234,7 +234,7 @@ export default function PricingPage() {
 
       {/* ── Hero: state the charge, once, plainly ── */}
       <section className="container-responsive pb-12 pt-8 sm:pt-12">
-        <p className="font-bridal text-[10.5px] font-medium uppercase tracking-[0.24em] text-bridal-gold">
+        <p className="font-bridal text-[10.5px] font-medium uppercase tracking-[0.24em] text-bridal-gold-dark">
           For wedding vendors
         </p>
         <h1 className="mt-3 max-w-3xl font-display text-[34px] italic leading-[1.12] text-bridal-charcoal sm:text-[46px]">
