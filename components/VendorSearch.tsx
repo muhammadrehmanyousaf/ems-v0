@@ -114,6 +114,8 @@ const DEFAULT_FILTERS: Filters = {
 export default function VendorSearch({ vendorType }: VendorSearchProps) {
   const searchParams = useSearchParams()
   const [vendors, setVendors] = useState<Vendor[]>([])
+  // The real total, read off page 1 so the results count never climbs.
+  const [totalCount, setTotalCount] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
   const [sortOption, setSortOption] = useState("default")
@@ -167,15 +169,43 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
   // "Filters" toggle reveals it; on lg+ the sidebar is always shown.
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
+  /**
+   * WW-PERF — paint on the first page, finish in the background.
+   *
+   * This awaited the WHOLE list before calling `setVendors`, and with 3,279
+   * vendors that is seventeen requests. Measured on production: /vendors LCP
+   * 7,189ms, of which 5,545ms was Load Delay -- the LCP image had not been
+   * asked for yet, because no card existed to ask for it.
+   *
+   * Page 1 is 200 rows against the twelve a screen shows, so the grid can
+   * render as soon as it lands and the remaining pages merge in behind it. The
+   * count beside the results reads `totalCount` from page 1's pagination, so it
+   * shows 3,279 straight away rather than climbing from 200.
+   *
+   * `generation` guards the two setStates: a partial from a superseded request
+   * must never land on top of a newer one. The old single-setState version had
+   * the same race and no guard; adding a second write makes it likelier, so it
+   * is fixed here rather than left.
+   */
+  const generation = useRef(0)
   const fetchVendors = async (avail: string = availableOn, verified: boolean = verifiedOnly) => {
+    const mine = ++generation.current
     setIsLoading(true)
+    const onFirstPage = (rows: Vendor[], total: number) => {
+      if (generation.current !== mine) return
+      setVendors(rows)
+      setTotalCount(total)
+      setIsLoading(false)
+    }
     try {
       const data = vendorTypeFromPath === "all"
-        ? await VendorAPI.getAllBusinesses(avail || undefined, verified || undefined)
-        : await VendorAPI.getBusinessesByVendorType(vendorTypeFromPath, undefined, avail || undefined, verified || undefined)
+        ? await VendorAPI.getAllBusinesses(avail || undefined, verified || undefined, onFirstPage)
+        : await VendorAPI.getBusinessesByVendorType(vendorTypeFromPath, undefined, avail || undefined, verified || undefined, onFirstPage)
+      if (generation.current !== mine) return
       setVendors(data)
+      setTotalCount(data.length)
     } catch {}
-    finally { setIsLoading(false) }
+    finally { if (generation.current === mine) setIsLoading(false) }
   }
 
   useEffect(() => { fetchVendors(availableOn, verifiedOnly) }, [availableOn, verifiedOnly])
@@ -805,7 +835,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                       {filteredVendors.length}
                     </span>
                     <span className="font-bridal text-[11px] uppercase tracking-[0.22em] text-bridal-text-soft">
-                      of {vendors.length} {vendors.length === 1 ? "result" : "results"}
+                      of {totalCount || vendors.length} {(totalCount || vendors.length) === 1 ? "result" : "results"}
                     </span>
                   </span>
                 )}

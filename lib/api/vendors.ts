@@ -138,9 +138,23 @@ function normalizeBusiness(raw: any): any {
 // the remaining pages in parallel, then return the merged raw rows. Previously
 // the listing only ever fetched the top 20 (by completeness), leaving every
 // vendor ranked 21+ unreachable in the UI.
+/**
+ * `onFirstPage` is what makes the listing paint.
+ *
+ * WW-PERF. This awaited EVERY page before returning, and the listing only calls
+ * `setVendors` on the result — so with 3,279 vendors the browser made seventeen
+ * requests and rendered nothing until the last one landed. Measured on
+ * production: /vendors LCP 7,189ms, of which 5,545ms was Load Delay, i.e. the
+ * LCP image had not been ASKED for yet.
+ *
+ * Page 1 is 200 rows, far more than the twelve a screen shows. Handing it to the
+ * caller the moment it arrives lets the grid render after ONE request while the
+ * rest merge in behind it. Same data, same order, same final array.
+ */
 async function fetchAllBusinessPages(
   url: string,
   baseParams: Record<string, unknown> = {},
+  onFirstPage?: (rows: any[], total: number) => void,
 ): Promise<any[]> {
   // F-A — larger pages (fewer round-trips; backend cap is 200) + a bounded
   // concurrency pool instead of firing every remaining page at once. The old
@@ -156,7 +170,10 @@ async function fetchAllBusinessPages(
     params: { ...baseParams, page: 1, limit: PAGE_SIZE },
   })
   let rows = rowsOf(first)
-  const totalPages = first?.data?.data?.pagination?.totalPages || 1
+  const pagination = first?.data?.data?.pagination
+  const totalPages = pagination?.totalPages || 1
+  // The true total comes off page 1, so the count never has to jump from 200.
+  onFirstPage?.(rows, pagination?.total ?? rows.length)
   if (totalPages > 1) {
     const pageNums = Array.from({ length: totalPages - 1 }, (_, i) => i + 2)
     const results: any[][] = new Array(pageNums.length)
@@ -182,12 +199,20 @@ export class VendorAPI {
   // Get all businesses (every page, not just the first).
   // availableOn (YYYY-MM-DD) → only venues free that day.
   // verifiedOnly → D-4: only KYC-verified halls.
-  static async getAllBusinesses(availableOn?: string, verifiedOnly?: boolean): Promise<Vendor[]> {
+  static async getAllBusinesses(
+    availableOn?: string,
+    verifiedOnly?: boolean,
+    onFirstPage?: (vendors: Vendor[], total: number) => void,
+  ): Promise<Vendor[]> {
     try {
-      const list = await fetchAllBusinessPages(BASE, {
-        ...(availableOn ? { availableOn } : {}),
-        ...(verifiedOnly ? { verifiedOnly: 'true' } : {}),
-      })
+      const list = await fetchAllBusinessPages(
+        BASE,
+        {
+          ...(availableOn ? { availableOn } : {}),
+          ...(verifiedOnly ? { verifiedOnly: 'true' } : {}),
+        },
+        onFirstPage && ((rows, total) => onFirstPage(rows.map(normalizeBusiness), total)),
+      )
       return list.map(normalizeBusiness)
     } catch {
       return []
@@ -200,14 +225,19 @@ export class VendorAPI {
     pakistaniFilters?: PakistaniFilterParams,
     availableOn?: string,
     verifiedOnly?: boolean,
+    onFirstPage?: (vendors: Vendor[], total: number) => void,
   ): Promise<Vendor[]> {
     try {
-      const list = await fetchAllBusinessPages(`${BASE}/businesses-by-vendor`, {
-        vendorType,
-        ...(pakistaniFilters || {}),
-        ...(availableOn ? { availableOn } : {}),
-        ...(verifiedOnly ? { verifiedOnly: 'true' } : {}),
-      })
+      const list = await fetchAllBusinessPages(
+        `${BASE}/businesses-by-vendor`,
+        {
+          vendorType,
+          ...(pakistaniFilters || {}),
+          ...(availableOn ? { availableOn } : {}),
+          ...(verifiedOnly ? { verifiedOnly: 'true' } : {}),
+        },
+        onFirstPage && ((rows, total) => onFirstPage(rows.map(normalizeBusiness), total)),
+      )
       return list.map(normalizeBusiness)
     } catch {
       return []
