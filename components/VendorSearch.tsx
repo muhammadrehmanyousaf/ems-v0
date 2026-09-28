@@ -540,7 +540,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                         value={filters.rating.toString()}
                         onValueChange={v => setFilters(p => ({ ...p, rating: Number(v) }))}
                       >
-                        <SelectTrigger className="h-10 text-sm border-bridal-beige bg-bridal-ivory rounded-[4px] font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
+                        <SelectTrigger aria-label="Minimum Rating" className="h-10 text-sm border-bridal-beige bg-bridal-ivory rounded-[4px] font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-bridal-cream border-bridal-beige rounded-md">
@@ -605,7 +605,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                             value={filters.capacity.toString()}
                             onValueChange={v => setFilters(p => ({ ...p, capacity: Number(v) }))}
                           >
-                            <SelectTrigger className="h-10 text-sm border-bridal-beige bg-bridal-ivory rounded-[4px] font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
+                            <SelectTrigger aria-label="Min. Guest Capacity" className="h-10 text-sm border-bridal-beige bg-bridal-ivory rounded-[4px] font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="bg-bridal-cream border-bridal-beige rounded-md">
@@ -710,7 +710,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                         value={filters.cancellationPolicy || "all"}
                         onValueChange={v => setFilters(p => ({ ...p, cancellationPolicy: v === "all" ? "" : v }))}
                       >
-                        <SelectTrigger className="h-10 text-sm border-bridal-beige bg-bridal-ivory rounded-[4px] font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
+                        <SelectTrigger aria-label="Cancellation Policy" className="h-10 text-sm border-bridal-beige bg-bridal-ivory rounded-[4px] font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-bridal-cream border-bridal-beige rounded-md">
@@ -816,7 +816,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                 )}
               </div>
               <Select value={sortOption} onValueChange={setSortOption}>
-                <SelectTrigger className="w-full sm:w-52 h-10 border-bridal-beige bg-bridal-ivory text-sm rounded-[4px] font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
+                <SelectTrigger aria-label="Sort results" className="w-full sm:w-52 h-10 border-bridal-beige bg-bridal-ivory text-sm rounded-[4px] font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent className="bg-bridal-cream border-bridal-beige rounded-md">

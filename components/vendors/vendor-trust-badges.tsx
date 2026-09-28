@@ -128,6 +128,10 @@ export function VendorTrustBadges({
   return (
     <div
       className={cn("flex flex-wrap items-center gap-1.5", className)}
+      // `role="group"`, not a bare div: aria-label is prohibited on a generic
+      // element, and axe reports it once per card — nine times on /search.
+      // group is what this is, and group takes a name.
+      role="group"
       aria-label="Vendor trust badges"
     >
       {renderTier && tier && (
@@ -151,10 +155,13 @@ export function VendorTrustBadges({
               meta.className,
             )}
             title={meta.title}
-            aria-label={meta.label}
           >
             <Icon className="h-3 w-3" aria-hidden />
-            {!compact && <span>{meta.label}</span>}
+            {/* Named by its own content rather than by `aria-label`, which is
+                prohibited on a generic span. In compact mode the label is
+                hidden from sight but still read aloud, which is what the
+                aria-label was there for. */}
+            {compact ? <span className="sr-only">{meta.label}</span> : <span>{meta.label}</span>}
           </span>
         );
       })}

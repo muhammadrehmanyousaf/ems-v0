@@ -301,7 +301,7 @@ function SearchContent() {
                     {/* Category */}
                     <FilterGroup icon={<Award className="w-3.5 h-3.5 text-bridal-gold" />} label="Category">
                       <Select value={filters.category} onValueChange={v => setF("category", v)}>
-                        <SelectTrigger className="h-10 text-sm border-bridal-beige bg-bridal-ivory rounded-[4px] font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
+                        <SelectTrigger aria-label="Category" className="h-10 text-sm border-bridal-beige bg-bridal-ivory rounded-[4px] font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
                           <SelectValue placeholder="All categories" />
                         </SelectTrigger>
                         <SelectContent className="bg-bridal-cream border-bridal-beige rounded-md">
@@ -346,7 +346,7 @@ function SearchContent() {
                     {/* Rating */}
                     <FilterGroup icon={<Star className="w-3.5 h-3.5 text-bridal-gold" />} label="Minimum Rating">
                       <Select value={filters.rating.toString()} onValueChange={v => setF("rating", parseFloat(v))}>
-                        <SelectTrigger className="h-10 text-sm border-bridal-beige bg-bridal-ivory rounded-[4px] font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
+                        <SelectTrigger aria-label="Minimum Rating" className="h-10 text-sm border-bridal-beige bg-bridal-ivory rounded-[4px] font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
                           <SelectValue placeholder="Any rating" />
                         </SelectTrigger>
                         <SelectContent className="bg-bridal-cream border-bridal-beige rounded-md">
@@ -363,7 +363,7 @@ function SearchContent() {
                     {/* Capacity */}
                     <FilterGroup icon={<Users className="w-3.5 h-3.5 text-bridal-gold" />} label="Minimum Capacity">
                       <Select value={filters.capacity.toString()} onValueChange={v => setF("capacity", parseInt(v))}>
-                        <SelectTrigger className="h-10 text-sm border-bridal-beige bg-bridal-ivory rounded-[4px] font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
+                        <SelectTrigger aria-label="Minimum Capacity" className="h-10 text-sm border-bridal-beige bg-bridal-ivory rounded-[4px] font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
                           <SelectValue placeholder="Any capacity" />
                         </SelectTrigger>
                         <SelectContent className="bg-bridal-cream border-bridal-beige rounded-md">
@@ -381,7 +381,7 @@ function SearchContent() {
                     {/* Sort */}
                     <FilterGroup icon={<SortAsc className="w-3.5 h-3.5 text-bridal-gold" />} label="Sort By">
                       <Select value={filters.sortBy} onValueChange={v => setF("sortBy", v)}>
-                        <SelectTrigger className="h-10 text-sm border-bridal-beige bg-bridal-ivory rounded-[4px] font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
+                        <SelectTrigger aria-label="Sort By" className="h-10 text-sm border-bridal-beige bg-bridal-ivory rounded-[4px] font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-bridal-cream border-bridal-beige rounded-md">
