@@ -15,55 +15,41 @@ export const vendorKeys = {
   featured: () => [...vendorKeys.all, 'featured'] as const,
 }
 
-// Single source of truth: fetch all vendors once, share via TanStack Query cache
-export function useVendors() {
-  return useQuery({
-    queryKey: vendorKeys.lists(),
-    // Wrapped, NOT passed by reference. React Query calls queryFn with its own
-    // context object, and `getAllBusinesses`'s first parameter is `availableOn`
-    // (a YYYY-MM-DD date) — so passing the reference sent the whole context
-    // down the wire as a date filter. Observed on the homepage:
-    //   /businesses?availableOn[client]=[object+Object]
-    //     &availableOn[queryKey][0]=vendors&availableOn[signal]=[object+AbortSignal]
-    // The backend ignores it (bookedBusinessIdsOn requires a string matching
-    // /^\d{4}-\d{2}-\d{2}$/), so nothing broke — but it also made `data`
-    // `unknown` for every caller, which is why the homepage hero and /search
-    // were full of untyped vendor loops.
-    queryFn: () => VendorAPI.getAllBusinesses(),
-    staleTime: 10 * 60 * 1000,
-    gcTime: 15 * 60 * 1000,
-  })
-}
+/**
+ * `useVendors()` used to live here: one query that fetched EVERY page of
+ * /businesses and shared the whole catalogue through the React Query cache.
+ *
+ * WW-PERF — it is gone, not deprecated, because it is the primitive that made
+ * "download the entire marketplace" the path of least resistance. Its three
+ * callers were the homepage hero (which used it to count city names), /search
+ * (which re-implemented the server's filters over it) and the favourites
+ * preloader (which never read a row of it). All three now ask the server for
+ * what they render: VendorAPI.searchCards() for a page of card-shaped rows, and
+ * VendorAPI.getFacets() for counts.
+ *
+ * `fetchAllBusinessPages` still exists in lib/api/vendors.ts and is still
+ * correct — for app/sitemap.ts, which genuinely needs every vendor, once, at
+ * build time. It has no business running in a browser.
+ */
 
-// Filter from the already-cached all-vendors list instead of a separate API call.
-// Falls back to a direct API call only if the all-vendors query hasn't loaded yet.
-export function useVendorsByType(type: string) {
-  const queryClient = useQueryClient()
-
+/**
+ * A handful of vendors of one type, for a homepage section.
+ *
+ * WW-PERF — this used to read the all-vendors cache and, when that cache was
+ * empty, fall back to `getBusinessesByVendorType`, which walks EVERY page for
+ * that type. Four homepage sections call it and they all mount at once, so the
+ * cache was always empty and each one downloaded its own full list: 18 of the
+ * homepage's 36 API calls, at ~740 KB of JSON each.
+ *
+ * No section renders more than 8 rows (EditorialGallerySection). So it asks for
+ * one small page of the card projection and stops there. `limit` is a parameter
+ * because the caller knows how many it will show.
+ */
+export function useVendorsByType(type: string, limit = 12) {
   return useQuery({
-    queryKey: vendorKeys.byType(type),
-    queryFn: async () => {
-      // Try to use already-cached all-vendors data first
-      const cached = queryClient.getQueryData<Vendor[]>(vendorKeys.lists())
-      if (cached && cached.length > 0) {
-        // `subBusinessType` is a Postgres TEXT[] (businessModel.js:147).
-        // normalizeBusiness() flattens it to a string, but this reads from the
-        // query cache, so tolerate both shapes rather than trusting that —
-        // calling .toLowerCase() on an array throws and would fail the whole
-        // queryFn. Same two-shape handling as the `catering` readers.
-        const want = type.toLowerCase()
-        return cached.filter((v) => {
-          const subRaw = v.subBusinessType
-          const subs = Array.isArray(subRaw) ? subRaw : subRaw ? [subRaw] : []
-          return (
-            v.vendor?.vendorType?.toLowerCase() === want ||
-            subs.some((s) => String(s).toLowerCase() === want)
-          )
-        })
-      }
-      // Fallback to dedicated API call
-      return VendorAPI.getBusinessesByVendorType(type)
-    },
+    queryKey: [...vendorKeys.byType(type), { limit }],
+    queryFn: ({ signal }) =>
+      VendorAPI.searchCards({ vendorTypes: type, limit, signal }).then((r) => r.items),
     enabled: !!type && type !== 'all',
     staleTime: 10 * 60 * 1000,
     gcTime: 15 * 60 * 1000,

@@ -14,7 +14,9 @@ import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
 import { useRouter } from "next/navigation"
 import type { Vendor } from "@/lib/types"
 import { VENDOR_TYPES, VENDOR_TYPE_DISPLAY_NAMES, VENDOR_TYPE_DESCRIPTIONS, getAllVendorPaths, VENDOR_TYPE_PATHS } from "@/lib/vendor-types"
-import { useVendors } from "@/hooks/use-vendors"
+import { useQuery } from "@tanstack/react-query"
+import { useDebounced } from "@/hooks/use-debounced"
+import { VendorAPI } from "@/lib/api/vendors"
 import { usePlatformStats } from "@/hooks/use-platform-stats"
 import { motion, AnimatePresence } from "framer-motion"
 import { Swiper, SwiperSlide } from "swiper/react"
@@ -72,8 +74,23 @@ export function HeroSection() {
 
   const searchRef = useRef<HTMLDivElement>(null)
 
-  // Use React Query hook for vendors
-  const { data: allVendors = [], isLoading } = useVendors()
+  /**
+   * WW-PERF — this hero used to call `useVendors()`, which walks every page of
+   * /businesses: 17 requests and roughly 12 MB of JSON parsed on a phone, in
+   * order to count cities, guess which vendors are venues by name, and filter a
+   * 3,272-row array on every keystroke. Measured on a mid-range Android on 4G,
+   * the homepage took LCP 7,472ms with 8,067ms of blocked main thread.
+   *
+   * It is a search box. So it now asks the server, which has always supported
+   * these filters: facets for the city chips (one GROUP BY, ~1.2 KB), and one
+   * debounced card-shaped query per tab for the suggestions AND the total.
+   */
+  const { data: facets } = useQuery({
+    queryKey: ["business-facets"],
+    queryFn: () => VendorAPI.getFacets(12),
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+  })
   const { data: stats } = usePlatformStats()
 
   // ── Recent searches (per-user, falls back to "guest") ──
@@ -218,36 +235,12 @@ export function HeroSection() {
     }, 0)
   }
 
-  // Get popular cities from vendor data - memoized
-  const popularCities = useMemo(() => {
-    const cityCounts: { [key: string]: number } = {}
-    
-    allVendors?.forEach((vendor) => {
-      if (vendor.city) {
-        cityCounts[vendor.city] = (cityCounts[vendor.city] || 0) + 1
-      }
-    })
-    
-    // Sort by count and get top 10 cities
-    const sortedCities = Object.entries(cityCounts)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 10)
-      .map(([city]) => city)
-    
-    return sortedCities
-  }, [allVendors])
-
-  // Filter venues from all vendors - memoized to prevent infinite loops
-  const venues = useMemo(() => allVendors.filter(vendor => 
-    vendor.type === VENDOR_TYPES.WEDDING_VENUE || 
-    vendor.name?.toLowerCase().includes('venue') ||
-    vendor.name?.toLowerCase().includes('hall') ||
-    vendor.name?.toLowerCase().includes('palace') ||
-    vendor.name?.toLowerCase().includes('banquet') ||
-    vendor.name?.toLowerCase().includes('marriage') ||
-    vendor.name?.toLowerCase().includes('wedding hall') ||
-    vendor.name?.toLowerCase().includes('garden')
-  ), [allVendors])
+  // The ten busiest cities, straight from the server's GROUP BY. This was
+  // counted in JavaScript over every vendor in the country.
+  const popularCities = useMemo(
+    () => (facets?.cities ?? []).slice(0, 10).map((c) => c.city),
+    [facets]
+  )
 
 
 
@@ -264,107 +257,63 @@ export function HeroSection() {
     'wedding-stationery': VENDOR_TYPES.WEDDING_STATIONERY,
   }
 
-  // Whether a vendor belongs to a category — for the "N vendors match" preview.
+  // The category -> vendorType map above is now the whole of the matching
+  // logic: it becomes `?vendorTypes=` and the server does the filtering. The
+  // two client-side matchers that lived here (`vendorMatchesCategory` and a
+  // `venueMatchesType` that switched on name substrings like "banquet" /
+  // "garden" / "farmhouse") are gone with the array they filtered.
+
+  // ── The two searches, server-side and debounced ─────────────────────────
   //
-  // This used to also match on fuzzy NAME substrings ("studio", "event",
-  // "fashion", "print"…), which over-counted wildly: makeup/recording/tailoring
-  // "studios" all counted as photographers, so the preview claimed 268 matches
-  // when the real /photographers listing (which filters by type) had 230. Match
-  // on the canonical type ONLY, so the preview number agrees with the page the
-  // user actually lands on. Unknown categories match everything (as before).
-  const vendorMatchesCategory = (vendor: Vendor, category: string): boolean => {
-    const wantType = CATEGORY_TO_TYPE[category]
-    if (!wantType) return true
-    return (vendor.type || '') === wantType
-  }
-
-  // Helper function to check if venue matches type
-  const venueMatchesType = (venue: Vendor, venueType: string): boolean => {
-    const venueName = venue.name?.toLowerCase() || ''
-    const venueDescription = venue.description?.toLowerCase() || ''
-    
-    switch (venueType) {
-      case 'banquet':
-        return venueName.includes('banquet') || venueName.includes('hall') || venueDescription.includes('banquet')
-      case 'hotel':
-        return venueName.includes('hotel') || venueName.includes('resort') || venueDescription.includes('hotel')
-      case 'resort':
-        return venueName.includes('resort') || venueName.includes('spa') || venueDescription.includes('resort')
-      case 'garden':
-        return venueName.includes('garden') || venueName.includes('lawn') || venueDescription.includes('garden')
-      case 'palace':
-        return venueName.includes('palace') || venueName.includes('royal') || venueDescription.includes('palace')
-      case 'beach':
-        return venueName.includes('beach') || venueName.includes('seaside') || venueDescription.includes('beach')
-      case 'farmhouse':
-        return venueName.includes('farm') || venueName.includes('villa') || venueDescription.includes('farm')
-      case 'outdoor':
-        return venueName.includes('outdoor') || venueName.includes('open') || venueDescription.includes('outdoor')
-      default:
-        return true
-    }
-  }
-
-  // Filter vendors against the current form state. We compute the FULL list
-  // once (used for the live "X matches" counter) and then slice 10 for the
-  // suggestions popover.
-  const filteredVendorsAll = useMemo(() => {
-    let filtered = allVendors
-
-    if (selectedCategory && selectedCategory !== 'all') {
-      filtered = filtered.filter(vendor => vendorMatchesCategory(vendor, selectedCategory))
-    }
-
-    if (location) {
-      filtered = filtered.filter(vendor => {
-        const vendorCity = vendor.city?.toLowerCase() || ''
-        const vendorLocation = vendor.location?.toLowerCase() || ''
-        const searchLocation = location.toLowerCase()
-        return vendorCity.includes(searchLocation) || vendorLocation.includes(searchLocation)
-      })
-    }
-
-    if (searchQuery) {
-      filtered = filtered.filter(vendor => {
-        const vendorName = vendor.name?.toLowerCase() || ''
-        const vendorDescription = vendor.description?.toLowerCase() || ''
-        const query = searchQuery.toLowerCase()
-        return vendorName.includes(query) || vendorDescription.includes(query)
-      })
-    }
-
-    return filtered
-  }, [allVendors, selectedCategory, location, searchQuery])
-
-  const filteredVendors = useMemo(
-    () => filteredVendorsAll.slice(0, 10),
-    [filteredVendorsAll]
+  // 250ms is the gap between "keeps up with typing" and "a request per
+  // keystroke". React Query dedupes and caches identical filter states, so
+  // going back to a previous query costs nothing.
+  const vendorFilters = useDebounced(
+    { q: searchQuery.trim(), cityLike: location.trim(), category: selectedCategory },
+    250
+  )
+  const venueFilters = useDebounced(
+    { venueType: selectedVenueType, cityLike: venueLocation.trim() },
+    250
   )
 
-  // Filter venues for the live count + dropdown.
-  const filteredVenuesAll = useMemo(() => {
-    let filtered = venues
+  const vendorQuery = useQuery({
+    queryKey: ["hero-vendor-search", vendorFilters],
+    queryFn: ({ signal }) =>
+      VendorAPI.searchCards({
+        q: vendorFilters.q,
+        cityLike: vendorFilters.cityLike,
+        vendorTypes:
+          vendorFilters.category && vendorFilters.category !== "all"
+            ? CATEGORY_TO_TYPE[vendorFilters.category]
+            : undefined,
+        limit: 10,
+        signal,
+      }),
+    staleTime: 5 * 60 * 1000,
+  })
 
-    if (selectedVenueType && selectedVenueType !== 'all') {
-      filtered = filtered.filter(venue => venueMatchesType(venue, selectedVenueType))
-    }
+  const venueQuery = useQuery({
+    queryKey: ["hero-venue-search", venueFilters],
+    queryFn: ({ signal }) =>
+      VendorAPI.searchCards({
+        // The venue-type chips ("banquet", "garden", "farmhouse"…) were matched
+        // against the name and description in JavaScript; `?q=` is that same
+        // match, done in SQL against name/subArea/description.
+        q: venueFilters.venueType && venueFilters.venueType !== "all" ? venueFilters.venueType : "",
+        cityLike: venueFilters.cityLike,
+        vendorTypes: VENDOR_TYPES.WEDDING_VENUE,
+        limit: 10,
+        signal,
+      }),
+    staleTime: 5 * 60 * 1000,
+  })
 
-    if (venueLocation) {
-      filtered = filtered.filter(venue => {
-        const venueCity = venue.city?.toLowerCase() || ''
-        const venueLocationText = venue.location?.toLowerCase() || ''
-        const searchLocation = venueLocation.toLowerCase()
-        return venueCity.includes(searchLocation) || venueLocationText.includes(searchLocation)
-      })
-    }
-
-    return filtered
-  }, [venues, selectedVenueType, venueLocation])
-
-  const filteredVenues = useMemo(
-    () => filteredVenuesAll.slice(0, 10),
-    [filteredVenuesAll]
-  )
+  const filteredVendors = vendorQuery.data?.items ?? []
+  const vendorMatchCount = vendorQuery.data?.total ?? 0
+  const filteredVenues = venueQuery.data?.items ?? []
+  const venueMatchCount = venueQuery.data?.total ?? 0
+  const isLoading = vendorQuery.isFetching || venueQuery.isFetching
 
   // Has the user actually filtered anything in the active tab? (Used to
   // decide when to surface the live "X matches" counter — we don't want it
@@ -990,16 +939,16 @@ export function HeroSection() {
                       <div className="text-[12px] font-bridal text-bridal-text-soft flex items-center gap-1.5">
                         <span
                           className={`inline-flex w-1.5 h-1.5 rounded-full ${
-                            filteredVendorsAll.length > 0
+                            vendorMatchCount > 0
                               ? "bg-bridal-sage"
                               : "bg-bridal-coral"
                           }`}
                         />
                         <span>
                           <span className="font-semibold text-bridal-charcoal">
-                            {filteredVendorsAll.length}
+                            {vendorMatchCount}
                           </span>{" "}
-                          {filteredVendorsAll.length === 1 ? "vendor" : "vendors"} match{" "}
+                          {vendorMatchCount === 1 ? "vendor" : "vendors"} match{" "}
                           <button
                             type="button"
                             onClick={handleVendorSearch}
@@ -1135,16 +1084,16 @@ export function HeroSection() {
                       <div className="text-[12px] font-bridal text-bridal-text-soft flex items-center gap-1.5">
                         <span
                           className={`inline-flex w-1.5 h-1.5 rounded-full ${
-                            filteredVenuesAll.length > 0
+                            venueMatchCount > 0
                               ? "bg-bridal-sage"
                               : "bg-bridal-coral"
                           }`}
                         />
                         <span>
                           <span className="font-semibold text-bridal-charcoal">
-                            {filteredVenuesAll.length}
+                            {venueMatchCount}
                           </span>{" "}
-                          {filteredVenuesAll.length === 1 ? "venue" : "venues"} match{" "}
+                          {venueMatchCount === 1 ? "venue" : "venues"} match{" "}
                           <button
                             type="button"
                             onClick={handleVenueSearch}

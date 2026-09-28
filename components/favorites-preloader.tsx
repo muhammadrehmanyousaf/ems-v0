@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useFavorites } from '@/hooks/use-favorites'
-import { useVendors } from '@/hooks/use-vendors'
 import VendorCard from '@/components/VendorCard'
 import { Heart, Loader2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
@@ -15,17 +14,17 @@ interface FavoritesPreloaderProps {
 
 export function FavoritesPreloader({ children }: FavoritesPreloaderProps) {
   const { favorites, isLoading: favoritesLoading } = useFavorites()
-  const { data: allVendors = [], isLoading: vendorsLoading } = useVendors()
-  const [showCachedContent, setShowCachedContent] = useState(false)
-
-  // Show cached content if we have favorites but vendors are still loading
-  useEffect(() => {
-    if (favorites.length > 0 && !favoritesLoading && vendorsLoading) {
-      setShowCachedContent(true)
-    } else if (!vendorsLoading) {
-      setShowCachedContent(false)
-    }
-  }, [favorites, favoritesLoading, vendorsLoading])
+  /**
+   * WW-PERF — this called `useVendors()`, which downloads every page of the
+   * catalog, and then never read a single row of it: `allVendors` was unused
+   * and only `vendorsLoading` was consulted, to decide whether to show a
+   * skeleton while that download finished. A page was downloading 3,272
+   * vendors in order to know that it was downloading.
+   *
+   * The download is gone, so the skeleton that covered it is gone with it.
+   * `useFavorites()` already loads what this page renders.
+   */
+  const [showCachedContent] = useState(false)
 
   if (showCachedContent) {
     // Show cached favorites while vendors load
