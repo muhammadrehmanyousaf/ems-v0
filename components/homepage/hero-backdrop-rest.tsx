@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Image from "next/image"
+import { HERO_SLIDES } from "@/components/homepage/hero-sources"
 
 /**
  * The hero crossfade's 2nd-7th images, each mounted just before its turn.
@@ -30,14 +30,8 @@ import Image from "next/image"
  * The first image stays server-rendered in hero-backdrop.tsx with `priority`,
  * so it is preloaded and is the LCP element.
  */
-const REST = [
-  "/images/home/hero/h2.jpg",
-  "/images/home/hero/h3.jpg",
-  "/images/home/hero/h4.jpg",
-  "/images/home/partners/venue.jpg",
-  "/images/home/hero/h6.jpg",
-  "/images/home/hero/h7.jpg",
-]
+/** The six that are not the LCP image. Paths live in hero-sources.ts. */
+const REST = HERO_SLIDES.slice(1)
 
 /** One slot of the 38.5s cycle, in ms. Seven slots, seven images. */
 const SLOT_MS = 5500
@@ -89,15 +83,20 @@ export function HeroBackdropRest() {
 
   return (
     <>
-      {REST.slice(0, mounted).map((src) => (
-        <Image
-          key={src}
-          src={src}
-          alt=""
-          fill
-          fetchPriority="low"
+      {HERO_SLIDES.slice(1, mounted + 1).map((slide) => (
+        // Plain <img> for the same reason as the LCP one: these are
+        // pre-generated AVIF under /public, so the optimizer — whose quota is
+        // exhausted — is not involved at all. See hero-sources.ts.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={slide.base}
+          src={slide.src}
+          srcSet={slide.srcSet}
           sizes="100vw"
-          className="object-cover animate-hero-fade opacity-0 motion-reduce:hidden"
+          alt=""
+          fetchPriority="low"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover animate-hero-fade opacity-0 motion-reduce:hidden"
           // Fixed, not staggered: each image mounts one slot before it is due,
           // so one slot of delay puts every one of them on the original
           // schedule. Staggering both would double-count the offset.

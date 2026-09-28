@@ -1,4 +1,4 @@
-import Image from "next/image"
+import { HERO_SLIDES } from "@/components/homepage/hero-sources"
 import { HeroBackdropRest } from "@/components/homepage/hero-backdrop-rest"
 
 /**
@@ -24,30 +24,37 @@ import { HeroBackdropRest } from "@/components/homepage/hero-backdrop-rest"
  * who asks for less motion.
  */
 
-export const HERO_IMAGES = [
-  "/images/home/spotlight/spotlight.jpg", // grand floral stage
-  "/images/home/hero/h2.jpg", // mehndi hands + bangles
-  "/images/home/hero/h3.jpg", // floral stage decor
-  "/images/home/hero/h4.jpg", // henna + jewellery hands
-  "/images/home/partners/venue.jpg", // modest bride at decorated venue
-  "/images/home/hero/h6.jpg", // modest bride, gold veil
-  "/images/home/hero/h7.jpg", // draped stage, red & gold flowers
-]
 
 export function HeroBackdrop() {
   return (
     <>
       {/* Only the LCP image is server-rendered and preloaded. The other six
-          arrive after the browser goes idle — see hero-backdrop-rest.tsx.
-          Rendering all seven here cost 310kb on arrival for a 40kb paint. */}
-      <Image
-        src={HERO_IMAGES[0]}
-        alt=""
-        fill
-        priority
+          arrive as the crossfade reaches them — see hero-backdrop-rest.tsx.
+
+          A plain <img>, not next/image: these are pre-generated AVIF under
+          /public (see hero-sources.ts), so there is nothing for the optimizer to
+          do and nothing for its exhausted quota to refuse. The preload is
+          hand-written, which was explicitly NOT safe while this went through
+          /_next/image — Next appends a per-deployment `dpl` token to those URLs,
+          so a hardcoded link stopped matching on the next deploy and preloaded
+          nothing. A static path has no token and keeps matching. */}
+      <link
+        rel="preload"
+        as="image"
+        href={HERO_SLIDES[0].src}
+        imageSrcSet={HERO_SLIDES[0].srcSet}
+        imageSizes="100vw"
         fetchPriority="high"
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={HERO_SLIDES[0].src}
+        srcSet={HERO_SLIDES[0].srcSet}
         sizes="100vw"
-        className="object-cover"
+        alt=""
+        fetchPriority="high"
+        decoding="async"
+        className="absolute inset-0 h-full w-full object-cover"
       />
       <HeroBackdropRest />
     </>
