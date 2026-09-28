@@ -151,6 +151,10 @@ export function PwaInstallPrompt() {
   return (
     <div
       role="dialog"
+      // A dialog must have a name. Without one axe reports `aria-dialog-name`
+      // on every page this prompt can appear on, and a screen reader announces
+      // "dialog" with nothing after it.
+      aria-label="Install Wedding Wala"
       aria-live="polite"
       /*
        * Sits ABOVE any fixed bottom action bar — never on top of it.

@@ -22,6 +22,11 @@ const routes = process.argv.slice(2).length
   : ["/planning-tools/budget", "/vendors", "/venues", "/search", "/planning-tools/checklist", "/planning-tools/guest-list", "/"];
 
 for (const route of routes) {
+  // chrome-launcher throws `EPERM` deleting its own temp directory on Windows
+  // AFTER the report has been written, so a non-zero exit does not mean the run
+  // failed. Delete the stale report first, run, then judge by whether a report
+  // exists — this trap made 21 of 22 templates read as FAILED in an earlier sweep.
+  try { fs.unlinkSync(TMP); } catch {}
   try {
     execFileSync(
       "npx",
@@ -34,8 +39,9 @@ for (const route of routes) {
       ],
       { stdio: "ignore", shell: true, timeout: 180000 }
     );
-  } catch {
-    console.log(route + "  -- lighthouse failed");
+  } catch { /* judged below, by whether a report exists */ }
+  if (!fs.existsSync(TMP)) {
+    console.log(route + "  -- lighthouse wrote no report");
     continue;
   }
   const lhr = JSON.parse(fs.readFileSync(TMP, "utf8"));
@@ -50,8 +56,12 @@ for (const route of routes) {
       const items = a.details?.items ?? [];
       console.log("  [" + catId + "] " + a.id + " — " + a.title + "  (" + items.length + ")");
       for (const it of items.slice(0, 4)) {
-        const sel = it.node?.selector || it.node?.snippet || it.source?.url || it.url || JSON.stringify(it).slice(0, 110);
-        console.log("      " + String(sel).replace(/\s+/g, " ").slice(0, 150));
+        // The SNIPPET first: a selector like `div > div.p-4 > div.flex` names a
+        // shape, and guessing which component that is got two rules wrong.
+        // The snippet is the actual element, so it can be searched for.
+        const sel = it.node?.snippet || it.node?.selector || it.source?.url || it.url || JSON.stringify(it).slice(0, 160);
+        console.log("      " + String(sel).replace(/\s+/g, " ").slice(0, 210));
+        if (it.node?.snippet && it.node?.selector) console.log("        @ " + it.node.selector.slice(0, 120));
       }
     }
   }
