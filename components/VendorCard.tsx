@@ -394,7 +394,7 @@ export default function VendorCard({
                         </span>
                       </div>
                     </div>
-                    <span className="font-bridal text-[9.5px] uppercase tracking-[0.2em] font-medium text-bridal-gold mt-1">
+                    <span className="font-bridal text-[9.5px] uppercase tracking-[0.2em] font-medium text-bridal-gold-dark mt-1">
                       {reviews > 0 ? getRatingLabel(rating) : "New"}
                     </span>
                   </div>

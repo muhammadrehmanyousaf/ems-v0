@@ -238,7 +238,7 @@ export function CookieConsent() {
                 We use essential cookies to keep you signed in and the booking flow
                 working. Analytics and marketing cookies are optional. Read our{" "}
               </span>
-              <Link href="/cookie-policy" className="text-bridal-gold-dark hover:underline">
+              <Link href="/cookie-policy" className="text-bridal-gold-dark underline">
                 Cookie Policy
               </Link>
               .
@@ -298,7 +298,7 @@ export function CookieConsent() {
                   <button
                     type="button"
                     onClick={saveCustom}
-                    className="min-w-0 flex-1 sm:flex-none inline-flex items-center justify-center px-3 sm:px-4 h-9 rounded-full bg-bridal-gold text-white font-bridal text-[12.5px] font-medium hover:bg-bridal-gold-dark transition-colors"
+                    className="min-w-0 flex-1 sm:flex-none inline-flex items-center justify-center px-3 sm:px-4 h-9 rounded-full bg-bridal-gold-dark text-white font-bridal text-[12.5px] font-medium hover:bg-bridal-gold-deep transition-colors"
                   >
                     <span className="truncate">Save preferences</span>
                   </button>
@@ -315,7 +315,7 @@ export function CookieConsent() {
                   <button
                     type="button"
                     onClick={acceptAll}
-                    className="min-w-0 flex-1 sm:flex-none inline-flex items-center justify-center px-3 sm:px-4 h-9 rounded-full bg-bridal-gold text-white font-bridal text-[12.5px] font-medium hover:bg-bridal-gold-dark transition-colors"
+                    className="min-w-0 flex-1 sm:flex-none inline-flex items-center justify-center px-3 sm:px-4 h-9 rounded-full bg-bridal-gold-dark text-white font-bridal text-[12.5px] font-medium hover:bg-bridal-gold-deep transition-colors"
                   >
                     <span className="truncate">Accept all</span>
                   </button>

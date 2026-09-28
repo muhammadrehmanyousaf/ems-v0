@@ -497,6 +497,10 @@ function SearchContent() {
               </div>
             ) : (
               <>
+                {/* The cards are h3. Without this the page runs h1 -> h3 and axe
+                   reports `heading-order`; it also gives screen readers a way to
+                   jump straight to the results. */}
+                <h2 className="sr-only">Search results</h2>
                 <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
                   <AnimatePresence mode="popLayout">
                     {paginatedVendors.map((vendor, idx) => (
@@ -603,6 +607,10 @@ function BridalCheckRow({
         id={id}
         checked={checked}
         onCheckedChange={v => onChange(!!v)}
+        // Radix renders a <button role="checkbox">, and a <label for> does not
+        // name a button under the accessible-name spec — only its contents do,
+        // and this one has none. axe reports every filter as `button-name`.
+        aria-label={label}
         className="border-bridal-beige data-[state=checked]:bg-bridal-gold data-[state=checked]:text-bridal-charcoal data-[state=checked]:border-bridal-gold-dark transition-colors"
       />
       <label

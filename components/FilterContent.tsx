@@ -99,6 +99,7 @@ export default function FilterContent({
                 id={`amenity-${amenity}`}
                 checked={filters.amenities.includes(amenity)}
                 onCheckedChange={() => handleAmenityToggle(amenity)}
+                aria-label={amenity}
               />
               <label htmlFor={`amenity-${amenity}`} className="ml-2">
                 {amenity}
@@ -136,6 +137,7 @@ export default function FilterContent({
                 id={`staff-${staff}`}
                 checked={filters.staff.includes(staff as StaffOption)}
                 onCheckedChange={() => handleStaffToggle(staff as StaffOption)}
+                aria-label={staff}
               />
               <label htmlFor={`staff-${staff}`} className="ml-2 capitalize">
                 {staff}
