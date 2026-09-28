@@ -180,6 +180,14 @@ const config: Config = {
   			   fade at each end. `--n` is set per image so one keyframe set
   			   serves all of them. Pure CSS: the hero paints and animates with
   			   no JavaScript, which is what took Swiper off the critical path. */
+  			/* WW-PERF — the page-change fade, as CSS instead of framer-motion.
+  			   See components/ui/page-transition.tsx: the motion version pulled
+  			   the whole animation library into the shared chrome of every
+  			   public page, for a 150ms fade that only shows on navigation. */
+  			'page-fade': {
+  				from: { opacity: '0' },
+  				to: { opacity: '1' },
+  			},
   			'hero-fade': {
   				'0%,   12%': { opacity: '1' },
   				'14.3%, 98%': { opacity: '0' },
@@ -241,6 +249,7 @@ const config: Config = {
   			'slide-in-right': 'slide-in-right 0.4s ease-out forwards',
   			'ken-burns': 'ken-burns 20s ease-in-out infinite',
   			'hero-fade': 'hero-fade 38.5s linear infinite',
+  			'page-fade': 'page-fade 150ms ease-out both',
   			'gradient-shift': 'gradient-shift 6s ease infinite',
   			'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
   			'blur-in': 'blur-in 0.6s ease-out forwards',

@@ -1,4 +1,5 @@
 import Image from "next/image"
+import { HeroBackdropRest } from "@/components/homepage/hero-backdrop-rest"
 
 /**
  * The hero's background images — a SERVER component, deliberately.
@@ -36,24 +37,19 @@ export const HERO_IMAGES = [
 export function HeroBackdrop() {
   return (
     <>
-      {HERO_IMAGES.map((src, i) => (
-        <Image
-          key={src}
-          src={src}
-          alt=""
-          fill
-          priority={i === 0}
-          fetchPriority={i === 0 ? "high" : "low"}
-          loading={i === 0 ? "eager" : "lazy"}
-          sizes="100vw"
-          className={
-            i === 0
-              ? "object-cover"
-              : "object-cover animate-hero-fade opacity-0 motion-reduce:hidden"
-          }
-          style={i === 0 ? undefined : { animationDelay: `${i * 5.5}s` }}
-        />
-      ))}
+      {/* Only the LCP image is server-rendered and preloaded. The other six
+          arrive after the browser goes idle — see hero-backdrop-rest.tsx.
+          Rendering all seven here cost 310kb on arrival for a 40kb paint. */}
+      <Image
+        src={HERO_IMAGES[0]}
+        alt=""
+        fill
+        priority
+        fetchPriority="high"
+        sizes="100vw"
+        className="object-cover"
+      />
+      <HeroBackdropRest />
     </>
   )
 }
