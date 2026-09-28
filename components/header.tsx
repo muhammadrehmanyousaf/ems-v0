@@ -215,12 +215,14 @@ export function Header() {
                       className="flex items-center gap-2"
                       onClick={() => setIsOpen(false)}
                     >
+                      {/* Same asset, same reason — see the header crest below. */}
                       <Image
                         src="/icon-mark.png"
                         alt=""
                         aria-hidden="true"
                         width={36}
                         height={36}
+                        unoptimized
                         className="h-9 w-auto shrink-0"
                       />
                       <span className="font-display italic leading-none tracking-tight whitespace-nowrap text-[24px] text-bridal-charcoal">
@@ -454,6 +456,14 @@ export function Header() {
                   it twice: "serve images in next-gen formats" and "properly
                   size images". `priority` because it is above the fold in the
                   header on every route. */}
+                {/* WW-PERF — served straight from /public, not through
+                    /_next/image. The Vercel optimization quota is exhausted:
+                    a width already in its cache still returns 200, but any
+                    width that is not returns 402. The footer and the module
+                    rail already request this exact file raw, so the browser
+                    has it cached by the time this renders — routing it
+                    through the optimizer bought a second copy of a 16 kB
+                    file and a dependency on a quota that has run out. */}
               <Image
                 src="/icon-mark.png"
                 alt=""
@@ -461,6 +471,7 @@ export function Header() {
                 width={48}
                 height={48}
                 priority
+                unoptimized
                 className="h-10 sm:h-12 w-auto shrink-0"
               />
               <span className="hidden sm:inline font-display italic leading-none tracking-tight whitespace-nowrap text-[26px] sm:text-[32px] min-[1400px]:text-[28px] text-bridal-charcoal">
