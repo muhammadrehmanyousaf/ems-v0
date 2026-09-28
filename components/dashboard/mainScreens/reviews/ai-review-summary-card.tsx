@@ -25,6 +25,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { AiAPI } from '@/lib/api/ai';
+import { useQueryClient } from '@tanstack/react-query';
+import { BusinessesAPI } from '@/lib/api/dashboard';
+import { businessListKey } from '@/lib/query/business-keys';
 
 interface BizOption {
   id: number;
@@ -47,17 +50,21 @@ export function AiReviewSummaryCard() {
    * could change it — but they had to notice first.
    */
   const activeBusinessId = useActiveBusinessId();
+  const qc = useQueryClient();
 
   useEffect(() => {
     AiAPI.status()
       .then((s) => setAvailable(!!(s.configured && s.features.reviewSummary)))
       .catch(() => setAvailable(false));
-    axiosInstance
-      .get('/api/v1/businesses/user-business')
-      .then((r) => {
-        const arr =
-          (Array.isArray(r.data?.data) ? r.data.data : r.data?.data?.data) || [];
-        const opts = arr.map((b: any) => ({
+    // WW-PERF — the shared business-list cache. This card sat on the reviews
+    // screen re-downloading a list the shell had already fetched.
+    qc.fetchQuery({
+      queryKey: businessListKey,
+      queryFn: () => BusinessesAPI.getUserBusinesses(),
+      staleTime: 10 * 60_000,
+    })
+      .then((arr) => {
+        const opts = (arr || []).map((b) => ({
           id: b.id,
           name: b.name || `Business #${b.id}`,
         }));

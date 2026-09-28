@@ -10,6 +10,7 @@ import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMyBusinesses } from "@/hooks/use-my-businesses"
 import {
   BrokerAPI,
   type BrokerCommission,
@@ -17,7 +18,6 @@ import {
   BROKER_TYPE_LABELS,
   COMMISSION_STATUS_LABELS,
 } from "@/lib/api/brokers"
-import { BusinessesAPI } from "@/lib/api/dashboard"
 import { CommissionFormDialog } from "@/components/dashboard/mainScreens/brokers/redesigned/commission-form-dialog"
 import { RecordPaymentDialog, DisputeCommissionDialog, VoidCommissionDialog } from "@/components/dashboard/mainScreens/brokers/redesigned/commission-action-dialogs"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -83,7 +83,7 @@ export function BrokersRedesignedView() {
     queryKey: ["brokers-redesigned"],
     queryFn: () => BrokerAPI.listCommissions(),
   })
-  const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
+  const { data: businesses } = useMyBusinesses()
 
   /**
    * WWL-295 — `GET /api/v1/brokers` returns 12 full records and the product

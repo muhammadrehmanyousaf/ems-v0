@@ -15,6 +15,8 @@ import * as React from "react"
 import { venueOsApi } from "@/lib/api/venueOs"
 import { useActiveBusinessStore } from "@/lib/store/active-business-store"
 import { BusinessesAPI } from "@/lib/api/dashboard"
+import { useQueryClient } from "@tanstack/react-query"
+import { businessListKey } from "@/lib/query/business-keys"
 
 // Module-level store holding the ACTIVE venue's resolved flags. The hook below
 // keeps it in sync; the flag functions read it synchronously during render.
@@ -63,6 +65,7 @@ export function useRuntimeFlag(key: string): boolean {
  */
 export function useVenueOsFlags(): { loading: boolean; flags: Record<string, boolean> } {
   const activeBusinessId = useActiveBusinessStore((s) => s.activeBusinessId)
+  const qc = useQueryClient()
   const [state, setState] = React.useState<{ loading: boolean; flags: Record<string, boolean> }>(
     { loading: true, flags: runtime },
   )
@@ -74,7 +77,13 @@ export function useVenueOsFlags(): { loading: boolean; flags: Record<string, boo
       let bid = activeBusinessId
       if (bid == null) {
         try {
-          const list = await BusinessesAPI.getUserBusinesses()
+          // WW-PERF — the shared business-list cache, not a private fetch. This hook
+          // runs on every Venue-OS panel; each one used to re-download the list.
+          const list = await qc.fetchQuery({
+            queryKey: businessListKey,
+            queryFn: () => BusinessesAPI.getUserBusinesses(),
+            staleTime: 10 * 60_000,
+          })
           if (list?.length) bid = list[0].id
         } catch { /* ignore */ }
       }

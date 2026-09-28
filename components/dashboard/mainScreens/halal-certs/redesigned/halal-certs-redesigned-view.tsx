@@ -10,6 +10,7 @@ import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMyBusinesses } from "@/hooks/use-my-businesses"
 import { SupplierAPI } from "@/lib/api/suppliers"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import {
@@ -19,7 +20,6 @@ import {
   ISSUING_AUTHORITY_LABELS,
   CERT_STATUS_LABELS,
 } from "@/lib/api/halalCerts"
-import { BusinessesAPI } from "@/lib/api/dashboard"
 import { HalalCertFormDialog } from "@/components/dashboard/mainScreens/halal-certs/redesigned/halal-cert-form-dialog"
 import { RevokeCertDialog, RenewCertDialog } from "@/components/dashboard/mainScreens/halal-certs/redesigned/halal-cert-transition-dialogs"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -84,7 +84,7 @@ export function HalalCertsRedesignedView() {
     queryKey: ["halal-certs-expiring"],
     queryFn: () => HalalCertAPI.expiring(),
   })
-  const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
+  const { data: businesses } = useMyBusinesses()
   /**
    * WWL-293/311/332/350 — this was `businesses?.[0]?.id`, so under "All venues"
    * a new record landed on whichever venue happened to be first in the array,

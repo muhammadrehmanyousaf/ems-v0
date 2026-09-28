@@ -21,8 +21,11 @@ import {
 } from "@/components/ui/sidebar"
 import { useUser } from "@/context/UserContext"
 import { getVendorTypeConfig } from "@/lib/vendor-type-config"
-import { BusinessesAPI, type ApiBusiness } from "@/lib/api/dashboard"
+import { type ApiBusiness } from "@/lib/api/dashboard"
+import { useMyBusinesses } from "@/hooks/use-my-businesses"
 import { useActiveBusinessStore } from "@/lib/store/active-business-store"
+
+const EMPTY_BUSINESSES: ApiBusiness[] = []
 
 /** "Palm Court Marquee" -> "PC". Two letters is what fits in 44px. */
 function initialsOf(name: string): string {
@@ -42,7 +45,11 @@ export function TeamSwitcher({ variant = "panel" }: { variant?: "panel" | "rail"
   const { isMobile } = useSidebar()
   const { user } = useUser()
   const vendorConfig = getVendorTypeConfig(user?.vendorType)
-  const [businesses, setBusinesses] = React.useState<ApiBusiness[]>([])
+  // WW-PERF — the shell asks for the vendor's venues on every screen. This used
+  // to be a `useState` filled by a `useEffect`, so the list was refetched on every
+  // navigation and shared with nobody. `useMyBusinesses` is the one cache key the
+  // whole portal reads, so the switcher now costs zero requests of its own.
+  const businesses = useMyBusinesses().data ?? EMPTY_BUSINESSES
   // Active venue lives in a persisted store (localStorage) so the choice sticks
   // across reloads and every dashboard data-hook can read it. null = All venues.
   const activeBusinessId = useActiveBusinessStore((s) => s.activeBusinessId)
@@ -60,20 +67,16 @@ export function TeamSwitcher({ variant = "panel" }: { variant?: "panel" | "rail"
     [setActiveBusinessId, queryClient],
   )
 
+  // If a persisted selection points at a venue this user no longer owns, fall
+  // back to the combined view. Kept as its own effect: it must still run after
+  // the list arrives, but it no longer owns the fetch. Guarded on a non-empty
+  // list so an in-flight or failed load never clears a valid selection.
   React.useEffect(() => {
-    if (!user) return
-    BusinessesAPI.getUserBusinesses()
-      .then((list) => {
-        setBusinesses(list)
-        // If a persisted selection points at a venue this user no longer owns,
-        // fall back to the combined view.
-        if (activeBusinessId != null && !list.some((b) => b.id === activeBusinessId)) {
-          setActiveBusinessId(null)
-        }
-      })
-      .catch(() => {})
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user])
+    if (businesses.length === 0) return
+    if (activeBusinessId != null && !businesses.some((b) => b.id === activeBusinessId)) {
+      setActiveBusinessId(null)
+    }
+  }, [businesses, activeBusinessId, setActiveBusinessId])
 
   const multi = businesses.length > 1
   // WW-ADDBIZ — the dropdown used to render ONLY when a vendor already owned 2+

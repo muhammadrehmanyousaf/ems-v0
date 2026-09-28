@@ -12,6 +12,7 @@ import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMyBusinesses } from "@/hooks/use-my-businesses"
 import {
   DroneNocAPI,
   type DroneNOC,
@@ -20,7 +21,6 @@ import {
   PERMIT_TYPE_LABELS,
   PERMIT_AUTHORITY_LABELS,
 } from "@/lib/api/droneNoc"
-import { BusinessesAPI } from "@/lib/api/dashboard"
 import { PermitFormDialog } from "@/components/dashboard/mainScreens/drone-noc/redesigned/permit-form-dialog"
 import {
   PermitReasonDialog,
@@ -82,7 +82,7 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
     queryKey: ["drone-noc-redesigned"],
     queryFn: () => DroneNocAPI.list(),
   })
-  const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
+  const { data: businesses } = useMyBusinesses()
   /**
    * WWL-293/311/332/350 — this was `businesses?.[0]?.id`, so under "All venues"
    * a new record landed on whichever venue happened to be first in the array,

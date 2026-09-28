@@ -9,6 +9,7 @@
 
 import * as React from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { invalidateBusinessData } from "@/lib/query/business-keys"
 import { BusinessesAPI } from "@/lib/api/dashboard"
 import { EmptyState } from "@/components/dashboard/primitives/empty-state"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
@@ -74,7 +75,7 @@ export function ImagesManager({ businessId, images }: { businessId: number; imag
   // instead of up to an hour later.
   const invalidate = () => {
     void pushLive(businessId)
-    return qc.invalidateQueries({ queryKey: ["biz-settings-hub"] })
+    return invalidateBusinessData(qc)
   }
 
   // NOTE: both mutations rewrite the WHOLE images array, derived from the

@@ -16,6 +16,7 @@
 
 import * as React from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { invalidateBusinessData } from "@/lib/query/business-keys"
 import { BusinessesAPI } from "@/lib/api/dashboard"
 import { Button } from "@/components/ui/button"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
@@ -40,7 +41,7 @@ export function RecoverMediaCard({ businessId }: { businessId: number | string }
     onSuccess: () => {
       showSuccessToast("Photo restored")
       void pushLive(businessId)
-      qc.invalidateQueries({ queryKey: ["biz-settings-hub"] })
+      invalidateBusinessData(qc)
       qc.invalidateQueries({ queryKey: ["biz-orphan-media", businessId] })
     },
     onError: () => toast.error("Couldn't restore that photo. Please try again."),

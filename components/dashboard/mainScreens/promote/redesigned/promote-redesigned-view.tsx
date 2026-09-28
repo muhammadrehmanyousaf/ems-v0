@@ -10,13 +10,13 @@ import * as React from "react"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMyBusinesses } from "@/hooks/use-my-businesses"
 import {
   PromotionsAPI,
   PLACEMENT_LABEL,
   type PromotionRequestRow,
   type PromotionStatus,
 } from "@/lib/api/promotions"
-import { BusinessesAPI } from "@/lib/api/dashboard"
 import { PromoteRequestDialog } from "@/components/dashboard/mainScreens/promote/redesigned/promote-request-dialog"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
@@ -85,7 +85,7 @@ export function PromoteRedesignedView() {
     queryKey: ["promote-redesigned", activeBusinessId],
     queryFn: () => PromotionsAPI.listMine(),
   })
-  const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
+  const { data: businesses } = useMyBusinesses()
   /**
    * WWL-293/311/332/350 — this was `businesses?.[0]?.id`, so under "All venues"
    * a new record landed on whichever venue happened to be first in the array,

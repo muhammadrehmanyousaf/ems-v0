@@ -14,11 +14,11 @@
  */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useMyBusinesses } from "@/hooks/use-my-businesses";
 import { ArrowUp, ArrowDown, MessageCircle, Loader2, Image as ImageIcon } from "lucide-react";
 import { getReportCards, type ReportCard } from "@/lib/api/bookingOrder";
 import { useBusiness } from "@/context/BusinessContext";
 import { useActiveBusinessId } from "@/lib/store/active-business-store";
-import { BusinessesAPI } from "@/lib/api/dashboard";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { shareCard, type ShareRow } from "@/lib/whatsappShare";
@@ -62,10 +62,7 @@ export function ReportCardsView() {
    * none is — never one venue's name over the group's totals.
    */
   const activeBusinessId = useActiveBusinessId();
-  const { data: businesses } = useQuery({
-    queryKey: ["my-businesses"],
-    queryFn: () => BusinessesAPI.getUserBusinesses(),
-  });
+  const { data: businesses } = useMyBusinesses();
   const activeVenue = businesses?.find((b) => b.id === activeBusinessId);
   const multiVenue = (businesses?.length ?? 0) > 1;
   const vendor =

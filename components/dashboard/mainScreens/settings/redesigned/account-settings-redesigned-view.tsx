@@ -13,6 +13,7 @@
 import { validatePkPhone, validateEmail, normalizePkPhone, normalizeEmail } from "@/lib/validation/pk-fields";
 import * as React from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMyProfile, myProfileKey } from "@/hooks/use-my-profile"
 import { UsersAPI, type ApiUser } from "@/lib/api/dashboard"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatusPill } from "@/components/dashboard/primitives/status-pill"
@@ -151,7 +152,7 @@ function EditProfileDialog({
     },
     onSuccess: async () => {
       showSuccessToast("Profile updated")
-      qc.invalidateQueries({ queryKey: ["account-settings-redesigned"] })
+      qc.invalidateQueries({ queryKey: myProfileKey })
       await refreshUser()
       onOpenChange(false)
     },
@@ -331,10 +332,7 @@ function ChangePasswordDialog({
 }
 
 export function AccountSettingsRedesignedView() {
-  const { data, isLoading } = useQuery({
-    queryKey: ["account-settings-redesigned"],
-    queryFn: () => UsersAPI.getMyProfile(),
-  })
+  const { data, isLoading } = useMyProfile()
   const u: ApiUser | undefined = data?.user
   // Business-contact fields ride on the user object but aren't typed on
   // ApiUser; read them through a string-record cast (mirrors the original).

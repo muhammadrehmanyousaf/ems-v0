@@ -25,6 +25,11 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   images: {
+    // Cloudinary images are transformed by Cloudinary and served from its CDN;
+    // everything else still goes through the Next optimizer. See the file for
+    // why — in short, `/_next/image` was returning 402 for every vendor photo
+    // on production because the Vercel optimization quota had run out.
+    loaderFile: "./lib/image-loader.ts",
     // SEO: serve modern formats and responsive sizes via the Next.js
     // optimizer. Reference: docs/seo/05-T5-image-migration-runbook.md +
     // docs/seo/00-master-seo-playbook.md §11.

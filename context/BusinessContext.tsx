@@ -2,7 +2,9 @@
 
 import React, { createContext, useContext, useCallback, ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { BusinessesAPI, type ApiBusiness } from '@/lib/api/dashboard';
+import { type ApiBusiness } from '@/lib/api/dashboard';
+import { useMyBusinesses } from '@/hooks/use-my-businesses';
+import { businessListKey } from '@/lib/query/business-keys';
 import { useUser } from './UserContext';
 
 interface BusinessContextType {
@@ -14,8 +16,12 @@ interface BusinessContextType {
 
 const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
 
-/** Exported so a mutation elsewhere can invalidate this without importing the provider. */
-export const businessListKey = ['businesses', 'mine'] as const;
+/**
+ * Re-exported for the call sites that already import it from here. The key
+ * itself now lives in `lib/query/business-keys` so `useMyBusinesses` can share
+ * it without importing this provider.
+ */
+export { businessListKey };
 
 /**
  * The vendor's businesses — fetched once per session, not once per screen.
@@ -40,17 +46,10 @@ export const BusinessProvider = ({ children }: { children: ReactNode }) => {
     const qc = useQueryClient();
     const enabled = !!isAuthenticated && !!user?.isVendor;
 
-    const q = useQuery({
-        queryKey: businessListKey,
-        queryFn: () => BusinessesAPI.getUserBusinesses(),
-        enabled,
-        staleTime: 10 * 60 * 1000,
-        gcTime: 30 * 60 * 1000,
-        // Keep showing what we have on a transient failure rather than blanking
-        // the venue switcher — the previous implementation deliberately did not
-        // clear on error and that behaviour is preserved.
-        retry: 1,
-    });
+    // One definition, shared with every screen: the provider is just another
+    // reader of `useMyBusinesses`, so it cannot drift from the fourteen screens
+    // that call the hook directly.
+    const q = useMyBusinesses({ enabled });
 
     const refreshBusiness = useCallback(
         async (_silent = false) => {

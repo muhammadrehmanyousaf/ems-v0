@@ -20,10 +20,23 @@ import type { QueryClient } from "@tanstack/react-query"
  * mutation that touches a business calls this instead of naming one key, so a
  * fourth reader added tomorrow is covered by adding it here once.
  */
+/**
+ * THE key for `GET /businesses/user-business`. Read through `useMyBusinesses()`
+ * (or `BusinessContext`), never by naming a key of your own — see the hook for
+ * what five competing keys cost.
+ */
+export const businessListKey = ["businesses", "mine"] as const
+
 export const BUSINESS_QUERY_KEYS = [
+  businessListKey,
+  // `my-completeness` is a DIFFERENT endpoint (GET /businesses/my-completeness)
+  // that derives from the same record, so it has to be invalidated alongside it.
+  ["my-completeness"],
+  // Retired keys. Nothing reads these since the business list was collapsed onto
+  // `businessListKey`; invalidating a cache with no readers is a no-op, and they
+  // stay listed so a call site that is reintroduced by mistake is still covered.
   ["biz-settings-hub"],
   ["my-businesses"],
-  ["my-completeness"],
 ] as const
 
 /**

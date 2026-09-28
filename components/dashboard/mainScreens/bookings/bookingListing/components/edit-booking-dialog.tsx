@@ -1,6 +1,8 @@
 'use client';
 
 import { validatePkPhone, normalizePkPhone } from "@/lib/validation/pk-fields";
+import { useQueryClient } from '@tanstack/react-query';
+import { businessListKey } from '@/lib/query/business-keys';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -182,6 +184,8 @@ export function EditBookingDialog({ open, onOpenChange, booking, onSuccess }: Ed
     const [loadingService,  setLoadingService]  = useState(false);
     const [saving,          setSaving]          = useState(false);
 
+    const qc = useQueryClient();
+
     const detail     = booking.bookingDetails?.[0];
     const businessId = detail?.businessId;
 
@@ -191,7 +195,14 @@ export function EditBookingDialog({ open, onOpenChange, booking, onSuccess }: Ed
         setLoadingService(true);
 
         Promise.all([
-            BusinessesAPI.getUserBusinesses(),
+            // WW-PERF — `fetchQuery` on the shared key: served from cache when the
+            // shell has already loaded the list, which it has by the time a booking
+            // dialog can be opened. Falls back to a real request if it has not.
+            qc.fetchQuery({
+                queryKey: businessListKey,
+                queryFn: () => BusinessesAPI.getUserBusinesses(),
+                staleTime: 10 * 60_000,
+            }),
             PackagesAPI.getAll(businessId),
             MenusAPI.getAll(businessId),
         ])
