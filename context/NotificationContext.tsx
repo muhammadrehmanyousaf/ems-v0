@@ -11,6 +11,8 @@ import React, {
 } from "react";
 import { io, Socket } from "socket.io-client";
 import { useUser } from "./UserContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { unreadCountKey } from "@/hooks/use-unread-count";
 import {
   NotificationAPI,
   type Notification,
@@ -50,6 +52,7 @@ const NotificationContext = createContext<NotificationContextType | undefined>(
 
 export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const { user, isAuthenticated } = useUser();
+  const queryClient = useQueryClient();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -193,8 +196,24 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       setHasMore(result.hasMore);
       setPage(1);
 
-      const count = await NotificationAPI.getUnreadCount();
-      setUnreadCount(count);
+      // WW-PERF — read the shared query's cache instead of making a fifth
+      // request for a number three other components already asked for. The
+      // notifications list above carries `unreadCount` implicitly, but the
+      // badge is owned by hooks/use-unread-count.ts; going through the query
+      // client keeps one request per session and one source of truth.
+      // Measured before this: /notifications/unread-count fired 4x on every
+      // console screen, 72 of 210 requests across 18 screens.
+      const cached = queryClient.getQueryData<number>(unreadCountKey);
+      if (typeof cached === "number") {
+        setUnreadCount(cached);
+      } else {
+        const count = await queryClient.fetchQuery({
+          queryKey: unreadCountKey,
+          queryFn: () => NotificationAPI.getUnreadCount(),
+          staleTime: 60 * 1000,
+        });
+        setUnreadCount(count);
+      }
     } catch (err) {
       console.error("[Notifications] Failed to load:", err);
       // WWL-400 — an empty list and a failed load must not look the same.
