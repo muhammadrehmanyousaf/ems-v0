@@ -19,10 +19,6 @@ import { useDebounced } from "@/hooks/use-debounced"
 import { VendorAPI } from "@/lib/api/vendors"
 import { usePlatformStats } from "@/hooks/use-platform-stats"
 import { motion, AnimatePresence } from "framer-motion"
-import { Swiper, SwiperSlide } from "swiper/react"
-import { Autoplay, EffectFade } from "swiper/modules"
-import "swiper/css"
-import "swiper/css/effect-fade"
 import { TextReveal, CountUp, ScrollReveal } from "@/components/ui/motion-wrapper"
 
 // ── Bridal primitives (Phase 2.1 — homepage hero revamp) ─────────────────
@@ -536,43 +532,37 @@ export function HeroSection() {
             client Swiper, so the page's largest paint isn't gated by carousel
             JS hydration (the single biggest CWV lever here). The Swiper's
             matching first slide covers it seamlessly once mounted. */}
-        <Image
-          src={heroImages[0]}
-          alt=""
-          fill
-          priority
-          fetchPriority="high"
-          sizes="100vw"
-          className="object-cover"
-        />
-        <Swiper
-          modules={[Autoplay, EffectFade]}
-          effect="fade"
-          autoplay={{ delay: 5500, disableOnInteraction: false }}
-          loop
-          speed={2200}
-          className="w-full h-full"
-        >
-          {heroImages.map((src, i) => (
-            <SwiperSlide key={i}>
-              <div className="w-full h-full overflow-hidden relative">
-                {/* Carousel slides layer over the static SSR paint above. The
-                    first slide's image is already cached from that priority
-                    paint, so it swaps in without a flash; the rest lazy-load
-                    as the fade advances. */}
-                <Image
-                  src={src}
-                  alt=""
-                  fill
-                  loading={i === 0 ? "eager" : "lazy"}
-                  sizes="100vw"
-                  className="object-cover animate-ken-burns"
-                  style={{ animationDelay: `${i * 5}s` }}
-                />
-              </div>
-            </SwiperSlide>
-          ))}
-        </Swiper>
+        {/* WW-PERF — the hero crossfade is CSS, not Swiper.
+            Lighthouse on the deployed page: LCP 8.0s, of which 5,129ms (64%)
+            was RENDER DELAY — the hero image had downloaded and was waiting on
+            a busy main thread. Swiper sat in the middle of that: a carousel
+            library, its CSS, and its hydration, all to crossfade seven
+            decorative background images that nobody clicks.
+            Seven stacked <Image>s on one staggered keyframe do the same thing
+            with no JavaScript. The first keeps `priority` + `fetchPriority`
+            (it IS the LCP element); the rest are lazy and fade in later. */}
+        {heroImages.map((src, i) => (
+          <Image
+            key={src}
+            src={src}
+            alt=""
+            fill
+            priority={i === 0}
+            fetchPriority={i === 0 ? "high" : "low"}
+            loading={i === 0 ? "eager" : "lazy"}
+            sizes="100vw"
+            className={
+              i === 0
+                ? "object-cover"
+                : "object-cover animate-hero-fade opacity-0 motion-reduce:hidden"
+            }
+            style={
+              i === 0
+                ? undefined
+                : { animationDelay: `${i * 5.5}s` }
+            }
+          />
+        ))}
 
         {/* ── Bridal layered veils ── */}
         {/* 1. Mughal jaal motif at very low opacity — cultural watermark. */}

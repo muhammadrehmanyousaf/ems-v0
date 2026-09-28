@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { VendorAPI } from '@/lib/api/vendors'
 import type { Vendor } from '@/lib/types'
+import { getVendorTypeFromPath } from '@/lib/vendor-types'
 
 // Query keys
 export const vendorKeys = {
@@ -33,41 +34,67 @@ export const vendorKeys = {
  */
 
 /**
+ * The vendor types the homepage's sections ask for.
+ *
+ * WW-PERF — these are batched into ONE request. They live here rather than in
+ * the page because `useVendorsByType` needs to know, before it fetches, whether
+ * the type it was handed is part of the batch: every section calling the hook
+ * with a type on this list shares a single query key, so React Query dedupes
+ * five components down to one request. A type NOT on the list falls back to its
+ * own small fetch, so the hook stays correct for any caller.
+ */
+export const HOME_SECTION_PATHS = [
+  "photographers",
+  "venues",
+  "makeup-artists",
+  "decor",
+  "henna-artists",
+  "bridal-wear",
+  "catering",
+  "car-rental",
+  "wedding-stationery",
+] as const
+
+const HOME_SECTION_TYPES = HOME_SECTION_PATHS.map((p) => getVendorTypeFromPath(p)).filter(Boolean)
+
+/** How many rows a section can render. The widest is EditorialGallerySection at 8. */
+const PER_TYPE = 8
+
+/**
  * A handful of vendors of one type, for a homepage section.
  *
- * WW-PERF — this used to read the all-vendors cache and, when that cache was
- * empty, fall back to `getBusinessesByVendorType`, which walks EVERY page for
- * that type. Four homepage sections call it and they all mount at once, so the
- * cache was always empty and each one downloaded its own full list: 18 of the
- * homepage's 36 API calls, at ~740 KB of JSON each.
+ * This used to read the all-vendors cache and, when that cache was empty, fall
+ * back to `getBusinessesByVendorType`, which walks EVERY page for that type.
+ * Four homepage sections call it and they all mount at once, so the cache was
+ * always empty and each one downloaded its own full list: 18 of the homepage's
+ * 36 API calls at ~740 KB of JSON each.
  *
- * No section renders more than 8 rows (EditorialGallerySection). So it asks for
- * one small page of the card projection and stops there. `limit` is a parameter
- * because the caller knows how many it will show.
+ * It then fetched one small page per type — better, but still one request per
+ * section. Now the whole set comes back in one call and each section selects
+ * its own slice.
  */
 export function useVendorsByType(type: string, limit = 12) {
-  return useQuery({
+  const batched = !!type && HOME_SECTION_TYPES.includes(type)
+
+  const batch = useQuery({
+    queryKey: ["home-sections", HOME_SECTION_TYPES, PER_TYPE],
+    queryFn: ({ signal }) => VendorAPI.getByTypes(HOME_SECTION_TYPES, PER_TYPE, signal),
+    enabled: batched,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  })
+
+  const single = useQuery({
     queryKey: [...vendorKeys.byType(type), { limit }],
     queryFn: ({ signal }) =>
       VendorAPI.searchCards({ vendorTypes: type, limit, signal }).then((r) => r.items),
-    enabled: !!type && type !== 'all',
+    enabled: !!type && type !== "all" && !batched,
     staleTime: 10 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
   })
-}
 
-// Featured vendors: just the first 8 from the all-vendors cache
-export function useFeaturedVendors() {
-  return useQuery({
-    queryKey: vendorKeys.featured(),
-    queryFn: async () => {
-      const allVendors = await VendorAPI.getAllBusinesses()
-      if (allVendors.length === 0) return []
-      return allVendors.slice(0, 8)
-    },
-    staleTime: 10 * 60 * 1000,
-    gcTime: 15 * 60 * 1000,
-  })
+  if (!batched) return single
+  return { ...batch, data: batch.data?.[type] ?? [] }
 }
 
 // Get vendor by ID

@@ -3,6 +3,7 @@ import dynamic from "next/dynamic"
 import { SITE_NAME, SITE_TITLE, SITE_DESCRIPTION, SITE_URL } from "@/lib/seo"
 // Hero stays EAGER — it holds the LCP element (above the fold).
 import { HeroSection } from "@/components/homepage/hero-section"
+import { BelowFold } from "@/components/homepage/below-fold"
 
 export const metadata: Metadata = {
   // Homepage gets the FULL branded title (no template suffix). Without this
@@ -63,64 +64,84 @@ export default function Home() {
       <HeroSection />
 
       {/* 2 · Featured Categories — single-line carousel, 9 categories */}
-      <FeaturedCategories />
+      <BelowFold minHeight={420}>
+        <FeaturedCategories />
+      </BelowFold>
 
       {/* 4 · How It Works — 3 steps with Playfair italic gold numbers */}
-      <HowItWorks />
+      <BelowFold minHeight={620}>
+        <HowItWorks />
+      </BelowFold>
 
       {/* 5 · Featured Photographers showcase (existing) */}
-      <FeaturedVendorsShowcase
-        vendorPath="photographers"
-        title="Featured Photographers"
-        subtitle="Capture Every Moment"
-        description="Pakistan's most beloved wedding photographers, hand-picked for their craft."
-      />
+      <BelowFold minHeight={900}>
+        <FeaturedVendorsShowcase
+          vendorPath="photographers"
+          title="Featured Photographers"
+          subtitle="Capture Every Moment"
+          description="Pakistan's most beloved wedding photographers, hand-picked for their craft."
+        />
+      </BelowFold>
 
       {/* 7 · Editorial Gallery — venues + makeup artists strip (existing) */}
-      <EditorialGallerySection
-        title="Explore Top Vendors"
-        subtitle="Curated Picks"
-        description="Swipe through our handpicked selection of premium wedding partners."
-        vendorTypes={[
-          { path: "venues", label: "Wedding Venues" },
-          { path: "makeup-artists", label: "Makeup Artists" },
-        ]}
-      />
+      <BelowFold minHeight={900}>
+        <EditorialGallerySection
+          title="Explore Top Vendors"
+          subtitle="Curated Picks"
+          description="Swipe through our handpicked selection of premium wedding partners."
+          vendorTypes={[
+            { path: "venues", label: "Wedding Venues" },
+            { path: "makeup-artists", label: "Makeup Artists" },
+          ]}
+        />
+      </BelowFold>
 
       {/* 10 · Bento masonry — decorators + henna + bridal wear (existing) */}
-      <BentoGridSection
-        title="Discover More"
-        subtitle="Visual Showcase"
-        description="Browse our curated collection of talented wedding professionals."
-        vendorTypes={[
-          { path: "decor", label: "Decorators" },
-          { path: "henna-artists", label: "Henna Artists" },
-          { path: "bridal-wear", label: "Bridal Wear" },
-        ]}
-      />
+      <BelowFold minHeight={1100}>
+        <BentoGridSection
+          title="Discover More"
+          subtitle="Visual Showcase"
+          description="Browse our curated collection of talented wedding professionals."
+          vendorTypes={[
+            { path: "decor", label: "Decorators" },
+            { path: "henna-artists", label: "Henna Artists" },
+            { path: "bridal-wear", label: "Bridal Wear" },
+          ]}
+        />
+      </BelowFold>
 
       {/* 13 · Editorial alternating rows — catering, car-rental, stationery (existing) */}
-      <EditorialAlternatingSection
-        title="More Wedding Services"
-        subtitle="Complete Your Day"
-        vendorTypes={[
-          { path: "catering",            label: "Catering Services",   tagline: "Delicious food for your guests" },
-          { path: "car-rental",          label: "Luxury Car Rental",   tagline: "Elegant transportation for your big day" },
-          { path: "wedding-stationery",  label: "Wedding Stationery",  tagline: "Beautiful invitations and cards" },
-        ]}
-      />
+      <BelowFold minHeight={1400}>
+        <EditorialAlternatingSection
+          title="More Wedding Services"
+          subtitle="Complete Your Day"
+          vendorTypes={[
+            { path: "catering",            label: "Catering Services",   tagline: "Delicious food for your guests" },
+            { path: "car-rental",          label: "Luxury Car Rental",   tagline: "Elegant transportation for your big day" },
+            { path: "wedding-stationery",  label: "Wedding Stationery",  tagline: "Beautiful invitations and cards" },
+          ]}
+        />
+      </BelowFold>
 
       {/* 15 · Trust strip — verified vendors, secure payments */}
-      <TrustStrip />
+      <BelowFold minHeight={320}>
+        <TrustStrip />
+      </BelowFold>
 
       {/* 18 · Free Planning Tools — checklist, budget, etc. */}
-      <FreeTools />
+      <BelowFold minHeight={700}>
+        <FreeTools />
+      </BelowFold>
 
       {/* 19 · Vendor acquisition CTA — mauve background, gold button */}
-      <VendorCTABanner />
+      <BelowFold minHeight={460}>
+        <VendorCTABanner />
+      </BelowFold>
 
       {/* 20 · Final newsletter CTA — homepage closer */}
-      <FinalNewsletterCTA />
+      <BelowFold minHeight={460}>
+        <FinalNewsletterCTA />
+      </BelowFold>
     </>
   )
 }
