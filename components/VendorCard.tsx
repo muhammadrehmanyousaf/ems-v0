@@ -57,6 +57,19 @@ interface VendorCardProps {
    * Partial so callers can pass the full Vendor / Business object directly.
    */
   business?: ListingBadgeBusiness
+  /**
+   * Load this card's image eagerly, at high priority.
+   *
+   * WW-PERF. next/image defaults to `loading="lazy"`, and on a listing the FIRST
+   * card is the largest paint — so the element Lighthouse measures was the one
+   * element told to wait. Measured on production /vendors: LCP 7.8s with 3,540ms
+   * of Load Delay, and the LCP element reported as
+   * `<img alt="Rehman Grand Marquee" loading="lazy">`.
+   *
+   * Only the cards above the fold should set this. Marking them all eager would
+   * queue 200 images against each other and make it worse.
+   */
+  priority?: boolean
 }
 
 export default function VendorCard({
@@ -78,6 +91,7 @@ export default function VendorCard({
   className = "",
   onFavoriteToggle,
   business,
+  priority = false,
 }: VendorCardProps) {
   // BK-048 — vacation mode dims the card and replaces the booking CTA with
   // a disabled "Back on …" button. Listing stays visible per BK-048's spec
@@ -278,6 +292,7 @@ export default function VendorCard({
                   src={imgSrc}
                   alt={name}
                   fill
+                  priority={priority}
                   className="object-cover transition-all duration-[2000ms] ease-out group-hover:scale-110"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   onError={() => {

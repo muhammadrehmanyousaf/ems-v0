@@ -914,16 +914,21 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                 ))
               ) : filteredVendors.length > 0 ? (
                 <AnimatePresence mode="popLayout">
+                  {/* WW-PERF — the first row does not fade in. Chrome does not count an
+                      element at opacity 0 as the largest paint, so fading the LCP card in
+                      delays the metric by the length of the fade for no visible gain: these
+                      cards are on screen before the eye arrives. The rest keep the stagger. */}
                   {paginatedVendors.map((vendor, idx) => (
                     <motion.div
                       key={vendor.id}
                       layout
-                      initial={{ opacity: 0, y: 16 }}
+                      initial={idx < 3 ? false : { opacity: 0, y: 16 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.25, delay: idx * 0.04 }}
                     >
                       <VendorCard
+                        priority={idx < 3}
                         id={vendor.id}
                         name={vendor.name}
                         image={vendor.images?.[0] || "/placeholder.svg"}
