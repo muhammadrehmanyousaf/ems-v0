@@ -215,11 +215,12 @@ export function Header() {
                       className="flex items-center gap-2"
                       onClick={() => setIsOpen(false)}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Image
                         src="/icon-mark.png"
                         alt=""
                         aria-hidden="true"
+                        width={36}
+                        height={36}
                         className="h-9 w-auto shrink-0"
                       />
                       <span className="font-display italic leading-none tracking-tight whitespace-nowrap text-[24px] text-bridal-charcoal">
@@ -447,11 +448,19 @@ export function Header() {
 
             {/* Logo — crest + Playfair wordmark */}
             <Link href="/" aria-label="Wedding Wala — home" className="flex items-center gap-2 sm:gap-2.5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              {/* WW-PERF — next/image, not a raw <img>. This is a 16kb PNG
+                  rendered at 40-48px on every page of the site; the optimizer
+                  serves AVIF/WebP at the size actually used. Lighthouse flagged
+                  it twice: "serve images in next-gen formats" and "properly
+                  size images". `priority` because it is above the fold in the
+                  header on every route. */}
+              <Image
                 src="/icon-mark.png"
                 alt=""
                 aria-hidden="true"
+                width={48}
+                height={48}
+                priority
                 className="h-10 sm:h-12 w-auto shrink-0"
               />
               <span className="hidden sm:inline font-display italic leading-none tracking-tight whitespace-nowrap text-[26px] sm:text-[32px] min-[1400px]:text-[28px] text-bridal-charcoal">
