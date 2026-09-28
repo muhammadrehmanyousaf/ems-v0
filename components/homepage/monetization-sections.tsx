@@ -174,7 +174,7 @@ export function HowItWorks() {
                   <span className="inline-flex w-14 h-14 mb-4 rounded-full bg-bridal-gold/15 border border-bridal-gold/45 items-center justify-center">
                     <Icon className="w-6 h-6 text-bridal-gold-dark" strokeWidth={1.6} />
                   </span>
-                  <span className="block font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold mb-2">
+                  <span className="block font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold-dark mb-2">
                     Step {s.n}
                   </span>
                   <h3 className="font-display italic text-[22px] text-bridal-charcoal leading-tight">

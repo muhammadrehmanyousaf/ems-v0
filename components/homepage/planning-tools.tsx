@@ -732,7 +732,7 @@ export function PlanningTools() {
                     <span className="inline-flex w-12 h-12 mb-4 rounded-full bg-bridal-blush/70 border border-bridal-beige items-center justify-center group-hover:bg-bridal-gold/15 group-hover:border-bridal-gold/55 transition-colors">
                       <tool.icon className="w-5 h-5 text-bridal-gold-dark" strokeWidth={1.6} />
                     </span>
-                    <span className="block font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold mb-1">
+                    <span className="block font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold-dark mb-1">
                       Tool {tool.step}
                     </span>
                     <h3 className="font-display italic text-[20px] text-bridal-charcoal leading-tight">

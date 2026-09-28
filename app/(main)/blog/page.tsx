@@ -44,7 +44,7 @@ export default function BlogIndexPage() {
         <Breadcrumbs items={[{ name: "Blog", href: "/blog" }]} className="mb-6" />
 
         <header className="mb-10 max-w-3xl">
-          <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold mb-3">
+          <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold-dark mb-3">
             Editorial
           </p>
           <h1 className="font-display italic text-[38px] sm:text-[48px] leading-tight text-bridal-charcoal">

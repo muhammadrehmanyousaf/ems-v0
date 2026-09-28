@@ -48,7 +48,7 @@ export function LegalPageShell({
 
       <header className="mb-10 max-w-3xl">
         {eyebrow && (
-          <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold mb-3">
+          <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold-dark mb-3">
             {eyebrow}
           </p>
         )}

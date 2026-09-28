@@ -244,7 +244,7 @@ export async function BestVendorListiclePage({ slug }: { slug: string }) {
         />
 
         <header className="mb-8 max-w-3xl">
-          <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold mb-3">
+          <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold-dark mb-3">
             Best of {city.name} · {LISTICLE_YEAR}
           </p>
           <h1 className="font-display italic text-[36px] sm:text-[46px] leading-tight text-bridal-charcoal">

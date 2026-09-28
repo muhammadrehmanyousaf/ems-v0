@@ -20,6 +20,7 @@ import { useActiveBusinessStore } from "@/lib/store/active-business-store"
 import { useShellStore } from "@/lib/store/shell-store"
 import { useResolvedThemeMode } from "@/lib/store/theme-prefs"
 import { NotificationAPI } from "@/lib/api/notifications"
+import { useUnreadCount } from "@/hooks/use-unread-count"
 
 export const initialsOf = (s?: string | null) =>
   (s || "?").trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase() || "?"
@@ -810,12 +811,12 @@ export function useArtifactShell(hostRef: React.RefObject<HTMLDivElement | null>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // live unread-notifications count → bell dot
-  React.useEffect(() => {
-    let alive = true
-    NotificationAPI.getUnreadCount().then((c) => { if (alive) setUnread(c) }).catch(() => {})
-    return () => { alive = false }
-  }, [])
+  // live unread-notifications count → bell dot.
+  // WW-PERF — shared query; see hooks/use-unread-count.ts. This ran on every
+  // one of the 82 console screens, alongside three other copies of the same
+  // fetch.
+  const { unread: sharedUnread } = useUnreadCount()
+  React.useEffect(() => { setUnread(sharedUnread) }, [sharedUnread])
   React.useEffect(() => {
     const s = shadowRef.current; if (!s) return
     const dot = s.querySelector("[data-unread-dot]") as HTMLElement | null

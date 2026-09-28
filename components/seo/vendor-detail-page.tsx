@@ -312,7 +312,7 @@ export async function VendorDetailPage(input: PageInput) {
           </div>
 
           <div>
-            <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold mb-3">
+            <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold-dark mb-3">
               {vt.singular} · {city.name}
             </p>
             <h1 className="font-display italic text-[36px] sm:text-[44px] leading-tight text-bridal-charcoal">

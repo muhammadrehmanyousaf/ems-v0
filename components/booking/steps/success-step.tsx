@@ -113,7 +113,7 @@ export default function SuccessStep({
             <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-bridal-gold to-transparent" />
             <div className="relative flex items-center gap-2.5">
               <Building className="h-4 w-4 text-bridal-gold" />
-              <p className="font-bridal text-[10px] uppercase tracking-[0.32em] font-medium text-bridal-gold">
+              <p className="font-bridal text-[10px] uppercase tracking-[0.32em] font-medium text-bridal-gold-dark">
                 {isVendor ? 'Vendor booking' : 'Venue booking'}
               </p>
             </div>

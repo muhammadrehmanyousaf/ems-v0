@@ -20,6 +20,7 @@ import { useUser } from "@/context/UserContext"
 import { getDashboardRole, type DashboardRole } from "@/lib/dashboard-role"
 import { useThemePrefs, useResolvedThemeMode } from "@/lib/store/theme-prefs"
 import { NotificationAPI } from "@/lib/api/notifications"
+import { useUnreadCount } from "@/hooks/use-unread-count"
 
 const ROLE_LABEL: Record<DashboardRole, string> = { superAdmin: "Super admin", admin: "Admin", vendor: "Vendor", none: "Workspace" }
 
@@ -29,12 +30,8 @@ export function ChampagneUserMenu() {
   const router = useRouter()
   const setMode = useThemePrefs((s) => s.setMode)
   const resolved = useResolvedThemeMode()
-  const [unread, setUnread] = React.useState(0)
-  React.useEffect(() => {
-    let a = true
-    NotificationAPI.getUnreadCount().then((c: number) => { if (a) setUnread(c) }).catch(() => {})
-    return () => { a = false }
-  }, [])
+  // WW-PERF — shared query; see hooks/use-unread-count.ts
+  const { unread } = useUnreadCount()
 
   const displayName = user?.fullName || "User"
   const displayEmail = user?.email || ""

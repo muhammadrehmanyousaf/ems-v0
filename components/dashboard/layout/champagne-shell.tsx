@@ -28,6 +28,7 @@ import {
 } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { ChampagneSidebar } from "./champagne-sidebar"
+import { useUnreadCount } from "@/hooks/use-unread-count"
 
 /** React pages (non-artifact, e.g. the settings hub) call this to set the
  * persistent shell's crumb + active-route, mirroring what useArtifactShell does
@@ -204,8 +205,10 @@ export function ChampagneShell({
   const activeHref = activeHrefProp ?? storeHref
   const crumbBold = crumbBoldProp ?? storeBold
   const crumbSub = crumbSubProp ?? storeSub
-  const [unread, setUnread] = React.useState(0)
-  React.useEffect(() => { let a = true; NotificationAPI.getUnreadCount().then((c: number) => { if (a) setUnread(c) }).catch(() => {}); return () => { a = false } }, [])
+  // WW-PERF — shared query. This, the user menu, the artifact shell and
+  // NotificationContext each fetched this number independently: four requests
+  // for one badge on every console page load, slowest measured at 1,177ms.
+  const { unread } = useUnreadCount()
   // Reflect the manual light/dark choice onto <html> too, so React pages inside
   // the shell (the settings hub — tailwind `dark:` styles) follow the toggle.
   React.useEffect(() => {
