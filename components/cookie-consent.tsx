@@ -238,7 +238,7 @@ export function CookieConsent() {
                 We use essential cookies to keep you signed in and the booking flow
                 working. Analytics and marketing cookies are optional. Read our{" "}
               </span>
-              <Link href="/cookie-policy" className="text-bridal-gold hover:underline">
+              <Link href="/cookie-policy" className="text-bridal-gold-dark hover:underline">
                 Cookie Policy
               </Link>
               .

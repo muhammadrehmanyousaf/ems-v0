@@ -121,7 +121,7 @@ export function Footer() {
               <div className="max-w-md">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="block w-8 h-px bg-gradient-to-r from-transparent to-bridal-gold" />
-                  <span className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold font-medium">
+                  <span className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold-dark font-medium">
                     The Bridal Letter
                   </span>
                 </div>

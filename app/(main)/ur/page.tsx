@@ -46,7 +46,7 @@ export default function UrduLandingPage() {
   return (
     <div lang="ur" dir="rtl" className="min-h-screen bg-gradient-to-br from-bridal-cream via-white to-bridal-cream/30 px-4 py-16">
       <div className="max-w-2xl mx-auto text-center">
-        <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold mb-3">
+        <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold-dark mb-3">
           اردو
         </p>
         <h1 className="font-display italic text-[40px] sm:text-[52px] leading-tight text-bridal-charcoal" style={{ fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif" }}>

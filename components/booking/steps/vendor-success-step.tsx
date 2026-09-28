@@ -140,7 +140,7 @@ export default function VendorSuccessStep({
               {getVendorIcon(vendor?.vendor?.vendorType || vendorData?.type || vendorData?.subBusinessType)}
             </div>
             <div>
-              <p className="font-bridal text-[10px] uppercase tracking-[0.32em] font-medium text-bridal-gold mb-0.5">
+              <p className="font-bridal text-[10px] uppercase tracking-[0.32em] font-medium text-bridal-gold-dark mb-0.5">
                 Booked with
               </p>
               <h3 className="font-display italic text-[24px] text-bridal-ivory leading-tight">

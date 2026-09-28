@@ -88,7 +88,7 @@ export default function RealWeddingPage({ params }: RouteProps) {
 
         {/* Header */}
         <header className="max-w-3xl mb-8">
-          <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold mb-3">
+          <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold-dark mb-3">
             Real wedding · {recap.city}, {recap.region}
           </p>
           <h1 className="font-display italic text-[34px] sm:text-[48px] leading-tight text-bridal-charcoal">

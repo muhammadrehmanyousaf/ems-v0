@@ -76,7 +76,7 @@ export default function GlossaryTermPage({ params }: RouteProps) {
         />
 
         <header className="mb-8 max-w-3xl">
-          <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold mb-3">
+          <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold-dark mb-3">
             Pakistani wedding glossary
           </p>
           <div className="flex items-baseline gap-3 flex-wrap">

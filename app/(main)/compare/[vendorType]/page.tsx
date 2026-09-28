@@ -142,7 +142,7 @@ export default function CompareVendorTypePage({ params }: RouteProps) {
         />
 
         <header className="mb-10 max-w-3xl">
-          <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold mb-3">
+          <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold-dark mb-3">
             Compare
           </p>
           <h1 className="font-display italic text-[36px] sm:text-[44px] leading-tight text-bridal-charcoal">

@@ -49,7 +49,7 @@ export default async function NotFound() {
       <div className="max-w-3xl mx-auto">
         {/* Hero */}
         <div className="text-center mb-12">
-          <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold mb-3">
+          <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold-dark mb-3">
             404
           </p>
           <h1 className="font-display italic text-[40px] sm:text-[52px] leading-tight text-bridal-charcoal mb-4">
