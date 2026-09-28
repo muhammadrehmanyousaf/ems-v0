@@ -218,10 +218,10 @@ export default function GuestListPage() {
           {/* Mobile Actions */}
           {isMobile && (
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => setIsAddDialogOpen(true)}>
+              <Button size="sm" variant="outline" aria-label="Add guest" onClick={() => setIsAddDialogOpen(true)}>
                 <Plus className="w-4 h-4" />
               </Button>
-              <Button size="sm" variant="outline" onClick={exportGuestList}>
+              <Button size="sm" variant="outline" aria-label="Export guest list" onClick={exportGuestList}>
                 <Download className="w-4 h-4" />
               </Button>
             </div>
@@ -319,7 +319,7 @@ export default function GuestListPage() {
           )}
         </div>
         
-        <Progress value={rsvpProgress} className="h-3" />
+        <Progress value={rsvpProgress} className="h-3" aria-label="RSVPs confirmed" />
         <div className="flex justify-between text-sm text-neutral-600 mt-2">
           <span>0 responses</span>
           <span>{guests.length} total guests</span>
@@ -347,7 +347,7 @@ export default function GuestListPage() {
           
           {/* Group Filter */}
           <Select value={selectedGroup} onValueChange={setSelectedGroup}>
-            <SelectTrigger className="w-full sm:w-48">
+            <SelectTrigger aria-label="Filter guests" className="w-full sm:w-48">
               <SelectValue placeholder="All Groups" />
             </SelectTrigger>
             <SelectContent>
@@ -360,7 +360,7 @@ export default function GuestListPage() {
           
           {/* RSVP Filter */}
           <Select value={selectedRsvp} onValueChange={setSelectedRsvp}>
-            <SelectTrigger className="w-full sm:w-48">
+            <SelectTrigger aria-label="Filter guests" className="w-full sm:w-48">
               <SelectValue placeholder="All RSVPs" />
             </SelectTrigger>
             <SelectContent>
@@ -449,6 +449,7 @@ export default function GuestListPage() {
                     
                     <button
                       onClick={() => deleteGuest(guest.id)}
+                      aria-label={`Delete ${guest.name}`}
                       className="flex-shrink-0 p-1 text-neutral-400 hover:text-red-500 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -458,7 +459,7 @@ export default function GuestListPage() {
                 
                 <div className="flex flex-col sm:flex-row gap-2">
                   <Select value={guest.rsvp} onValueChange={(value: 'pending' | 'confirmed' | 'declined') => updateGuest(guest.id, 'rsvp', value)}>
-                    <SelectTrigger className="w-full sm:w-32">
+                    <SelectTrigger aria-label="RSVP status" className="w-full sm:w-32">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
