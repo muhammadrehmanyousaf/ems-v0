@@ -48,7 +48,7 @@ const INIT = `
 `;
 
 (async () => {
-  const b = await chromium.connectOverCDP("http://localhost:9223");
+  const b = await chromium.connectOverCDP("http://127.0.0.1:9223");
   const ctx = await b.newContext({ viewport: { width: 1440, height: 950 } });
 
   // sign in once; every screen reuses the session
