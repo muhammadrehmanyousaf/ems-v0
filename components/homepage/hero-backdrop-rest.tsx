@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Image from "next/image"
 
 /**
- * The hero crossfade's 2nd-7th images, mounted only once the page is settled.
+ * The hero crossfade's 2nd-7th images, each mounted just before its turn.
  *
  * WW-PERF, and this fixes a regression I introduced. Replacing Swiper with a CSS
  * crossfade stacked all seven hero images absolutely inside the viewport, and
@@ -14,14 +14,21 @@ import Image from "next/image"
  *     spotlight 40kb · h2 36kb · h3 28kb · h4 52kb · venue 27kb · h6 56kb · h7 70kb
  *     = 310kb, where only the first 40kb is the LCP image
  *
- * Swiper had been lazy-loading its slides, so the CSS version was cheaper in
- * JavaScript and 270kb more expensive in images. Both matter; this keeps the
- * JavaScript win and takes the images back.
+ * Deferring the six to an idle callback kept them out of the critical path but
+ * still fetched every one in a burst a second after arrival. Measured against
+ * production at 390px: all SEVEN hero images, 150kb, within three seconds — and
+ * Lighthouse's three largest payloads on the homepage were h7, h6 and h4, none
+ * of which is on screen for another twenty-two seconds.
+ *
+ * They are needed 5.5s apart, so they mount 5.5s apart. Image i mounts at
+ * i × 5.5s and carries a fixed 5.5s `animationDelay`, so it becomes visible at
+ * (i+1) × 5.5s — exactly the schedule the single-burst version produced, and in
+ * phase with the 38.5s cycle forever after, because the animation is infinite
+ * and 7 × 5.5 = 38.5. Identical to watch. Measured locally: 2 images by 3s,
+ * 3 by 8s, 4 by 14s, against 7 by 3s on production.
  *
  * The first image stays server-rendered in hero-backdrop.tsx with `priority`,
- * so it is preloaded and is the LCP element. These mount after the browser goes
- * idle, which is long before the crossfade needs them — the second image is not
- * due until 5.5s.
+ * so it is preloaded and is the LCP element.
  */
 const REST = [
   "/images/home/hero/h2.jpg",
@@ -32,48 +39,69 @@ const REST = [
   "/images/home/hero/h7.jpg",
 ]
 
+/** One slot of the 38.5s cycle, in ms. Seven slots, seven images. */
+const SLOT_MS = 5500
+
 export function HeroBackdropRest() {
-  const [show, setShow] = useState(false)
+  // How many of REST have been mounted so far. Starts at zero; one more every
+  // slot. Rendering a prefix rather than a set keeps the DOM order stable.
+  const [mounted, setMounted] = useState(0)
 
   useEffect(() => {
-    let cancelled = false
-    const start = () => { if (!cancelled) setShow(true) }
-    // requestIdleCallback where available, so these never compete with the
-    // work that gets the page usable; a timeout as the backstop for Safari.
+    // `motion-reduce:hidden` already spares the bandwidth — a `display:none`
+    // image with `loading="lazy"` is never fetched, and production measures at
+    // one image, 18kb, under reduced motion. What it does NOT spare is six
+    // <img> elements that exist only to stay hidden, so they are not created.
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return
+
+    const timers: ReturnType<typeof setTimeout>[] = []
     let idle: number | undefined
-    const timer = setTimeout(() => {
+
+    const begin = () => {
+      REST.forEach((_, i) => {
+        // Image i is due on screen at (i+1) × 5.5s and mounts one slot early,
+        // which is 5.5s of download lead for a file of at most 70kb.
+        timers.push(setTimeout(() => setMounted((n) => Math.max(n, i + 1)), i * SLOT_MS))
+      })
+    }
+
+    // Start the sequence once the browser is idle, so the first mount never
+    // competes with the work that gets the page usable.
+    const kickoff = setTimeout(() => {
       if ("requestIdleCallback" in window) {
-        idle = (window as { requestIdleCallback: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback(start, { timeout: 2000 })
+        idle = (window as { requestIdleCallback: (cb: () => void, o?: { timeout: number }) => number })
+          .requestIdleCallback(begin, { timeout: 2000 })
       } else {
-        start()
+        begin()
       }
     }, 1200)
+
     return () => {
-      cancelled = true
-      clearTimeout(timer)
+      clearTimeout(kickoff)
+      for (const t of timers) clearTimeout(t)
       if (idle !== undefined && "cancelIdleCallback" in window) {
         (window as { cancelIdleCallback: (h: number) => void }).cancelIdleCallback(idle)
       }
     }
   }, [])
 
-  if (!show) return null
+  if (mounted === 0) return null
 
   return (
     <>
-      {REST.map((src, i) => (
+      {REST.slice(0, mounted).map((src) => (
         <Image
           key={src}
           src={src}
           alt=""
           fill
           fetchPriority="low"
-          loading="lazy"
           sizes="100vw"
           className="object-cover animate-hero-fade opacity-0 motion-reduce:hidden"
-          // +1 because the first image is rendered by the server component and
-          // holds slot 0 of the same staggered keyframe.
-          style={{ animationDelay: `${(i + 1) * 5.5}s` }}
+          // Fixed, not staggered: each image mounts one slot before it is due,
+          // so one slot of delay puts every one of them on the original
+          // schedule. Staggering both would double-count the offset.
+          style={{ animationDelay: `${SLOT_MS / 1000}s` }}
         />
       ))}
     </>
