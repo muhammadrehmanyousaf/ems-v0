@@ -33,6 +33,14 @@ export default function wwImageLoader({ src, width, quality }: LoaderArgs): stri
   // Data and blob URLs are already the image; there is nothing to fetch or resize.
   if (src.startsWith("data:") || src.startsWith("blob:")) return src;
 
+  // SVG is vector — there is no width to resize it to and nothing to re-encode,
+  // and the optimizer refuses it anyway unless `dangerouslyAllowSVG` is set.
+  // Sending it there only produced errors, both measured on /venues:
+  //   402 on `/placeholder.svg` (the exhausted quota, for a 1 kB local file)
+  //   400 on the backend's `/placeholder.svg` (that host is not in remotePatterns)
+  // Served as-is, it is smaller than any raster the optimizer could return.
+  if (src.split("?")[0].toLowerCase().endsWith(".svg")) return src;
+
   if (src.includes("res.cloudinary.com") && src.includes(CLOUDINARY_UPLOAD)) {
     const cut = src.indexOf(CLOUDINARY_UPLOAD) + CLOUDINARY_UPLOAD.length;
     // `q_auto:good` rather than a fixed quality: Cloudinary picks per image, and
