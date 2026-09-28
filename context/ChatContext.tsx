@@ -56,6 +56,32 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
+/**
+ * The unread badge, refreshed at most once a second and never twice at a time.
+ *
+ * WW-PERF. Three places ask for it: on socket setup, when a message arrives, and
+ * when a conversation is opened. All three are right to ask, but on the chat
+ * screen the first and third land together — the screen opens the first
+ * conversation as it mounts — so `/chat/unread-total` was the last duplicate
+ * request left in the console sweep.
+ *
+ * An in-flight promise is shared rather than a second request started, and a
+ * call within a second of the last result reuses that result. Every call site
+ * keeps its meaning; only the burst collapses.
+ */
+let unreadInFlight: Promise<number> | null = null;
+let unreadAt = 0;
+let unreadValue = 0;
+function refreshTotalUnread(): Promise<number> {
+  const now = Date.now();
+  if (unreadInFlight) return unreadInFlight;
+  if (now - unreadAt < 1000) return Promise.resolve(unreadValue);
+  unreadInFlight = ChatAPI.getTotalUnread()
+    .then((n) => { unreadValue = n; unreadAt = Date.now(); return n; })
+    .finally(() => { unreadInFlight = null; });
+  return unreadInFlight;
+}
+
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const { user, isAuthenticated } = useUser();
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
@@ -83,6 +109,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       setConversations([]);
       setMessages([]);
       setTotalUnread(0);
+      // The coalescing cache is module scope, so it outlives this provider.
+      // Clear it on sign-out or the next account could read the last one's badge.
+      unreadValue = 0;
+      unreadAt = 0;
       return;
     }
 
@@ -161,7 +191,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         });
 
         // Update total unread
-        ChatAPI.getTotalUnread().then(setTotalUnread).catch(() => {});
+        refreshTotalUnread().then(setTotalUnread).catch(() => {});
       }
     );
 
@@ -229,7 +259,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
     // Load initial data
     loadConversations();
-    ChatAPI.getTotalUnread().then(setTotalUnread).catch(() => {});
+    refreshTotalUnread().then(setTotalUnread).catch(() => {});
 
     return () => {
       socket.disconnect();
@@ -289,7 +319,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         setConversations((prev) =>
           prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c))
         );
-        ChatAPI.getTotalUnread().then(setTotalUnread).catch(() => {});
+        refreshTotalUnread().then(setTotalUnread).catch(() => {});
       } catch (err) {
         console.error("[Chat] Failed to load messages:", err);
         setMessagesError("Couldn't load this conversation.");

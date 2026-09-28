@@ -453,7 +453,7 @@ svg .axis-lbl{ fill:var(--ink-3); font-size:10.5px; }
 export function OverviewArtifact() {
   const hostRef = React.useRef<HTMLDivElement | null>(null)
   const { user } = useUser()
-  const { business } = useBusiness()
+  const { business, loading: businessLoading } = useBusiness()
   const activeBusinessId = useActiveBusinessId()
   const { shadowRef, ready } = useArtifactShell(hostRef, {
     activeHref: "/dashboard", crumbBold: "Overview", crumbSub: "Aaj ka din", extraCss: EXTRA_CSS,
@@ -487,7 +487,12 @@ export function OverviewArtifact() {
   const compQ = useQuery({ queryKey: ["art-completeness"], queryFn: () => CompletenessAPI.listMine() })
   const bizId = activeBusinessId ?? (business as { id?: number } | null)?.id ?? null
   const reviewsQ = useQuery({ queryKey: ["art-reviews", bizId], enabled: !!bizId, queryFn: () => ReviewsAPI.getBusinessReviews(Number(bizId)).catch(() => null) })
-  const refundQ = useQuery({ queryKey: ["art-refunds", bizId], queryFn: () => listRefundObligations(bizId ?? undefined).catch(() => null) })
+  // `bizId` is null until the business list resolves, so this fired once under
+  // ["art-refunds", null] and again under ["art-refunds", 3358] — a different
+  // key, so TanStack could not dedupe it. `reviewsQ` above dodges this with
+  // `enabled: !!bizId`, but null is a legitimate value here (it means "all
+  // venues"), so the gate is on the list having settled instead.
+  const refundQ = useQuery({ queryKey: ["art-refunds", bizId], enabled: !businessLoading, queryFn: () => listRefundObligations(bizId ?? undefined).catch(() => null) })
   // WW-WORKLIST — past-date bookings nobody closed + delivered-and-unpaid.
   const workQ = useQuery({ queryKey: ["art-work", activeBusinessId], queryFn: () => getActionSummary(activeBusinessId ?? undefined).catch(() => null) })
   const healthQ = useQuery({ queryKey: ["art-health", activeBusinessId], queryFn: () => BusinessHealthAPI.getSignals(activeBusinessId ?? undefined).catch(() => null) })
