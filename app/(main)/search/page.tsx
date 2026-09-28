@@ -17,7 +17,9 @@ import { Separator } from "@/components/ui/separator"
 import type { Vendor } from "@/lib/types"
 import { VENDOR_TYPES } from "@/lib/vendor-types"
 import VendorCard from "@/components/VendorCard"
-import { useVendors } from "@/hooks/use-vendors"
+import { useQuery } from "@tanstack/react-query"
+import { useDebounced } from "@/hooks/use-debounced"
+import { VendorAPI } from "@/lib/api/vendors"
 
 /**
  * Coerce any vendor field to a lowercase string before matching.
@@ -91,7 +93,15 @@ function SearchContent() {
   const category = searchParams?.get("category") || ""
   const location = searchParams?.get("location") || ""
 
-  const { data: allVendors = [], isLoading, error } = useVendors()
+  // The size of the whole catalogue, for the "X of N results" line. One
+  // GROUP BY (~1.2 KB) in place of what used to be `allVendors.length` — the
+  // length of an array this page had downloaded in full.
+  const { data: facets } = useQuery({
+    queryKey: ["business-facets"],
+    queryFn: () => VendorAPI.getFacets(12),
+    staleTime: 30 * 60 * 1000,
+  })
+  const catalogTotal = facets?.total ?? 0
 
   useEffect(() => {
     setFilters(prev => ({
@@ -102,118 +112,80 @@ function SearchContent() {
     }))
   }, [query, category, location])
 
-  const vendorMatchesCategory = (vendor: Vendor, category: string): boolean => {
-    if (category === "all") return true
-    const vendorName = txt(vendor.name)
-    const vendorType = vendor.type || ""
-
-    const map: Record<string, { type: string; keywords: string[] }> = {
-      "photographers": { type: VENDOR_TYPES.PHOTOGRAPHER, keywords: ["photography", "studio", "camera", "lens", "shutter", "pixel", "frame", "capture", "moments", "shots"] },
-      "makeup-artists": { type: VENDOR_TYPES.MAKEUP_ARTIST, keywords: ["makeup", "beauty", "glamour", "bridal beauty", "makeover", "stylish", "gorgeous"] },
-      "decor": { type: VENDOR_TYPES.DECORATOR, keywords: ["decor", "sajawat", "event", "styling", "settings", "decoration", "floral", "arrangement", "design", "theme"] },
-      "catering": { type: VENDOR_TYPES.CATERING, keywords: ["catering", "food", "restaurant", "kitchen", "dining", "cuisine", "meal", "banquet", "caterer", "chef"] },
-      "venues": { type: VENDOR_TYPES.WEDDING_VENUE, keywords: ["venue", "hall", "resort", "hotel", "palace", "garden", "lawn", "banquet", "marriage", "wedding"] },
-      "bridal-wear": { type: VENDOR_TYPES.BRIDAL_WEAR, keywords: ["bridal", "dress", "suit", "lehenga", "saree", "outfit", "fashion", "designer", "boutique", "clothing"] },
-      "car-rental": { type: VENDOR_TYPES.CAR_RENTAL, keywords: ["car", "vehicle", "transport", "rental", "limousine", "luxury", "fleet", "cab", "taxi", "auto"] },
-      "henna-artists": { type: VENDOR_TYPES.HENNA_ARTIST, keywords: ["henna", "mehendi", "artist", "design", "tattoo", "body art", "traditional", "decoration", "artwork"] },
-    }
-
-    const cfg = map[category]
-    if (!cfg) return true
-    if (vendorType === cfg.type) return true
-    return cfg.keywords.some(k => vendorName.includes(k))
+  /**
+   * WW-PERF — category -> canonical vendor type, for `?vendorTypes=`.
+   *
+   * BEHAVIOUR CHANGE, deliberate. The old client-side matcher accepted a vendor
+   * into a category if its TYPE matched *or* its NAME contained any of ~10
+   * keywords — "studio", "event", "fashion", "food"… That over-counted badly:
+   * makeup, recording and tailoring "studios" all counted as photographers, so
+   * this page disagreed with the /photographers listing it links to. The hero
+   * section was narrowed to type-only for exactly this reason (see its comment:
+   * the preview claimed 268 matches where the real listing had 230). /search now
+   * agrees with both. Consequence: a category shows fewer, correct vendors.
+   */
+  const CATEGORY_TO_TYPE: Record<string, string> = {
+    "photographers": VENDOR_TYPES.PHOTOGRAPHER,
+    "makeup-artists": VENDOR_TYPES.MAKEUP_ARTIST,
+    "decor": VENDOR_TYPES.DECORATOR,
+    "catering": VENDOR_TYPES.CATERING,
+    "venues": VENDOR_TYPES.WEDDING_VENUE,
+    "bridal-wear": VENDOR_TYPES.BRIDAL_WEAR,
+    "car-rental": VENDOR_TYPES.CAR_RENTAL,
+    "henna-artists": VENDOR_TYPES.HENNA_ARTIST,
+    "wedding-stationery": VENDOR_TYPES.WEDDING_STATIONERY,
   }
 
-  const filteredVendors = useMemo(() => {
-    let filtered = [...allVendors]
+  const SORT_TO_PARAM: Record<string, string> = {
+    "price-low": "price-low",
+    "price-high": "price-high",
+    "name": "name",
+    "recent": "newest",
+  }
 
-    if (filters.search.trim()) {
-      /*
-       * Match on WORDS, not on one contiguous phrase.
-       *
-       * This used to be `[...fields].some(f => txt(f).includes(s))`, i.e. the
-       * entire query had to appear verbatim inside a single field. Measured live:
-       * `?q=wedding hall lahore` returned "0 vendors found" out of 3,272, because
-       * no listing stores that exact string anywhere — the words are spread across
-       * `type` ("Wedding Venue") and `city` ("Lahore"). Every natural multi-word
-       * query a person actually types died the same way, on a marketplace whose
-       * entire job is to find vendors.
-       *
-       * Now the fields are flattened into one haystack and every word must appear
-       * somewhere in it. If that is too strict to return anything, fall back to
-       * "any word matches" rather than showing an empty page — a ranked-ish list
-       * of near misses beats a dead end.
-       */
-      const words = filters.search.toLowerCase().trim().split(/\s+/).filter(Boolean)
-      const hay = (v: Vendor) =>
-        [v.name, v.location, v.city, v.type, v.subBusinessType]
-          .map(txt)
-          .join(" ")
-          // "wedding-venue" / "wedding_venue" should match the word "wedding".
-          .replace(/[_-]+/g, " ")
+  /**
+   * WW-PERF — the search is the server's job now.
+   *
+   * This page used to call `useVendors()`, which walks every page of
+   * /businesses — 17 requests, ~12 MB of JSON parsed on a phone — and then ran
+   * ten `.filter()` passes over 3,272 rows in a useMemo on every keystroke,
+   * re-implementing filters `getBusinesses` has always supported. Measured on a
+   * mid-range Android on 4G: LCP 4,832ms with 4,543ms of blocked main thread.
+   *
+   * Now: one request per settled filter state, 12 card-shaped rows (~13 KB),
+   * and the count comes from the database instead of an array length.
+   */
+  const queryParams = useDebounced(
+    {
+      q: filters.search.trim(),
+      cityLike: filters.location.trim(),
+      vendorTypes:
+        filters.category && filters.category !== "all" ? CATEGORY_TO_TYPE[filters.category] : undefined,
+      minBudget: filters.priceRange[0] > 0 ? filters.priceRange[0] : undefined,
+      maxBudget: filters.priceRange[1] < 1000000 ? filters.priceRange[1] : undefined,
+      minRating: filters.rating > 0 ? filters.rating : undefined,
+      minCapacity: filters.capacity > 0 ? filters.capacity : undefined,
+      amenityLike: filters.amenities.length ? filters.amenities.join(",") : undefined,
+      sort: SORT_TO_PARAM[filters.sortBy] || "rating",
+      page: currentPage,
+    },
+    300
+  )
 
-      const all = filtered.filter(v => { const h = hay(v); return words.every(w => h.includes(w)) })
-      filtered = all.length
-        ? all
-        : filtered.filter(v => { const h = hay(v); return words.some(w => h.includes(w)) })
-    }
+  const searchQ = useQuery({
+    queryKey: ["vendor-search", queryParams],
+    queryFn: ({ signal }) => VendorAPI.searchCards({ ...queryParams, limit: 12, signal }),
+    // Keep the previous page on screen while the next one loads, so changing a
+    // filter does not blank the results and jump the scroll position.
+    placeholderData: (prev) => prev,
+    staleTime: 2 * 60 * 1000,
+  })
 
-    if (filters.category && filters.category !== "all") {
-      filtered = filtered.filter(v => vendorMatchesCategory(v, filters.category))
-    }
-
-    if (filters.location.trim()) {
-      const l = filters.location.toLowerCase().trim()
-      filtered = filtered.filter(v =>
-        txt(v.location).includes(l) || txt(v.city).includes(l)
-      )
-    }
-
-    filtered = filtered.filter(v => {
-      const price = Number(v.minimumPrice || v.price || 0)
-      return price >= filters.priceRange[0] && price <= filters.priceRange[1]
-    })
-
-    if (filters.rating > 0) {
-      filtered = filtered.filter(v => Number(v.rating || 0) >= filters.rating)
-    }
-
-    if (filters.capacity > 0) {
-      filtered = filtered.filter(v => Number(v.capacity || 0) >= filters.capacity)
-    }
-
-    if (filters.amenities.length > 0) {
-      filtered = filtered.filter(v => {
-        if (!Array.isArray(v.amenities) || v.amenities.length === 0) return false
-        return filters.amenities.some(a =>
-          v.amenities.some((va: unknown) => txt(va).includes(txt(a)))
-        )
-      })
-    }
-
-    switch (filters.sortBy) {
-      case "price-low":
-        filtered.sort((a, b) => Number(a.minimumPrice || a.price || 0) - Number(b.minimumPrice || b.price || 0))
-        break
-      case "price-high":
-        filtered.sort((a, b) => Number(b.minimumPrice || b.price || 0) - Number(a.minimumPrice || a.price || 0))
-        break
-      case "name":
-        filtered.sort((a, b) => a.name.localeCompare(b.name))
-        break
-      case "recent":
-        filtered.sort((a, b) => Number(b.id || 0) - Number(a.id || 0))
-        break
-      default:
-        filtered.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0))
-        break
-    }
-
-    return filtered
-  }, [allVendors, filters])
-
-  const totalPages = Math.ceil(filteredVendors.length / 12)
-  const paginatedVendors = filteredVendors.slice((currentPage - 1) * 12, currentPage * 12)
+  const paginatedVendors = searchQ.data?.items ?? []
+  const totalCount = searchQ.data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalCount / 12))
+  const isLoading = searchQ.isLoading
+  const error = searchQ.error
 
   useEffect(() => { setCurrentPage(1) }, [filters])
 
@@ -273,7 +245,7 @@ function SearchContent() {
           </h1>
           <div className="mx-auto mb-5 h-[1px] w-24 bg-gradient-to-r from-transparent via-bridal-gold to-transparent" />
           <p className="font-bridal text-[14px] sm:text-[15px] text-bridal-text-soft max-w-2xl mx-auto leading-relaxed">
-            <span className="font-display italic text-bridal-charcoal text-[20px] mr-1.5">{filteredVendors.length}</span>
+            <span className="font-display italic text-bridal-charcoal text-[20px] mr-1.5">{totalCount}</span>
             vendors found
             {filters.search && <> for <span className="text-bridal-gold-dark">“{filters.search}”</span></>}
             {filters.category !== "all" && <> in <span className="text-bridal-gold-dark">{VENDOR_CATEGORIES.find(c => c.value === filters.category)?.display}</span></>}
@@ -459,10 +431,10 @@ function SearchContent() {
               ) : (
                 <span className="flex items-baseline gap-2">
                   <span className="font-display italic text-[20px] text-bridal-charcoal leading-none">
-                    {filteredVendors.length}
+                    {totalCount}
                   </span>
                   <span className="font-bridal text-[11px] uppercase tracking-[0.22em] text-bridal-text-soft">
-                    of {allVendors.length} {allVendors.length === 1 ? "result" : "results"}
+                    of {catalogTotal} {catalogTotal === 1 ? "result" : "results"}
                   </span>
                 </span>
               )}
@@ -504,7 +476,7 @@ function SearchContent() {
                   </div>
                 ))}
               </div>
-            ) : filteredVendors.length === 0 ? (
+            ) : totalCount === 0 ? (
               <div className="text-center py-20 px-6 bg-bridal-cream rounded-md border border-bridal-beige">
                 <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-bridal-blush mb-4">
                   <Search className="w-6 h-6 text-bridal-mauve" />

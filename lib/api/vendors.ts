@@ -81,10 +81,14 @@ function normalizeBusiness(raw: any): any {
     rating,
     reviewCount,
     reviews: raw.reviews || [],
+    // WW-PERF — `?view=card` sends `minPackagePrice` (computed in SQL) instead
+    // of the whole packages array, so the "from Rs X" line survives the slim
+    // projection. Full responses still fall back to the array as before.
     price: (raw.price || raw.minimumPrice) ||
       (Array.isArray(raw.packages) && raw.packages.length > 0
         ? Math.min(...raw.packages.map((p: any) => Number(p.price)).filter((p: number) => p > 0))
         : null) ||
+      (Number(raw.minPackagePrice) > 0 ? Number(raw.minPackagePrice) : null) ||
       null,
     staff: raw.staff || [],
     amenities: raw.amenities || [],
@@ -92,7 +96,14 @@ function normalizeBusiness(raw: any): any {
     cancellationPolicy: raw.cancellationPolicy || raw.cancelationPolicy || '',
     sponsored: raw.sponsored ?? false,
     description: raw.description || '',
-    images: raw.images || [],
+    // `?view=card` returns one image as `primaryImage` rather than the whole
+    // array. Re-shaping it here means every existing card renderer — which all
+    // read `images[0]` — works with a card row without knowing it is one.
+    images: Array.isArray(raw.images) && raw.images.length
+      ? raw.images
+      : raw.primaryImage
+        ? [raw.primaryImage]
+        : [],
     packages: normalizePackages(raw.packages),
     // BK-100.54 — pass through Pakistani-specific search filter inputs.
     // Backend returns typeSpecificDetails as JSONB (already parsed) and
@@ -200,6 +211,74 @@ export class VendorAPI {
       return list.map(normalizeBusiness)
     } catch {
       return []
+    }
+  }
+
+  /**
+   * WW-PERF — one page of CARD-shaped rows, filtered by the server.
+   *
+   * This is the call that replaces "download all 3,272 vendors and filter them
+   * in a useMemo". `?view=card` returns ~580 bytes a row instead of ~3.7 KB
+   * (measured: a 200-row page went 743 KB -> 113 KB), and the server applies
+   * the filters it has always supported and the client was re-implementing.
+   *
+   * Returns the page AND the total, because the surfaces that need this — the
+   * hero's "N vendors match", the search results header — need the count of
+   * everything matching, not the length of the page.
+   */
+  static async searchCards(params: {
+    q?: string
+    city?: string
+    cityLike?: string
+    vendorTypes?: string
+    minCapacity?: number
+    maxBudget?: number
+    limit?: number
+    page?: number
+    signal?: AbortSignal
+  }): Promise<{ items: Vendor[]; total: number }> {
+    const { signal, limit = 12, page = 1, ...rest } = params
+    const query: Record<string, string> = { view: 'card', limit: String(limit), page: String(page) }
+    for (const [k, v] of Object.entries(rest)) {
+      const s = typeof v === 'number' ? String(v) : (v || '').toString().trim()
+      if (s) query[k] = s
+    }
+    try {
+      const res = await axiosInstance.get(BASE, { params: query, signal })
+      const d = res?.data?.data
+      const rows = Array.isArray(d) ? d : d?.data || []
+      const total = Number(d?.pagination?.totalItems ?? d?.pagination?.total ?? rows.length) || 0
+      return { items: rows.map(normalizeBusiness), total }
+    } catch (e: any) {
+      // An aborted request is a newer keystroke, not a failure — let the caller
+      // ignore it instead of rendering "0 matches" for a request we cancelled.
+      if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED') throw e
+      return { items: [], total: 0 }
+    }
+  }
+
+  /**
+   * WW-PERF — counts without the catalog.
+   *
+   * The homepage hero walked all 17 pages of `/businesses` and counted cities in
+   * JavaScript to render ten chips. This is the same answer as one GROUP BY:
+   * ~1.2 KB, ~380 ms, in place of ~12 MB of JSON.
+   */
+  static async getFacets(cities = 12): Promise<{
+    total: number
+    cities: Array<{ city: string; count: number }>
+    vendorTypes: Array<{ vendorType: string; count: number }>
+  }> {
+    try {
+      const res = await axiosInstance.get(`${BASE}/facets`, { params: { cities: String(cities) } })
+      const d = res?.data?.data || {}
+      return {
+        total: Number(d.total) || 0,
+        cities: Array.isArray(d.cities) ? d.cities : [],
+        vendorTypes: Array.isArray(d.vendorTypes) ? d.vendorTypes : [],
+      }
+    } catch {
+      return { total: 0, cities: [], vendorTypes: [] }
     }
   }
 
