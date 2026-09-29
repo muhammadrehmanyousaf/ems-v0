@@ -758,25 +758,23 @@ export default function DateTimeStep({
          desktop. On mobile they stack — calendar on top, slots below.
          This is the standard booking-flow layout (Airbnb, Booking.com,
          Calendly). */}
-      {/* Stacked, not side by side.
-          This split the calendar and the options into two columns, which worked
-          when the step had the full page. It does not now: the summary takes a
-          fixed 360px from lg up, so the options were squeezed into a strip with
-          "At our plot / lawn" wrapping over four lines.
+      {/* Calendar left at a fixed width, options right.
+          Stacking these (the previous attempt) left the calendar stretched to
+          the full column: measured at 1440px, a date cell was 122px wide and
+          48px tall — a two-digit number floating in a box two and a half times
+          wider than it is tall, which is why the step read as sparse.
 
-          Moving the split to xl did not fix it, and the reason is worth writing
-          down: Tailwind breakpoints measure the VIEWPORT, not this container. At
-          1440px `xl:` is active while the column it applies to is about 1000px
-          wide, so the split fired anyway. Without container queries the honest
-          answer is to stop splitting — the calendar takes the column's width and
-          the options sit under it, which reads in one direction and holds at
-          every size. */}
-      <div className="flex flex-col gap-5 items-stretch">
+          The width below is the fix and the number matters: 400px minus 40px of
+          padding leaves 360 across seven columns, so a cell is ~51px and close
+          to square, which is where Airbnb and Booking.com sit. The options then
+          take the remaining ~535px of the content column, which is enough for
+          the location cards two-up — the thing that was squeezed when the
+          calendar was 520px wide. */}
+      <div className="flex flex-col gap-5 items-stretch lg:flex-row lg:items-start">
 
-      {/* Monthly calendar — Airbnb / Booking.com pattern.
-         Constrained to ~520px so the cells stay at industry-standard
-         ~44-56px regardless of how wide the page container is. */}
-      <section className="rounded-lg border border-bridal-beige bg-bridal-ivory p-4 sm:p-5 w-full">
+      {/* Monthly calendar — Airbnb / Booking.com pattern. The fixed width is
+         what keeps the cells square; see the note above. */}
+      <section className="rounded-lg border border-bridal-beige bg-bridal-ivory p-4 sm:p-5 w-full lg:w-[400px] lg:flex-shrink-0">
         {/* Header row: month label + prev/next */}
         <div className="flex items-center justify-between mb-4">
           <button
@@ -838,7 +836,7 @@ export default function DateTimeStep({
          "Where will the service happen?" card fills the space beside the
          calendar instead of leaving a tall empty gap. On mobile this whole
          column drops below the calendar. */}
-      <div className="w-full space-y-5">
+      <div className="w-full min-w-0 space-y-5 lg:flex-1">
         {/* WW-SPACE-FIRST — the space is chosen BEFORE the date and the
            guest count, because it decides both.
            It used to sit at the BOTTOM of this column, under the time picker,
@@ -874,7 +872,7 @@ export default function DateTimeStep({
                   selectedSubVenueName: picked?.name || null,
                 }))
               }}
-              className="bridal-select w-full rounded-md border border-bridal-beige bg-white px-3.5 py-3 font-bridal text-[13.5px] text-bridal-charcoal outline-none transition-colors focus:border-bridal-gold-dark focus:ring-2 focus:ring-bridal-gold/25"
+              className="bridal-select w-full rounded-md border border-bridal-beige bg-white px-4 py-3 font-bridal text-[13.5px] text-bridal-charcoal outline-none transition-colors focus:border-bridal-gold-dark focus:ring-2 focus:ring-bridal-gold/25"
             >
               <option value="">Whole venue / any hall</option>
               {/* The capacity is on the OPTION, not only in the warning that
@@ -953,7 +951,7 @@ export default function DateTimeStep({
                   selectedResourceName: picked?.label || null,
                 }))
               }}
-              className="bridal-select w-full rounded-md border border-bridal-beige bg-white px-3.5 py-3 font-bridal text-[13.5px] text-bridal-charcoal outline-none transition-colors focus:border-bridal-gold-dark focus:ring-2 focus:ring-bridal-gold/25"
+              className="bridal-select w-full rounded-md border border-bridal-beige bg-white px-4 py-3 font-bridal text-[13.5px] text-bridal-charcoal outline-none transition-colors focus:border-bridal-gold-dark focus:ring-2 focus:ring-bridal-gold/25"
             >
               <option value="">Whole venue / any space</option>
               {spaces.map((sp) => (
@@ -1145,7 +1143,7 @@ export default function DateTimeStep({
                   requestedGenderMode: (e.target.value || null) as BookingFormData["requestedGenderMode"],
                 }))
               }
-              className="bridal-select w-full rounded-md border border-bridal-beige bg-white px-3.5 py-3 font-bridal text-[13.5px] text-bridal-charcoal outline-none transition-colors focus:border-bridal-gold-dark focus:ring-2 focus:ring-bridal-gold/25"
+              className="bridal-select w-full rounded-md border border-bridal-beige bg-white px-4 py-3 font-bridal text-[13.5px] text-bridal-charcoal outline-none transition-colors focus:border-bridal-gold-dark focus:ring-2 focus:ring-bridal-gold/25"
             >
               <option value="">No preference / decide later</option>
               {ARRANGEMENT_CHOICES.map((c) => (

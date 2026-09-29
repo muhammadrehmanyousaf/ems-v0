@@ -1417,7 +1417,10 @@ export default function BookingForm() {
             <div className="min-w-0 rounded-md bg-bridal-cream border border-bridal-beige shadow-[0_8px_24px_-20px_rgba(176,125,84,0.45)] [&>*:first-child]:rounded-t-md [&>*:last-child]:rounded-b-md">
 
               {/* Event Tabs */}
-              {events.length > 0 && globalStep >= 2 && (
+              {/* Only when there is more than one function to switch between.
+                  With a single event this drew a 64px row to hold one pill that
+                  does nothing when you press it — a tab bar with one tab. */}
+              {events.length > 1 && globalStep >= 2 && (
                 <div className="border-b border-bridal-beige/60 px-5 sm:px-7 py-2.5">
                   <EventTabs
                     events={events}

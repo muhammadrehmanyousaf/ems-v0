@@ -148,7 +148,13 @@ export function ServiceLocationPicker({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      {/* One per row, not two.
+        These sit in the options column beside the calendar, which is about
+        490px — so two-up gave each card ~235px and every one wrapped to four
+        lines: a heading, two lines of description, then the italic example over
+        two more. Full width, each is a heading and one line, and the four read
+        as a list you scan rather than a wall you decode. */}
+      <div className="grid grid-cols-1 gap-2">
         {MODES.map((m) => {
           const active = m.key === mode;
           const suggested = suggestedMode === m.key && !mode;
@@ -165,7 +171,7 @@ export function ServiceLocationPicker({
                 })
               }
               className={cn(
-                "relative text-left rounded-lg border p-3.5 transition-all hover:-translate-y-px",
+                "relative text-left rounded-lg border p-4 transition-all hover:-translate-y-px",
                 "focus:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold/50",
                 active
                   ? cn("ring-2 ring-bridal-gold/40", m.accentClass)
