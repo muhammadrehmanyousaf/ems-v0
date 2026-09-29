@@ -149,13 +149,16 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
 
   if (venuePackages.length === 0) {
     return (
-      <div className="w-full space-y-5">
-        <div>
-          <h2 className="font-display italic text-[22px] sm:text-[24px] text-bridal-charcoal leading-tight">
+      <div className="w-full space-y-8">
+        <header className="max-w-2xl">
+          <p className="font-bridal text-[11px] uppercase tracking-[0.22em] text-bridal-text-label">
+            Step three
+          </p>
+          <h2 className="mt-2 font-display italic text-[30px] sm:text-[38px] leading-[1.1] text-bridal-charcoal">
             {heading}
           </h2>
-          <p className="mt-1 font-bridal text-[12.5px] text-bridal-text-soft">{subheading}</p>
-        </div>
+          <p className="mt-3 font-bridal text-[14px] leading-relaxed text-bridal-text-soft">{subheading}</p>
+        </header>
         <div className="rounded-md border border-dashed border-bridal-beige bg-bridal-cream p-10 text-center">
           <p className="font-bridal text-[12.5px] text-bridal-text-soft">No packages available yet. Continue to review and contact the vendor.</p>
         </div>
@@ -164,13 +167,16 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
   }
 
   return (
-    <div className="space-y-5 w-full">
-      <div>
-        <h2 className="font-display italic text-[22px] sm:text-[24px] text-bridal-charcoal leading-tight">
+    <div className="w-full space-y-8">
+      <header className="max-w-2xl">
+        <p className="font-bridal text-[11px] uppercase tracking-[0.22em] text-bridal-text-label">
+          Step three
+        </p>
+        <h2 className="mt-2 font-display italic text-[30px] sm:text-[38px] leading-[1.1] text-bridal-charcoal">
           {heading}
         </h2>
-        <p className="mt-1 font-bridal text-[12.5px] text-bridal-text-soft">{subheading}</p>
-      </div>
+        <p className="mt-3 font-bridal text-[14px] leading-relaxed text-bridal-text-soft">{subheading}</p>
+      </header>
 
       <ul className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {venuePackages.map((pkg, idx) => {
