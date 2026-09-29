@@ -85,15 +85,39 @@ export function ScrollReveal({
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
+  /**
+   * The observer needs an ELEMENT on the very first render.
+   *
+   * `useInView` attaches its IntersectionObserver in an effect that reads
+   * `ref.current` once. The pre-mount branch below used to render without the
+   * ref, so on that first pass `ref.current` was null, the effect bailed, and
+   * because a ref does not re-run effects it never attached at all. `isInView`
+   * then stayed false forever and the content sat at opacity 0 permanently —
+   * 26 large blocks on the live homepage, still invisible after scrolling the
+   * whole page. Both branches render the same tag, so React reuses the DOM node
+   * and the observer stays pointed at it when `mounted` flips.
+   *
+   * `settled` is the belt to that braces: whatever happens to the observer,
+   * content becomes visible. Invisible content is a worse failure than a
+   * missing animation, and this component had already produced it once.
+   */
+  const [settled, setSettled] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(true), 2000)
+    return () => clearTimeout(t)
+  }, [])
+
+  const show = isInView || settled
+
   if (!mounted) {
-    return <div className={className}>{children}</div>
+    return <div ref={ref} className={className}>{children}</div>
   }
 
   return (
     <motion.div
       ref={ref}
-      initial={isInView ? "visible" : "hidden"}
-      animate={isInView ? "visible" : "hidden"}
+      initial={show ? "visible" : "hidden"}
+      animate={show ? "visible" : "hidden"}
       variants={{
         hidden: v.hidden,
         visible: { ...v.visible, transition: { duration, delay, ease: [0.25, 0.4, 0.25, 1] } },
@@ -124,11 +148,21 @@ export function StaggerContainer({
   const ref = useRef(null)
   const isInView = useInView(ref, { once, margin: "0px 0px -60px 0px" })
 
+  // This one attaches its ref immediately, so it does not have ScrollReveal's
+  // bug — but it hides its children behind the same observer, and invisible
+  // content is what just went out on the live site. Same fallback.
+  const [settled, setSettled] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(true), 2000)
+    return () => clearTimeout(t)
+  }, [])
+  const show = isInView || settled
+
   return (
     <motion.div
       ref={ref}
       initial="hidden"
-      animate={isInView ? "visible" : "hidden"}
+      animate={show ? "visible" : "hidden"}
       variants={{
         hidden: {},
         visible: { transition: { staggerChildren: staggerDelay } },
@@ -224,9 +258,17 @@ export function TextReveal({
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
+  // Same fault, same fix as ScrollReveal above — see the note there.
+  const [settled, setSettled] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(true), 2000)
+    return () => clearTimeout(t)
+  }, [])
+  const show = isInView || settled
+
   if (!mounted) {
     return (
-      <Tag className={className} aria-label={text}>
+      <Tag ref={ref} className={className} aria-label={text}>
         {text}
       </Tag>
     )
@@ -239,7 +281,7 @@ export function TextReveal({
           key={i}
           initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
           animate={
-            isInView
+            show
               ? {
                   opacity: 1,
                   y: 0,
