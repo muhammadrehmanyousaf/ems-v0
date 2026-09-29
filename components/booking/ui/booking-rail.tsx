@@ -1,6 +1,7 @@
 "use client"
 
-import { Check, Star, Lock, ShieldCheck } from "lucide-react"
+import { Check, Star, Lock, ShieldCheck, MapPin } from "lucide-react"
+import Image from "next/image"
 import type { EventVenue } from "@/lib/types"
 
 interface BookingTopBarProps {
@@ -20,14 +21,36 @@ export default function BookingTopBar({
   currentStep,
   isVenueBooking,
 }: BookingTopBarProps) {
+  const v = venue as any
+  const venueImage: string | null =
+    (Array.isArray(v?.images) && v.images.find((u: unknown) => typeof u === "string" && u)) || null
+  const where = [v?.subArea, v?.city].filter(Boolean).join(", ")
+
   return (
     <header className="rounded-md border border-bridal-beige bg-bridal-cream shadow-[0_8px_24px_-20px_rgba(176,125,84,0.45)] overflow-hidden">
       {/* Identity + trust — single tight row */}
       <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-2.5 border-b border-bridal-beige/70">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 rounded-full bg-bridal-charcoal text-bridal-ivory flex items-center justify-center flex-shrink-0 font-display italic text-[15px]">
-            {(venue?.name || "V").slice(0, 1).toUpperCase()}
-          </div>
+          {/* The venue's own photograph, not its initial.
+              Six screens of questions is a long way to walk from the page where
+              you chose a place, and the only thing carried across was a letter
+              in a circle. The business payload has ten images; using the first
+              costs one request the vendor page has already warmed, and it keeps
+              the thing being bought in front of the person buying it. Falls back
+              to the initial when a vendor has uploaded nothing. */}
+          {venueImage ? (
+            <Image
+              src={venueImage}
+              alt=""
+              width={40}
+              height={40}
+              className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-bridal-charcoal font-display italic text-[15px] text-bridal-ivory">
+              {(venue?.name || "V").slice(0, 1).toUpperCase()}
+            </div>
+          )}
           <div className="min-w-0 flex items-center gap-2.5 flex-wrap">
             <p className="hidden sm:block font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
               Booking with
@@ -44,6 +67,12 @@ export default function BookingTopBar({
             <span className="px-2 py-0.5 rounded-full bg-bridal-blush/55 border border-bridal-rose/40 text-bridal-mauve font-bridal text-[9.5px] uppercase tracking-[0.18em] font-medium">
               {isVenueBooking ? "Venue" : (venue as any)?.type || "Vendor"}
             </span>
+            {where && (
+              <span className="hidden items-center gap-1 font-bridal text-[12px] text-bridal-text-soft sm:inline-flex">
+                <MapPin className="h-3 w-3 text-bridal-gold-dark" />
+                {where}
+              </span>
+            )}
           </div>
         </div>
 
