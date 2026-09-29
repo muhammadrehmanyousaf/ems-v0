@@ -10,6 +10,7 @@ import EventSelectionStep from "@/components/booking/steps/event-selection-step"
 import EventTabs from "@/components/booking/ui/event-tabs"
 import BookingTopBar from "@/components/booking/ui/booking-rail"
 import MobileSummaryBar from "@/components/booking/ui/mobile-summary-bar"
+import LivePricingPanel from "@/components/booking/ui/live-pricing-panel"
 import type { BookingFormData, EventVenue, EventBooking, Vendor } from "@/lib/types"
 import { ArrowLeft, ArrowRight, Sparkles, Timer, AlertTriangle } from "lucide-react"
 import { BridalButton } from "@/components/bridal/bridal-button"
@@ -1388,7 +1389,24 @@ export default function BookingForm() {
               />
             )}
 
-            {/* Step body — full-width bridal cream card */}
+            {/* Two columns from lg up: the decisions on the left, and a summary
+                that stays with you on the right.
+
+                This flow was a single centred column that asked six screens of
+                questions and showed the price at the end. `LivePricingPanel`
+                below — 255 lines that compute the whole breakdown — was written
+                and then never rendered anywhere; the comment on the mobile bar
+                still says it "replaces sticky desktop sidebar". So the desktop
+                had no answer to "what am I buying and what does it cost" at any
+                point before the final screen, which is the thing every booking
+                product puts on the right-hand side and keeps there.
+
+                The proportions are the ones that pattern settled on: content
+                takes the remaining space, the panel is a fixed 360px, and it
+                sticks below the header rather than scrolling away. */}
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+
+            {/* Step body — bridal cream card */}
             <div className="min-w-0 rounded-md bg-bridal-cream border border-bridal-beige shadow-[0_8px_24px_-20px_rgba(176,125,84,0.45)] overflow-hidden">
 
               {/* Event Tabs */}
@@ -1532,9 +1550,24 @@ export default function BookingForm() {
                 </div>
               )}
             </div>
+
+            {/* The summary column. Hidden below lg, where MobileSummaryBar does
+                the same job as a bar pinned to the bottom of the screen. */}
+            {globalStep >= 2 && !isSuccessStep && (
+              <aside className="hidden lg:block lg:sticky lg:top-6">
+                <LivePricingPanel
+                  formData={activeFormData}
+                  venue={venue}
+                  vendorsDetails={vendorsDetails[activeEventIndex] || []}
+                  selectedPackageObj={selectedPackageObj}
+                  selectedMenuObj={selectedMenuObj}
+                />
+              </aside>
+            )}
+            </div>
           </div>
 
-          {/* Mobile bottom summary bar — replaces sticky desktop sidebar */}
+          {/* Mobile bottom summary bar — the small-screen form of the sidebar */}
           {globalStep >= 2 && !isSuccessStep && (
             <MobileSummaryBar
               formData={activeFormData}

@@ -758,12 +758,25 @@ export default function DateTimeStep({
          desktop. On mobile they stack — calendar on top, slots below.
          This is the standard booking-flow layout (Airbnb, Booking.com,
          Calendly). */}
-      <div className="flex flex-col lg:flex-row gap-5 items-start">
+      {/* Stacked, not side by side.
+          This split the calendar and the options into two columns, which worked
+          when the step had the full page. It does not now: the summary takes a
+          fixed 360px from lg up, so the options were squeezed into a strip with
+          "At our plot / lawn" wrapping over four lines.
+
+          Moving the split to xl did not fix it, and the reason is worth writing
+          down: Tailwind breakpoints measure the VIEWPORT, not this container. At
+          1440px `xl:` is active while the column it applies to is about 1000px
+          wide, so the split fired anyway. Without container queries the honest
+          answer is to stop splitting — the calendar takes the column's width and
+          the options sit under it, which reads in one direction and holds at
+          every size. */}
+      <div className="flex flex-col gap-5 items-stretch">
 
       {/* Monthly calendar — Airbnb / Booking.com pattern.
          Constrained to ~520px so the cells stay at industry-standard
          ~44-56px regardless of how wide the page container is. */}
-      <section className="rounded-lg border border-bridal-beige bg-bridal-ivory p-4 sm:p-5 w-full lg:w-[520px] lg:flex-shrink-0 mx-auto sm:mx-0">
+      <section className="rounded-lg border border-bridal-beige bg-bridal-ivory p-4 sm:p-5 w-full">
         {/* Header row: month label + prev/next */}
         <div className="flex items-center justify-between mb-4">
           <button
@@ -825,7 +838,7 @@ export default function DateTimeStep({
          "Where will the service happen?" card fills the space beside the
          calendar instead of leaving a tall empty gap. On mobile this whole
          column drops below the calendar. */}
-      <div className="w-full lg:flex-1 space-y-5">
+      <div className="w-full space-y-5">
         {/* WW-SPACE-FIRST — the space is chosen BEFORE the date and the
            guest count, because it decides both.
            It used to sit at the BOTTOM of this column, under the time picker,
