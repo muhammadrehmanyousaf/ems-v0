@@ -65,8 +65,18 @@ interface VendorCardProps {
    * of Load Delay, and the LCP element reported as
    * `<img alt="Rehman Grand Marquee" loading="lazy">`.
    *
-   * Only the cards above the fold should set this. Marking them all eager would
-   * queue 200 images against each other and make it worse.
+   * Only the LCP card should set this — ONE card, not the visible row.
+   *
+   * It was the first three, on the reasoning that a desktop grid shows three.
+   * Measured on production: that emitted three `<link rel=preload as=image>` at
+   * high priority, 58kb each, so 175kb of images competed for the front of the
+   * queue when exactly one of them is the largest paint. /vendors showed Load
+   * Delay 1,896ms and Load Time 1,863ms for an image that takes ~325ms to
+   * transfer at the simulated bandwidth.
+   *
+   * On a phone — which is what the mobile score measures, and where the grid is
+   * a single column — cards two and three are below the fold anyway. They load
+   * normally, which is what `loading="lazy"` is for.
    */
   priority?: boolean
 }
