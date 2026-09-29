@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import type { BookingFormData, EventVenue, Vendor } from "@/lib/types"
 import { Receipt, ChevronUp, ChevronDown, Lock } from "lucide-react"
 import { readUnitConfig, sellsByTheUnit, unitLineFor, describeUnitQty } from "@/lib/pricing/per-unit"
+import { slotText } from "@/lib/booking/slot-vocabulary"
 
 interface LivePricingPanelProps {
   formData: BookingFormData
@@ -141,6 +142,36 @@ export default function LivePricingPanel({
     return { items, subtotal, downPayment, remaining: subtotal - downPayment }
   }, [formData, venue, vendorsDetails, selectedPackageObj, selectedMenuObj])
 
+  /**
+   * What has been chosen so far, in words.
+   *
+   * The panel showed money and nothing else, so from step two to step five the
+   * only confirmation that the date you picked had registered was to go back and
+   * look. A summary that answers "what am I buying" has to name the thing, not
+   * just price it — these are the same four facts the Review step lists, read
+   * from the same fields, so the two screens cannot disagree.
+   */
+  const chosen = useMemo(() => {
+    const rows: { label: string; value: string }[] = []
+    const f = formData as any
+    const d = formData.bookingDate ? new Date(formData.bookingDate) : null
+    if (d && !Number.isNaN(d.getTime())) {
+      rows.push({ label: "Date", value: d.toLocaleDateString("en-PK", { weekday: "short", day: "numeric", month: "long", year: "numeric" }) })
+    }
+    const time = slotText({
+      bookingTime: formData.timeSlot,
+      slotLabel: formData.slotLabel,
+      slotStartTime: formData.slotStartTime,
+      slotEndTime: formData.slotEndTime,
+    })
+    if (time) rows.push({ label: "Time", value: time })
+    const space = f.selectedSubVenueName || f.selectedResourceName
+    if (space) rows.push({ label: "Hall", value: String(space) })
+    const guests = Number(formData.guestCount) || 0
+    if (guests > 0) rows.push({ label: "Guests", value: `${guests} ${guests === 1 ? "guest" : "guests"}` })
+    return rows
+  }, [formData])
+
   const formatPKR = (n: number) =>
     new Intl.NumberFormat("en-PK", { style: "currency", currency: "PKR", maximumFractionDigits: 0 }).format(n)
 
@@ -160,6 +191,23 @@ export default function LivePricingPanel({
               Booking total
             </h3>
           </div>
+
+          {chosen.length > 0 && (
+            <div className="border-b border-bridal-beige/60 px-5 py-4">
+              <dl className="space-y-2">
+                {chosen.map((row) => (
+                  <div key={row.label} className="flex items-baseline justify-between gap-3">
+                    <dt className="font-bridal text-[11px] uppercase tracking-[0.18em] text-bridal-text-label">
+                      {row.label}
+                    </dt>
+                    <dd className="min-w-0 text-right font-bridal text-[13px] text-bridal-charcoal">
+                      {row.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
 
           <div className="p-5 space-y-3.5">
             {breakdown.items.map((item, i) => (

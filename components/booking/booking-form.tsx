@@ -1407,7 +1407,14 @@ export default function BookingForm() {
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
 
             {/* Step body — bridal cream card */}
-            <div className="min-w-0 rounded-md bg-bridal-cream border border-bridal-beige shadow-[0_8px_24px_-20px_rgba(176,125,84,0.45)] overflow-hidden">
+            {/* No `overflow-hidden`. It was here to clip the children's
+                backgrounds to the rounded corners, and it also silently broke
+                the sticky footer below — a sticky element cannot escape a
+                clipping ancestor, so the action row scrolled away exactly as it
+                had before. The corners are handled by rounding the first and
+                last children instead, which costs two classes and keeps the
+                action reachable. */}
+            <div className="min-w-0 rounded-md bg-bridal-cream border border-bridal-beige shadow-[0_8px_24px_-20px_rgba(176,125,84,0.45)] [&>*:first-child]:rounded-t-md [&>*:last-child]:rounded-b-md">
 
               {/* Event Tabs */}
               {events.length > 0 && globalStep >= 2 && (
@@ -1443,8 +1450,12 @@ export default function BookingForm() {
 
               {/* Step body — tightened padding so compressed steps don't sit
                   in a sea of empty space */}
+              {/* The extra bottom padding on lg is the height of the pinned
+                  action row. Without it the footer sits over the last thing on
+                  the step — the final week of the calendar disappeared behind
+                  it, including a selected date. */}
               <div
-                className="p-4 sm:p-5 lg:p-6"
+                className="p-4 sm:p-5 lg:p-6 lg:pb-20"
                 style={{ position: "relative", zIndex: 2, pointerEvents: "auto" }}
               >
                 {stepContent}
@@ -1510,9 +1521,23 @@ export default function BookingForm() {
                 </div>
               )}
 
-              {/* Footer — Back · Continue, homepage BridalButton language */}
+              {/* Footer — Back · Continue, homepage BridalButton language.
+                  Sticky to the bottom of the viewport while this card is in
+                  view. The date step runs well past one screen, and the action
+                  that moves you on was parked at the end of it — so the way to
+                  continue was to scroll looking for it. Pinned, it is where your
+                  hand already is. It releases at the card's end, so it never
+                  floats over the footer or the next section.
+                  `lg:` only, and that is a deliberate stop rather than an
+                  oversight. Pinning it on a phone as well needs it to clear
+                  MobileSummaryBar, which is `fixed bottom-0` — but that bar
+                  hides itself when the subtotal is still zero, so an offset that
+                  assumes it leaves the action floating in the middle of the step
+                  with content visible underneath. It looked broken, so it is
+                  not shipping. The honest fix is to put the action INTO that bar,
+                  which is what a phone wants anyway; that is its own change. */}
               {!isSuccessStep && (
-                <div className="border-t border-bridal-beige bg-bridal-ivory/60 px-5 sm:px-7 py-3 relative z-10">
+                <div className="border-t border-bridal-beige bg-bridal-ivory/95 px-5 sm:px-7 py-3 relative z-10 lg:sticky lg:bottom-0 lg:backdrop-blur-sm">
                   <div className="flex items-center justify-between gap-3">
                     <BridalButton
                       type="button"
