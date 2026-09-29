@@ -510,7 +510,7 @@ function SearchContent() {
                     {paginatedVendors.map((vendor, idx) => (
                       <div key={vendor.id}>
                         <VendorCard
-                          priority={idx < 3}
+                          priority={idx === 0}
                           id={vendor.id}
                           name={vendor.name}
                           image={vendor.images?.[0] || "/placeholder.svg"}
