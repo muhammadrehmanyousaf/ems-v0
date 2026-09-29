@@ -149,13 +149,16 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
 
   if (venuePackages.length === 0) {
     return (
-      <div className="w-full space-y-5">
-        <div>
-          <h2 className="font-display italic text-[22px] sm:text-[24px] text-bridal-charcoal leading-tight">
+      <div className="w-full space-y-8">
+        <header className="max-w-2xl">
+          <p className="font-bridal text-[11px] uppercase tracking-[0.22em] text-bridal-text-label">
+            Step three
+          </p>
+          <h2 className="mt-2 font-display italic text-[30px] sm:text-[38px] leading-[1.1] text-bridal-charcoal">
             {heading}
           </h2>
-          <p className="mt-1 font-bridal text-[12.5px] text-bridal-text-soft">{subheading}</p>
-        </div>
+          <p className="mt-3 font-bridal text-[14px] leading-relaxed text-bridal-text-soft">{subheading}</p>
+        </header>
         <div className="rounded-md border border-dashed border-bridal-beige bg-bridal-cream p-10 text-center">
           <p className="font-bridal text-[12.5px] text-bridal-text-soft">No packages available yet. Continue to review and contact the vendor.</p>
         </div>
@@ -164,13 +167,16 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
   }
 
   return (
-    <div className="space-y-5 w-full">
-      <div>
-        <h2 className="font-display italic text-[22px] sm:text-[24px] text-bridal-charcoal leading-tight">
+    <div className="w-full space-y-8">
+      <header className="max-w-2xl">
+        <p className="font-bridal text-[11px] uppercase tracking-[0.22em] text-bridal-text-label">
+          Step three
+        </p>
+        <h2 className="mt-2 font-display italic text-[30px] sm:text-[38px] leading-[1.1] text-bridal-charcoal">
           {heading}
         </h2>
-        <p className="mt-1 font-bridal text-[12.5px] text-bridal-text-soft">{subheading}</p>
-      </div>
+        <p className="mt-3 font-bridal text-[14px] leading-relaxed text-bridal-text-soft">{subheading}</p>
+      </header>
 
       <ul className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {venuePackages.map((pkg, idx) => {
@@ -190,6 +196,12 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
               <button
                 type="button"
                 onClick={() => togglePkg(id)}
+                // Same gap BUG-024 closed on the event step: the chosen state
+                // was carried by border colour alone, so a screen-reader user —
+                // and anyone who cannot separate the two browns — had no way to
+                // confirm which package they were about to pay for.
+                aria-pressed={isSelected}
+                aria-label={`${pkg.name || "Package"}${isSelected ? " (selected)" : ""}`}
                 className={`relative w-full text-left rounded-md bg-bridal-ivory border transition-all overflow-hidden
                   ${isSelected
                     ? "border-bridal-gold-dark bg-bridal-cream shadow-[0_14px_32px_-18px_rgba(176,125,84,0.5)]"

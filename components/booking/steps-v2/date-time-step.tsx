@@ -704,13 +704,22 @@ export default function DateTimeStep({
                striking it out would state something untrue for a second. */
             isPending && !isPast
               ? "text-bridal-text-soft/40 cursor-wait"
+              /* A PAST day is not a refusal either, and it used to be struck
+                 through like one. On any date after the 1st that painted most
+                 of the visible month with a line through it -- opening the
+                 calendar on the 29th showed twenty-eight crossed-out days and
+                 two open ones, which reads as "this venue has nothing". Past
+                 days are simply faint now; the strike is kept for a date the
+                 venue has actually blocked, where it means something. */
+              : isPast
+              ? "text-bridal-text-soft/35 cursor-not-allowed"
               : disabled
               ? "text-bridal-text-soft/50 cursor-not-allowed line-through decoration-1"
               : isSelected
-                ? "bg-bridal-charcoal text-bridal-ivory shadow-[0_8px_22px_-10px_rgba(44,24,16,0.55)] hover:bg-bridal-charcoal"
+                ? "bg-bridal-gold-dark text-white shadow-[0_10px_24px_-10px_rgba(145,101,57,0.6)] hover:bg-bridal-gold-dark"
                 : isToday
                   ? "border border-bridal-gold-dark text-bridal-charcoal hover:bg-bridal-blush/45"
-                  : "text-bridal-charcoal hover:bg-bridal-blush/45"
+                  : "text-bridal-charcoal hover:bg-bridal-cream"
           }
         `}
       >
@@ -726,20 +735,24 @@ export default function DateTimeStep({
   }
 
   return (
-    <div className="space-y-5 w-full">
-      {/* Heading — homepage display italic typography */}
-      <div>
-        <h2 className="font-display italic text-[22px] sm:text-[24px] text-bridal-charcoal leading-tight">
+    <div className="w-full space-y-8">
+      {/* Heading — the same weight as step one, so the journey reads as one
+          piece rather than a headline followed by five form pages. */}
+      <header className="max-w-2xl">
+        <p className="font-bridal text-[11px] uppercase tracking-[0.22em] text-bridal-text-label">
+          Step two
+        </p>
+        <h2 className="mt-2 font-display italic text-[30px] sm:text-[38px] leading-[1.1] text-bridal-charcoal">
           When is your event?
         </h2>
         {/* Promised a hold until 2026-08-29, when holds were removed from the
             booking flow. The date is not reserved by choosing it here, and the
             customer is better served knowing that than being told otherwise. */}
-        <p className="mt-1 font-bridal text-[12.5px] text-bridal-text-soft">
+        <p className="mt-3 font-bridal text-[14px] leading-relaxed text-bridal-text-soft">
           Pick a date and a time of day. The date isn&apos;t reserved until the venue
           accepts your request, so send it as soon as you&apos;re ready.
         </p>
-      </div>
+      </header>
 
       {/* Calendar (left) + Time-of-day picker (right) side-by-side on
          desktop. On mobile they stack — calendar on top, slots below.
@@ -848,7 +861,7 @@ export default function DateTimeStep({
                   selectedSubVenueName: picked?.name || null,
                 }))
               }}
-              className="w-full rounded-md border border-bridal-beige bg-bridal-ivory px-3 py-2.5 font-bridal text-[13px] text-bridal-charcoal outline-none focus:border-bridal-gold-dark"
+              className="bridal-select w-full rounded-md border border-bridal-beige bg-white px-3.5 py-3 font-bridal text-[13.5px] text-bridal-charcoal outline-none transition-colors focus:border-bridal-gold-dark focus:ring-2 focus:ring-bridal-gold/25"
             >
               <option value="">Whole venue / any hall</option>
               {/* The capacity is on the OPTION, not only in the warning that
@@ -927,7 +940,7 @@ export default function DateTimeStep({
                   selectedResourceName: picked?.label || null,
                 }))
               }}
-              className="w-full rounded-md border border-bridal-beige bg-bridal-ivory px-3 py-2.5 font-bridal text-[13px] text-bridal-charcoal outline-none focus:border-bridal-gold-dark"
+              className="bridal-select w-full rounded-md border border-bridal-beige bg-white px-3.5 py-3 font-bridal text-[13.5px] text-bridal-charcoal outline-none transition-colors focus:border-bridal-gold-dark focus:ring-2 focus:ring-bridal-gold/25"
             >
               <option value="">Whole venue / any space</option>
               {spaces.map((sp) => (
@@ -1119,7 +1132,7 @@ export default function DateTimeStep({
                   requestedGenderMode: (e.target.value || null) as BookingFormData["requestedGenderMode"],
                 }))
               }
-              className="w-full rounded-md border border-bridal-beige bg-bridal-ivory px-3 py-2.5 font-bridal text-[13px] text-bridal-charcoal outline-none focus:border-bridal-gold-dark"
+              className="bridal-select w-full rounded-md border border-bridal-beige bg-white px-3.5 py-3 font-bridal text-[13.5px] text-bridal-charcoal outline-none transition-colors focus:border-bridal-gold-dark focus:ring-2 focus:ring-bridal-gold/25"
             >
               <option value="">No preference / decide later</option>
               {ARRANGEMENT_CHOICES.map((c) => (

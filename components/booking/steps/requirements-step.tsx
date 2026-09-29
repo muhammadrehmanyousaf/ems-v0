@@ -122,13 +122,11 @@ export default function RequirementsStep({ value, onChange, venueName, showDieta
   return (
     <motion.div className="space-y-7" variants={container} initial="hidden" animate="visible">
       <motion.div variants={item}>
-        <p className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-gold-dark mb-2">
-          Step · Your requirements
-        </p>
-        <h2 className="font-display italic text-[28px] sm:text-[32px] text-bridal-charcoal leading-tight">
+        <p className="font-bridal text-[11px] uppercase tracking-[0.22em] text-bridal-text-label">Step five</p>
+        <h2 className="mt-2 font-display italic text-[30px] sm:text-[38px] leading-[1.1] text-bridal-charcoal">
           Anything we should know?
         </h2>
-        <p className="mt-2 font-bridal text-[14px] text-bridal-text-soft">
+        <p className="mt-3 font-bridal text-[14px] leading-relaxed text-bridal-text-soft">
           All optional — but whatever you write here goes straight to{" "}
           {venueName || "the venue"} and onto their kitchen sheet.
         </p>

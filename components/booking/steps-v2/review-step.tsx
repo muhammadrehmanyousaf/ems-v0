@@ -482,10 +482,10 @@ export default function ReviewStep({
           <Sparkles className="w-3 h-3" />
           Final Step · Confirm
         </p>
-        <h2 className="font-display italic text-[26px] sm:text-[30px] text-bridal-charcoal leading-tight">
+        <h2 className="font-display italic text-[30px] sm:text-[38px] leading-[1.1] text-bridal-charcoal">
           Review your booking
         </h2>
-        <p className="mt-1.5 font-bridal text-[12.5px] text-bridal-text-soft max-w-xl mx-auto">
+        <p className="mx-auto mt-3 max-w-xl font-bridal text-[14px] leading-relaxed text-bridal-text-soft">
           Double-check the details. The down payment is charged on confirm — the rest is due at the venue.
         </p>
       </div>

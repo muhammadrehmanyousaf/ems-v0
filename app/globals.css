@@ -179,6 +179,35 @@ html[data-locale="ur"] body {
 }
 
 /* Caps label — DM Sans 500, gold, wide tracking. */
+/**
+ * A <select> that belongs to this site.
+ *
+ * The booking flow's three selects were given bridal colours but left with the
+ * browser's own control: a platform chevron, platform metrics, and on Windows a
+ * grey inset that reads as an unstyled form field sitting between two designed
+ * ones. `appearance: none` plus our own chevron keeps the native element --
+ * which is still the right control on a phone, and the accessible one -- while
+ * making it look like the rest of the page.
+ *
+ * The chevron is an inline SVG in the brand's charcoal. It sits 1rem from the
+ * right and the padding leaves room for it, so a long option label never runs
+ * underneath the arrow.
+ */
+.bridal-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%232C1810' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+  padding-right: 2.5rem;
+  cursor: pointer;
+}
+
+.bridal-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .bridal-label {
   font-family: var(--font-dm-sans), 'Helvetica Neue', Arial, sans-serif;
   font-size: 11px;

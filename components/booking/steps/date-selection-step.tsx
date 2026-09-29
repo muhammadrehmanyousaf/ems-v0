@@ -263,20 +263,20 @@ export default function DateSelectionStep({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-[22px] sm:text-[24px] font-semibold tracking-tight text-zinc-900 leading-tight">
+        <h2 className="text-[22px] sm:text-[24px] font-semibold tracking-tight text-bridal-charcoal leading-tight">
           {dateHeading}
         </h2>
-        <p className="mt-1.5 text-[13.5px] text-zinc-500">
+        <p className="mt-1.5 text-[13.5px] text-bridal-text-soft">
           Select a date and preferred time slot for your event
         </p>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-5 items-stretch">
         {/* Left: Calendar Card */}
-        <div className="flex flex-col rounded-xl border border-zinc-200 bg-white overflow-hidden">
-          <div className="flex items-center gap-2 px-5 py-3 border-b border-zinc-100">
-            <CalendarDays className="h-4 w-4 text-zinc-700" />
-            <span className="text-[12px] font-semibold text-zinc-900">
+        <div className="flex flex-col rounded-xl border border-bridal-beige bg-white overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-3 border-b border-bridal-beige/60">
+            <CalendarDays className="h-4 w-4 text-bridal-text" />
+            <span className="text-[12px] font-semibold text-bridal-charcoal">
               Select date
             </span>
           </div>
@@ -294,10 +294,10 @@ export default function DateSelectionStep({
                 month: "w-full gap-3",
                 table: "w-full border-collapse table-fixed",
                 weekdays: "flex w-full",
-                weekday: "flex-1 min-w-0 text-center text-[11px] font-medium text-zinc-500 uppercase tracking-wider",
+                weekday: "flex-1 min-w-0 text-center text-[11px] font-medium text-bridal-text-soft uppercase tracking-wider",
                 week: "flex w-full mt-1",
                 day: "flex-1 min-w-0 aspect-square p-0 text-center relative",
-                month_caption: "flex h-9 w-full items-center justify-center px-9 text-[14px] font-semibold text-zinc-900",
+                month_caption: "flex h-9 w-full items-center justify-center px-9 text-[14px] font-semibold text-bridal-charcoal",
               }}
               disabled={(d) => {
                 const today = new Date();
@@ -330,7 +330,7 @@ export default function DateSelectionStep({
               modifiersClassNames={{
                 partiallyBooked: "bg-amber-50 text-amber-700 font-medium",
                 fullyBooked: "bg-red-50 text-red-600 line-through",
-                vendorBlocked: "bg-zinc-100 text-zinc-400 line-through opacity-60",
+                vendorBlocked: "bg-bridal-sand text-bridal-text-soft/75 line-through opacity-60",
               }}
             />
             {/* The calendar now refuses to guess when it has no data for the
@@ -338,8 +338,8 @@ export default function DateSelectionStep({
                 grid. Retry re-fires the same month rather than reloading the
                 page, which would lose the event already chosen. */}
             {availabilityLoading && !availabilityFailed && (
-              <div className="mt-3 flex items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-[12px] text-zinc-600">
-                <span className="inline-block h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
+              <div className="mt-3 flex items-center gap-2 rounded-md border border-bridal-beige bg-bridal-cream px-3 py-2 text-[12px] text-bridal-text-soft">
+                <span className="inline-block h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-bridal-gold-dark border-t-transparent" />
                 Checking this venue&apos;s availability…
               </div>
             )}
@@ -362,7 +362,7 @@ export default function DateSelectionStep({
                 </div>
               </div>
             )}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-3 mt-3 border-t border-zinc-100 text-[11px] text-zinc-600">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-3 mt-3 border-t border-bridal-beige/60 text-[11px] text-bridal-text-soft">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-amber-400" />
                 Partially booked
@@ -372,7 +372,7 @@ export default function DateSelectionStep({
                 Fully booked
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-zinc-300" />
+                <span className="w-2 h-2 rounded-full bg-bridal-beige" />
                 Unavailable
               </span>
             </div>
@@ -380,20 +380,20 @@ export default function DateSelectionStep({
         </div>
 
         {/* Right: Time Slot Card */}
-        <div className="flex flex-col rounded-xl border border-zinc-200 bg-white overflow-hidden">
-          <div className="flex items-center gap-2 px-5 py-3 border-b border-zinc-100">
-            <Clock className="h-4 w-4 text-zinc-700" />
-            <span className="text-[12px] font-semibold text-zinc-900">
+        <div className="flex flex-col rounded-xl border border-bridal-beige bg-white overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-3 border-b border-bridal-beige/60">
+            <Clock className="h-4 w-4 text-bridal-text" />
+            <span className="text-[12px] font-semibold text-bridal-charcoal">
               Select time slot
             </span>
           </div>
           <div className="flex-1 flex flex-col justify-between p-4 sm:p-5 gap-4">
             {selectedDayAvail?.isBlocked && (
-              <div className="flex items-start gap-3 rounded-lg bg-zinc-50 border border-zinc-200 px-4 py-3">
-                <AlertTriangle className="h-4 w-4 text-zinc-500 shrink-0 mt-0.5" />
+              <div className="flex items-start gap-3 rounded-lg bg-bridal-cream border border-bridal-beige px-4 py-3">
+                <AlertTriangle className="h-4 w-4 text-bridal-text-soft shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-[13.5px] font-semibold text-zinc-900">Vendor not available this day</p>
-                  <p className="text-[12px] text-zinc-500 mt-0.5">
+                  <p className="text-[13.5px] font-semibold text-bridal-charcoal">Vendor not available this day</p>
+                  <p className="text-[12px] text-bridal-text-soft mt-0.5">
                     {selectedDayAvail.blockReason || "The vendor has marked this date as unavailable."}{" "}
                     Please select a different date.
                   </p>
@@ -439,34 +439,34 @@ export default function DateSelectionStep({
                       }}
                       className={`flex items-center justify-between rounded-lg border px-4 py-3.5 text-left transition-all
                         ${isBooked
-                          ? "border-zinc-200 bg-zinc-50 opacity-60"
+                          ? "border-bridal-beige bg-bridal-cream opacity-60"
                           : isHeld
                             ? "border-amber-200 bg-amber-50/50"
                             : isSelected
-                              ? "border-zinc-900 bg-zinc-50 ring-2 ring-zinc-900/5"
-                              : "border-zinc-200 bg-white hover:border-zinc-400 hover:bg-zinc-50"
+                              ? "border-bridal-gold-dark bg-bridal-cream ring-2 ring-bridal-gold-dark/5"
+                              : "border-bridal-beige bg-white hover:border-bridal-gold/60 hover:bg-bridal-cream"
                         }`}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0
                           ${isBooked
-                            ? "bg-zinc-100"
+                            ? "bg-bridal-sand"
                             : isHeld
                               ? "bg-amber-100"
                               : isSelected
-                                ? "bg-zinc-900 text-white"
-                                : "bg-zinc-100 text-zinc-700"
+                                ? "bg-bridal-gold-dark text-white"
+                                : "bg-bridal-sand text-bridal-text"
                           }`}>
                           <Clock className={`w-4 h-4 ${
-                            isBooked ? "text-zinc-400" : isHeld ? "text-amber-700" : "text-current"
+                            isBooked ? "text-bridal-text-soft/75" : isHeld ? "text-amber-700" : "text-current"
                           }`} />
                         </div>
                         <div>
                           <p className={`text-[15px] font-semibold leading-tight
-                            ${isBooked ? "text-zinc-400" : "text-zinc-900"}`}>
+                            ${isBooked ? "text-bridal-text-soft/75" : "text-bridal-charcoal"}`}>
                             {slot.label}
                           </p>
-                          <p className="text-[12px] text-zinc-500 mt-0.5">{slot.time}</p>
+                          <p className="text-[12px] text-bridal-text-soft mt-0.5">{slot.time}</p>
                         </div>
                       </div>
                       {isBooked ? (
@@ -479,13 +479,13 @@ export default function DateSelectionStep({
                           Reserved
                         </span>
                       ) : isSelected ? (
-                        <div className="w-6 h-6 rounded-full bg-zinc-900 flex items-center justify-center shrink-0">
+                        <div className="w-6 h-6 rounded-full bg-bridal-gold-dark flex items-center justify-center shrink-0">
                           <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                           </svg>
                         </div>
                       ) : (
-                        <div className="w-5 h-5 rounded-full border-2 border-zinc-300 shrink-0" />
+                        <div className="w-5 h-5 rounded-full border-2 border-bridal-beige shrink-0" />
                       )}
                     </button>
                     {isHeld && heldMinsLeft !== null && (
@@ -534,15 +534,15 @@ export default function DateSelectionStep({
               )}
 
               {enforceCapacity && (
-                <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3.5">
+                <div className="rounded-lg border border-bridal-beige bg-white px-4 py-3.5">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-lg bg-zinc-100 flex items-center justify-center">
-                        <Users className="h-4 w-4 text-zinc-700" />
+                      <div className="w-9 h-9 rounded-lg bg-bridal-sand flex items-center justify-center">
+                        <Users className="h-4 w-4 text-bridal-text" />
                       </div>
                       <div>
-                        <p className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-zinc-500">Guests</p>
-                        <p className="text-[14px] font-semibold text-zinc-900 leading-tight">How many?</p>
+                        <p className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-bridal-text-soft">Guests</p>
+                        <p className="text-[14px] font-semibold text-bridal-charcoal leading-tight">How many?</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -551,9 +551,9 @@ export default function DateSelectionStep({
                         aria-label="Decrease guests by 10"
                         onClick={() => adjustGuests(-10)}
                         style={{ pointerEvents: "auto", cursor: "pointer" }}
-                        className="w-9 h-9 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 hover:border-zinc-300 active:scale-95 inline-flex items-center justify-center transition-colors"
+                        className="w-9 h-9 rounded-lg border border-bridal-beige bg-white hover:bg-bridal-cream hover:border-bridal-beige active:scale-95 inline-flex items-center justify-center transition-colors"
                       >
-                        <Minus className="w-3.5 h-3.5 text-zinc-700" />
+                        <Minus className="w-3.5 h-3.5 text-bridal-text" />
                       </button>
                       <div className="flex items-baseline gap-1">
                         <input
@@ -569,30 +569,30 @@ export default function DateSelectionStep({
                             }
                             updateFormData((prev) => ({ ...prev, guestCount: nextCount }));
                           }}
-                          className="w-14 text-center text-[20px] font-semibold tabular-nums text-zinc-900 bg-transparent border-0 outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none p-0"
+                          className="w-14 text-center text-[20px] font-semibold tabular-nums text-bridal-charcoal bg-transparent border-0 outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none p-0"
                           placeholder="10"
                         />
-                        <span className="text-[11px] uppercase tracking-[0.12em] font-medium text-zinc-500">guests</span>
+                        <span className="text-[11px] uppercase tracking-[0.12em] font-medium text-bridal-text-soft">guests</span>
                       </div>
                       <button
                         type="button"
                         aria-label="Increase guests by 10"
                         onClick={() => adjustGuests(10)}
                         style={{ pointerEvents: "auto", cursor: "pointer" }}
-                        className="w-9 h-9 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 hover:border-zinc-300 active:scale-95 inline-flex items-center justify-center transition-colors"
+                        className="w-9 h-9 rounded-lg border border-bridal-beige bg-white hover:bg-bridal-cream hover:border-bridal-beige active:scale-95 inline-flex items-center justify-center transition-colors"
                       >
-                        <Plus className="w-3.5 h-3.5 text-zinc-700" />
+                        <Plus className="w-3.5 h-3.5 text-bridal-text" />
                       </button>
                     </div>
                   </div>
                   {venue?.maxCapacity && formData.guestCount >= venue.maxCapacity && (
-                    <p className="mt-3 text-[11.5px] text-amber-700 flex items-center gap-1.5 pt-3 border-t border-zinc-100">
+                    <p className="mt-3 text-[11.5px] text-amber-700 flex items-center gap-1.5 pt-3 border-t border-bridal-beige/60">
                       <AlertTriangle className="h-3 w-3 shrink-0" />
                       Maximum capacity reached (max: {venue.maxCapacity} guests)
                     </p>
                   )}
                   {venue?.minCapacity && formData.guestCount > 0 && formData.guestCount < venue.minCapacity && (
-                    <p className="mt-3 text-[11.5px] text-amber-700 flex items-center gap-1.5 pt-3 border-t border-zinc-100">
+                    <p className="mt-3 text-[11.5px] text-amber-700 flex items-center gap-1.5 pt-3 border-t border-bridal-beige/60">
                       <AlertTriangle className="h-3 w-3 shrink-0" />
                       Below minimum capacity (min: {venue.minCapacity} guests)
                     </p>

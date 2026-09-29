@@ -135,14 +135,14 @@ export function ServiceLocationPicker({
   })();
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-4 space-y-4">
+    <div className="rounded-lg border border-bridal-beige bg-white p-4 space-y-4">
       <div className="flex items-start gap-2">
         <MapPin className="h-4 w-4 mt-0.5 text-bridal-gold" />
         <div className="space-y-0.5">
-          <p className="text-sm font-medium text-neutral-900">
+          <p className="font-display italic text-[16px] text-bridal-charcoal">
             Where will the service happen?
           </p>
-          <p className="text-xs text-neutral-500">
+          <p className="font-bridal text-[12px] text-bridal-text-soft">
             Optional — leave blank if the service is at the vendor&apos;s usual address.
           </p>
         </div>
@@ -165,11 +165,11 @@ export function ServiceLocationPicker({
                 })
               }
               className={cn(
-                "relative text-left rounded-md border-2 p-3 transition-all",
+                "relative text-left rounded-lg border p-3.5 transition-all hover:-translate-y-px",
                 "focus:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold/50",
                 active
                   ? cn("ring-2 ring-bridal-gold/40", m.accentClass)
-                  : "border-neutral-200 bg-white hover:border-neutral-300",
+                  : "border-bridal-beige bg-white hover:border-bridal-beige",
               )}
               aria-pressed={active}
             >
@@ -182,13 +182,13 @@ export function ServiceLocationPicker({
                 <Icon
                   className={cn(
                     "h-4 w-4 mt-0.5 shrink-0",
-                    active ? "text-bridal-charcoal" : "text-neutral-500",
+                    active ? "text-bridal-charcoal" : "text-bridal-text-soft",
                   )}
                 />
                 <div>
-                  <p className="text-sm font-medium text-neutral-900">{m.title}</p>
-                  <p className="text-[11px] text-neutral-500 mt-0.5">{m.blurb}</p>
-                  <p className="text-[10px] text-neutral-400 mt-1 italic">
+                  <p className="text-sm font-medium text-bridal-charcoal">{m.title}</p>
+                  <p className="text-[11px] text-bridal-text-soft mt-0.5">{m.blurb}</p>
+                  <p className="text-[10px] text-bridal-text-soft/75 mt-1 italic">
                     e.g. {m.example}
                   </p>
                 </div>
@@ -199,7 +199,7 @@ export function ServiceLocationPicker({
       </div>
 
       {needsAddress && (
-        <div className="space-y-2 pt-1 border-t border-neutral-100">
+        <div className="space-y-2 pt-1 border-t border-bridal-beige/60">
           <div className="space-y-1">
             <Label htmlFor="sl-address" className="text-xs">
               Address <span className="text-red-500">*</span>
@@ -216,7 +216,7 @@ export function ServiceLocationPicker({
               aria-describedby="sl-address-help"
               aria-invalid={addressTooShort}
             />
-            <p id="sl-address-help" className="text-[11px] text-neutral-500">
+            <p id="sl-address-help" className="text-[11px] text-bridal-text-soft">
               Be specific enough for the vendor crew to find you — block, street, landmark.
             </p>
             {addressTooShort && (
@@ -229,7 +229,7 @@ export function ServiceLocationPicker({
           <div className="space-y-1">
             <Label htmlFor="sl-notes" className="text-xs">
               Landmark / parking / instructions{" "}
-              <span className="text-neutral-400">(optional)</span>
+              <span className="text-bridal-text-soft/75">(optional)</span>
             </Label>
             <Textarea
               id="sl-notes"
@@ -242,7 +242,7 @@ export function ServiceLocationPicker({
               rows={2}
               className="text-sm resize-none"
             />
-            <div className="flex justify-between text-[11px] text-neutral-400">
+            <div className="flex justify-between text-[11px] text-bridal-text-soft/75">
               <span className="flex items-center gap-1">
                 <Info className="h-3 w-3" />
                 Shared with the vendor crew once booking is confirmed.

@@ -115,36 +115,36 @@ export default function MobileSummaryBar({
   if (breakdown.subtotal === 0) return null
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-zinc-200 shadow-[0_-4px_16px_-8px_rgba(0,0,0,0.12)]">
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-bridal-beige shadow-[0_-4px_16px_-8px_rgba(0,0,0,0.12)]">
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
         className="w-full px-4 py-3 flex items-center justify-between"
       >
         <div className="flex items-center gap-2.5">
-          <span className="w-8 h-8 rounded-full bg-zinc-100 inline-flex items-center justify-center">
-            <Receipt className="h-3.5 w-3.5 text-zinc-700" />
+          <span className="w-8 h-8 rounded-full bg-bridal-sand inline-flex items-center justify-center">
+            <Receipt className="h-3.5 w-3.5 text-bridal-text" />
           </span>
           <div className="text-left">
-            <p className="text-[10px] uppercase tracking-[0.12em] font-semibold text-zinc-500 leading-none">
+            <p className="text-[10px] uppercase tracking-[0.12em] font-semibold text-bridal-text-soft leading-none">
               {breakdown.downPayment > 0 ? "Due now" : "Total"}
             </p>
-            <p className="text-[15px] font-semibold text-zinc-900 leading-tight mt-0.5 tabular-nums">
+            <p className="text-[15px] font-semibold text-bridal-charcoal leading-tight mt-0.5 tabular-nums">
               {formatPKR(breakdown.downPayment > 0 ? breakdown.downPayment : breakdown.subtotal)}
             </p>
           </div>
         </div>
-        {expanded ? <ChevronDown className="h-4 w-4 text-zinc-500" /> : <ChevronUp className="h-4 w-4 text-zinc-500" />}
+        {expanded ? <ChevronDown className="h-4 w-4 text-bridal-text-soft" /> : <ChevronUp className="h-4 w-4 text-bridal-text-soft" />}
       </button>
       {expanded && (
-        <div className="px-4 pb-4 space-y-2 border-t border-zinc-100 pt-3">
+        <div className="px-4 pb-4 space-y-2 border-t border-bridal-beige/60 pt-3">
           {breakdown.items.map((item, i) => (
             <div key={i} className="flex items-center justify-between text-[12.5px]">
-              <span className="text-zinc-700 truncate">{item.label}</span>
-              <span className="text-zinc-900 font-semibold shrink-0 ml-2 tabular-nums">{formatPKR(item.amount)}</span>
+              <span className="text-bridal-text truncate">{item.label}</span>
+              <span className="text-bridal-charcoal font-semibold shrink-0 ml-2 tabular-nums">{formatPKR(item.amount)}</span>
             </div>
           ))}
-          <div className="flex justify-between text-[12.5px] pt-2 border-t border-zinc-100 font-semibold text-zinc-900">
+          <div className="flex justify-between text-[12.5px] pt-2 border-t border-bridal-beige/60 font-semibold text-bridal-charcoal">
             <span>Subtotal</span>
             <span className="tabular-nums">{formatPKR(breakdown.subtotal)}</span>
           </div>
