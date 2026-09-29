@@ -122,9 +122,6 @@ export default function RequirementsStep({ value, onChange, venueName, showDieta
   return (
     <motion.div className="space-y-7" variants={container} initial="hidden" animate="visible">
       <motion.div variants={item}>
-        <p className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-gold-dark mb-2">
-          Step · Your requirements
-        </p>
         <p className="font-bridal text-[11px] uppercase tracking-[0.22em] text-bridal-text-label">Step five</p>
         <h2 className="mt-2 font-display italic text-[30px] sm:text-[38px] leading-[1.1] text-bridal-charcoal">
           Anything we should know?
