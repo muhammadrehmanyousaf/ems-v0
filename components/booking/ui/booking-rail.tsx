@@ -68,8 +68,32 @@ export default function BookingTopBar({
         </div>
       </div>
 
-      {/* Step list — centered */}
-      <nav className="px-4 sm:px-5 py-2.5 overflow-x-auto bg-bridal-ivory/40 flex justify-center">
+      {/* Step list.
+          On a phone this was the same six-step rail with labels, in a
+          horizontally scrolling row: `min-w-max` inside `overflow-x-auto`, so
+          the steps ran off the right edge and the person saw "MEHNDI ... PACK"
+          with the rest hidden behind a scroll nobody thinks to try. A rail you
+          cannot read is not orientation, it is decoration that costs height.
+          Phones get the one fact that matters — which step this is, and how
+          many are left — plus a bar that fills. The full rail returns at sm. */}
+      <div className="border-t border-bridal-beige/70 bg-bridal-ivory/40 px-4 py-3 sm:hidden">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="font-bridal text-[10.5px] uppercase tracking-[0.2em] text-bridal-text-label">
+            Step {Math.min(currentStep + 1, steps.length)} of {steps.length}
+          </span>
+          <span className="truncate font-display italic text-[15px] text-bridal-charcoal">
+            {steps[Math.min(Math.max(currentStep, 0), steps.length - 1)]?.title}
+          </span>
+        </div>
+        <div className="mt-2 h-1 overflow-hidden rounded-full bg-bridal-beige">
+          <div
+            className="h-full rounded-full bg-bridal-gold-dark transition-all duration-500 ease-out"
+            style={{ width: `${(Math.min(currentStep + 1, steps.length) / steps.length) * 100}%` }}
+          />
+        </div>
+      </div>
+
+      <nav className="hidden overflow-x-auto bg-bridal-ivory/40 px-4 py-2.5 sm:flex sm:justify-center sm:px-5">
         <ol className="flex items-center gap-1 min-w-max">
           {steps.map((step, idx) => {
             const isCompleted = idx < currentStep

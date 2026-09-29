@@ -190,6 +190,12 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
               <button
                 type="button"
                 onClick={() => togglePkg(id)}
+                // Same gap BUG-024 closed on the event step: the chosen state
+                // was carried by border colour alone, so a screen-reader user —
+                // and anyone who cannot separate the two browns — had no way to
+                // confirm which package they were about to pay for.
+                aria-pressed={isSelected}
+                aria-label={`${pkg.name || "Package"}${isSelected ? " (selected)" : ""}`}
                 className={`relative w-full text-left rounded-md bg-bridal-ivory border transition-all overflow-hidden
                   ${isSelected
                     ? "border-bridal-gold-dark bg-bridal-cream shadow-[0_14px_32px_-18px_rgba(176,125,84,0.5)]"
