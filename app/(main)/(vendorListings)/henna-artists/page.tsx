@@ -1,8 +1,8 @@
-import VendorSearch from "@/components/VendorSearch"
+import { ListingRoute } from "@/components/listing/listing-route"
 
 export const dynamic = "force-dynamic"
 
 export default function HennaArtistsPage() {
-  return <VendorSearch vendorType="henna-artists" />
+  return <ListingRoute vendorType="henna-artists" />
 }
 

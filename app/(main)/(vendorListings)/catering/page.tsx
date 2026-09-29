@@ -1,8 +1,8 @@
-import VendorSearch from "@/components/VendorSearch"
+import { ListingRoute } from "@/components/listing/listing-route"
 
 export const dynamic = "force-dynamic"
 
 export default function CateringPage() {
-  return <VendorSearch vendorType="catering" />
+  return <ListingRoute vendorType="catering" />
 }
 

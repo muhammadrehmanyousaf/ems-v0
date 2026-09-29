@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import VendorSearch from "@/components/VendorSearch"
+import { ListingRoute } from "@/components/listing/listing-route"
 import { buildPageMetadata, SITE_NAME } from "@/lib/seo"
 
 /**
@@ -21,6 +21,6 @@ export const metadata: Metadata = buildPageMetadata({
 })
 
 export default function VenuesPage() {
-  return <VendorSearch vendorType="venues" />
+  return <ListingRoute vendorType="venues" />
 }
 

@@ -26,6 +26,14 @@ import { todayInKarachi } from "@/lib/utils/pk-date"
 
 interface VendorSearchProps {
   vendorType: string
+  /**
+   * The first screenful, fetched on the server by `ListingRoute`. Optional, so
+   * the 24 routes could be moved over one at a time and any caller that does not
+   * supply it behaves exactly as before: empty grid, client fetch, skeletons.
+   */
+  initialVendors?: Vendor[]
+  /** `pagination.total` for the seed query, so the count is right on first paint. */
+  initialTotal?: number
 }
 
 interface Filters {
@@ -111,13 +119,22 @@ const DEFAULT_FILTERS: Filters = {
   languages: [],
 }
 
-export default function VendorSearch({ vendorType }: VendorSearchProps) {
+export default function VendorSearch({
+  vendorType,
+  initialVendors,
+  initialTotal,
+}: VendorSearchProps) {
   const searchParams = useSearchParams()
-  const [vendors, setVendors] = useState<Vendor[]>([])
+  // Seeded by the server so the grid — and the largest paint — exist in the
+  // HTML. Without this the first render is empty and the LCP image cannot be
+  // requested until a client round-trip has finished: measured on production
+  // /vendors, LCP 4.9s with 3,338ms of Load Delay and Load Time 0ms.
+  const [vendors, setVendors] = useState<Vendor[]>(initialVendors ?? [])
   // The real total, read off page 1 so the results count never climbs.
-  const [totalCount, setTotalCount] = useState(0)
+  const [totalCount, setTotalCount] = useState(initialTotal ?? 0)
   const [currentPage, setCurrentPage] = useState(1)
-  const [isLoading, setIsLoading] = useState(true)
+  // Nothing is "loading" when the server already handed us a screenful.
+  const [isLoading, setIsLoading] = useState(!(initialVendors && initialVendors.length > 0))
   const [sortOption, setSortOption] = useState("default")
 
   // Seed initial filters from URL — lets the hero search hand off
@@ -188,9 +205,17 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
    * is fixed here rather than left.
    */
   const generation = useRef(0)
+  // What is currently on screen, read inside fetchVendors without making it a
+  // dependency of the effect that calls it.
+  const seededRef = useRef<Vendor[]>(initialVendors ?? [])
+  seededRef.current = vendors
   const fetchVendors = async (avail: string = availableOn, verified: boolean = verifiedOnly) => {
     const mine = ++generation.current
-    setIsLoading(true)
+    // Only show skeletons when there is nothing to show. Flipping this on while
+    // the server-rendered cards are on screen would replace them with loading
+    // placeholders — a visible flash, and it would throw away the paint the
+    // seed exists to produce.
+    if (seededRef.current.length === 0) setIsLoading(true)
     const onFirstPage = (rows: Vendor[], total: number) => {
       if (generation.current !== mine) return
       setVendors(rows)

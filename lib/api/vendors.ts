@@ -51,7 +51,12 @@ function normalizePackages(packages: any[]): any[] {
   })
 }
 
-function normalizeBusiness(raw: any): any {
+/**
+ * Exported so the SERVER can shape a listing seed the same way the client does.
+ * The two must agree exactly or the first client render replaces the
+ * server-rendered cards and undoes the point of seeding them.
+ */
+export function normalizeBusiness(raw: any): any {
   if (!raw) return raw
   const vendor = raw.vendor || {}
   // Backend now returns `rating` (avg) and `reviewCount` aggregated by SQL.
