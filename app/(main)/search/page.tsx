@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense, useMemo } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
 import { firstOf } from "@/lib/utils"
 import {
   Search, MapPin, Star, Users, Filter, SortAsc, Award, Heart,
@@ -502,20 +501,14 @@ function SearchContent() {
                    jump straight to the results. */}
                 <h2 className="sr-only">Search results</h2>
                 <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
-                  <AnimatePresence mode="popLayout">
-                    {/* WW-PERF — the first row does not fade in. Chrome does not count an
-                        element at opacity 0 as the largest paint, so fading the LCP card in
-                        delays the metric by the length of the fade for no visible gain: these
-                        cards are on screen before the eye arrives. The rest keep the stagger. */}
+                  {/* WW-PERF — no framer-motion around the grid.
+                      `AnimatePresence mode="popLayout"` with `layout` on every card
+                      measures each one's box on mount, which is main-thread work
+                      during hydration, on exactly the cards the largest paint is
+                      waiting for. The entrance is a CSS animation inside VendorCard
+                      now; the cards above the fold get none at all. */}
                     {paginatedVendors.map((vendor, idx) => (
-                      <motion.div
-                        key={vendor.id}
-                        layout
-                        initial={idx < 3 ? false : { opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{ duration: 0.25, delay: idx * 0.04 }}
-                      >
+                      <div key={vendor.id}>
                         <VendorCard
                           priority={idx < 3}
                           id={vendor.id}
@@ -531,9 +524,8 @@ function SearchContent() {
                           sponsored={vendor.sponsored}
                           business={vendor}
                         />
-                      </motion.div>
+                      </div>
                     ))}
-                  </AnimatePresence>
                 </div>
 
                 {/* Pagination */}

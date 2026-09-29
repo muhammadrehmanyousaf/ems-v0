@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useRef } from "react"
 import { useSearchParams } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
 import { firstOf } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -938,20 +937,15 @@ export default function VendorSearch({
                   </div>
                 ))
               ) : filteredVendors.length > 0 ? (
-                <AnimatePresence mode="popLayout">
-                  {/* WW-PERF — the first row does not fade in. Chrome does not count an
-                      element at opacity 0 as the largest paint, so fading the LCP card in
-                      delays the metric by the length of the fade for no visible gain: these
-                      cards are on screen before the eye arrives. The rest keep the stagger. */}
+                <>
+                {/* WW-PERF — no framer-motion around the grid.
+                      `AnimatePresence mode="popLayout"` with `layout` on every card
+                      measures each one's box on mount, which is main-thread work
+                      during hydration, on exactly the cards the largest paint is
+                      waiting for. The entrance is a CSS animation inside VendorCard
+                      now; the cards above the fold get none at all. */}
                   {paginatedVendors.map((vendor, idx) => (
-                    <motion.div
-                      key={vendor.id}
-                      layout
-                      initial={idx < 3 ? false : { opacity: 0, y: 16 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.25, delay: idx * 0.04 }}
-                    >
+                    <div key={vendor.id}>
                       <VendorCard
                         priority={idx < 3}
                         id={vendor.id}
@@ -976,9 +970,9 @@ export default function VendorSearch({
                         sponsored={vendor.sponsored}
                         business={vendor}
                       />
-                    </motion.div>
+                    </div>
                   ))}
-                </AnimatePresence>
+                </>
               ) : (
                 <div className="col-span-full text-center py-20 px-6 bg-bridal-cream rounded-md border border-bridal-beige">
                   <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-bridal-blush mb-4">
