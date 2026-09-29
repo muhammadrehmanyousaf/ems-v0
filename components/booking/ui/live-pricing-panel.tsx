@@ -206,8 +206,13 @@ export default function LivePricingPanel({
                   card: the customer pays the venue directly and reports it.
                   A security claim about a processor that never touches the
                   money is the one piece of copy that must not be left stale. */}
+              {/* "we hold your date" went stale the same way the Stripe line
+                  did. Holds were taken out of the booking flow on 2026-08-29 —
+                  date-time-step's own comment says "the date is not reserved by
+                  choosing it here" — so the summary was promising, next to the
+                  price, the one thing the flow had stopped doing. */}
               <Lock className="h-3 w-3" />
-              <span>You pay the venue directly — we hold your date</span>
+              <span>You pay the venue directly — nothing is charged until they accept</span>
             </div>
           </div>
         </div>
