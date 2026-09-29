@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useRef, useCallback, useEffect } from "react"
-import { motion, useInView } from "framer-motion"
 import Link from "next/link"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -239,8 +238,6 @@ export default function VendorCard({
 
   // ── 3D Tilt ──
   const cardRef = useRef<HTMLDivElement>(null)
-  const inViewRef = useRef<HTMLDivElement>(null)
-  const isInView = useInView(inViewRef, { once: true, margin: "0px 0px -60px 0px" })
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return
@@ -262,13 +259,23 @@ export default function VendorCard({
 
   return (
     <>
-      <div ref={inViewRef}>
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5, ease: [0.25, 0.4, 0.25, 1] }}
-          className={`h-full ${className}`}
-        >
+      {/* WW-PERF — this was a framer-motion wrapper with
+          `initial={{ opacity: 0, y: 30 }}` revealed by `useInView`, which meant
+          EVERY card shipped invisible and only appeared once JavaScript had
+          hydrated and an IntersectionObserver had fired.
+
+          Measured on production: all twelve server-rendered cards carried
+          `style="opacity:0;transform:translateY(30px)"` in the HTML, and
+          /vendors reported LCP 7.7s of which 4,330ms was Render Delay — the LCP
+          image finished downloading at 3.3s and was not painted for another four
+          seconds, because Chrome does not count an element at opacity 0.
+
+          Server-rendering the cards had therefore bought nothing: they were in
+          the HTML and invisible. A CSS animation replaces it. It needs no
+          JavaScript, no observer per card, and the cards above the fold get no
+          entrance at all — they are already on screen, and animating them in
+          only delays the metric that measures them. */}
+      <div className={`h-full ${priority ? "" : "animate-stagger-fade-up"} ${className}`}>
           <div
             ref={cardRef}
             onMouseMove={handleMouseMove}
@@ -524,7 +531,6 @@ export default function VendorCard({
               )}
             </Card>
           </div>
-        </motion.div>
       </div>
 
       {/* Login Alert Dialog */}
