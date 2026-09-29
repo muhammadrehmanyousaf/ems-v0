@@ -1,4 +1,4 @@
-import VendorSearch from '@/components/VendorSearch';
+import { ListingRoute } from '@/components/listing/listing-route';
 import { Metadata } from 'next'
 import React from 'react'
 
@@ -9,10 +9,10 @@ export const metadata: Metadata = {
 
 const page = ({params}: {params:{type:string}}) => {
     const vendorType = params.type;
-    
+
     return (
         <div>
-            <VendorSearch vendorType={vendorType} />
+            <ListingRoute vendorType={vendorType} />
         </div>
     )
 }

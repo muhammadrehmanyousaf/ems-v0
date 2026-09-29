@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import VendorSearch from "@/components/VendorSearch"
+import { ListingRoute } from "@/components/listing/listing-route"
 import { buildPageMetadata, SITE_NAME } from "@/lib/seo"
 
 // BK-100.55 Layer 3 — SEO landing for sound system rental.
@@ -13,5 +13,5 @@ export const metadata: Metadata = buildPageMetadata({
 })
 
 export default function SoundSystemRentalPage() {
-  return <VendorSearch vendorType="sound-system-rental" />
+  return <ListingRoute vendorType="sound-system-rental" />
 }
