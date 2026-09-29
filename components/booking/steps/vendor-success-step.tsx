@@ -266,7 +266,7 @@ export default function VendorSuccessStep({
                   {packageData?.description && (
                     <div className="md:col-span-2">
                       <span className="font-bridal text-[12.5px] text-bridal-text-soft">Description:</span>
-                      <p className="text-neutral-800 mt-1">{packageData.description}</p>
+                      <p className="text-bridal-charcoal mt-1">{packageData.description}</p>
                     </div>
                   )}
                   {packageData?.features && packageData.features.length > 0 && (
@@ -274,7 +274,7 @@ export default function VendorSuccessStep({
                       <span className="font-bridal text-[12.5px] text-bridal-text-soft">Features:</span>
                       <ul className="mt-2 space-y-1">
                         {packageData.features.map((feature: string, index: number) => (
-                          <li key={index} className="flex items-center text-neutral-800">
+                          <li key={index} className="flex items-center text-bridal-charcoal">
                             <span className="mr-2 text-bridal-gold">•</span>
                             {feature}
                           </li>
