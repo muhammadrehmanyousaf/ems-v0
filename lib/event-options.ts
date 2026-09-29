@@ -35,6 +35,25 @@ export const EVENT_OPTIONS: string[] = [
   "Other",
 ];
 
+/**
+ * The marriage functions, as a set.
+ *
+ * The split already existed as a comment in the list above, and the booking UI
+ * needs it for real: fifteen event types in one undifferentiated grid is a wall,
+ * and "which of these is part of a wedding" is not something a UI file should be
+ * guessing at separately from the list that defines the law's reach.
+ */
+export const MARRIAGE_EVENTS: ReadonlySet<string> = new Set([
+  "Mehndi",
+  "Baraat",
+  "Walima",
+  "Nikah",
+  "Mayoun",
+  "Dholki",
+  "Reception",
+  "Engagement",
+]);
+
 /** Same list in the `{ value, label }` shape the vendor pickers take. */
 export const EVENT_OPTIONS_SELECT = EVENT_OPTIONS.map((value) => ({
   value,

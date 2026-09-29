@@ -1152,7 +1152,7 @@ export default function BookingForm() {
   if (requestSentData) {
     return (
       <div className="w-full">
-        <div className="rounded-xl bg-white border border-zinc-200 overflow-hidden p-6 sm:p-8 lg:p-10 shadow-sm">
+        <div className="rounded-xl bg-white border border-bridal-beige overflow-hidden p-6 sm:p-8 lg:p-10 shadow-sm">
           <RequestSentScreen
             bookingId={requestSentData.bookingId}
             venueName={venue?.name}
@@ -1169,7 +1169,7 @@ export default function BookingForm() {
   if (bankTransferData) {
     return (
       <div className="w-full">
-        <div className="rounded-xl bg-white border border-zinc-200 overflow-hidden p-6 sm:p-8 lg:p-10 shadow-sm">
+        <div className="rounded-xl bg-white border border-bridal-beige overflow-hidden p-6 sm:p-8 lg:p-10 shadow-sm">
           <BankTransferScreen
             bookingId={bankTransferData.bookingId}
             amount={bankTransferData.amount}
@@ -1273,35 +1273,35 @@ export default function BookingForm() {
   return (
     <div className="w-full space-y-4 sm:space-y-5">
       {(loading || userLoading) ? (
-        <div className="rounded-xl bg-white border border-zinc-200 overflow-hidden shadow-sm">
-          <div className="h-16 bg-zinc-100 animate-pulse" />
+        <div className="rounded-xl bg-white border border-bridal-beige overflow-hidden shadow-sm">
+          <div className="h-16 bg-bridal-sand animate-pulse" />
           <div className="p-8 space-y-6">
             <div className="flex gap-3">
               {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-7 flex-1 bg-zinc-100 rounded-md animate-pulse" />
+                <div key={i} className="h-7 flex-1 bg-bridal-sand rounded-md animate-pulse" />
               ))}
             </div>
             <div className="space-y-4">
-              <div className="h-5 w-48 bg-zinc-100 rounded animate-pulse" />
-              <div className="h-12 bg-zinc-100 rounded-md animate-pulse" />
-              <div className="h-12 bg-zinc-100 rounded-md animate-pulse" />
-              <div className="h-12 bg-zinc-100 rounded-md animate-pulse" />
+              <div className="h-5 w-48 bg-bridal-sand rounded animate-pulse" />
+              <div className="h-12 bg-bridal-sand rounded-md animate-pulse" />
+              <div className="h-12 bg-bridal-sand rounded-md animate-pulse" />
+              <div className="h-12 bg-bridal-sand rounded-md animate-pulse" />
             </div>
           </div>
         </div>
       ) : error ? (
-        <div className="rounded-xl bg-white p-12 text-center border border-zinc-200 shadow-sm">
+        <div className="rounded-xl bg-white p-12 text-center border border-bridal-beige shadow-sm">
           <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-red-50 border border-red-100 flex items-center justify-center">
             <svg className="w-7 h-7 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
             </svg>
           </div>
-          <h2 className="text-xl font-semibold tracking-tight text-zinc-900 mb-2">Something went wrong</h2>
-          <p className="text-[13px] text-zinc-500 max-w-sm mx-auto mb-6">{error || 'Unable to load booking details.'}</p>
+          <h2 className="text-xl font-semibold tracking-tight text-bridal-charcoal mb-2">Something went wrong</h2>
+          <p className="text-[13px] text-bridal-text-soft max-w-sm mx-auto mb-6">{error || 'Unable to load booking details.'}</p>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="inline-flex items-center justify-center h-10 px-5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-[13px] font-medium transition-colors"
+            className="inline-flex items-center justify-center h-10 px-5 rounded-lg bg-bridal-gold-dark hover:bg-bridal-gold-deep text-white text-[13px] font-medium transition-colors"
           >
             Refresh page
           </button>
@@ -1393,7 +1393,7 @@ export default function BookingForm() {
 
               {/* Event Tabs */}
               {events.length > 0 && globalStep >= 2 && (
-                <div className="border-b border-zinc-100 px-5 sm:px-7 py-2.5">
+                <div className="border-b border-bridal-beige/60 px-5 sm:px-7 py-2.5">
                   <EventTabs
                     events={events}
                     activeEventIndex={activeEventIndex}
@@ -1547,13 +1547,13 @@ export default function BookingForm() {
 
           {/* Multi-event info banner */}
           {globalStep >= 2 && events.length > 1 && (
-            <div className="rounded-xl bg-white border border-zinc-200 p-4 text-[13px] text-zinc-700 flex items-start gap-3 shadow-sm">
-              <div className="w-8 h-8 rounded-full bg-zinc-100 inline-flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Sparkles className="w-3.5 h-3.5 text-zinc-700" />
+            <div className="rounded-xl bg-white border border-bridal-beige p-4 text-[13px] text-bridal-text flex items-start gap-3 shadow-sm">
+              <div className="w-8 h-8 rounded-full bg-bridal-sand inline-flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Sparkles className="w-3.5 h-3.5 text-bridal-text" />
               </div>
               <div>
-                <p className="text-[14px] font-semibold text-zinc-900 mb-0.5">Multiple events booked</p>
-                <p className="text-zinc-500">Complete the form for each event tab and submit them individually.</p>
+                <p className="text-[14px] font-semibold text-bridal-charcoal mb-0.5">Multiple events booked</p>
+                <p className="text-bridal-text-soft">Complete the form for each event tab and submit them individually.</p>
               </div>
             </div>
           )}

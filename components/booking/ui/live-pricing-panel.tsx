@@ -150,13 +150,13 @@ export default function LivePricingPanel({
     <>
       {/* Desktop card */}
       <div className="hidden lg:block">
-        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-zinc-100">
-            <p className="text-[11px] uppercase tracking-[0.14em] font-semibold text-zinc-500 mb-1 inline-flex items-center gap-1.5">
+        <div className="rounded-xl border border-bridal-beige bg-white shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-bridal-beige/60">
+            <p className="text-[11px] uppercase tracking-[0.14em] font-semibold text-bridal-text-soft mb-1 inline-flex items-center gap-1.5">
               <Receipt className="h-3.5 w-3.5" />
               Order summary
             </p>
-            <h3 className="text-[18px] font-semibold tracking-tight text-zinc-900 leading-tight">
+            <h3 className="text-[18px] font-semibold tracking-tight text-bridal-charcoal leading-tight">
               Booking total
             </h3>
           </div>
@@ -165,34 +165,34 @@ export default function LivePricingPanel({
             {breakdown.items.map((item, i) => (
               <div key={i} className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-medium text-zinc-900 truncate">{item.label}</p>
-                  <p className="text-[10.5px] uppercase tracking-[0.12em] text-zinc-500 mt-0.5">{item.type}</p>
+                  <p className="text-[13px] font-medium text-bridal-charcoal truncate">{item.label}</p>
+                  <p className="text-[10.5px] uppercase tracking-[0.12em] text-bridal-text-soft mt-0.5">{item.type}</p>
                 </div>
-                <span className="text-[14px] font-semibold text-zinc-900 shrink-0 tabular-nums">
+                <span className="text-[14px] font-semibold text-bridal-charcoal shrink-0 tabular-nums">
                   {formatPKR(item.amount)}
                 </span>
               </div>
             ))}
 
-            <div className="border-t border-zinc-100 pt-4 mt-4 space-y-3">
+            <div className="border-t border-bridal-beige/60 pt-4 mt-4 space-y-3">
               <div className="flex justify-between items-baseline">
-                <span className="text-[13px] font-medium text-zinc-700">Subtotal</span>
-                <span className="text-[18px] font-semibold text-zinc-900 leading-none tabular-nums">
+                <span className="text-[13px] font-medium text-bridal-text">Subtotal</span>
+                <span className="text-[18px] font-semibold text-bridal-charcoal leading-none tabular-nums">
                   {formatPKR(breakdown.subtotal)}
                 </span>
               </div>
 
               {breakdown.downPayment > 0 && (
-                <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-3 space-y-1.5">
+                <div className="rounded-lg bg-bridal-cream border border-bridal-beige p-3 space-y-1.5">
                   <div className="flex justify-between items-baseline">
-                    <span className="text-[11px] uppercase tracking-[0.14em] font-semibold text-zinc-900">
+                    <span className="text-[11px] uppercase tracking-[0.14em] font-semibold text-bridal-charcoal">
                       Due now
                     </span>
-                    <span className="text-[18px] font-semibold text-zinc-900 leading-none tabular-nums">
+                    <span className="text-[18px] font-semibold text-bridal-charcoal leading-none tabular-nums">
                       {formatPKR(breakdown.downPayment)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-[12px] text-zinc-500">
+                  <div className="flex justify-between text-[12px] text-bridal-text-soft">
                     <span>Remaining at venue</span>
                     <span className="tabular-nums">{formatPKR(breakdown.remaining)}</span>
                   </div>
@@ -200,7 +200,7 @@ export default function LivePricingPanel({
               )}
             </div>
 
-            <div className="pt-3 mt-1 border-t border-zinc-100 flex items-center gap-1.5 text-[11.5px] text-zinc-500">
+            <div className="pt-3 mt-1 border-t border-bridal-beige/60 flex items-center gap-1.5 text-[11.5px] text-bridal-text-soft">
               {/* WW-DIRECT-PAY — said "Secured payments via Stripe", inside the
                   booking flow, next to the price. There is no Stripe and no
                   card: the customer pays the venue directly and reports it.
@@ -214,35 +214,35 @@ export default function LivePricingPanel({
       </div>
 
       {/* Mobile bottom sheet */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-zinc-200 shadow-[0_-4px_16px_-8px_rgba(0,0,0,0.12)]">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-bridal-beige shadow-[0_-4px_16px_-8px_rgba(0,0,0,0.12)]">
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}
           className="w-full px-4 py-3 flex items-center justify-between"
         >
           <div className="flex items-center gap-2.5">
-            <span className="w-8 h-8 rounded-full bg-zinc-100 inline-flex items-center justify-center">
-              <Receipt className="h-3.5 w-3.5 text-zinc-700" />
+            <span className="w-8 h-8 rounded-full bg-bridal-sand inline-flex items-center justify-center">
+              <Receipt className="h-3.5 w-3.5 text-bridal-text" />
             </span>
             <div className="text-left">
-              <p className="text-[10px] uppercase tracking-[0.14em] font-semibold text-zinc-500 leading-none">Total</p>
-              <p className="text-[16px] font-semibold text-zinc-900 leading-tight mt-0.5 tabular-nums">
+              <p className="text-[10px] uppercase tracking-[0.14em] font-semibold text-bridal-text-soft leading-none">Total</p>
+              <p className="text-[16px] font-semibold text-bridal-charcoal leading-tight mt-0.5 tabular-nums">
                 {formatPKR(breakdown.subtotal)}
               </p>
             </div>
           </div>
-          {expanded ? <ChevronDown className="h-4 w-4 text-zinc-500" /> : <ChevronUp className="h-4 w-4 text-zinc-500" />}
+          {expanded ? <ChevronDown className="h-4 w-4 text-bridal-text-soft" /> : <ChevronUp className="h-4 w-4 text-bridal-text-soft" />}
         </button>
         {expanded && (
-          <div className="px-4 pb-4 space-y-2 border-t border-zinc-100 pt-3">
+          <div className="px-4 pb-4 space-y-2 border-t border-bridal-beige/60 pt-3">
             {breakdown.items.map((item, i) => (
               <div key={i} className="flex items-center justify-between text-[12.5px]">
-                <span className="text-zinc-700 truncate">{item.label}</span>
-                <span className="text-zinc-900 font-semibold shrink-0 ml-2 tabular-nums">{formatPKR(item.amount)}</span>
+                <span className="text-bridal-text truncate">{item.label}</span>
+                <span className="text-bridal-charcoal font-semibold shrink-0 ml-2 tabular-nums">{formatPKR(item.amount)}</span>
               </div>
             ))}
             {breakdown.downPayment > 0 && (
-              <div className="flex justify-between text-[12.5px] pt-2 border-t border-zinc-100 font-semibold text-zinc-900">
+              <div className="flex justify-between text-[12.5px] pt-2 border-t border-bridal-beige/60 font-semibold text-bridal-charcoal">
                 <span>Due now</span>
                 <span className="tabular-nums">{formatPKR(breakdown.downPayment)}</span>
               </div>

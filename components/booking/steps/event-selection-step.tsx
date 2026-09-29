@@ -2,8 +2,7 @@
 
 import { BookingFormData, EventVenue, Vendor } from "@/lib/types"
 import { Palette, Music, Heart, Cake, Gift, Calendar, Check, Utensils, Briefcase, Baby, GraduationCap, Moon } from "lucide-react"
-import { motion } from "framer-motion"
-import { EVENT_OPTIONS } from "@/lib/event-options"
+import { EVENT_OPTIONS, MARRIAGE_EVENTS } from "@/lib/event-options"
 
 interface EventSelectionStepProps {
   selectedEvents?: string[]
@@ -11,16 +10,6 @@ interface EventSelectionStepProps {
   setFormData: React.Dispatch<React.SetStateAction<BookingFormData>>
   formData: BookingFormData
   venue: EventVenue | Vendor | null
-}
-
-const container = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.04 } },
-}
-
-const item = {
-  hidden: { opacity: 0, scale: 0.96 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.25 } },
 }
 
 // Anything unlisted falls back to Calendar, so a new event type never renders
@@ -41,6 +30,29 @@ const iconMap: Record<string, any> = {
   Milaad: Moon,
   Soyem: Moon,
   Other: Calendar,
+}
+
+/**
+ * One line of context per function, so the grid reads as a set of occasions
+ * rather than fifteen interchangeable words. Absent here = no line, which is
+ * what a vendor's own custom service name will get.
+ */
+const eventNote: Record<string, string> = {
+  Mehndi: "Colour, dhol and henna",
+  Baraat: "The groom's procession",
+  Walima: "The reception feast",
+  Nikah: "The ceremony itself",
+  Mayoun: "The days before",
+  Dholki: "Singing and drums",
+  Reception: "An evening for everyone",
+  Engagement: "Where it begins",
+  Birthday: "Any age, any size",
+  Corporate: "Dinners and launches",
+  Aqiqa: "Welcoming a newborn",
+  Graduation: "Marking the milestone",
+  Milaad: "A devotional gathering",
+  Soyem: "A remembrance",
+  Other: "Tell us what you have in mind",
 }
 
 export default function EventSelectionStep({ selectedEvents = [], onEventToggle, setFormData, formData, venue }: EventSelectionStepProps) {
@@ -66,79 +78,146 @@ export default function EventSelectionStep({ selectedEvents = [], onEventToggle,
     return EVENT_OPTIONS
   }
 
-  const availableEvents = getAvailableEvents()
+  const availableEvents: string[] = getAvailableEvents()
+
+  /**
+   * Split into wedding functions and everything else.
+   *
+   * Fifteen equal boxes in one grid is a wall — nothing to anchor on, and the
+   * thing most people came to book (a mehndi, a baraat) sits beside "Corporate"
+   * with identical weight. The grouping comes from `MARRIAGE_EVENTS`, the same
+   * set that decides whether the Marriage Functions Act reaches a booking, so
+   * the UI is not making up its own idea of what a wedding function is. A group
+   * with nothing in it renders nothing, so a photographer who only lists two
+   * services still gets a clean screen.
+   */
+  const marriage = availableEvents.filter((e) => MARRIAGE_EVENTS.has(e))
+  const other = availableEvents.filter((e) => !MARRIAGE_EVENTS.has(e))
+  const groups = [
+    { key: "wedding", title: "Wedding functions", events: marriage },
+    { key: "other", title: marriage.length > 0 ? "Other occasions" : "Occasions", events: other },
+  ].filter((g) => g.events.length > 0)
+
+  const renderCard = (event: string, index: number) => {
+    const isSelected = selectedEvents.includes(event)
+    const Icon = iconMap[event] || Calendar
+    const note = eventNote[event]
+
+    return (
+      <button
+        key={event}
+        type="button"
+        // BUG-024 — the selected state was carried only by border colour, so
+        // a screen-reader user (and anyone who can't tell the two browns
+        // apart) had no way to confirm their choice on this multi-select
+        // step before paying. aria-pressed exposes the toggle state.
+        aria-pressed={isSelected}
+        aria-label={`${event}${isSelected ? " (selected)" : ""}`}
+        onClick={() => onEventToggle?.(event)}
+        // The entrance is CSS, not framer-motion. A JS-driven reveal on this
+        // grid once left the whole thing at opacity 0 on production when its
+        // observer failed to attach; a keyframe cannot get stuck that way.
+        style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
+        className={`group relative flex flex-col items-start gap-3 rounded-lg border p-4 text-left animate-stagger-fade-up transition-[border-color,background-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2 ${
+          isSelected
+            ? "border-bridal-gold-dark bg-bridal-cream shadow-[0_14px_30px_-20px_rgba(145,101,57,0.55)]"
+            : "border-bridal-beige bg-white hover:border-bridal-gold/60 hover:shadow-[0_14px_30px_-24px_rgba(145,101,57,0.4)]"
+        }`}
+      >
+        <span
+          aria-hidden
+          className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
+            isSelected
+              ? "bg-bridal-gold-dark text-white"
+              : "bg-bridal-blush/55 text-bridal-mauve group-hover:bg-bridal-gold/20 group-hover:text-bridal-gold-dark"
+          }`}
+        >
+          <Icon className="h-[18px] w-[18px]" strokeWidth={1.6} />
+        </span>
+
+        <span className="min-w-0">
+          <span
+            className={`block font-display italic text-[17px] leading-tight ${
+              isSelected ? "text-bridal-gold-dark" : "text-bridal-charcoal"
+            }`}
+          >
+            {event}
+          </span>
+          {note && (
+            <span className="mt-0.5 block font-bridal text-[11.5px] leading-snug text-bridal-text-soft">
+              {note}
+            </span>
+          )}
+        </span>
+
+        {/* The tick sits in the corner rather than replacing anything, so the
+            card does not change size when it is chosen and the grid never
+            reflows under the cursor. */}
+        <span
+          aria-hidden
+          className={`absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full border transition-all duration-200 ${
+            isSelected
+              ? "scale-100 border-bridal-gold-dark bg-bridal-gold-dark opacity-100"
+              : "scale-75 border-bridal-beige bg-white opacity-0 group-hover:opacity-60"
+          }`}
+        >
+          <Check className="h-3 w-3 text-white" strokeWidth={3} />
+        </span>
+      </button>
+    )
+  }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="font-display italic text-[22px] sm:text-[24px] text-bridal-charcoal leading-tight">
+    <div className="space-y-8">
+      <header className="max-w-2xl">
+        <p className="font-bridal text-[11px] uppercase tracking-[0.22em] text-bridal-text-label">
+          Step one
+        </p>
+        <h2 className="mt-2 font-display italic text-[30px] sm:text-[38px] leading-[1.1] text-bridal-charcoal">
           What are you celebrating?
         </h2>
-        <p className="mt-1 font-bridal text-[12.5px] text-bridal-text-soft">
-          Select the events you&apos;d like to book — each one gets its own configuration.
+        <p className="mt-3 font-bridal text-[14px] leading-relaxed text-bridal-text-soft">
+          Pick every function you want at this venue. Choose more than one and each
+          gets its own date, menu and pricing — you only fill this in once.
         </p>
-      </div>
+      </header>
 
-      <motion.div
-        className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2"
-        variants={container}
-        initial="hidden"
-        animate="visible"
+      {groups.map((group) => (
+        <section key={group.key} aria-label={group.title} className="space-y-3">
+          {groups.length > 1 && (
+            <h3 className="font-bridal text-[11px] uppercase tracking-[0.2em] text-bridal-text-label">
+              {group.title}
+            </h3>
+          )}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {group.events.map(renderCard)}
+          </div>
+        </section>
+      ))}
+
+      {/* A running answer to "what have I chosen", in words rather than a count
+          in a pill — on a multi-select step the list is the reassurance. */}
+      <div
+        aria-live="polite"
+        className={`rounded-lg border px-4 py-3 transition-colors ${
+          selectedEvents.length > 0
+            ? "border-bridal-gold/45 bg-bridal-cream"
+            : "border-dashed border-bridal-beige bg-transparent"
+        }`}
       >
-        {availableEvents.map((event: string) => {
-          const isSelected = selectedEvents.includes(event)
-          const Icon = iconMap[event] || Calendar
-
-          return (
-            <motion.button
-              key={event}
-              type="button"
-              variants={item}
-              whileTap={{ scale: 0.97 }}
-              // BUG-024 — the selected state was carried only by border colour, so
-              // a screen-reader user (and anyone who can't tell the two browns
-              // apart) had no way to confirm their choice on this multi-select
-              // step before paying. aria-pressed exposes the toggle state.
-              aria-pressed={isSelected}
-              aria-label={`${event}${isSelected ? " (selected)" : ""}`}
-              className={`group relative flex flex-col items-center gap-1.5 rounded-md border p-2.5 transition-all duration-200 ${
-                isSelected
-                  ? 'border-bridal-gold-dark bg-bridal-cream shadow-[0_8px_22px_-14px_rgba(176,125,84,0.45)]'
-                  : 'border-bridal-beige bg-bridal-ivory hover:border-bridal-gold/55 hover:bg-bridal-cream'
-              }`}
-              onClick={() => onEventToggle?.(event)}
-            >
-              {isSelected && (
-                <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-bridal-gold border border-bridal-gold-dark flex items-center justify-center">
-                  <Check className="w-2.5 h-2.5 text-bridal-charcoal" strokeWidth={3} />
-                </span>
-              )}
-              <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
-                isSelected
-                  ? 'bg-bridal-gold/20 text-bridal-gold-dark'
-                  : 'bg-bridal-blush/55 text-bridal-mauve group-hover:bg-bridal-gold/15 group-hover:text-bridal-gold-dark'
-              }`}>
-                <Icon className="w-4 h-4" strokeWidth={1.6} />
-              </div>
-              <span className={`font-display italic text-[13px] leading-tight ${
-                isSelected ? 'text-bridal-gold-dark' : 'text-bridal-charcoal'
-              }`}>
-                {event}
-              </span>
-            </motion.button>
-          )
-        })}
-      </motion.div>
-
-      {selectedEvents.length > 0 && (
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-bridal-cream border border-bridal-gold/45">
-          <Check className="w-3 h-3 text-bridal-gold-dark" strokeWidth={3} />
-          <span className="font-bridal text-[10.5px] uppercase tracking-[0.18em] font-medium text-bridal-gold-dark">
-            <span className="font-display italic text-[13px] tracking-normal text-bridal-charcoal mr-0.5">{selectedEvents.length}</span>
-            event{selectedEvents.length > 1 ? 's' : ''} selected
-          </span>
-        </div>
-      )}
+        {selectedEvents.length > 0 ? (
+          <p className="font-bridal text-[13px] leading-relaxed text-bridal-charcoal">
+            <span className="font-display italic text-[15px] text-bridal-gold-dark">
+              {selectedEvents.length} {selectedEvents.length === 1 ? "function" : "functions"}
+            </span>{" "}
+            — {selectedEvents.join(", ")}. You can set the date and details for each one next.
+          </p>
+        ) : (
+          <p className="font-bridal text-[13px] text-bridal-text-soft">
+            Nothing chosen yet — pick at least one function to continue.
+          </p>
+        )}
+      </div>
     </div>
   )
 }
