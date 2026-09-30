@@ -51,7 +51,9 @@ const BookingDesk = forwardRef<HTMLDivElement, BookingDeskProps>(function Bookin
         tabIndex={0}
         className={`booking-body bridal-scroll min-h-0 flex-1 outline-none ${desk ? "overflow-y-auto overscroll-contain [scrollbar-gutter:stable]" : ""}`}
       >
-        <div className={desk ? "px-10 py-[var(--bk-body-pad-y)] large:px-14" : "px-4 pb-6 pt-5"}>{children}</div>
+        {/* Capped so a 1920px screen does not stretch rows to 850px; the
+            reading width stays what it is at 1440. */}
+        <div className={desk ? "max-w-[1040px] px-10 py-[var(--bk-body-pad-y)] large:px-14" : "px-4 pb-6 pt-5"}>{children}</div>
       </div>
       {actionBar}
     </div>

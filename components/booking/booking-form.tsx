@@ -1159,7 +1159,9 @@ export default function BookingForm() {
         // that states a minimum opens the guest count at that minimum rather
         // than at 1 — a 1-guest marquee booking (BK-769) is what the old
         // default produced when nobody touched the field.
-        const minGuests = guestRowApplies(venue) ? Number(venue?.minCapacity) || 0 : 0
+        const minGuests = guestRowApplies(venue)
+          ? Number(venue?.minCapacity) || Math.min(100, Number(venue?.maxCapacity) || 100)
+          : 0
         const newEvents: EventBooking[] = selectedEvents.map((evt) => {
           const existing = events.find((e) => e.eventType === evt)
           if (existing) return existing
