@@ -127,6 +127,21 @@ async function measure(p, label, viewport) {
       panelOverflowPx: panel ? panel.scrollHeight - panel.clientHeight : null,
       continueInView: inView(cont),
       continueRect: rect(cont),
+      // The Stage must fit the viewport whole: nothing inside it scrolls or
+      // is clipped, and the bottom edge of the money block is on screen.
+      stage: (() => {
+        const st = document.querySelector(".booking-stage")
+        if (!st) return null
+        const money = st.querySelector("[data-booking-money]")
+        const mr = money ? money.getBoundingClientRect() : null
+        // Only the identity block can legitimately scroll (its last-resort
+        // overflow-y:auto); the photo zone holds a slowly zooming image whose
+        // transform counts toward scrollHeight and must not be read as clipping.
+        const block = st.querySelector("[data-booking-money]")?.parentElement
+        const clipped = !!block && block.scrollHeight > block.clientHeight + 1
+        const moneyInView = mr ? mr.bottom <= vh + 1 && mr.top >= 0 : null
+        return { h: st.clientHeight, contentFits: !clipped && moneyInView !== false, moneyBottom: mr ? Math.round(mr.bottom) : null, moneyInView }
+      })(),
       hidden,
       overflow,
       overflowEls,
@@ -139,12 +154,14 @@ async function measure(p, label, viewport) {
   // On the desk tiers the document must not scroll (the desk body does). On a
   // phone or tablet the document scrolls by design and the action bar is
   // pinned, so only the pinned button, hidden content and overflow count.
-  const deskTier = (viewport.startsWith("1440") || viewport.startsWith("1366") || viewport.startsWith("1024")) && viewport !== "1366x640"
+  const [vwW, vwH] = viewport.split("x").map(Number)
+  const deskTier = vwW >= 1024 && vwH >= 600
   // Arrival screens (request sent, bank transfer, success) have no Continue —
   // their own buttons act — so the pinned-button rule does not apply there.
   const arrival = ["sent", "bank", "success"].includes(m.step)
-  const bad = (deskTier && m.documentScrolls) || (!arrival && !m.continueInView) || m.hidden.length || m.overflow
-  log(`${viewport} ${label.padEnd(14)} ${bad ? "✗" : "✓"} docScroll=${m.documentScrolls} (${m.documentHeight}px) panelOverflow=${m.panelOverflowPx} continue=${m.continueInView} hidden=${m.hidden.length} overflow=${m.overflow}${m.overflow ? " → " + m.overflowEls.join(" | ") : ""}`)
+  const stageBad = m.stage && (!m.stage.contentFits || m.stage.moneyInView === false)
+  const bad = (deskTier && m.documentScrolls) || (!arrival && !m.continueInView) || m.hidden.length || m.overflow || stageBad
+  log(`${viewport} ${label.padEnd(14)} ${bad ? "✗" : "✓"} docScroll=${m.documentScrolls} (${m.documentHeight}px) panelOverflow=${m.panelOverflowPx} continue=${m.continueInView} hidden=${m.hidden.length} overflow=${m.overflow}${m.overflow ? " → " + m.overflowEls.join(" | ") : ""}${m.stage ? ` stage=${m.stage.contentFits ? "fits" : "CLIPPED"}/money@${m.stage.moneyBottom}` : ""}`)
   return m
 }
 
@@ -254,7 +271,7 @@ async function walk(ctx, viewport) {
   // bookmarks bar and the taskbar, where the document is allowed to scroll).
   const extra = []
   if (flag("all")) {
-    for (const [w, h] of [[1024, 768], [1366, 640]]) {
+    for (const [w, h] of [[1024, 768], [1366, 640], [1093, 614]]) {
       const c = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, storageState: STATE })
       extra.push(...(await walk(c, `${w}x${h}`)))
       await c.close()
@@ -270,9 +287,11 @@ async function walk(ctx, viewport) {
   const fails = all.filter((m) => {
     // Locked tiers: ≥1024 wide and ≥700 tall. The release valve (1366x640)
     // and the phone scroll the document by design.
-    const locked = !m.viewport.startsWith("390") && !m.viewport.startsWith("1366x640")
+    const [w, h] = m.viewport.split("x").map(Number)
+    const locked = w >= 1024 && h >= 600
     const arrival = ["sent", "bank", "success"].includes(m.step)
-    return (locked && m.documentScrolls) || (!arrival && !m.continueInView) || m.hidden.length || m.overflow
+    const stageBad = m.stage && (!m.stage.contentFits || m.stage.moneyInView === false)
+    return (locked && m.documentScrolls) || (!arrival && !m.continueInView) || m.hidden.length || m.overflow || stageBad
   })
   fs.writeFileSync(path.join(OUT, "results.json"), JSON.stringify(all, null, 2))
   log(`done: ${all.length} screens, ${fails.length} with a problem → ${OUT}`)

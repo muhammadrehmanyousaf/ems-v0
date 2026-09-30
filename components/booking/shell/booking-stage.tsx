@@ -127,8 +127,11 @@ export default function BookingStage({
         </Link>
       </div>
 
-      {/* Photo zone */}
-      <div className="relative min-h-[120px] flex-1" style={{ backgroundImage: JAAL, backgroundSize: "80px 80px" }}>
+      {/* Photo zone. basis-0 + min-h-0: the photograph takes whatever height
+          is left after the identity block and the money, and gives way first
+          when the viewport is short — the ledger and the total are never
+          clipped. */}
+      <div className="relative min-h-0 flex-1 basis-0 overflow-hidden" style={{ backgroundImage: JAAL, backgroundSize: "80px 80px" }}>
         {photo && (
           <div key={photo} className="absolute inset-0 animate-fade-in">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -150,8 +153,10 @@ export default function BookingStage({
         />
       </div>
 
-      {/* Identity + ledger + money */}
-      <div className="relative shrink-0 px-8 pb-6 pt-2">
+      {/* Identity + ledger + money. Sized by the short-screen variables so it
+          fits a 614px viewport with room for the photo; on anything smaller
+          still it scrolls inside itself rather than clipping the total. */}
+      <div className="bridal-scroll relative min-h-0 overflow-y-auto px-8 pt-2 pb-[var(--bk-stage-pad)]">
         {locked && <span aria-hidden className="absolute left-8 right-8 top-0 h-px origin-left bg-bridal-gold animate-hairline-draw" />}
         {loading ? (
           <div className="space-y-3 py-2" aria-hidden>
@@ -183,7 +188,7 @@ export default function BookingStage({
         )}
 
         {!loading && rows.length > 0 && (
-          <div className="mt-4">
+          <div className="mt-[var(--bk-stage-gap)]">
             <LedgerRows rows={rows} onJump={onJump} locked={locked} />
           </div>
         )}

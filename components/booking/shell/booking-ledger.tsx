@@ -322,13 +322,13 @@ export function LedgerRows({ rows, onJump, locked, variant = "stage" }: Omit<Led
 
 export function MoneyBlock({ money, compact }: { money: MoneyState; compact?: boolean }) {
   return (
-    <div data-booking-money className={compact ? "" : "pt-4"}>
+    <div data-booking-money className={compact ? "" : "pt-[var(--bk-stage-gap,16px)]"}>
       <p className="font-bridal text-[11px] font-medium uppercase tracking-[0.18em] text-bridal-gold">{money.label}</p>
       <p className="mt-1 flex items-baseline gap-2">
         {money.struck && (
           <span className="font-display italic text-[16px] leading-[20px] text-bridal-ivory/50 line-through tabular-nums">{money.struck}</span>
         )}
-        <span key={money.value} className="font-display italic text-[22px] leading-[26px] text-bridal-ivory tabular-nums animate-fade-in">
+        <span key={money.value} className="font-display italic text-[length:var(--bk-money,22px)] leading-[1.2] text-bridal-ivory tabular-nums animate-fade-in">
           {money.value}
         </span>
       </p>

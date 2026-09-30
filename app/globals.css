@@ -587,6 +587,9 @@ html[data-locale="ur"] body {
   --bk-step-title-lh: 38px;
   --bk-stage-name: 32px;
   --bk-stage-name-lh: 38px;
+  --bk-stage-pad: 24px;
+  --bk-stage-gap: 16px;
+  --bk-money: 22px;
   --bk-stage-w: 400px;
   background-color: #FDF8F2;
   min-height: 100vh;
@@ -606,21 +609,44 @@ html[data-locale="ur"] body {
     --bk-step-title-lh: 34px;
     --bk-stage-name: 28px;
     --bk-stage-name-lh: 34px;
+    --bk-stage-pad: 16px;
+    --bk-stage-gap: 12px;
+  }
+}
+/* Short screens — a 1366×768 laptop at 125% scaling has 614px of viewport.
+   The Stage must still show the photo, every ledger row and the money without
+   scrolling: band 56 + identity ~90 + 7 rows × 28 + money ~80 + padding ≈ 460,
+   which leaves ~150px of photograph at 614. */
+@media (max-height: 700px) {
+  .booking-shell {
+    --bk-top-bar: 56px;
+    --bk-action-bar: 72px;
+    --bk-body-pad-y: 20px;
+    --bk-stage-band: 56px;
+    --bk-ledger-row: 28px;
+    --bk-stage-name: 24px;
+    --bk-stage-name-lh: 30px;
+    --bk-step-title: 26px;
+    --bk-step-title-lh: 30px;
+    --bk-stage-pad: 12px;
+    --bk-stage-gap: 10px;
+    --bk-money: 20px;
   }
 }
 
 /* Desk tiers, locked to the viewport: nothing but the desk body scrolls. */
-@media (min-width: 1024px) and (min-height: 700px) {
+@media (min-width: 1024px) and (min-height: 600px) {
   .booking-shell { display: flex; height: 100vh; height: 100dvh; overflow: hidden; }
   .booking-shell > .booking-stage { width: var(--bk-stage-w); flex: 0 0 auto; height: 100%; }
   .booking-shell > .booking-desk { height: 100%; }
 }
 
-/* Release valve — a 1366×768 laptop with a bookmarks bar and the taskbar has
-   ~640px of inner height. Locking the shell there would clip the action bar,
-   so the document scrolls, the Stage sticks, and the action bar sticks to the
-   bottom (no ancestor has overflow: hidden in this mode, so sticky works). */
-@media (min-width: 1024px) and (max-height: 699px) {
+/* Release valve — under 600px of viewport (a very small window) the desk has
+   no room left to scroll inside, so the document scrolls, the Stage sticks,
+   and the action bar sticks to the bottom (no ancestor has overflow: hidden
+   in this mode, so sticky works). The Stage itself still fits: see the
+   short-screen variables above. */
+@media (min-width: 1024px) and (max-height: 599px) {
   .booking-shell { display: flex; align-items: flex-start; }
   .booking-shell > .booking-stage { width: var(--bk-stage-w); flex: 0 0 auto; position: sticky; top: 0; height: 100vh; height: 100dvh; }
   .booking-shell > .booking-desk { min-height: 100vh; min-height: 100dvh; }
