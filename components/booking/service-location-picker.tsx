@@ -292,7 +292,11 @@ export function ServiceLocationPicker({
             <p id="sl-address-help" className="text-[11px] text-bridal-text-soft">
               Be specific enough for the vendor crew to find you — block, street, landmark.
             </p>
-            {addressTooShort && (
+            {/* Only once they have started typing. A red error before a single
+                character is entered reads as a reprimand for opening the sheet;
+                the empty case is already said by the row outside ("Address
+                needed") and by the required mark on the label. */}
+            {addressTooShort && (address || "").trim().length > 0 && (
               <p className="text-[11px] text-red-600">
                 Please enter at least {ADDRESS_MIN} characters.
               </p>
