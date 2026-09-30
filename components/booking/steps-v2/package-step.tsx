@@ -156,231 +156,127 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
     )
   }
 
+  /**
+   * Rows, not tiles — the shape the vendors step uses: one line you scan,
+   * the price where the eye expects it, one button. A package that needs
+   * more words opens under its row; nothing changes size elsewhere.
+   */
   return (
-    <ul className="grid grid-cols-1 gap-3 xl:grid-cols-2" aria-label="Packages">
+    <ul className="space-y-2" aria-label="Packages">
       {venuePackages.map((pkg, idx) => {
         const id = String(pkg.id)
         const isSelected = selectedId === id
         const isExpanded = expanded.has(id)
         const features = flattenFeatures((pkg as any).features)
-        const preview = isExpanded ? features : features.slice(0, 4)
         const isPopular = idx === 1 && venuePackages.length > 1 && !isCarRental && !isBridalWear
-        /* Written for the hall the customer picked, rather than for the
-           venue generally. Sorted to the front above; badged here so the
-           reason it is first is visible and not just felt. */
         const isForChosenSpace = isSpaceOwnPackage(pkg)
-        const perHead = packageIsPerHead(pkg)
         const images = Array.isArray((pkg as any).images) ? ((pkg as any).images as string[]).filter(Boolean) : []
-        const heroImage = images[0]
-        const unit = perHead
-          ? "per head"
-          : isCarRental ? "per event" : isBridalWear ? "per outfit" : "package"
+        const thumb = images[0]
+        const perHead = packageIsPerHead(pkg)
+        const heads = packageBillableHeads(pkg, formData.guestCount)
+        const atMin = packageIsAtMinGuarantee(pkg, formData.guestCount)
+        const unit = perHead ? "per head" : isCarRental ? "per event" : isBridalWear ? "per outfit" : "package"
+        const summary = features.slice(0, 3).join(" · ")
+        const more = Math.max(0, features.length - 3)
 
-        /*
-         * Card anatomy: the visual tile (`div`) first, then a transparent
-         * <button aria-pressed> laid over the whole tile as the select
-         * target, so the "+N more" and quantity controls inside the tile are
-         * real buttons sitting ABOVE the overlay (`relative z-10`) instead of
-         * buttons nested inside a button — which the HTML parser rejects and
-         * which made keyboard order inside the card unpredictable.
-         */
         return (
           <li
             key={id}
-            className="group relative min-w-0 motion-safe:animate-stagger-fade-up"
             style={{ animationDelay: `${Math.min(idx, 8) * 30}ms` }}
+            className={`rounded-[4px] border transition-colors duration-150 motion-safe:animate-stagger-fade-up ${
+              isSelected ? "border-bridal-gold-dark bg-bridal-cream" : "border-bridal-beige bg-white hover:bg-bridal-blush/45"
+            }`}
           >
-            <div
-              className={`relative flex h-full flex-col rounded-[4px] border transition-[border-color,background-color,transform] duration-150 motion-safe:group-hover:-translate-y-px motion-safe:group-active:scale-[0.99] ${
-                isSelected
-                  ? "border-bridal-gold-dark bg-bridal-cream"
-                  : "border-bridal-beige bg-white group-hover:border-bridal-gold/60 group-hover:bg-bridal-blush/45"
-              }`}
-            >
-              {/* The 4px gold rule down the left edge — scales in from the top
-                  when the card is chosen and ends fully visible. It carries no
-                  text, so its collapsed state is a transform, not hidden copy. */}
-              <span
-                aria-hidden
-                className={`absolute bottom-0 left-0 top-0 w-1 origin-top rounded-l-[3px] bg-bridal-gold motion-safe:transition-transform motion-safe:duration-[180ms] motion-safe:ease-out ${
-                  isSelected ? "scale-y-100" : "scale-y-0"
-                }`}
-              />
-
-              {/* QA #8 — package images the vendor uploaded. The card never
-                  rendered them, so "all package details" were not visible.
-                  Additive + guarded: shows only when images exist. The first
-                  image is a 120px header; the rest are named in the alt so
-                  nothing the vendor uploaded is silently dropped. */}
-              {heroImage && (
+            <div className="flex items-center gap-4 px-4 py-3">
+              {thumb && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={heroImage}
-                  alt={`${pkg.name || "Package"}${images.length > 1 ? ` (1 of ${images.length} photos)` : ""}`}
-                  loading="lazy"
-                  className="h-[120px] w-full shrink-0 rounded-t-[3px] border-b border-bridal-beige object-cover"
-                />
+                <img src={thumb} alt="" loading="lazy" className="h-14 w-14 shrink-0 rounded-[6px] border border-bridal-beige object-cover" />
               )}
-
-              <div className="flex flex-1 flex-col p-4 pr-12">
-                {/* Top row: name (+ badge) at left, price + unit at right */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <h3 className="font-display italic text-[19px] leading-[24px] text-bridal-charcoal">
-                        {pkg.name}
-                      </h3>
-                      {/* The hall's own package wins the badge slot. Showing
-                          "Popular" next to "This hall's package" would put two
-                          competing reasons to pick it on one line, and only one
-                          of them is a fact about this customer's choice. */}
-                      {isForChosenSpace ? (
-                        <span className="inline-flex h-[18px] items-center rounded-full border border-bridal-sage/50 bg-bridal-sage/20 px-2 font-bridal text-[9.5px] font-medium uppercase tracking-[0.18em] text-[#3F6B43]">
-                          {chosenSpaceName ? `${chosenSpaceName} package` : "This hall's package"}
-                        </span>
-                      ) : isPopular ? (
-                        <span className="inline-flex h-[18px] items-center rounded-full bg-bridal-gold px-2 font-bridal text-[9.5px] font-medium uppercase tracking-[0.18em] text-bridal-charcoal">
-                          Popular
-                        </span>
-                      ) : null}
-                    </div>
-                    {pkg.description && (
-                      <p
-                        className={`mt-1 font-bridal text-[12px] leading-[16px] text-bridal-text-soft ${
-                          isExpanded ? "" : "line-clamp-1"
-                        }`}
-                      >
-                        {pkg.description}
-                      </p>
-                    )}
-                    {guestsLabel && (
-                      <p className="mt-1 font-bridal text-[11px] uppercase leading-[16px] tracking-[0.14em] text-bridal-gold-dark tabular-nums">
-                        {guestsLabel}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* WW-PKG-UNIT — the unit NEVER leaves the number.
-                      "Rs 2,500" next to "package" told a customer nothing
-                      about whether that was the whole event or one plate, and
-                      it is the same ambiguity that let vendors enter a
-                      per-head rate as a flat one. For a per-head package we
-                      also show what it comes to at THEIR guest count, because
-                      that is the figure they are actually deciding on. */}
-                  <div className="shrink-0 text-right">
-                    <p className="font-display italic text-[22px] leading-[26px] text-bridal-gold-dark tabular-nums">
-                      Rs. {Number(pkg.price)?.toLocaleString()}
-                    </p>
-                    <p className="font-bridal text-[10px] uppercase leading-[12px] tracking-[0.18em] text-bridal-text-soft">
-                      {unit}
-                    </p>
-                    {perHead && (
-                      <p className="mt-1 font-bridal text-[11px] leading-[16px] text-bridal-text-soft tabular-nums">
-                        {(() => {
-                          const heads = packageBillableHeads(pkg, formData.guestCount)
-                          const atMin = packageIsAtMinGuarantee(pkg, formData.guestCount)
-                          return `Rs. ${packageChargeFor(pkg, formData.guestCount).toLocaleString()} for ${heads} ${heads === 1 ? "guest" : "guests"}${atMin ? " (min)" : ""}`
-                        })()}
-                      </p>
-                    )}
-                    {packageIncludesFood(pkg) && (
-                      <p className="mt-1 font-bridal text-[10px] uppercase leading-[12px] tracking-[0.16em] text-[#3F6B43]">
-                        Food included
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Features: one row of chips and a "+N more" that grows the
-                    card in place. Chips wrap only when a name is long. */}
-                {features.length > 0 && (
-                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                    {preview.map((f, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex h-6 items-center gap-1 rounded-full border border-bridal-beige bg-bridal-ivory px-2 font-bridal text-[11px] leading-[14px] text-bridal-charcoal/85"
-                      >
-                        <Check className="h-2.5 w-2.5 shrink-0 text-bridal-gold-dark" strokeWidth={3} aria-hidden />
-                        {f}
-                      </span>
-                    ))}
-                    {features.length > 4 && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toggleExpand(id)
-                        }}
-                        aria-expanded={isExpanded}
-                        aria-label={isExpanded ? `Show fewer features of ${pkg.name || "package"}` : `Show ${features.length - 4} more features of ${pkg.name || "package"}`}
-                        className="relative z-10 -my-[9px] inline-flex h-11 items-center gap-1 rounded-full px-2 font-bridal text-[11px] font-medium uppercase tracking-[0.18em] text-bridal-gold-dark transition-colors duration-150 hover:text-bridal-gold-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2 focus-visible:ring-offset-bridal-ivory xl:-my-[3px] xl:h-[30px]"
-                      >
-                        {isExpanded ? <ChevronUp className="h-3 w-3" aria-hidden /> : <ChevronDown className="h-3 w-3" aria-hidden />}
-                        {isExpanded ? "Show less" : `+${features.length - 4} more`}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Quantity stepper — a 48px footer inside the chosen card.
-                  Sits above the select overlay so its buttons are the target. */}
-              {hasQuantity && isSelected && (
-                <div className="relative z-10 flex h-12 shrink-0 items-center justify-between border-t border-bridal-gold/45 bg-bridal-cream px-4">
-                  <span className="font-bridal text-[11px] font-medium uppercase leading-[14px] tracking-[0.18em] text-bridal-gold-dark">
-                    {isCarRental ? "Vehicles" : isBridalWear ? "Outfits" : "Sets"}
-                  </span>
-                  <div className="inline-flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => adjustQty(-1)}
-                      className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-bridal-beige bg-white text-bridal-charcoal transition-colors duration-150 hover:bg-bridal-blush/45 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2 focus-visible:ring-offset-bridal-ivory xl:h-9 xl:w-9"
-                      aria-label="Decrease"
-                    >
-                      <Minus className="h-3.5 w-3.5" aria-hidden />
-                    </button>
-                    <span className="w-8 text-center font-display italic text-[15px] leading-[20px] text-bridal-charcoal tabular-nums" aria-live="polite">
-                      {qty}
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <p className="font-display italic text-[18px] leading-6 text-bridal-charcoal">{pkg.name}</p>
+                  {isForChosenSpace ? (
+                    <span className="rounded-full border border-bridal-sage/50 bg-bridal-sage/20 px-2 py-0.5 font-bridal text-[9.5px] font-medium uppercase tracking-[0.16em] text-[#3F6B43]">
+                      {chosenSpaceName ? `${chosenSpaceName} package` : "This hall's package"}
                     </span>
+                  ) : isPopular ? (
+                    <span className="rounded-full bg-bridal-gold px-2 py-0.5 font-bridal text-[9.5px] font-medium uppercase tracking-[0.16em] text-bridal-charcoal">
+                      Popular
+                    </span>
+                  ) : null}
+                  {packageIncludesFood(pkg) && (
+                    <span className="font-bridal text-[10px] font-medium uppercase tracking-[0.16em] text-[#3F6B43]">Food included</span>
+                  )}
+                </div>
+                <p className="mt-0.5 flex min-w-0 items-baseline gap-1.5 font-bridal text-[12.5px] leading-[18px] text-bridal-text-soft">
+                  <span className="min-w-0 truncate">{[guestsLabel, summary].filter(Boolean).join(" · ") || pkg.description || ""}</span>
+                  {more > 0 && (
                     <button
                       type="button"
-                      onClick={() => adjustQty(1)}
-                      className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-bridal-beige bg-white text-bridal-charcoal transition-colors duration-150 hover:bg-bridal-blush/45 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2 focus-visible:ring-offset-bridal-ivory xl:h-9 xl:w-9"
-                      aria-label="Increase"
+                      onClick={() => toggleExpand(id)}
+                      aria-expanded={isExpanded}
+                      className="shrink-0 font-medium text-bridal-gold-dark hover:text-bridal-gold-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark"
                     >
-                      <Plus className="h-3.5 w-3.5" aria-hidden />
+                      {isExpanded ? "less" : `+${more} more`}
                     </button>
-                  </div>
-                </div>
-              )}
-
-              {/* ✓ disc top-right: an empty ring until chosen, then a gold-dark
-                  disc that pops in. Pinned to the tile, not the image. */}
-              <span
-                aria-hidden
-                className={`absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full border transition-colors duration-150 ${
+                  )}
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="font-bridal text-[16px] font-semibold leading-5 tabular-nums text-bridal-charcoal">
+                  Rs {Number(pkg.price)?.toLocaleString()}
+                </p>
+                <p className="font-bridal text-[10.5px] uppercase leading-[14px] tracking-[0.14em] text-bridal-text-soft">
+                  {unit}
+                  {perHead && ` · Rs ${packageChargeFor(pkg, formData.guestCount).toLocaleString()} for ${heads}${atMin ? " (min)" : ""}`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => togglePkg(id)}
+                aria-pressed={isSelected}
+                aria-label={`${pkg.name || "Package"}${isSelected ? " (selected)" : ""}`}
+                className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-[4px] border px-4 font-bridal text-[11px] font-medium uppercase tracking-[0.16em] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2 ${
                   isSelected
-                    ? "border-bridal-gold-dark bg-bridal-gold-dark text-bridal-ivory motion-safe:animate-scale-in"
-                    : "border-bridal-beige bg-white text-bridal-ivory"
+                    ? "border-bridal-gold-dark bg-bridal-gold-dark text-bridal-ivory motion-safe:animate-pop-select"
+                    : "border-bridal-beige bg-white text-bridal-charcoal hover:border-bridal-gold-dark hover:text-bridal-gold-dark"
                 }`}
-                style={heroImage ? { top: 132 } : undefined}
               >
-                {isSelected && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
-              </span>
+                {isSelected && <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />}
+                {isSelected ? "Selected" : "Select"}
+              </button>
             </div>
 
-            {/* The select target: covers the tile, carries the accessible
-                name and the pressed state. Same hooks as before — BUG-024
-                closed the "state carried by border colour alone" gap on the
-                event step, and this keeps it closed here: a screen-reader user
-                can confirm which package they are about to pay for. */}
-            <button
-              type="button"
-              onClick={() => togglePkg(id)}
-              aria-pressed={isSelected}
-              aria-label={`${pkg.name || "Package"}${isSelected ? " (selected)" : ""}`}
-              className="absolute inset-0 rounded-[4px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2 focus-visible:ring-offset-bridal-ivory"
-            />
+            {(isExpanded || (pkg.description && summary)) && isExpanded && (
+              <div className="border-t border-bridal-beige/70 px-4 py-3">
+                {pkg.description && <p className="mb-2 font-bridal text-[12.5px] leading-[18px] text-bridal-text-soft">{pkg.description}</p>}
+                <ul className="flex flex-wrap gap-1.5">
+                  {features.map((ft, i) => (
+                    <li key={i} className="inline-flex items-center gap-1 rounded-full border border-bridal-beige bg-white px-2 py-0.5 font-bridal text-[11px] text-bridal-charcoal/85">
+                      <Check className="h-2.5 w-2.5 text-bridal-gold-dark" strokeWidth={3} aria-hidden />
+                      {ft}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {hasQuantity && isSelected && (
+              <div className="flex items-center justify-between border-t border-bridal-gold/45 px-4 py-2.5">
+                <span className="font-bridal text-[13px] text-bridal-charcoal">
+                  {isCarRental ? "Vehicles" : isBridalWear ? "Outfits" : "Sets"}
+                </span>
+                <div className="flex items-center rounded-full border border-bridal-beige bg-white p-0.5">
+                  <button type="button" onClick={() => adjustQty(-1)} aria-label="Decrease" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-bridal-charcoal hover:bg-bridal-blush/45 motion-safe:active:scale-95">
+                    <Minus className="h-4 w-4" aria-hidden />
+                  </button>
+                  <span className="w-10 text-center font-bridal text-[15px] font-medium tabular-nums text-bridal-charcoal" aria-live="polite">{qty}</span>
+                  <button type="button" onClick={() => adjustQty(1)} aria-label="Increase" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-bridal-charcoal hover:bg-bridal-blush/45 motion-safe:active:scale-95">
+                    <Plus className="h-4 w-4" aria-hidden />
+                  </button>
+                </div>
+              </div>
+            )}
           </li>
         )
       })}
