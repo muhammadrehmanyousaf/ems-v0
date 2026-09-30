@@ -246,13 +246,22 @@ export default function RequirementsStep({ value, onChange, showDietary = true, 
           </div>
 
           <label className="mt-2 flex h-11 cursor-pointer items-center gap-2 font-bridal text-[13px] leading-[18px] text-bridal-charcoal xl:h-8">
-            <input
-              type="checkbox"
-              className="h-4 w-4 accent-bridal-gold-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2"
-              checked={value.dietary.noBeef === true}
-              onChange={(e) => onChange({ ...value, dietary: { ...value.dietary, noBeef: e.target.checked } })}
-            />
-            No beef in any dish
+            {/* A chip, the same control as the quick picks above — not a bare
+                native checkbox sitting between two styled inputs. */}
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={value.dietary.noBeef === true}
+              onClick={() => onChange({ ...value, dietary: { ...value.dietary, noBeef: value.dietary.noBeef !== true } })}
+              className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-3.5 font-bridal text-[13px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2 ${
+                value.dietary.noBeef === true
+                  ? "border-bridal-gold-dark bg-bridal-cream text-bridal-charcoal"
+                  : "border-bridal-beige bg-white text-bridal-charcoal hover:bg-bridal-blush/45"
+              }`}
+            >
+              {value.dietary.noBeef === true && <Check className="h-3 w-3" strokeWidth={3} aria-hidden />}
+              No beef in any dish
+            </button>
           </label>
 
           <div className="mt-2">

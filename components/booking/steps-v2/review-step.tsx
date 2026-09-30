@@ -57,6 +57,7 @@ import {
 } from "@/lib/pricing/package"
 
 import { REQUIREMENT_TAG_LABELS, type RequirementTag, type RequirementSetup } from "@/lib/api/requirements"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 /** Mirrors SETUP_LABELS on the vendor's card, so both name the same thing. */
 const SETUP_REVIEW_LABELS: Record<string, string> = {
@@ -910,24 +911,30 @@ export default function ReviewStep({
                     Link this booking to one of your weddings for a multi-event bundle discount
                   </span>
                 </label>
-                <select
-                  id="umbrella-picker"
-                  value={formData.umbrellaId ?? ""}
-                  onChange={(e) =>
-                    updateFormData?.({
-                      umbrellaId: e.target.value ? Number(e.target.value) : undefined,
-                    })
-                  }
-                  className={`h-11 w-full rounded-[4px] border border-bridal-beige bg-white px-3 font-bridal text-[14px] text-bridal-charcoal focus:border-bridal-gold-dark ${FOCUS}`}
+                {/* A styled list, not the browser's own dropdown. Radix will not
+                    take an empty-string item, so "none" stands for standalone. */}
+                <Select
+                  value={formData.umbrellaId ? String(formData.umbrellaId) : "none"}
+                  onValueChange={(v) => updateFormData?.({ umbrellaId: v && v !== "none" ? Number(v) : undefined })}
                 >
-                  <option value="">— Don&apos;t link (standalone booking) —</option>
-                  {umbrellas.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {umbrellaLabel(u)}
-                      {u.weddingDate ? ` · ${u.weddingDate}` : ""}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger
+                    id="umbrella-picker"
+                    className="h-11 w-full rounded-[4px] border-bridal-beige bg-white px-3 font-bridal text-[14px] text-bridal-charcoal focus:ring-2 focus:ring-bridal-gold-dark focus:ring-offset-0 data-[state=open]:border-bridal-gold-dark"
+                  >
+                    <SelectValue placeholder="Don't link (standalone booking)" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-[6px] border-bridal-beige bg-bridal-ivory shadow-[0_16px_40px_-20px_rgba(44,24,16,0.35)]">
+                    <SelectItem value="none" className="h-11 rounded-[4px] pl-9 font-bridal text-[14px] text-bridal-charcoal focus:bg-bridal-blush/60 focus:text-bridal-charcoal">
+                      Don&apos;t link (standalone booking)
+                    </SelectItem>
+                    {umbrellas.map((u) => (
+                      <SelectItem key={u.id} value={String(u.id)} className="h-11 rounded-[4px] pl-9 font-bridal text-[14px] text-bridal-charcoal focus:bg-bridal-blush/60 focus:text-bridal-charcoal">
+                        {umbrellaLabel(u)}
+                        {u.weddingDate ? ` · ${u.weddingDate}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Discount preview — soft estimate. Authoritative
