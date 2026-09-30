@@ -64,3 +64,6 @@ PR-BODY-*.md
 
 # QA/test scratch — never commit (contains session tokens, screenshots, scripts)
 scratchpad/
+
+# QA journey output (screenshots, session state)
+.qa/

@@ -1,95 +1,157 @@
 "use client"
 
-import { useState, useEffect } from "react"
+/**
+ * Vendors step — "Add other vendors?"
+ *
+ * The shell's StepFrame renders the eyebrow, the title and the subtitle; this
+ * step renders only its controls: a search input, a scrollable row of
+ * category chips, the vendors already added (when any) and a grid of 88px
+ * result rows. A vendor's detail and package picker open in a DeskSheet
+ * (right sheet on desk, bottom drawer on phone); this step owns that state.
+ *
+ * Payload writes are unchanged: `selectedVendors` (ids as strings) and
+ * `selectedVendorPackages` (package ids as strings, the same shape the
+ * package step toggles). Removing a vendor still clears every vendor package,
+ * exactly as before.
+ */
+
+import { useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Plus, X, Search, Eye, MapPin, Star, Loader2, AlertTriangle } from "lucide-react"
+import { Plus, X, Search, MapPin, Star, Loader2, Check } from "lucide-react"
 import type { BookingFormData, Vendor } from "@/lib/types"
 import { VendorAPI } from "@/lib/api/vendors"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import { toast } from "@/components/ui/use-toast"
 import { VENDOR_TYPES } from "@/lib/vendor-types"
-import { motion } from "framer-motion"
+import { BridalButton } from "@/components/bridal/bridal-button"
+import DeskSheet from "@/components/booking/shell/desk-sheet"
+import { useBookingShell } from "@/components/booking/shell/booking-shell-context"
 
 interface VendorSelectionStepProps {
   formData: BookingFormData
   updateFormData: (data: Partial<BookingFormData>) => void
 }
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.4, 0.25, 1] } },
+const FOCUS_RING =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2"
+
+const money = (n: number) => `Rs ${Math.round(Number(n) || 0).toLocaleString("en-PK")}`
+const startingPrice = (v: any) => Number(v?.minimumPrice || v?.price || 0)
+const vendorTypeOf = (v: any): string => {
+  const t = v?.type || v?.subBusinessType
+  return Array.isArray(t) ? String(t[0] || "") : String(t || "")
+}
+
+/** 48px avatar: the vendor's first image, or their initial on sand. */
+function VendorAvatar({ vendor, size = 48 }: { vendor: any; size?: number }) {
+  const src = vendor?.images?.[0]
+  const initial = String(vendor?.name || "?").trim().charAt(0).toUpperCase()
+  return (
+    <div
+      className="relative shrink-0 overflow-hidden rounded-full border border-bridal-beige bg-bridal-sand"
+      style={{ width: size, height: size }}
+      aria-hidden
+    >
+      {src ? (
+        <Image src={src} alt="" fill sizes={`${size}px`} className="object-cover" />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center font-display italic text-[18px] text-bridal-gold-dark">
+          {initial}
+        </span>
+      )}
+    </div>
+  )
 }
 
 export default function VendorSelectionStep({ formData, updateFormData }: VendorSelectionStepProps) {
+  const { tier, announce } = useBookingShell()
   const [selectedVendorType, setSelectedVendorType] = useState("")
-  const [selectedVendorId, setSelectedVendorId] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [allVendors, setAllVendors] = useState<any[]>([])
-  const [previewVendor, setPreviewVendor] = useState<Vendor | null>(null)
-  const [previewOpen, setPreviewOpen] = useState(false)
+  const [loadingVendors, setLoadingVendors] = useState(true)
+  // The vendor open in the sheet (row tap / "Packages"), and its full record.
+  const [sheetVendor, setSheetVendor] = useState<Vendor | null>(null)
   const [previewVendorDetail, setPreviewVendorDetail] = useState<Vendor | null>(null)
+  const [checkingAvailability, setCheckingAvailability] = useState(false)
+
+  // Every vendor this step has ever seen, by id. A selected vendor must keep
+  // rendering after the category filter moves to a list that no longer holds
+  // it, so lookups fall back to this cache rather than the current page.
+  const knownVendors = useRef<Map<string, any>>(new Map())
+  const remember = (list: any[]) => {
+    list.forEach((v) => {
+      if (v && v.id != null) knownVendors.current.set(String(v.id), v)
+    })
+  }
 
   useEffect(() => {
+    let cancelled = false
     const load = async () => {
-      if (selectedVendorType && selectedVendorType !== 'all') {
-        let data = await VendorAPI.getBusinessesByVendorType(selectedVendorType)
+      setLoadingVendors(true)
+      let data: any[]
+      if (selectedVendorType && selectedVendorType !== "all") {
+        data = await VendorAPI.getBusinessesByVendorType(selectedVendorType)
         if (!data || data.length === 0) {
           const all = await VendorAPI.getAllBusinesses()
           const typeLower = selectedVendorType.toLowerCase()
-          data = all.filter((v) => (v.type || '').toLowerCase() === typeLower)
+          data = all.filter((v) => (v.type || "").toLowerCase() === typeLower)
         }
-        setAllVendors(data)
       } else {
-        const all = await VendorAPI.getAllBusinesses()
-        setAllVendors(all)
+        data = await VendorAPI.getAllBusinesses()
       }
+      if (cancelled) return
+      remember(data)
+      setAllVendors(data)
+      setLoadingVendors(false)
     }
     load()
+    return () => {
+      cancelled = true
+    }
   }, [selectedVendorType])
 
   useEffect(() => {
+    let cancelled = false
     const fetchDetail = async (id: string) => {
       const detail = await VendorAPI.getBusinessById(id)
-      if (detail) setPreviewVendorDetail(detail)
+      if (detail && !cancelled) {
+        remember([detail])
+        setPreviewVendorDetail(detail)
+      }
     }
-    if (previewVendor?.id) {
-      fetchDetail(String(previewVendor.id))
-    } else if (selectedVendorId) {
-      fetchDetail(String(selectedVendorId))
+    if (sheetVendor?.id) {
+      fetchDetail(String(sheetVendor.id))
     } else {
       setPreviewVendorDetail(null)
     }
-  }, [previewVendor, selectedVendorId])
-
-  const [checkingAvailability, setCheckingAvailability] = useState(false)
+    return () => {
+      cancelled = true
+    }
+  }, [sheetVendor])
 
   const vendorTypeOptions = Object.values(VENDOR_TYPES)
-  const filteredVendors = allVendors
+  const selectedIds = formData.selectedVendors.map(String)
 
-  const addVendor = async () => {
-    if (!selectedVendorId || formData.selectedVendors.includes(selectedVendorId)) return
+  const getVendorById = (id: string | number) =>
+    allVendors.find((vendor) => vendor.id == id) ?? knownVendors.current.get(String(id))
+
+  const addVendor = async (vendorId: string) => {
+    if (!vendorId || selectedIds.includes(vendorId)) return
 
     // Check availability if date & time are selected
     if (formData.bookingDate && formData.timeSlot) {
       setCheckingAvailability(true)
       try {
         const result = await VendorAPI.checkDateAvailability(
-          [Number(selectedVendorId)],
-          typeof formData.bookingDate === 'string' ? formData.bookingDate : new Date(formData.bookingDate).toISOString(),
-          formData.timeSlot
+          [Number(vendorId)],
+          typeof formData.bookingDate === "string" ? formData.bookingDate : new Date(formData.bookingDate).toISOString(),
+          formData.timeSlot,
         )
         if (!result.available && result.conflicts.length > 0) {
-          const names = result.conflicts.map(c => c.businessName).join(', ')
+          const names = result.conflicts.map((c) => c.businessName).join(", ")
           const altSlots = result.alternativeSlots?.availableSlots || []
           toast({
             title: "Vendor Unavailable",
-            description: `${names} is already booked at this time.${altSlots.length > 0 ? ` Available slots: ${altSlots.join(', ')}` : ' No alternative slots available.'}`,
+            description: `${names} is already booked at this time.${altSlots.length > 0 ? ` Available slots: ${altSlots.join(", ")}` : " No alternative slots available."}`,
             variant: "destructive",
           })
           setCheckingAvailability(false)
@@ -102,10 +164,10 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
     }
 
     updateFormData({
-      selectedVendors: [...formData.selectedVendors, selectedVendorId],
+      selectedVendors: [...formData.selectedVendors, vendorId],
     })
-    setSelectedVendorType("")
-    setSelectedVendorId("")
+    const v = getVendorById(vendorId)
+    if (v?.name) announce(`${v.name} added`)
   }
 
   const removeVendor = (vendorId: string | number) => {
@@ -115,288 +177,374 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
     })
   }
 
-  const getVendorById = (id: string) => allVendors.find((vendor) => vendor.id == id)
+  // Same write the package step performs when a vendor package is toggled.
+  const toggleVendorPackage = (packageId: string) => {
+    const current = (formData.selectedVendorPackages || []).map(String)
+    const next = current.includes(packageId) ? current.filter((id) => id !== packageId) : [...current, packageId]
+    updateFormData({ selectedVendorPackages: next })
+  }
 
-  const searchFilteredVendors = formData.selectedVendors
-    .map((id) => getVendorById(id))
-    .filter(
-      (vendor) =>
-        vendor &&
-        (vendor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          vendor.type.toLowerCase().includes(searchQuery.toLowerCase())),
-    )
+  const query = searchQuery.trim().toLowerCase()
+  const selectedKey = selectedIds.join(",")
+  const results = useMemo(
+    () =>
+      allVendors.filter((vendor) => {
+        if (!vendor || selectedIds.includes(String(vendor.id))) return false
+        if (!query) return true
+        return (
+          String(vendor.name || "").toLowerCase().includes(query) ||
+          vendorTypeOf(vendor).toLowerCase().includes(query)
+        )
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allVendors, selectedKey, query],
+  )
+
+  const selectedVendors = selectedIds.map((id) => getVendorById(id)).filter(Boolean) as any[]
+  const selectedPackageIds = (formData.selectedVendorPackages || []).map(String)
+  const packageCountFor = (vendor: any) =>
+    selectedPackageIds.filter((pid) => (vendor?.packages || []).some((p: any) => String(p.id) === pid)).length
+
+  const sheetOpen = sheetVendor !== null
+  const sheetDetail: any = previewVendorDetail ?? sheetVendor
+  const sheetIsSelected = sheetVendor ? selectedIds.includes(String(sheetVendor.id)) : false
+  const sheetPackages: any[] = Array.isArray(sheetDetail?.packages) ? sheetDetail.packages : []
+
+  const chipH = tier === "phone" ? "h-11" : "h-10"
+  const chipBase = `inline-flex ${chipH} shrink-0 items-center whitespace-nowrap rounded-full border px-4 font-bridal text-[12px] leading-[16px] transition-colors duration-150 ${FOCUS_RING}`
+  const chipOn = "border-bridal-gold-dark bg-bridal-cream text-bridal-charcoal"
+  const chipOff = "border-bridal-beige bg-white text-bridal-text hover:bg-bridal-blush/45 hover:border-bridal-gold-dark"
+
+  const ghostBtn = `inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-[4px] border border-bridal-beige bg-white px-4 font-bridal text-[12px] font-medium uppercase tracking-[0.18em] text-bridal-gold-dark transition-colors duration-150 hover:border-bridal-gold-dark hover:bg-bridal-blush/45 disabled:cursor-not-allowed disabled:opacity-50 xl:h-9 ${FOCUS_RING}`
 
   return (
-    <div className="space-y-8">
-      <div className="text-center">
-        <h2 className="font-display italic text-[28px] sm:text-[32px] text-bridal-charcoal leading-tight">Additional Vendors</h2>
-        <p className="mt-2 font-bridal text-[14px] text-bridal-text-soft">Enhance your event with services from other vendors</p>
+    // Rhythm (§7.7): search 48 → 12 → chips 40 → 16 → [added list → 16 →] results.
+    <div>
+      {/* Search — 48px */}
+      <div className="relative">
+        <label htmlFor="vendor" className="sr-only">
+          Search vendors
+        </label>
+        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-bridal-gold-dark" aria-hidden />
+        <input
+          id="vendor"
+          type="search"
+          autoComplete="off"
+          placeholder="Search by name or service"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className={`h-12 w-full rounded-[4px] border border-bridal-beige bg-white pl-11 pr-4 font-bridal text-[14px] leading-[20px] text-bridal-charcoal placeholder:text-bridal-text-soft transition-colors duration-150 hover:border-bridal-gold-dark ${FOCUS_RING}`}
+        />
       </div>
 
-      <div className="rounded-md bg-bridal-cream p-4 border border-bridal-gold/45 flex items-start gap-3 shadow-[0_8px_24px_-20px_rgba(176,125,84,0.4)]">
-        <Star className="w-4 h-4 mt-0.5 text-bridal-gold flex-shrink-0" />
-        <p className="font-bridal text-[13px] text-bridal-charcoal/85">
-          <strong className="font-display italic text-bridal-gold-dark not-italic mr-1">Optional</strong>
-          — select additional vendors to complement your venue. Choose their packages in the next step.
-        </p>
+      {/* Category chips — one 40px row (44 on phone), scrolls sideways */}
+      <div
+        id="vendor-type"
+        role="group"
+        aria-label="Vendor type"
+        className="hide-scrollbar -mx-1 mt-3 flex gap-2 overflow-x-auto px-1 py-0.5"
+      >
+        <button
+          type="button"
+          aria-pressed={!selectedVendorType || selectedVendorType === "all"}
+          onClick={() => setSelectedVendorType("")}
+          className={`${chipBase} ${!selectedVendorType || selectedVendorType === "all" ? chipOn : chipOff}`}
+        >
+          All vendors
+        </button>
+        {vendorTypeOptions.map((type) => {
+          const on = selectedVendorType === type
+          return (
+            <button
+              key={type}
+              type="button"
+              aria-pressed={on}
+              onClick={() => setSelectedVendorType(on ? "" : type)}
+              className={`${chipBase} ${on ? chipOn : chipOff}`}
+            >
+              {type}
+            </button>
+          )
+        })}
       </div>
 
-      {/* Add Vendors Section */}
-      <div className="space-y-4">
-        <h3 className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-gold-dark">Add Vendors</h3>
-
-        <div className="rounded-md border border-bridal-beige bg-bridal-ivory p-5">
-          <div className="flex flex-col space-y-3 sm:flex-row sm:space-x-3 sm:space-y-0">
-            <div className="flex-1 space-y-1">
-              <Label htmlFor="vendor-type" className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Vendor Type</Label>
-              <Select value={selectedVendorType || 'all'} onValueChange={setSelectedVendorType}>
-                <SelectTrigger id="vendor-type" className="rounded-[4px] border-bridal-beige bg-bridal-cream h-11 font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
-                  <SelectValue placeholder="Select vendor type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All vendor types</SelectItem>
-                  {vendorTypeOptions.map((type) => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex-1 space-y-1">
-              <Label htmlFor="vendor" className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Vendor</Label>
-              <Select value={selectedVendorId} onValueChange={setSelectedVendorId}>
-                <SelectTrigger id="vendor" className="rounded-[4px] border-bridal-beige bg-bridal-cream h-11 font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
-                  <SelectValue placeholder="Select vendor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredVendors.map((vendor) => (
-                    <SelectItem key={vendor.id} value={String(vendor.id)}>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="truncate">{vendor.name} (Rs. {(vendor.minimumPrice || vendor.price || 0).toLocaleString()})</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPreviewVendor(vendor); setPreviewOpen(true) }}
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-end">
-              <button
-                type="button"
-                onClick={addVendor}
-                disabled={!selectedVendorId || checkingAvailability}
-                className={`w-full sm:w-auto h-11 px-6 rounded-[4px] font-bridal text-[12px] uppercase tracking-[0.22em] font-medium transition-all duration-300 inline-flex items-center justify-center gap-2 ${
-                  !selectedVendorId || checkingAvailability
-                    ? 'bg-bridal-gold/40 text-bridal-charcoal/60 cursor-not-allowed'
-                    : 'bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] hover:shadow-[0_14px_30px_-12px_rgba(176,125,84,0.7)]'
-                }`}
-              >
-                {checkingAvailability ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                {checkingAvailability ? 'Checking...' : 'Add'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Selected Vendors */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-gold-dark">Selected Vendors</h3>
-          {formData.selectedVendors.length > 0 && (
-            <div className="relative w-44">
-              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-bridal-gold" />
-              <Input
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 font-bridal text-[13px] h-10 rounded-[4px] border-bridal-beige bg-bridal-cream text-bridal-charcoal placeholder:text-bridal-text-soft focus-visible:border-bridal-gold/55 focus-visible:ring-1 focus-visible:ring-bridal-gold"
-              />
-            </div>
-          )}
-        </div>
-
-        {formData.selectedVendors.length === 0 ? (
-          <div className="rounded-md border border-dashed border-bridal-beige bg-bridal-cream p-8 text-center">
-            <p className="font-display italic text-[18px] text-bridal-charcoal">No vendors selected yet</p>
-            <p className="mt-1.5 font-bridal text-[12px] text-bridal-text-soft">Add vendors from the selection above</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {(searchQuery ? searchFilteredVendors : formData.selectedVendors.map((id) => getVendorById(id))).map((vendor) => {
-              if (!vendor) return null
+      {/* Selected vendors — above the results, only when any */}
+      {selectedVendors.length > 0 && (
+        <section aria-label="Selected vendors" className="mt-4">
+          <p className="font-bridal text-[11px] font-medium uppercase leading-[14px] tracking-[0.18em] text-bridal-gold-dark">
+            Added · <span className="tabular-nums">{selectedVendors.length}</span>
+          </p>
+          <ul className="mt-2 space-y-2">
+            {selectedVendors.map((vendor, i) => {
+              const pkgCount = packageCountFor(vendor)
               return (
-                <motion.div
+                <li
                   key={vendor.id}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="flex items-center justify-between rounded-md border border-bridal-beige bg-bridal-ivory hover:border-bridal-gold/45 p-4 transition-colors"
+                  className="animate-stagger-fade-up relative flex min-h-[56px] items-center gap-3 rounded-[4px] border border-bridal-gold-dark bg-bridal-cream py-1.5 pl-4 pr-2"
+                  style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}
                 >
-                  <div>
-                    <p className="font-display italic text-[16px] text-bridal-charcoal">{vendor.name}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <Badge variant="outline" className="bg-bridal-cream text-bridal-gold-dark border-bridal-gold/45 text-[10px] uppercase tracking-[0.18em] font-bridal font-medium px-2 py-0.5">
-                        {vendor.type}
-                      </Badge>
-                      <span className="font-bridal text-[12px] text-bridal-gold-dark">Rs. {(vendor.minimumPrice || vendor.price || 0).toLocaleString()}</span>
-                    </div>
+                  {/* 4px gold left rule — selection mark (§9); a real element, not a shadow */}
+                  <span aria-hidden className="absolute inset-y-0 left-0 w-1 rounded-l-[4px] bg-bridal-gold" />
+                  <VendorAvatar vendor={vendor} size={32} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-display italic text-[15px] leading-[20px] text-bridal-charcoal">{vendor.name}</p>
+                    <p className="truncate font-bridal text-[12px] leading-[16px] text-bridal-text-soft">
+                      {vendorTypeOf(vendor)}
+                      {pkgCount > 0 && (
+                        <span className="text-[#3F6B43]">
+                          {" "}· <span className="tabular-nums">{pkgCount}</span> {pkgCount === 1 ? "package" : "packages"}
+                        </span>
+                      )}
+                    </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <button type="button" onClick={() => setSheetVendor(vendor)} className={ghostBtn}>
+                    Packages
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => removeVendor(vendor.id)}
-                    className="h-8 w-8 rounded-full p-0 text-bridal-text-soft hover:bg-bridal-coral/15 hover:text-bridal-coral transition-colors"
+                    aria-label={`Remove ${vendor.name}`}
+                    className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-bridal-text-soft transition-colors duration-150 hover:bg-bridal-coral/15 hover:text-bridal-coral xl:h-9 xl:w-9 ${FOCUS_RING}`}
                   >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </motion.div>
+                    <X className="h-4 w-4" aria-hidden />
+                  </button>
+                </li>
               )
             })}
+          </ul>
+        </section>
+      )}
+
+      {/* Results — 88px rows, 1 column at base, 2 at xl */}
+      <div className="mt-4" data-booking-vendor-results={results.length}>
+        {loadingVendors ? (
+          <ul className="grid grid-cols-1 gap-3 xl:grid-cols-2" aria-busy="true" aria-label="Loading vendors">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <li key={i} className="flex h-[88px] items-center gap-3 rounded-[4px] border border-bridal-beige bg-white px-4">
+                <div className="h-12 w-12 animate-pulse rounded-full bg-bridal-sand" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3.5 w-2/3 animate-pulse rounded bg-bridal-sand" />
+                  <div className="h-3 w-1/2 animate-pulse rounded bg-bridal-sand" />
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : results.length === 0 ? (
+          <div className="rounded-[4px] border border-dashed border-bridal-beige bg-white px-4 py-8 text-center">
+            <p className="font-display italic text-[18px] leading-[24px] text-bridal-charcoal">
+              {query ? "No vendors match that search" : "No vendors in this category yet"}
+            </p>
+            <p className="mt-1 font-bridal text-[13px] leading-[18px] text-bridal-text-soft">
+              {query ? "Try another name or service." : "Try another category, or continue without one."}
+            </p>
           </div>
+        ) : (
+          <ul className="grid grid-cols-1 gap-3 xl:grid-cols-2" aria-label="Vendors">
+            {results.map((vendor, i) => {
+              const from = startingPrice(vendor)
+              return (
+                <li
+                  key={vendor.id}
+                  className="animate-stagger-fade-up flex h-[88px] items-center gap-3 rounded-[4px] border border-bridal-beige bg-white pl-4 pr-3 transition-colors duration-150 hover:bg-bridal-blush/45"
+                  style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSheetVendor(vendor)}
+                    aria-label={`View ${vendor.name}`}
+                    className={`flex min-w-0 flex-1 items-center gap-3 rounded-[4px] py-2 text-left ${FOCUS_RING}`}
+                  >
+                    <VendorAvatar vendor={vendor} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-display italic text-[15px] leading-[20px] text-bridal-charcoal">
+                        {vendor.name}
+                      </span>
+                      <span className="mt-0.5 block truncate font-bridal text-[12px] leading-[16px] text-bridal-text-soft">
+                        {vendorTypeOf(vendor)}
+                        {from > 0 && (
+                          <>
+                            {" "}· from <span className="tabular-nums text-bridal-gold-dark">{money(from)}</span>
+                          </>
+                        )}
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => addVendor(String(vendor.id))}
+                    disabled={checkingAvailability}
+                    aria-label={`Add ${vendor.name}`}
+                    className={ghostBtn}
+                  >
+                    {checkingAvailability ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Plus className="h-3.5 w-3.5" aria-hidden />}
+                    Add
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
         )}
       </div>
 
-      {/* Inline Vendor Preview */}
-      {previewVendorDetail && (
-        <Card className="border border-bridal-beige bg-bridal-cream shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] rounded-md overflow-hidden">
-          <CardHeader className="bg-bridal-ivory border-b border-bridal-beige py-4 px-5">
-            <CardTitle className="flex items-center justify-between gap-2 font-display italic text-[18px] text-bridal-charcoal">
-              <span className="truncate">{previewVendorDetail.name}</span>
-              <Badge variant="outline" className="bg-bridal-cream text-bridal-gold-dark border-bridal-gold/45 font-bridal text-[10.5px] uppercase tracking-[0.2em] font-medium px-2.5 py-0.5">
-                {previewVendorDetail.type || (previewVendorDetail as any).subBusinessType}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 p-5">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="col-span-1">
-                <div className="relative w-full h-36 overflow-hidden rounded-xl">
-                  <Image
-                    src={previewVendorDetail.images?.[0] || "/placeholder.jpg"}
-                    alt={previewVendorDetail.name}
-                    fill
-                    sizes="(min-width: 640px) 33vw, 100vw"
-                    className="object-cover"
-                  />
-                </div>
-              </div>
-              <div className="col-span-1 sm:col-span-2 space-y-2">
-                <div className="flex flex-wrap items-center gap-3 font-bridal text-[13px] text-bridal-charcoal/85">
-                  <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {previewVendorDetail.location || previewVendorDetail.city}</span>
-                  <span className="flex items-center gap-1 text-bridal-gold-dark"><Star className="w-3.5 h-3.5 fill-bridal-gold text-bridal-gold" /> {Number(previewVendorDetail.rating || 0).toFixed(1)}</span>
-                  <Badge variant="outline" className="text-xs">Rs. {previewVendorDetail.minimumPrice || 0}</Badge>
-                </div>
-                {previewVendorDetail.description && (
-                  <p className="font-bridal text-[12.5px] text-bridal-text-soft line-clamp-2 leading-relaxed">{previewVendorDetail.description}</p>
-                )}
-                {previewVendorDetail.amenities && previewVendorDetail.amenities.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {previewVendorDetail.amenities.slice(0, 6).map((a, i) => (
-                      <Badge key={i} variant="outline" className="text-[10.5px] uppercase tracking-[0.18em] font-bridal font-medium bg-bridal-ivory text-bridal-charcoal/85 border-bridal-beige px-2 py-0.5">{a}</Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {(previewVendorDetail as any).packages && (previewVendorDetail as any).packages.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-gold-dark">Packages</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {(previewVendorDetail as any).packages.map((pkg: any) => (
-                    <div key={pkg.id} className="rounded-md border border-bridal-beige p-3 bg-bridal-ivory">
-                      <div className="flex items-center justify-between">
-                        <span className="font-display italic text-[15px] text-bridal-charcoal">{pkg.name}</span>
-                        <span className="font-display italic text-[16px] text-bridal-gold-dark">Rs. {pkg.price?.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2 pt-2">
-              <button
+      {/* Vendor detail + package picker — DeskSheet (right on desk, drawer on phone) */}
+      <DeskSheet
+        open={sheetOpen}
+        onOpenChange={(open) => {
+          if (!open) setSheetVendor(null)
+        }}
+        title={sheetDetail?.name || "Vendor"}
+        description={[vendorTypeOf(sheetDetail), sheetDetail?.location || sheetDetail?.city].filter(Boolean).join(" · ") || undefined}
+        footer={
+          sheetIsSelected ? (
+            <div className="flex w-full gap-2">
+              <BridalButton
                 type="button"
-                onClick={() => setPreviewVendorDetail(null)}
-                className="inline-flex items-center justify-center h-10 px-5 rounded-[4px] border border-bridal-beige bg-bridal-cream hover:border-bridal-gold/55 hover:text-bridal-gold-dark text-bridal-charcoal font-bridal text-[11.5px] uppercase tracking-[0.22em] font-medium transition-colors"
-              >
-                Close
-              </button>
-              <button
-                type="button"
+                variant="outline"
+                size="md"
                 onClick={() => {
-                  if (previewVendorDetail) {
-                    const vType = (previewVendorDetail.type || (previewVendorDetail as any).subBusinessType || '').toString()
-                    setSelectedVendorType(vType || 'all')
-                    setSelectedVendorId(String(previewVendorDetail.id))
-                    updateFormData({
-                      selectedVendors: Array.from(new Set([...formData.selectedVendors, String(previewVendorDetail.id)])),
-                    })
-                  }
+                  if (sheetVendor) removeVendor(sheetVendor.id)
                 }}
-                className="inline-flex items-center justify-center h-10 px-6 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[11.5px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] transition-all duration-300"
               >
-                Use this vendor
-              </button>
+                Remove
+              </BridalButton>
+              <BridalButton type="button" variant="primary" size="md" block onClick={() => setSheetVendor(null)}>
+                Done
+              </BridalButton>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Vendor Preview Modal */}
-      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="rounded-md bg-bridal-cream border border-bridal-beige">
-          <DialogHeader>
-            <DialogTitle className="font-display italic text-[22px] text-bridal-charcoal">{previewVendor?.name}</DialogTitle>
-            <DialogDescription className="font-bridal text-[12px] uppercase tracking-[0.22em] text-bridal-gold-dark">
-              {previewVendor?.type || previewVendor?.subBusinessType}
-            </DialogDescription>
-          </DialogHeader>
+          ) : (
+            <BridalButton
+              type="button"
+              variant="primary"
+              size="md"
+              block
+              loading={checkingAvailability}
+              onClick={() => {
+                if (sheetVendor) addVendor(String(sheetVendor.id))
+              }}
+            >
+              {checkingAvailability ? "Checking availability" : `Add ${sheetDetail?.name || "vendor"}`}
+            </BridalButton>
+          )
+        }
+      >
+        {sheetDetail && (
           <div className="space-y-4">
-            <div className="relative w-full h-44 overflow-hidden rounded-md border border-bridal-beige">
+            <div className="relative h-40 w-full overflow-hidden rounded-[4px] border border-bridal-beige bg-bridal-sand">
               <Image
-                src={previewVendor?.images?.[0] || "/placeholder.jpg"}
-                alt={previewVendor?.name || ''}
+                src={sheetDetail.images?.[0] || "/placeholder.jpg"}
+                alt={sheetDetail.name || ""}
                 fill
-                sizes="(min-width: 768px) 600px, 100vw"
+                sizes="480px"
                 className="object-cover"
               />
             </div>
-            <div className="flex flex-wrap items-center gap-3 font-bridal text-[13px] text-bridal-charcoal/85">
-              <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-bridal-gold" /> {previewVendor?.location || previewVendor?.city}</span>
-              <span className="flex items-center gap-1.5"><Star className="w-3.5 h-3.5 fill-bridal-gold text-bridal-gold" /> <span className="font-display italic text-[15px] text-bridal-charcoal">{Number(previewVendor?.rating || 0).toFixed(1)}</span></span>
-              <span className="font-display italic text-[15px] text-bridal-gold-dark">Rs. {previewVendor?.minimumPrice || previewVendor?.price || 0}</span>
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-bridal text-[13px] leading-[18px] text-bridal-text">
+              {(sheetDetail.location || sheetDetail.city) && (
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-bridal-gold-dark" aria-hidden />
+                  {sheetDetail.location || sheetDetail.city}
+                </span>
+              )}
+              {Number(sheetDetail.rating || 0) > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <Star className="h-3.5 w-3.5 fill-bridal-gold text-bridal-gold" aria-hidden />
+                  <span className="tabular-nums">{Number(sheetDetail.rating || 0).toFixed(1)}</span>
+                </span>
+              )}
+              {startingPrice(sheetDetail) > 0 && (
+                <span className="font-display italic text-[15px] leading-[20px] tabular-nums text-bridal-gold-dark">
+                  from {money(startingPrice(sheetDetail))}
+                </span>
+              )}
             </div>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setPreviewOpen(false)}
-                className="inline-flex items-center justify-center h-10 px-5 rounded-[4px] border border-bridal-beige bg-bridal-cream hover:border-bridal-gold/55 hover:text-bridal-gold-dark text-bridal-charcoal font-bridal text-[11.5px] uppercase tracking-[0.22em] font-medium transition-colors"
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={() => { if (previewVendor) { setSelectedVendorId(String(previewVendor.id)); setPreviewOpen(false) } }}
-                className="inline-flex items-center justify-center h-10 px-6 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[11.5px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] transition-all duration-300"
-              >
-                Select
-              </button>
+
+            {sheetDetail.description && (
+              <p className="line-clamp-3 font-bridal text-[13px] leading-[18px] text-bridal-text-soft">{sheetDetail.description}</p>
+            )}
+
+            {Array.isArray(sheetDetail.amenities) && sheetDetail.amenities.length > 0 && (
+              <ul className="flex flex-wrap gap-1.5" aria-label="Amenities">
+                {sheetDetail.amenities.slice(0, 6).map((a: string, i: number) => (
+                  <li
+                    key={i}
+                    className="rounded-full border border-bridal-beige bg-white px-2.5 py-1 font-bridal text-[11px] leading-[14px] text-bridal-text"
+                  >
+                    {a}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="border-t border-bridal-beige pt-4">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="font-bridal text-[11px] font-medium uppercase leading-[14px] tracking-[0.18em] text-bridal-gold-dark">
+                  Packages
+                </p>
+                {!sheetIsSelected && sheetPackages.length > 0 && (
+                  <p className="font-bridal text-[12px] leading-[16px] text-bridal-text-soft">Add the vendor to choose</p>
+                )}
+              </div>
+
+              {previewVendorDetail === null ? (
+                <p className="mt-3 flex items-center gap-2 font-bridal text-[13px] leading-[18px] text-bridal-text-soft">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> Loading packages
+                </p>
+              ) : sheetPackages.length === 0 ? (
+                <p className="mt-3 font-bridal text-[13px] leading-[18px] text-bridal-text-soft">
+                  No packages listed — the vendor will quote after you send the request.
+                </p>
+              ) : (
+                <ul className="mt-3 space-y-2" aria-label={`${sheetDetail.name} packages`}>
+                  {sheetPackages.map((pkg: any, i: number) => {
+                    const pid = String(pkg.id)
+                    const on = selectedPackageIds.includes(pid)
+                    return (
+                      <li key={pid} className="animate-stagger-fade-up" style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}>
+                        <button
+                          type="button"
+                          disabled={!sheetIsSelected}
+                          aria-pressed={on}
+                          onClick={() => toggleVendorPackage(pid)}
+                          className={`relative flex min-h-[56px] w-full items-center gap-3 rounded-[4px] border px-4 py-2 text-left transition-colors duration-150 disabled:cursor-not-allowed ${
+                            on
+                              ? "border-bridal-gold-dark bg-bridal-cream"
+                              : "border-bridal-beige bg-white hover:bg-bridal-blush/45 disabled:hover:bg-white"
+                          } ${FOCUS_RING}`}
+                        >
+                          {/* 4px gold left rule, scaleY 0→1 on select (§8 card select) */}
+                          <span
+                            aria-hidden
+                            className={`absolute inset-y-0 left-0 w-1 origin-top rounded-l-[4px] bg-bridal-gold transition-transform duration-200 ease-out ${
+                              on ? "scale-y-100" : "scale-y-0"
+                            }`}
+                          />
+                          <span
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors duration-150 ${
+                              on
+                                ? "animate-pop-select border-bridal-gold-dark bg-bridal-gold-dark text-bridal-ivory"
+                                : "border-bridal-beige bg-white"
+                            }`}
+                            aria-hidden
+                          >
+                            {on && <Check className="h-3 w-3" strokeWidth={3} />}
+                          </span>
+                          <span className="min-w-0 flex-1 truncate font-display italic text-[15px] leading-[20px] text-bridal-charcoal">
+                            {pkg.name}
+                          </span>
+                          <span className="shrink-0 font-display italic text-[15px] leading-[20px] tabular-nums text-bridal-gold-dark">
+                            {money(pkg.price)}
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        )}
+      </DeskSheet>
     </div>
   )
 }

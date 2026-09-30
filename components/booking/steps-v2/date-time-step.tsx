@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback, useRef } from "react"
 import type { BookingFormData, EventVenue } from "@/lib/types"
-import { ChevronLeft, ChevronRight, Sun, Sunset, Moon, Minus, Plus, AlertTriangle, Timer, XCircle } from "lucide-react"
+import { ChevronLeft, ChevronRight, Sun, Sunset, Moon, Minus, Plus, Check, MapPin } from "lucide-react"
 import { VendorAPI } from "@/lib/api/vendors"
 import api from "@/lib/axiosConfig"
 // Capacity-aware slot-template availability (BK-008/015/019). Flag-gated:
@@ -12,7 +12,19 @@ import api from "@/lib/axiosConfig"
 import { BusinessAvailabilityAPI, type SlotAvailabilityRow } from "@/lib/api/businessAvailability"
 // BK-100.53 — service-location mode picker (optional; lets the
 // customer specify mehndi-at-home / marquee-at-plot / Nikah-at-masjid).
-import { ServiceLocationPicker } from "@/components/booking/service-location-picker"
+import {
+  ServiceLocationPicker,
+  SERVICE_LOCATION_SHORT_LABELS,
+  serviceLocationNeedsAddress,
+  type ServiceLocationMode,
+} from "@/components/booking/service-location-picker"
+// The shell contract: scroll-into-view, tier and live announcements come from
+// the shell; the notice rail bounds advisories; the desk sheet hosts the
+// service-location picker.
+import { useBookingShell } from "@/components/booking/shell/booking-shell-context"
+import NoticeRail, { type NoticeLine } from "@/components/booking/shell/notice-rail"
+import DeskSheet from "@/components/booking/shell/desk-sheet"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 // F-2 — canonical sub-venue (venue-hierarchy) picker for the customer flow.
 import { venueSpacesApi, type SubVenueNode } from "@/lib/api/venueSpaces"
 // SLOTS step 10 — the single slot vocabulary.
@@ -666,8 +678,173 @@ export default function DateTimeStep({
     }
   }, [activeLimit?.max, updateFormData])
 
-  /** A single day cell in the monthly grid. Airbnb-style: square, large
-   *  numeral, dot indicator for partial availability. */
+  /* ── Shell contract ────────────────────────────────────────────────────
+     The shell renders the eyebrow, the title, the subtitle, Back/Continue and
+     the receipt. This step renders only its controls, in one DOM that reads
+     calendar → hall → times → guests → arrangement → location on a 544px
+     column and as strip → notices → calendar ‖ times at ≥ 1280. */
+  const { tier, scrollBodyTo, announce } = useBookingShell()
+  const slotListRef = useRef<HTMLDivElement>(null)
+  const [locationOpen, setLocationOpen] = useState(false)
+
+  /* The sentence for a clamp the ceiling forced. The effect above lowers
+     guestCount when a smaller hall or slot is chosen; this one runs in the same
+     commit, so it still sees the count that was lowered and can say so. It
+     stays while the count equals the ceiling it was set to, then goes. */
+  const [clampNote, setClampNote] = useState<{ cap: number; text: string } | null>(null)
+  useEffect(() => {
+    if (!activeLimit) return
+    if ((formData.guestCount || 0) > activeLimit.max) {
+      setClampNote({
+        cap: activeLimit.max,
+        text: `Guests set to ${activeLimit.max} — ${activeLimit.source.toLowerCase()} ${activeLimit.max}`,
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeLimit?.max])
+  const clampLine = clampNote && (formData.guestCount || 0) === clampNote.cap ? clampNote.text : null
+
+  /* ── Presentation helpers (no data logic) ──────────────────────────── */
+  const WEEKDAY_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+  const dayHeader = (d: Date) => {
+    if (sameDay(d, today)) return "Today"
+    if (sameDay(d, addDays(today, 1))) return "Tomorrow"
+    return `${WEEKDAY_LONG[d.getDay()]}, ${d.getDate()} ${MONTHS_FULL[d.getMonth()]}`
+  }
+  const shortDay = (d: Date) => `${WEEKDAY_FULL[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`
+  const viewYm = ymOf(viewMonth)
+  const availError = (useTemplates ? templateMonthState[viewYm] : monthState[viewYm]) === "error"
+
+  const showHall = subVenueSpaces.length >= 1
+  const showSpace = spaces.length > 0 && subVenueSpaces.length === 0
+  const showGuests = needsGuestCount && enforceCapacity
+  const showArrangement = vendorTypeName === "Wedding venue" || subVenueSpaces.length >= 1
+  const hasStrip = showHall || showSpace || showGuests || showArrangement
+
+  // The rows for the chosen day (template engine), and the next three days
+  // with a free slot from what is already loaded — no new request.
+  const dayRows = selectedKey ? (templateDays[selectedKey] || []).filter((r) => r.runsThisWeekday) : []
+  const nextFreeDays: Date[] = (() => {
+    if (!useTemplates || !selectedKey) return []
+    const todayKey = toKey(today)
+    const from = selectedKey > todayKey ? selectedKey : todayKey
+    return Object.keys(templateDays)
+      .filter((k) => k > from && (templateDays[k] || []).some((r) => r.runsThisWeekday && !r.blocked && r.free > 0))
+      .sort()
+      .slice(0, 3)
+      .map((k) => {
+        const [y, m, dd] = k.split("-").map(Number)
+        return new Date(y, m - 1, dd)
+      })
+  })()
+
+  // Service location, summarised for the disclosure row.
+  const locMode = formData.serviceLocationMode as ServiceLocationMode | undefined
+  const locAddress = (formData.serviceLocationAddress || "").trim()
+  const locAddressMissing = serviceLocationNeedsAddress(locMode) && locAddress.length < 5
+  const locLabel = locMode && locMode !== "at_vendor" ? SERVICE_LOCATION_SHORT_LABELS[locMode] : "At the venue"
+
+  /* ── Advisories, one line each, grouped by the control they concern ── */
+  const calendarNotices: NoticeLine[] = []
+  if (selectedAvail?.isBlocked)
+    calendarNotices.push({
+      id: "blocked",
+      tone: "beige",
+      text: `Vendor not available this day — ${selectedAvail.blockReason || "pick a different date"}`,
+    })
+  if (availError)
+    calendarNotices.push({ id: "avail-error", tone: "soft", text: "Couldn't check availability — the venue will confirm" })
+
+  const holdFailedLine: NoticeLine | null = holdFailed
+    ? {
+        id: "hold-failed",
+        tone: "rose",
+        assertive: true,
+        text: `That slot was just reserved by another customer.${
+          holdFailedUntil
+            ? ` Held until ${holdFailedUntil.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`
+            : ""
+        } Please pick another time.`,
+      }
+    : null
+  const holdTimerLine: NoticeLine | null =
+    isHolding && timeRemaining > 0 && timeRemaining < 9999
+      ? {
+          id: "hold-timer",
+          tone: "sage",
+          icon: "timer",
+          text: `Slot reserved for ${String(Math.floor(timeRemaining / 60)).padStart(2, "0")}:${String(timeRemaining % 60).padStart(2, "0")}`,
+        }
+      : null
+
+  /* 10.13 — reported, never refused. A MIXED hall is not an error, it is a
+     fact the family needs BEFORE the night, while there is still time to pick
+     another hall or ask for a partition. */
+  const hallNotices: NoticeLine[] = []
+  if (genderFit.status === "mismatch" && genderFit.reason)
+    hallNotices.push({ id: "gender-mismatch", tone: "amber", text: genderFit.reason })
+  if (genderFit.status === "fits")
+    hallNotices.push({ id: "gender-fits", tone: "sage", text: "This hall can be arranged the way you've asked." })
+  /* The venue has not recorded what it can do — said as a question for the
+     venue, not a defect of it. */
+  if (genderFit.status === "unknown" && genderFit.reason)
+    hallNotices.push({ id: "gender-unknown", tone: "soft", text: genderFit.reason })
+  /* 10.16 (UC-22) — rain on an open lawn. */
+  if (backupPlan?.exposed && backupPlan.message)
+    hallNotices.push({ id: "backup", tone: backupPlan.hasPlan ? "sage" : "amber", text: backupPlan.message })
+
+  /* Compliance is advisory (never blocks); comfort and minimum are the
+     vendor's preferences, not physical or legal limits. */
+  const guestNotices: NoticeLine[] = []
+  complianceWarnings.forEach((w, i) => guestNotices.push({ id: `compliance-${i}`, tone: "amber", text: w }))
+  if (clampLine) guestNotices.push({ id: "clamp", tone: "mauve", text: clampLine })
+  if (comfortWarning) guestNotices.push({ id: "comfort", tone: "mauve", text: comfortWarning })
+  if (belowMinimum) guestNotices.push({ id: "below-min", tone: "mauve", text: belowMinimum })
+
+  // ≥ 1280: one rail above the calendar, in priority order. slotConflict is
+  // the shell's line, not this step's.
+  const railLines: NoticeLine[] = [
+    ...(holdFailedLine ? [holdFailedLine] : []),
+    ...calendarNotices,
+    ...guestNotices,
+    ...hallNotices,
+    ...(holdTimerLine ? [holdTimerLine] : []),
+  ]
+  // Base layout: under the control each concerns. Guest notices sit under the
+  // guests row when there is one, otherwise under the times.
+  const slotNotices: NoticeLine[] = [
+    ...(holdFailedLine ? [holdFailedLine] : []),
+    ...(holdTimerLine ? [holdTimerLine] : []),
+    ...(showGuests ? [] : guestNotices),
+  ]
+
+  const pickDay = (d: Date) => {
+    handlePickDay(d)
+    // The base layout stacks the times under the calendar; bring them up
+    // once a day is chosen. A method call on the shell, never an observer.
+    if (tier === "phone" || tier === "tablet") scrollBodyTo(slotListRef.current, { block: "nearest" })
+    announce(`${dayHeader(d)} selected`)
+  }
+
+  const focusRing =
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2"
+
+  const chip = (text: string, tone: "coral" | "gold" | "beige") => (
+    <span
+      className={`shrink-0 rounded-full border px-2 py-[3px] font-bridal text-[10px] font-medium uppercase leading-3 tracking-[0.12em] ${
+        tone === "coral"
+          ? "border-bridal-coral/40 bg-bridal-coral/15 text-bridal-coral"
+          : tone === "gold"
+            ? "border-bridal-gold/45 bg-bridal-gold/15 text-bridal-gold-dark"
+            : "border-bridal-beige bg-bridal-beige/60 text-bridal-text-soft"
+      }`}
+    >
+      {text}
+    </span>
+  )
+
+  /** A single day cell: a 44px circle (40 under the shell's density tier),
+   *  Playfair numeral, gold dot or "n left" for partial availability. */
   const renderDayCell = (d: Date) => {
     const key = toKey(d)
     const isPast = d < today
@@ -683,607 +860,572 @@ export default function DateTimeStep({
     const inMonth = isSameMonth(d)
     const disabled = isPast || isBlocked || isPending
 
-    return (
+    // Tooltip text: why a day is blocked, or what is already taken on it.
+    const a = dayAvail(key)
+    let tip: string | null = null
+    if (isBlocked && !isPast) tip = a?.blockReason || "Not available"
+    else if (isPartial) {
+      const rows = templateDays[key] || []
+      const names = (a?.bookedSlots || []).map((s) =>
+        useTemplates
+          ? rows.find((r) => r.startTime.slice(0, 5) === s)?.label ?? s
+          : PERIODS.find((p) => p.value === s)?.label ?? s,
+      )
+      tip = names.length ? `${names.join(", ")} booked` : "Partly booked"
+    }
+    const partialLeft = isPartial && useTemplates
+      ? (templateDays[key] || []).filter((r) => r.runsThisWeekday && !r.blocked).reduce((n, r) => n + Math.max(0, r.free), 0)
+      : null
+
+    const button = (
       <button
-        key={key}
         type="button"
-        onClick={() => handlePickDay(d)}
+        onClick={() => pickDay(d)}
         disabled={disabled}
         aria-label={`${WEEKDAY_FULL[d.getDay()]}, ${MONTHS_FULL[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}${
           isPast ? " (in the past)" : isBlocked ? " (not available)" : isPending ? " (checking availability)" : ""
         }`}
         aria-pressed={isSelected}
-        className={`
-          relative h-11 sm:h-12 w-full flex flex-col items-center justify-center
-          rounded-full text-center transition-all
-          font-display text-[14px] sm:text-[15px] tabular-nums leading-none
+        className={`relative flex h-11 w-11 flex-col items-center justify-center rounded-full font-display text-[15px] leading-none tabular-nums transition-all duration-150 motion-safe:active:scale-95 xl:h-[var(--bk-cal-cell,44px)] xl:w-[var(--bk-cal-cell,44px)] ${focusRing}
           ${!inMonth ? "opacity-30" : ""}
+          ${isBlocked && !isPast ? "pointer-events-none" : ""}
           ${
             /* Pending is greyed but NOT struck through: a day we have not
                heard about yet is not a day the venue has refused, and
                striking it out would state something untrue for a second. */
             isPending && !isPast
-              ? "text-bridal-text-soft/40 cursor-wait"
-              /* A PAST day is not a refusal either, and it used to be struck
-                 through like one. On any date after the 1st that painted most
-                 of the visible month with a line through it -- opening the
-                 calendar on the 29th showed twenty-eight crossed-out days and
-                 two open ones, which reads as "this venue has nothing". Past
-                 days are simply faint now; the strike is kept for a date the
-                 venue has actually blocked, where it means something. */
+              ? "cursor-wait text-bridal-text-soft/40"
+              /* A PAST day is not a refusal either. Past days are simply
+                 faint; the strike is kept for a date the venue has actually
+                 blocked, where it means something. */
               : isPast
-              ? "text-bridal-text-soft/35 cursor-not-allowed"
-              : disabled
-              ? "text-bridal-text-soft/50 cursor-not-allowed line-through decoration-1"
-              : isSelected
-                ? "bg-bridal-gold-dark text-white shadow-[0_10px_24px_-10px_rgba(145,101,57,0.6)] hover:bg-bridal-gold-dark"
-                : isToday
-                  ? "border border-bridal-gold-dark text-bridal-charcoal hover:bg-bridal-blush/45"
-                  : "text-bridal-charcoal hover:bg-bridal-cream"
-          }
-        `}
+                ? "cursor-not-allowed text-bridal-text-soft/35"
+                : disabled
+                  ? "cursor-not-allowed text-bridal-text-soft/50 line-through decoration-1"
+                  : isSelected
+                    ? "bg-bridal-gold-dark text-white motion-safe:animate-pop-select"
+                    : isToday
+                      ? "ring-1 ring-inset ring-bridal-gold-dark text-bridal-charcoal hover:bg-bridal-blush/45"
+                      : "text-bridal-charcoal hover:bg-bridal-cream"
+          }`}
       >
         <span>{d.getDate()}</span>
-        {isPartial && !isSelected && (
-          <span
-            aria-hidden
-            className="absolute bottom-1 w-1 h-1 rounded-full bg-bridal-gold"
-          />
+        {isPartial && !isSelected && partialLeft != null && (
+          <span aria-hidden className="mt-[2px] font-bridal text-[9px] leading-[10px] text-bridal-gold-dark">
+            {partialLeft} left
+          </span>
+        )}
+        {isPartial && !isSelected && partialLeft == null && (
+          <span aria-hidden className="absolute bottom-1 h-1 w-1 rounded-full bg-bridal-gold" />
         )}
       </button>
     )
+
+    return (
+      <div key={key} className="flex justify-center">
+        {tip ? (
+          <Tooltip>
+            {/* A disabled button fires no pointer events, so the wrapper span
+                is the trigger for a blocked day; a partial day is enabled and
+                the wrapper simply passes the events through. */}
+            <TooltipTrigger asChild>
+              <span className="inline-flex rounded-full">{button}</span>
+            </TooltipTrigger>
+            <TooltipContent
+              side="top"
+              className="rounded-[4px] border-bridal-beige bg-bridal-charcoal px-2.5 py-1.5 font-bridal text-[12px] leading-4 text-bridal-ivory shadow-none"
+            >
+              {tip}
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          button
+        )}
+      </div>
+    )
   }
 
+  /* ── Strip cells (one DOM; a full-width row on the base layout, a cell of
+        the 64px strip at ≥ 1280) ────────────────────────────────────────── */
+  const cellBox =
+    "relative h-14 rounded-[4px] border border-bridal-beige bg-white xl:h-auto xl:rounded-none xl:border-0 xl:bg-transparent"
+  const cellLabel =
+    "pointer-events-none absolute left-4 top-2 z-[1] font-bridal text-[10.5px] font-medium uppercase leading-[14px] tracking-[0.18em] text-bridal-text-label xl:top-3"
+  const cellSelect =
+    `bridal-select h-full w-full rounded-[4px] border-0 bg-transparent pb-0 pl-4 pt-[18px] font-bridal text-[15px] leading-5 text-bridal-charcoal outline-none xl:rounded-none xl:pt-[22px] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-bridal-gold-dark`
+
+  const slotRowClass = (state: "disabled" | "selected" | "default") =>
+    `group flex h-14 w-full items-center gap-3 rounded-[4px] border px-4 text-left transition-colors duration-150 motion-safe:animate-stagger-fade-up ${focusRing} ${
+      state === "disabled"
+        ? "cursor-not-allowed border-bridal-beige bg-bridal-ivory text-bridal-text-soft/60"
+        : state === "selected"
+          ? "border-bridal-gold bg-bridal-gold text-bridal-charcoal motion-safe:animate-pop-select"
+          : "border-bridal-beige bg-white text-bridal-charcoal hover:bg-bridal-blush/45"
+    }`
+
+  const selectedMark = (
+    <span className="inline-flex shrink-0 items-center gap-1.5 font-bridal text-[11px] font-medium uppercase leading-[14px] tracking-[0.18em] text-bridal-charcoal">
+      <Check className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+      Selected
+    </span>
+  )
+
   return (
-    <div className="w-full space-y-8">
-      {/* Heading — the same weight as step one, so the journey reads as one
-          piece rather than a headline followed by five form pages. */}
-      <header className="max-w-2xl">
-        <p className="font-bridal text-[11px] uppercase tracking-[0.22em] text-bridal-text-label">
-          Step two
-        </p>
-        <h2 className="mt-2 font-display italic text-[30px] sm:text-[38px] leading-[1.1] text-bridal-charcoal">
-          When is your event?
-        </h2>
-        {/* Promised a hold until 2026-08-29, when holds were removed from the
-            booking flow. The date is not reserved by choosing it here, and the
-            customer is better served knowing that than being told otherwise. */}
-        <p className="mt-3 font-bridal text-[14px] leading-relaxed text-bridal-text-soft">
-          Pick a date and a time of day. The date isn&apos;t reserved until the venue
-          accepts your request, so send it as soon as you&apos;re ready.
-        </p>
-      </header>
-
-      {/* Calendar (left) + Time-of-day picker (right) side-by-side on
-         desktop. On mobile they stack — calendar on top, slots below.
-         This is the standard booking-flow layout (Airbnb, Booking.com,
-         Calendly). */}
-      {/* Stacked, not side by side.
-          This split the calendar and the options into two columns, which worked
-          when the step had the full page. It does not now: the summary takes a
-          fixed 360px from lg up, so the options were squeezed into a strip with
-          "At our plot / lawn" wrapping over four lines.
-
-          Moving the split to xl did not fix it, and the reason is worth writing
-          down: Tailwind breakpoints measure the VIEWPORT, not this container. At
-          1440px `xl:` is active while the column it applies to is about 1000px
-          wide, so the split fired anyway. Without container queries the honest
-          answer is to stop splitting — the calendar takes the column's width and
-          the options sit under it, which reads in one direction and holds at
-          every size. */}
-      <div className="flex flex-col gap-5 items-stretch">
-
-      {/* Monthly calendar — Airbnb / Booking.com pattern.
-         Constrained to ~520px so the cells stay at industry-standard
-         ~44-56px regardless of how wide the page container is. */}
-      <section className="rounded-lg border border-bridal-beige bg-bridal-ivory p-4 sm:p-5 w-full">
-        {/* Header row: month label + prev/next */}
-        <div className="flex items-center justify-between mb-4">
-          <button
-            type="button"
-            onClick={() => setViewMonth((m) => (canGoPrevMonth ? addMonths(m, -1) : m))}
-            disabled={!canGoPrevMonth}
-            className="w-9 h-9 inline-flex items-center justify-center rounded-full text-bridal-charcoal hover:bg-bridal-blush/55 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
-            aria-label="Previous month"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <h3 className="font-display italic text-[18px] sm:text-[20px] text-bridal-charcoal">
-            {MONTHS_FULL[viewMonth.getMonth()]} {viewMonth.getFullYear()}
-          </h3>
-          <button
-            type="button"
-            onClick={() => setViewMonth((m) => addMonths(m, 1))}
-            className="w-9 h-9 inline-flex items-center justify-center rounded-full text-bridal-charcoal hover:bg-bridal-blush/55 transition-colors"
-            aria-label="Next month"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Weekday header */}
-        <div className="grid grid-cols-7 gap-0.5 mb-1">
-          {WEEKDAY_SHORT.map((w, i) => (
-            <div
-              key={i}
-              className="h-8 flex items-center justify-center font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-soft"
-            >
-              {w}
-            </div>
-          ))}
-        </div>
-
-        {/* 6×7 day grid */}
-        <div className="grid grid-cols-7 gap-0.5">
-          {monthGrid.map((d) => renderDayCell(d))}
-        </div>
-
-        {/* Legend */}
-        <div className="mt-4 pt-3 border-t border-bridal-beige/70 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 font-bridal text-[10.5px] text-bridal-text-soft">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-bridal-gold" />
-            Limited availability
-          </span>
-          {selectedDate && (
-            <span className="font-bridal text-[12px] text-bridal-charcoal">
-              <span className="font-medium text-bridal-gold-dark">Selected:</span>{" "}
-              {formatLong(selectedDate)}
-            </span>
-          )}
-        </div>
-      </section>
-
-      {/* Right column: time-of-day picker (single row) + the service-location
-         picker stacked beneath it. The slots now sit on ONE line and the
-         "Where will the service happen?" card fills the space beside the
-         calendar instead of leaving a tall empty gap. On mobile this whole
-         column drops below the calendar. */}
-      <div className="w-full space-y-5">
-        {/* WW-SPACE-FIRST — the space is chosen BEFORE the date and the
-           guest count, because it decides both.
-           It used to sit at the BOTTOM of this column, under the time picker,
-           the service-location card and the arrangement question. So a family
-           set 800 guests against the whole venue's ceiling, picked a slot, and
-           only then met the hall selector — at which point the guest count had
-           to be clamped down and the slots they had already been offered were
-           re-fetched and could disappear. Every one of those corrections is
-           the form taking something back that it had just given.
-           Asking first means the ceiling, the slots, the packages and the
-           menus are all the chosen hall's from the outset. */}
-        {/* F-2 — canonical sub-venue picker (venue-hierarchy). Shown when the
-           venue built ANY space(s); sends subVenueId (the per-hall path). Was
-           gated `> 1`, which silently hid a venue's only hall (QA #19) — now
-           `>= 1` so a single configured space is selectable. */}
-        {subVenueSpaces.length >= 1 && (
-          <section className="space-y-2">
-            <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
-              Which hall?
-            </p>
-            <select
-              value={(formData as any).selectedSubVenueId || ""}
-              onChange={(e) => {
-                const id = e.target.value
-                // Carry the hall's NAME forward too. Later steps only ever had
-                // the id, so the Packages step could not say "Terrace Lawn
-                // package" and the Review step could not name the room the
-                // customer is actually booking.
-                const picked = subVenueSpaces.find((sp) => String(sp.id) === String(id))
-                updateFormData((prev) => ({
-                  ...(prev as any),
-                  selectedSubVenueId: id,
-                  selectedSubVenueName: picked?.name || null,
-                }))
-              }}
-              className="bridal-select w-full rounded-md border border-bridal-beige bg-white px-3.5 py-3 font-bridal text-[13.5px] text-bridal-charcoal outline-none transition-colors focus:border-bridal-gold-dark focus:ring-2 focus:ring-bridal-gold/25"
-            >
-              <option value="">Whole venue / any hall</option>
-              {/* The capacity is on the OPTION, not only in the warning that
-                  fires once a guest count is already too high. A family
-                  picking between halls chooses by how many people it seats;
-                  making them pick first and be corrected second is the wrong
-                  order. */}
-              {subVenueSpaces.map((sp) => (
-                <option key={sp.id} value={sp.id}>
-                  {" ".repeat(sp.depth * 2)}{sp.name}{sp.kind ? ` — ${sp.kind}` : ""}
-                  {sp.fireRatedCapacity ? ` (up to ${sp.fireRatedCapacity} guests)` : ""}
-                </option>
-              ))}
-            </select>
-            <p className="font-bridal text-[10.5px] text-bridal-text-soft">
-              Pick a specific hall, floor or partition, or leave as the whole venue.
-            </p>
-
-            {/* 10.13 — the answer, while it can still change the decision.
-
-               Reported, never refused. A MIXED hall is not an error, it is a
-               fact the family needs BEFORE the night, while there is still
-               time to pick another hall or ask for a partition. Blocking here
-               would refuse a booking the venue may well be able to
-               accommodate, over a question only the venue can answer. */}
-            {genderFit.status === "mismatch" && genderFit.reason && (
-              <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-300 px-3 py-2 font-bridal text-[12px] text-amber-800">
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                <p>{genderFit.reason}</p>
+    <TooltipProvider delayDuration={240}>
+      <div className="flex w-full flex-col gap-3 xl:grid xl:grid-cols-[332px_minmax(0,1fr)] xl:items-start xl:gap-x-10 xl:gap-y-3 xl:[@media(max-height:820px)]:gap-y-2">
+        {/* ── Control strip: HALL · GUESTS · ARRANGEMENT ─────────────────
+            `contents` on the base layout so each cell is its own 56px row
+            ordered around the calendar and the times; a white 64px strip
+            with hairline dividers at ≥ 1280. Absent cells collapse. */}
+        {hasStrip && (
+          <div className="contents xl:col-span-2 xl:grid xl:h-16 xl:grid-flow-col xl:auto-cols-fr xl:divide-x xl:divide-bridal-beige xl:rounded-[4px] xl:border xl:border-bridal-beige xl:bg-white xl:[@media(max-height:820px)]:h-[60px]">
+            {/* WW-SPACE-FIRST — the space is chosen BEFORE the guest count and
+               the times, because it decides both: the ceiling, the slots, the
+               packages and the menus are all the chosen hall's from the
+               outset. */}
+            {/* F-2 — canonical sub-venue picker (venue-hierarchy). Shown when
+               the venue built ANY space(s); sends subVenueId (the per-hall
+               path). Was gated `> 1`, which silently hid a venue's only hall
+               (QA #19) — now `>= 1` so a single configured space is selectable. */}
+            {showHall && (
+              <div className={`order-2 ${cellBox}`}>
+                <label htmlFor="bk-hall" className={cellLabel}>Hall</label>
+                <select
+                  id="bk-hall"
+                  value={(formData as any).selectedSubVenueId || ""}
+                  onChange={(e) => {
+                    const id = e.target.value
+                    // Carry the hall's NAME forward too. Later steps only ever had
+                    // the id, so the Packages step could not say "Terrace Lawn
+                    // package" and the Review step could not name the room the
+                    // customer is actually booking.
+                    const picked = subVenueSpaces.find((sp) => String(sp.id) === String(id))
+                    updateFormData((prev) => ({
+                      ...(prev as any),
+                      selectedSubVenueId: id,
+                      selectedSubVenueName: picked?.name || null,
+                    }))
+                  }}
+                  className={cellSelect}
+                >
+                  <option value="">Whole venue / any hall</option>
+                  {/* The capacity is on the OPTION, not only in the warning that
+                      fires once a guest count is already too high. A family
+                      picking between halls chooses by how many people it seats;
+                      making them pick first and be corrected second is the wrong
+                      order. */}
+                  {subVenueSpaces.map((sp) => (
+                    <option key={sp.id} value={sp.id}>
+                      {" ".repeat(sp.depth * 2)}{sp.name}{sp.kind ? ` — ${sp.kind}` : ""}
+                      {sp.fireRatedCapacity ? ` (up to ${sp.fireRatedCapacity} guests)` : ""}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
-            {genderFit.status === "fits" && (
-              <p className="font-bridal text-[11px] text-[#3F6B43]">
-                This hall can be arranged the way you&apos;ve asked.
-              </p>
-            )}
-            {/* The venue has not recorded what it can do — said as a question
-               for the venue, not a defect of it. */}
-            {genderFit.status === "unknown" && genderFit.reason && (
-              <p className="font-bridal text-[11px] text-bridal-text-soft">{genderFit.reason}</p>
-            )}
-
-            {/* 10.16 (UC-22) — rain on an open lawn. A December wedding on an
-               open lawn in Lahore is a normal thing to book and an abnormal
-               thing to have no plan for. */}
-            {backupPlan?.exposed && backupPlan.message && (
-              <div
-                className={
-                  backupPlan.hasPlan
-                    ? "flex items-start gap-2 rounded-md bg-bridal-sage/15 border border-bridal-sage/40 px-3 py-2 font-bridal text-[12px] text-[#3F6B43]"
-                    : "flex items-start gap-2 rounded-md bg-amber-50 border border-amber-300 px-3 py-2 font-bridal text-[12px] text-amber-800"
-                }
-              >
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                <p>{backupPlan.message}</p>
+            {/* Which hall / lawn / partition? (BusinessResource model.) Only shown
+               when the venue configured bookable resources AND is NOT using the
+               canonical sub-venue tree. Optional — "whole venue" unpins. */}
+            {showSpace && (
+              <div className={`order-2 ${cellBox}`}>
+                <label htmlFor="bk-space" className={cellLabel}>Space</label>
+                <select
+                  id="bk-space"
+                  value={(formData as any).selectedResourceId || ""}
+                  onChange={(e) => {
+                    const id = e.target.value
+                    const picked = spaces.find((sp) => String(sp.id) === String(id))
+                    updateFormData((prev) => ({
+                      ...(prev as any),
+                      selectedResourceId: id,
+                      selectedResourceName: picked?.label || null,
+                    }))
+                  }}
+                  className={cellSelect}
+                >
+                  <option value="">Whole venue / any space</option>
+                  {spaces.map((sp) => (
+                    <option key={sp.id} value={sp.id}>
+                      {sp.label}{sp.kind ? ` — ${sp.kind}` : ""}
+                      {sp.capacityUnit ? ` (up to ${sp.capacityUnit} guests)` : ""}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
-          </section>
-        )}
-        {/* Which hall / lawn / partition? (BusinessResource model.) Only shown
-           when the venue configured bookable resources AND is NOT using the
-           canonical sub-venue tree (below). Optional — "whole venue" unpins. */}
-        {spaces.length > 0 && subVenueSpaces.length === 0 && (
-          <section className="space-y-2">
-            <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
-              Which space?
-            </p>
-            <select
-              value={(formData as any).selectedResourceId || ""}
-              onChange={(e) => {
-                const id = e.target.value
-                const picked = spaces.find((sp) => String(sp.id) === String(id))
-                updateFormData((prev) => ({
-                  ...(prev as any),
-                  selectedResourceId: id,
-                  selectedResourceName: picked?.label || null,
-                }))
-              }}
-              className="bridal-select w-full rounded-md border border-bridal-beige bg-white px-3.5 py-3 font-bridal text-[13.5px] text-bridal-charcoal outline-none transition-colors focus:border-bridal-gold-dark focus:ring-2 focus:ring-bridal-gold/25"
-            >
-              <option value="">Whole venue / any space</option>
-              {spaces.map((sp) => (
-                <option key={sp.id} value={sp.id}>
-                  {sp.label}{sp.kind ? ` — ${sp.kind}` : ""}
-                  {sp.capacityUnit ? ` (up to ${sp.capacityUnit} guests)` : ""}
-                </option>
-              ))}
-            </select>
-            <p className="font-bridal text-[10.5px] text-bridal-text-soft">
-              Pick a specific hall, lawn or partition, or leave as the whole venue.
-            </p>
-          </section>
-        )}
+            <NoticeRail lines={hallNotices} max={4} className="order-2 xl:hidden" />
 
-        <section className="space-y-2.5">
-        <div className="flex items-center justify-between">
-          <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
-            Time of day
-          </p>
-          {!selectedDate && (
-            <span className="font-bridal text-[10.5px] text-bridal-text-soft">
-              Pick a date first
-            </span>
-          )}
-        </div>
-        {useTemplates && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {(selectedKey ? (templateDays[selectedKey] || []).filter((r) => r.runsThisWeekday) : []).length === 0 ? (
-              <p className="col-span-full font-bridal text-[12px] text-bridal-text-soft py-2">
-                {selectedDate ? "No slots offered on this day." : "Pick a date to see available slots."}
-              </p>
-            ) : (
-              (templateDays[selectedKey as string] || []).filter((r) => r.runsThisWeekday).map((row) => {
-                const isSelected = formData.slotTemplateId === row.slotTemplateId
-                const soldOut = row.blocked || row.free <= 0
-                const disabled = !selectedDate || soldOut
-                return (
-                  <button
-                    key={row.slotTemplateId}
-                    type="button"
-                    onClick={() => handlePickTemplate(row)}
-                    disabled={disabled}
-                    className={`relative flex flex-col items-start gap-1.5 p-3 lg:p-4 rounded-md border text-left transition-all
-                      ${disabled
-                        ? "border-bridal-beige bg-bridal-ivory text-bridal-text-soft/50 cursor-not-allowed"
-                        : isSelected
-                          ? "border-bridal-gold-dark bg-bridal-cream shadow-[0_8px_22px_-14px_rgba(176,125,84,0.45)] text-bridal-charcoal"
-                          : "border-bridal-beige bg-bridal-ivory hover:border-bridal-gold/55 hover:bg-bridal-cream text-bridal-charcoal"
-                      }`}
+            {/* Guest count. Issue #62: shown only for the vendor types that
+                genuinely price per-guest (see allowlist above) AND when the
+                venue has set min/max capacity. */}
+            {showGuests && (
+              <div className="order-4 flex h-14 items-center justify-between gap-3 rounded-[4px] border border-bridal-beige bg-white px-4 xl:h-auto xl:flex-col xl:items-stretch xl:justify-center xl:gap-1 xl:rounded-none xl:border-0 xl:bg-transparent xl:py-0">
+                <div className="flex min-w-0 flex-col xl:flex-row xl:items-baseline xl:gap-2">
+                  <label
+                    htmlFor="bk-guests"
+                    className="font-bridal text-[10.5px] font-medium uppercase leading-[14px] tracking-[0.18em] text-bridal-text-label"
                   >
-                    <div className="min-w-0 w-full">
-                      <p className="font-display italic text-[15px] leading-tight">{row.label}</p>
-                      <p className="font-bridal text-[10.5px] text-bridal-text-soft mt-0.5">
-                        {row.startTime.slice(0, 5)} – {row.endTime.slice(0, 5)}
-                      </p>
-                    </div>
-                    {soldOut ? (
-                      <span className="shrink-0 px-1.5 py-0.5 rounded font-bridal text-[8.5px] uppercase tracking-[0.1em] font-medium bg-bridal-coral/15 text-bridal-coral border border-bridal-coral/40">
-                        {row.blocked ? "Blocked" : "Full"}
-                      </span>
-                    ) : (
-                      <span className="shrink-0 font-bridal text-[10px] font-medium text-bridal-gold-dark">
-                        {row.free} of {row.capacity} left
-                      </span>
-                    )}
+                    Guests
+                  </label>
+                  {/* Names the limit that is actually in force and where it
+                      comes from. "Max 1200" on a page where the chosen hall
+                      holds 300 is worse than no number at all. */}
+                  {(venue?.minCapacity || activeLimit) && (
+                    <span
+                      className="truncate font-bridal text-[11px] leading-4 text-bridal-text-soft tabular-nums"
+                      // The full sentence ("From 250 · this venue holds 900")
+                      // is the tooltip; the cell is 260px wide and shares it
+                      // with the stepper, so the visible form is the range.
+                      title={[
+                        venue?.minCapacity ? `From ${venue.minCapacity}` : "",
+                        activeLimit ? `${activeLimit.source} ${activeLimit.max}` : "",
+                      ].filter(Boolean).join(" · ")}
+                    >
+                      {venue?.minCapacity && activeLimit
+                        ? `${venue.minCapacity}–${activeLimit.max}`
+                        : venue?.minCapacity
+                          ? `From ${venue.minCapacity}`
+                          : activeLimit
+                            ? `Up to ${activeLimit.max}`
+                            : ""}
+                    </span>
+                  )}
+                </div>
+                <div className="flex shrink-0 items-center gap-1 xl:gap-2">
+                  <button
+                    type="button"
+                    onClick={() => adjust(-10)}
+                    className={`inline-flex h-11 w-11 items-center justify-center rounded-[4px] border border-bridal-beige bg-bridal-cream text-bridal-charcoal transition-all duration-150 hover:bg-bridal-blush/45 motion-safe:active:scale-95 xl:h-10 xl:w-10 xl:rounded-full ${focusRing}`}
+                    aria-label="Decrease guests"
+                  >
+                    <Minus className="h-4 w-4" aria-hidden />
                   </button>
-                )
-              })
+                  <input
+                    id="bk-guests"
+                    type="number"
+                    inputMode="numeric"
+                    data-booking-field="guestCount"
+                    min={0}
+                    value={formData.guestCount || ""}
+                    max={activeLimit?.max}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      let n = val === "" ? 0 : parseInt(val, 10)
+                      if (Number.isNaN(n)) n = 0
+                      if (activeLimit && n > activeLimit.max) n = activeLimit.max
+                      updateFormData((prev) => ({ ...prev, guestCount: n }))
+                    }}
+                    placeholder="10"
+                    className={`h-11 w-16 rounded-[4px] border-0 bg-transparent text-center font-display text-[18px] italic leading-6 tabular-nums text-bridal-charcoal outline-none transition-opacity duration-200 xl:h-10 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${focusRing}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => adjust(10)}
+                    className={`inline-flex h-11 w-11 items-center justify-center rounded-[4px] border border-bridal-beige bg-bridal-cream text-bridal-charcoal transition-all duration-150 hover:bg-bridal-blush/45 motion-safe:active:scale-95 xl:h-10 xl:w-10 xl:rounded-full ${focusRing}`}
+                    aria-label="Increase guests"
+                  >
+                    <Plus className="h-4 w-4" aria-hidden />
+                  </button>
+                </div>
+              </div>
+            )}
+            {showGuests && <NoticeRail lines={guestNotices} max={4} className="order-4 xl:hidden" />}
+
+            {/* 10.13 (UC-15) — how the function is arranged.
+
+               `SubVenue.genderMode` has been on every space on the platform
+               since the venue-hierarchy work, and nothing ever compared it to
+               what the customer wanted, because no screen ever asked. A family
+               booking a zenana function into a MIXED hall found out when the
+               guests arrived — and for a lot of Pakistani households that
+               decides whether the women of the family attend at all.
+
+               Optional, and never blocking. A family that states nothing is
+               not refused and is told nothing, which is the honest answer:
+               they have not been checked. */}
+            {showArrangement && (
+              <div className={`order-5 ${cellBox}`}>
+                <label htmlFor="bk-arrangement" className={cellLabel}>Arrangement</label>
+                <select
+                  id="bk-arrangement"
+                  value={formData.requestedGenderMode || ""}
+                  onChange={(e) =>
+                    updateFormData((prev) => ({
+                      ...prev,
+                      requestedGenderMode: (e.target.value || null) as BookingFormData["requestedGenderMode"],
+                    }))
+                  }
+                  className={cellSelect}
+                >
+                  <option value="">No preference</option>
+                  {ARRANGEMENT_CHOICES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label} — {c.hint}
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
           </div>
         )}
-        {!useTemplates && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          {PERIODS.map((p) => {
-            const isSelected = formData.timeSlot === p.value
-            const isBooked = selectedAvail?.bookedSlots?.includes(p.value) ?? false
-            const isHeld = selectedAvail?.heldSlots?.includes(p.value) ?? false
-            /**
-             * WW-CAL-CLOSED — a period the venue does not run is not the same
-             * as one that is already taken, and only the second was disabled.
-             * A venue that opens for dinner only had its Morning and Afternoon
-             * cards fully selectable — not booked, not held, just never on
-             * offer — and the customer found out at submit.
-             *
-             * `availableSlots` is the venue's own list of what it runs that
-             * day. When it is missing entirely we stay permissive, because
-             * that means the lookup failed rather than that nothing runs.
-             */
-            const offered = selectedAvail?.availableSlots
-            const notOffered = Array.isArray(offered) && !offered.includes(p.value)
-            const disabled = !selectedDate || isBooked || isHeld || notOffered
-            const Icon = p.icon
-            return (
-              <button
-                key={p.value}
-                type="button"
-                onClick={() => handlePickPeriod(p.value)}
-                disabled={disabled}
-                className={`relative flex flex-row sm:flex-col items-center sm:items-start gap-3 sm:gap-1.5 p-3 lg:p-4 rounded-md border text-left transition-all
-                  ${disabled
-                    ? "border-bridal-beige bg-bridal-ivory text-bridal-text-soft/50 cursor-not-allowed"
-                    : isSelected
-                      ? "border-bridal-gold-dark bg-bridal-cream shadow-[0_8px_22px_-14px_rgba(176,125,84,0.45)] text-bridal-charcoal"
-                      : "border-bridal-beige bg-bridal-ivory hover:border-bridal-gold/55 hover:bg-bridal-cream text-bridal-charcoal"
-                  }`}
-              >
-                <span
-                  className={`shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-full ${
-                    isSelected
-                      ? "bg-bridal-gold/20"
-                      : disabled
-                        ? "bg-bridal-beige/40"
-                        : "bg-bridal-blush/40"
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${isSelected ? "text-bridal-gold-dark" : disabled ? "" : "text-bridal-mauve"}`} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-display italic text-[15px] leading-tight">{p.label}</p>
-                  <p className="font-bridal text-[10.5px] text-bridal-text-soft mt-0.5">{p.hint}</p>
-                </div>
-                {isBooked && (
-                  <span className="shrink-0 px-1.5 py-0.5 rounded font-bridal text-[8.5px] uppercase tracking-[0.1em] font-medium bg-bridal-coral/15 text-bridal-coral border border-bridal-coral/40">
-                    Booked
-                  </span>
-                )}
-                {isHeld && !isBooked && (
-                  <span className="shrink-0 px-1.5 py-0.5 rounded font-bridal text-[8.5px] uppercase tracking-[0.1em] font-medium bg-bridal-gold/15 text-bridal-gold-dark border border-bridal-gold/45">
-                    On hold
-                  </span>
-                )}
-                {/* Says WHY it cannot be picked. "Not available" reads as a
-                    bug on a card that looks identical to the bookable ones. */}
-                {notOffered && !isBooked && !isHeld && (
-                  <span className="shrink-0 px-1.5 py-0.5 rounded font-bridal text-[8.5px] uppercase tracking-[0.1em] font-medium bg-bridal-beige/60 text-bridal-text-soft border border-bridal-beige">
-                    Not offered
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-        )}
-        </section>
 
-        {/* BK-100.53 — service-location picker, pulled up beside the calendar
-           so the single-row time picker doesn't leave a tall empty gap.
-           Optional; collapsed by default (empty mode). When the vendor type
-           strongly suggests a mode it surfaces a "Suggested" chip without
-           forcing the choice. */}
-        <ServiceLocationPicker
-          mode={formData.serviceLocationMode}
-          address={formData.serviceLocationAddress}
-          notes={formData.serviceLocationNotes}
-          vendorType={venue?.vendor?.vendorType}
-          onChange={(next) =>
-            updateFormData((prev) => ({
-              ...prev,
-              serviceLocationMode: next.mode,
-              serviceLocationAddress: next.address,
-              serviceLocationNotes: next.notes,
-            }))
-          }
-        />
+        {/* ── Notice rail (≥ 1280): at most two inline, the rest fold ──── */}
+        <NoticeRail lines={railLines} max={2} className="hidden xl:col-span-2 xl:block" />
 
-        {/* 10.13 (UC-15) — how the function is arranged.
-
-           `SubVenue.genderMode` has been on every space on the platform since
-           the venue-hierarchy work, and nothing ever compared it to what the
-           customer wanted, because no screen ever asked. A family booking a
-           zenana function into a MIXED hall found out when the guests arrived
-           — and for a lot of Pakistani households that decides whether the
-           women of the family attend at all.
-
-           Optional, and never blocking. A family that states nothing is not
-           refused and is told nothing, which is the honest answer: they have
-           not been checked. */}
-        {(vendorTypeName === "Wedding venue" || subVenueSpaces.length >= 1) && (
-          <section className="space-y-2">
-            <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
-              How is the function arranged?
+        {/* ── Calendar ──────────────────────────────────────────────────── */}
+        <section className="order-1 w-full xl:order-1 xl:w-[332px]" aria-label="Choose a date">
+          <div className="flex h-11 items-center justify-between xl:h-10 xl:[@media(max-height:820px)]:h-9">
+            <button
+              type="button"
+              onClick={() => setViewMonth((m) => (canGoPrevMonth ? addMonths(m, -1) : m))}
+              disabled={!canGoPrevMonth}
+              className={`inline-flex h-11 w-11 items-center justify-center rounded-full text-bridal-charcoal transition-colors duration-150 hover:bg-bridal-blush/45 disabled:cursor-not-allowed disabled:text-bridal-text-soft/40 disabled:hover:bg-transparent xl:h-9 xl:w-9 ${focusRing}`}
+              aria-label="Previous month"
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden />
+            </button>
+            <p className="font-display text-[20px] italic leading-6 text-bridal-charcoal" aria-live="polite">
+              {MONTHS_FULL[viewMonth.getMonth()]} {viewMonth.getFullYear()}
             </p>
-            <select
-              value={formData.requestedGenderMode || ""}
-              onChange={(e) =>
+            <button
+              type="button"
+              onClick={() => setViewMonth((m) => addMonths(m, 1))}
+              className={`inline-flex h-11 w-11 items-center justify-center rounded-full text-bridal-charcoal transition-colors duration-150 hover:bg-bridal-blush/45 xl:h-9 xl:w-9 ${focusRing}`}
+              aria-label="Next month"
+            >
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
+
+          {/* Weekday header */}
+          <div className="grid h-6 grid-cols-7 gap-1.5 xl:gap-1 xl:[@media(max-height:820px)]:h-[22px]" aria-hidden>
+            {WEEKDAY_SHORT.map((w, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-center font-bridal text-[10px] font-medium uppercase tracking-[0.18em] text-bridal-text-soft"
+              >
+                {w}
+              </div>
+            ))}
+          </div>
+
+          {/* 6×7 day grid — always 42 cells (buildMonthGrid pads), re-keyed
+              per month so the arrows fade the grid in. */}
+          <div key={viewYm} className="grid grid-cols-7 gap-1.5 motion-safe:animate-[fade-in_160ms_ease-out_forwards] xl:gap-1">
+            {monthGrid.map((d) => renderDayCell(d))}
+          </div>
+
+          {/* Legend */}
+          <div className="mt-1 flex h-6 items-center justify-between gap-3 font-bridal text-[11px] leading-4 text-bridal-text-soft xl:[@media(max-height:820px)]:h-5">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-bridal-gold" aria-hidden />
+              Limited
+            </span>
+            {selectedDate && (
+              <span className="truncate text-bridal-charcoal">
+                <span className="text-bridal-gold-dark">Selected:</span> {shortDay(selectedDate)}
+              </span>
+            )}
+          </div>
+        </section>
+        <NoticeRail lines={calendarNotices} max={3} className="order-1 xl:hidden" />
+
+        {/* ── Slot column: times, then the location row ─────────────────
+            `contents` on the base layout so the guests and arrangement rows
+            can sit between the times and the location row; a block beside
+            the calendar at ≥ 1280. */}
+        <div className="contents xl:order-2 xl:block xl:min-w-0">
+          <section className="order-3 min-w-0" aria-label="Choose a time">
+            <p
+              className={`h-6 truncate font-bridal text-[15px] leading-6 ${
+                selectedDate ? "text-bridal-charcoal" : "text-bridal-text-soft"
+              }`}
+            >
+              {selectedDate ? dayHeader(selectedDate) : "Pick a date to see times"}
+            </p>
+
+            <div ref={slotListRef} data-booking-slots className="mt-2 space-y-2 scroll-mt-4">
+              {useTemplates &&
+                selectedDate &&
+                dayRows.length > 0 &&
+                dayRows.map((row, i) => {
+                  const isSelected = formData.slotTemplateId === row.slotTemplateId
+                  const soldOut = row.blocked || row.free <= 0
+                  const disabled = !selectedDate || soldOut
+                  const hours =
+                    formatSlotRange(row.startTime, row.endTime) ||
+                    `${row.startTime.slice(0, 5)} to ${row.endTime.slice(0, 5)}`
+                  return (
+                    <button
+                      key={`${selectedKey}-${row.slotTemplateId}`}
+                      type="button"
+                      onClick={() => handlePickTemplate(row)}
+                      disabled={disabled}
+                      aria-pressed={isSelected}
+                      style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}
+                      className={slotRowClass(disabled ? "disabled" : isSelected ? "selected" : "default")}
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-display text-[15px] italic leading-5">{row.label}</span>
+                        <span
+                          className={`block truncate font-bridal text-[12px] leading-4 ${
+                            isSelected ? "text-bridal-charcoal/80" : disabled ? "" : "text-bridal-text-soft"
+                          }`}
+                        >
+                          {hours}
+                        </span>
+                      </span>
+                      {isSelected
+                        ? selectedMark
+                        : soldOut
+                          ? chip(row.blocked ? "Blocked" : "Full", "coral")
+                          : (
+                            <span className="shrink-0 font-bridal text-[11px] font-medium leading-4 tabular-nums text-bridal-gold-dark">
+                              {row.free} of {row.capacity} left
+                            </span>
+                          )}
+                    </button>
+                  )
+                })}
+
+              {!useTemplates &&
+                PERIODS.map((p, i) => {
+                  const isSelected = formData.timeSlot === p.value
+                  const isBooked = selectedAvail?.bookedSlots?.includes(p.value) ?? false
+                  const isHeld = selectedAvail?.heldSlots?.includes(p.value) ?? false
+                  /**
+                   * WW-CAL-CLOSED — a period the venue does not run is not the
+                   * same as one that is already taken, and only the second was
+                   * disabled. A venue that opens for dinner only had its Morning
+                   * and Afternoon cards fully selectable — not booked, not held,
+                   * just never on offer — and the customer found out at submit.
+                   *
+                   * `availableSlots` is the venue's own list of what it runs that
+                   * day. When it is missing entirely we stay permissive, because
+                   * that means the lookup failed rather than that nothing runs.
+                   */
+                  const offered = selectedAvail?.availableSlots
+                  const notOffered = Array.isArray(offered) && !offered.includes(p.value)
+                  const disabled = !selectedDate || isBooked || isHeld || notOffered
+                  const Icon = p.icon
+                  return (
+                    <button
+                      key={`${selectedKey}-${p.value}`}
+                      type="button"
+                      onClick={() => handlePickPeriod(p.value)}
+                      disabled={disabled}
+                      aria-pressed={isSelected}
+                      style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}
+                      className={slotRowClass(disabled ? "disabled" : isSelected ? "selected" : "default")}
+                    >
+                      <Icon
+                        className={`h-4 w-4 shrink-0 ${
+                          isSelected ? "text-bridal-charcoal" : disabled ? "text-bridal-text-soft/50" : "text-bridal-mauve"
+                        }`}
+                        aria-hidden
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-display text-[15px] italic leading-5">{p.label}</span>
+                        <span
+                          className={`block truncate font-bridal text-[12px] leading-4 ${
+                            isSelected ? "text-bridal-charcoal/80" : disabled ? "" : "text-bridal-text-soft"
+                          }`}
+                        >
+                          {p.hint}
+                        </span>
+                      </span>
+                      {isSelected && selectedMark}
+                      {!isSelected && isBooked && chip("Booked", "coral")}
+                      {!isSelected && isHeld && !isBooked && chip("On hold", "gold")}
+                      {/* Says WHY it cannot be picked. "Not available" reads as a
+                          bug on a card that looks identical to the bookable ones. */}
+                      {!isSelected && notOffered && !isBooked && !isHeld && chip("Not offered", "beige")}
+                    </button>
+                  )
+                })}
+            </div>
+
+            {/* A day with nothing on it — say so, and offer the nearest days
+                that do have something, from what is already loaded. */}
+            {useTemplates && selectedDate && dayRows.length === 0 && (
+              <div className="mt-2">
+                <p className="rounded-[4px] border border-dashed border-bridal-beige px-4 py-4 font-bridal text-[13px] leading-[18px] text-bridal-text-soft">
+                  No times offered on {shortDay(selectedDate)}
+                </p>
+                {nextFreeDays.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {nextFreeDays.map((d) => (
+                      <button
+                        key={toKey(d)}
+                        type="button"
+                        onClick={() => {
+                          setViewMonth(startOfMonth(d))
+                          pickDay(d)
+                        }}
+                        className={`inline-flex h-11 items-center rounded-full border border-bridal-beige bg-white px-4 font-bridal text-[12px] text-bridal-charcoal transition-colors duration-150 hover:bg-bridal-blush/45 xl:h-9 ${focusRing}`}
+                      >
+                        Next free: {d.getDate()} {MONTHS[d.getMonth()]}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+          <NoticeRail lines={slotNotices} max={4} className="order-3 xl:hidden" />
+
+          {/* BK-100.53 — service location. A disclosure row; the four modes,
+              the address and the notes live in the desk sheet (a bottom
+              drawer on a phone) so they never sit between the customer and
+              the calendar. */}
+          <button
+            type="button"
+            onClick={() => setLocationOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={locationOpen}
+            className={`order-6 flex h-14 w-full items-center gap-3 rounded-[4px] border border-bridal-beige bg-white px-4 text-left transition-colors duration-150 hover:bg-bridal-blush/45 xl:mt-4 ${focusRing}`}
+          >
+            <MapPin className="h-4 w-4 shrink-0 text-bridal-gold-dark" aria-hidden />
+            <span className="min-w-0 flex-1">
+              <span className="block font-bridal text-[13px] leading-[18px] text-bridal-text-soft">Where will it happen?</span>
+              <span className="block truncate font-bridal text-[13px] leading-[18px] text-bridal-charcoal">
+                {locLabel}
+                {locMode && locMode !== "at_vendor" && (
+                  <>
+                    {" · "}
+                    {locAddressMissing ? <span className="text-bridal-coral">Address needed</span> : locAddress}
+                  </>
+                )}
+              </span>
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-bridal-text-soft" aria-hidden />
+          </button>
+          <DeskSheet
+            open={locationOpen}
+            onOpenChange={setLocationOpen}
+            title="Where will the service happen?"
+            description="Optional — leave blank if it happens at the vendor's usual address."
+          >
+            {/* Optional; when the vendor type strongly suggests a mode it
+                surfaces a "Suggested" chip without forcing the choice. */}
+            <ServiceLocationPicker
+              frame="sheet"
+              mode={formData.serviceLocationMode}
+              address={formData.serviceLocationAddress}
+              notes={formData.serviceLocationNotes}
+              vendorType={venue?.vendor?.vendorType}
+              onChange={(next) =>
                 updateFormData((prev) => ({
                   ...prev,
-                  requestedGenderMode: (e.target.value || null) as BookingFormData["requestedGenderMode"],
+                  serviceLocationMode: next.mode,
+                  serviceLocationAddress: next.address,
+                  serviceLocationNotes: next.notes,
                 }))
               }
-              className="bridal-select w-full rounded-md border border-bridal-beige bg-white px-3.5 py-3 font-bridal text-[13.5px] text-bridal-charcoal outline-none transition-colors focus:border-bridal-gold-dark focus:ring-2 focus:ring-bridal-gold/25"
-            >
-              <option value="">No preference / decide later</option>
-              {ARRANGEMENT_CHOICES.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label} — {c.hint}
-                </option>
-              ))}
-            </select>
-            <p className="font-bridal text-[10.5px] text-bridal-text-soft">
-              We&apos;ll check the hall you pick can be arranged that way, and tell the venue.
-            </p>
-          </section>
-        )}
-
-      </div>{/* end right column */}
-
-      </div>{/* end calendar+slots row */}
-
-      {/* Venue compliance advisory (soft — never blocks the booking) */}
-      {complianceWarnings.length > 0 && (
-        <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-300 px-3 py-2 font-bridal text-[12px] text-amber-800">
-          <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <p className="font-medium">Compliance check</p>
-            <ul className="list-disc pl-4 space-y-0.5">
-              {complianceWarnings.map((w, i) => (
-                <li key={i}>{w}</li>
-              ))}
-            </ul>
-          </div>
+            />
+          </DeskSheet>
         </div>
-      )}
-
-      {/* Status messages */}
-      {holdFailed && (
-        <div className="flex items-start gap-2 rounded-md bg-bridal-coral/15 border border-bridal-coral/40 px-3 py-2 font-bridal text-[12px] text-bridal-coral">
-          <XCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-          <p>
-            That slot was just reserved by another customer.
-            {holdFailedUntil && (
-              <> Held until {holdFailedUntil.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.</>
-            )} Please pick another time.
-          </p>
-        </div>
-      )}
-      {selectedAvail?.isBlocked && (
-        <div className="flex items-start gap-2 rounded-md bg-bridal-beige/40 border border-bridal-beige px-3 py-2 font-bridal text-[12px] text-bridal-charcoal/80">
-          <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-          <p>
-            <span className="font-display italic text-[14px] text-bridal-charcoal">Vendor not available this day.</span>{" "}
-            {selectedAvail.blockReason || "Pick a different date."}
-          </p>
-        </div>
-      )}
-      {isHolding && timeRemaining > 0 && timeRemaining < 9999 && (
-        <div className="flex items-center gap-2 rounded-md bg-bridal-sage/15 border border-bridal-sage/40 px-3 py-2 font-bridal text-[12px] text-[#3F6B43]">
-          <Timer className="w-3.5 h-3.5 shrink-0" />
-          <span>
-            Slot reserved for{" "}
-            <span className="font-display italic text-[14px] tabular-nums">
-              {String(Math.floor(timeRemaining / 60)).padStart(2, "0")}:
-              {String(timeRemaining % 60).padStart(2, "0")}
-            </span>
-          </span>
-        </div>
-      )}
-
-      {/* Guest count — inline stepper. Issue #62: shown only for the
-          vendor types that genuinely price per-guest (see allowlist
-          above) AND when the venue has set min/max capacity. */}
-      {needsGuestCount && enforceCapacity && (
-        <section className="pt-3 border-t border-bridal-beige/70">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="font-display italic text-[15px] text-bridal-charcoal leading-tight">How many guests?</p>
-              {/* Names the limit that is actually in force and where it comes
-                  from. "Max 1200" on a page where the chosen hall holds 300 is
-                  worse than no number at all. */}
-              {(venue?.minCapacity || activeLimit) && (
-                <p className="font-bridal text-[10.5px] text-bridal-text-soft mt-0.5">
-                  {venue?.minCapacity ? `From ${venue.minCapacity}` : ""}
-                  {venue?.minCapacity && activeLimit ? " · " : ""}
-                  {activeLimit ? `${activeLimit.source} ${activeLimit.max}` : ""}
-                </p>
-              )}
-            </div>
-            <div className="inline-flex items-center gap-0.5 rounded-md border border-bridal-beige bg-bridal-cream p-0.5">
-              <button
-                type="button"
-                onClick={() => adjust(-10)}
-                className="w-8 h-8 inline-flex items-center justify-center rounded text-bridal-charcoal hover:bg-bridal-blush/55 active:scale-95 transition-all"
-                aria-label="Decrease guests"
-              >
-                <Minus className="w-3.5 h-3.5" />
-              </button>
-              <input
-                type="number"
-                min={0}
-                value={formData.guestCount || ""}
-                max={activeLimit?.max}
-                onChange={(e) => {
-                  const val = e.target.value
-                  let n = val === "" ? 0 : parseInt(val, 10)
-                  if (Number.isNaN(n)) n = 0
-                  if (activeLimit && n > activeLimit.max) n = activeLimit.max
-                  updateFormData((prev) => ({ ...prev, guestCount: n }))
-                }}
-                placeholder="10"
-                className="w-12 text-center font-display italic text-[18px] tabular-nums text-bridal-charcoal bg-transparent border-0 outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
-              <button
-                type="button"
-                onClick={() => adjust(10)}
-                className="w-8 h-8 inline-flex items-center justify-center rounded text-bridal-charcoal hover:bg-bridal-blush/55 active:scale-95 transition-all"
-                aria-label="Increase guests"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Advisory only — both are the vendor's preferences, not physical or
-              legal limits, so they inform rather than block. */}
-          {(comfortWarning || belowMinimum) && (
-            <div className="mt-2 space-y-1">
-              {comfortWarning && (
-                <p className="font-bridal text-[10.5px] leading-snug text-bridal-mauve">{comfortWarning}</p>
-              )}
-              {belowMinimum && (
-                <p className="font-bridal text-[10.5px] leading-snug text-bridal-mauve">{belowMinimum}</p>
-              )}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* (Service-location picker moved up into the right column beside the
-          calendar — see the "right column" block above.) */}
-    </div>
+      </div>
+    </TooltipProvider>
   )
 }

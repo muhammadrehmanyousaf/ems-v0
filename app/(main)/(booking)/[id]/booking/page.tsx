@@ -9,16 +9,13 @@ export const metadata: Metadata = {
 }
 
 export default function BookingPage() {
-  // A plain <div>, not <main>: the public chrome already provides the page's
-  // single <main> landmark. Adding another here nested a second (and with the
-  // root layout, a third) <main> — invalid HTML that made the accessibility tree
-  // list the booking content under two "main" regions, reading as a duplicated
-  // empty-state card on unpriced vendors.
+  // No container, no padding, no <main>: the booking shell is the page. It
+  // draws its own chrome (PublicChrome hides the marketing header and footer
+  // on this route) and lays itself out against the viewport — a Stage beside
+  // a Desk on wide screens, a header and a pinned action bar on a phone.
   return (
-    <div className="min-h-screen bg-bridal-ivory pb-24 lg:pb-12">
-      <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
-        <BookingForm />
-      </div>
+    <div className="booking-shell bg-bridal-ivory">
+      <BookingForm />
     </div>
   )
 }

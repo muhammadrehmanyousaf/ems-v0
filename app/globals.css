@@ -566,3 +566,110 @@ html[data-locale="ur"] body {
     box-shadow: 0 0 0 3px rgba(176, 125, 84, 0.35);
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BOOKING SHELL — /[id]/booking
+   One set of numbers for the whole route. The Stage (venue + ledger) and the
+   Desk (one step at a time) are laid out against the viewport: on the desk
+   tiers the shell is exactly one screen tall and only the desk body scrolls;
+   on a phone the document scrolls and the action bar is pinned. A density
+   tier tightens the numbers on short screens, and a release valve lets the
+   document scroll on cramped laptops rather than clipping the action bar.
+   ───────────────────────────────────────────────────────────────────────── */
+.booking-shell {
+  --bk-top-bar: 72px;
+  --bk-action-bar: 88px;
+  --bk-body-pad-y: 32px;
+  --bk-stage-band: 72px;
+  --bk-ledger-row: 36px;
+  --bk-cal-cell: 44px;
+  --bk-step-title: 32px;
+  --bk-step-title-lh: 38px;
+  --bk-stage-name: 32px;
+  --bk-stage-name-lh: 38px;
+  --bk-stage-pad: 24px;
+  --bk-stage-gap: 16px;
+  --bk-money: 22px;
+  --bk-stage-w: 400px;
+  background-color: #FDF8F2;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+@media (min-width: 1280px) { .booking-shell { --bk-stage-w: 480px; } }
+@media (min-width: 1440px) { .booking-shell { --bk-stage-w: 560px; } }
+@media (max-height: 820px) {
+  .booking-shell {
+    --bk-top-bar: 64px;
+    --bk-action-bar: 80px;
+    --bk-body-pad-y: 24px;
+    --bk-stage-band: 64px;
+    --bk-ledger-row: 32px;
+    --bk-cal-cell: 40px;
+    --bk-step-title: 28px;
+    --bk-step-title-lh: 34px;
+    --bk-stage-name: 28px;
+    --bk-stage-name-lh: 34px;
+    --bk-stage-pad: 16px;
+    --bk-stage-gap: 12px;
+  }
+}
+/* Short screens — a 1366×768 laptop at 125% scaling has 614px of viewport.
+   The Stage must still show the photo, every ledger row and the money without
+   scrolling: band 56 + identity ~90 + 7 rows × 28 + money ~80 + padding ≈ 460,
+   which leaves ~150px of photograph at 614. */
+@media (max-height: 700px) {
+  .booking-shell {
+    --bk-top-bar: 56px;
+    --bk-action-bar: 72px;
+    --bk-body-pad-y: 20px;
+    --bk-stage-band: 56px;
+    --bk-ledger-row: 28px;
+    --bk-stage-name: 24px;
+    --bk-stage-name-lh: 30px;
+    --bk-step-title: 26px;
+    --bk-step-title-lh: 30px;
+    --bk-stage-pad: 12px;
+    --bk-stage-gap: 10px;
+    --bk-money: 20px;
+  }
+}
+
+/* Desk tiers, locked to the viewport: nothing but the desk body scrolls. */
+@media (min-width: 1024px) and (min-height: 600px) {
+  .booking-shell { display: flex; height: 100vh; height: 100dvh; overflow: hidden; }
+  .booking-shell > .booking-stage { width: var(--bk-stage-w); flex: 0 0 auto; height: 100%; }
+  .booking-shell > .booking-desk { height: 100%; }
+}
+
+/* Release valve — under 600px of viewport (a very small window) the desk has
+   no room left to scroll inside, so the document scrolls, the Stage sticks,
+   and the action bar sticks to the bottom (no ancestor has overflow: hidden
+   in this mode, so sticky works). The Stage itself still fits: see the
+   short-screen variables above. */
+@media (min-width: 1024px) and (max-height: 599px) {
+  .booking-shell { display: flex; align-items: flex-start; }
+  .booking-shell > .booking-stage { width: var(--bk-stage-w); flex: 0 0 auto; position: sticky; top: 0; height: 100vh; height: 100dvh; }
+  .booking-shell > .booking-desk { min-height: 100vh; min-height: 100dvh; }
+  .booking-shell .booking-action-bar { position: sticky; bottom: 0; z-index: 20; }
+}
+
+/* Phone and tablet — the document scrolls, the action bar is pinned. */
+@media (max-width: 1023px) {
+  .booking-shell { display: block; padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+  .booking-shell .booking-action-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+@media print {
+  .booking-shell { display: block; height: auto; overflow: visible; }
+  .booking-stage, .booking-action-bar, .booking-top-bar, .booking-phone-header { display: none !important; }
+  .booking-body { overflow: visible !important; }
+}
+
+/* Urdu is first-class in the requirements box: system Urdu faces render it,
+   DM Sans renders English, and dir="auto" chooses the direction per line. */
+.font-multilingual {
+  font-family: var(--font-dm-sans), var(--font-nastaliq), "Noto Nastaliq Urdu", "Urdu Typesetting", "Noto Naskh Arabic", "Segoe UI", system-ui, sans-serif;
+}

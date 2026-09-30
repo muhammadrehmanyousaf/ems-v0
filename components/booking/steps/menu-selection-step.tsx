@@ -1,15 +1,16 @@
 "use client"
 
+import { useState } from "react"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import type { BookingFormData, EventVenue } from "@/lib/types"
-import { Check } from "lucide-react"
-import { motion } from "framer-motion"
+import { Check, ChevronDown } from "lucide-react"
 import { menuChargeFor, menuIsPerHead } from "@/lib/pricing/menu"
 // WW-MENU-READ — reads every shape `Menus.data` has been written in. The step
 // used to read only the sectioned one, so portal-written menus showed a title
 // and no dishes at all.
 import { menuSections } from "@/lib/menu/menu-items"
+import { useBookingShell } from "@/components/booking/shell/booking-shell-context"
 
 interface MenuSelectionStepProps {
   formData: BookingFormData
@@ -27,15 +28,18 @@ interface MenuSelectionStepProps {
   packageName?: string
 }
 
-const container = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
-}
-
-const item = {
-  hidden: { opacity: 0, y: 12 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-}
+/*
+ * Layout (spec §7.4). The shell renders the heading; this step is the included
+ * note, the menu rows and the footnote — nothing else.
+ *
+ *   row 72 (density 64): radio 20 · title 22/28 + preview 12/16 · price / Included · "See dishes"
+ *   selected row expands by default: dish panel, 2 columns at xl, max-height
+ *   168 (density 132) with its own scroll on the desk tiers so three rows stay
+ *   inside the fold. "See dishes" opens a panel WITHOUT selecting the menu.
+ *
+ * Entrance is CSS (`animate-stagger-fade-up`, keyframe ends at opacity 1). The
+ * old framer container/item variants mounted every row at opacity 0.
+ */
 
 export default function MenuSelectionStep({
   formData,
@@ -44,6 +48,15 @@ export default function MenuSelectionStep({
   includedInPackage = false,
   packageName,
 }: MenuSelectionStepProps) {
+  const { tier, announce } = useBookingShell()
+
+  /**
+   * Which dish panels the customer opened or closed by hand. Absent = follow
+   * the selection (the chosen menu shows its dishes, the others do not).
+   * Cleared on every selection so the new choice is the one that is open.
+   */
+  const [panelOverride, setPanelOverride] = useState<Record<string, boolean>>({})
+
   const handleMenuSelect = (menuId: string) => {
     const selectedMenu = venue?.menus.find((m) => m.id === menuId)
     // WW-PRICING-OVERHAUL — per-head menus bill price × max(guests, min-pax);
@@ -63,6 +76,13 @@ export default function MenuSelectionStep({
       selectedMenu: menuId,
       totalPrice: currentTotal - oldMenuPrice + menuPrice,
     })
+  }
+
+  const onValueChange = (menuId: string) => {
+    setPanelOverride({})
+    handleMenuSelect(menuId)
+    const picked = venue?.menus.find((m) => m.id === menuId)
+    if (picked?.title) announce(`${picked.title} selected`)
   }
 
   /**
@@ -89,159 +109,203 @@ export default function MenuSelectionStep({
     : allMenus
   const menus = scopedMenus && scopedMenus.length > 0 ? scopedMenus : allMenus
 
+  // The desk body is the scroller on the desk tiers, so the dish panel caps
+  // itself and scrolls inside. On a phone the document scrolls; a nested
+  // scroller there would trap the thumb, so the panel simply grows.
+  const panelCap = tier === "desk"
 
   return (
-    <motion.div className="space-y-7" variants={container} initial="hidden" animate="visible">
-      <motion.div variants={item}>
-        <p className="font-bridal text-[11px] uppercase tracking-[0.22em] text-bridal-text-label">Step four</p>
-        <h2 className="mt-2 font-display italic text-[30px] sm:text-[38px] leading-[1.1] text-bridal-charcoal">Choose your menu</h2>
-        <p className="mt-3 font-bridal text-[14px] leading-relaxed text-bridal-text-soft">
-          {includedInPackage
-            ? "Pick the dishes you'd like. Your food is already covered — this won't change your price."
-            : "Select a menu package for your event"}
-        </p>
-      </motion.div>
-
+    <div>
       {/* WW-PKG-UNIT — say it plainly, once, at the top. A customer who has just
           agreed to a per-head package and then meets a screen full of per-head
           menu prices reasonably assumes they are being charged again. */}
       {includedInPackage && (
-        <motion.div
-          variants={item}
-          className="rounded-sm border border-bridal-beige bg-bridal-sand/50 px-4 py-3"
+        <div
+          className="mb-3 flex min-h-[44px] items-center gap-2 rounded-[4px] border border-bridal-beige bg-bridal-sand/50 px-4 py-2 motion-safe:animate-stagger-fade-up"
+          style={{ animationDelay: "0ms" }}
         >
-          <p className="font-bridal text-[13px] text-bridal-text">
-            <Check className="inline-block w-3.5 h-3.5 mr-1.5 -mt-0.5 text-bridal-sage" aria-hidden="true" />
+          <Check className="h-3.5 w-3.5 shrink-0 text-[#3F6B43]" strokeWidth={2.5} aria-hidden="true" />
+          <p className="font-bridal text-[13px] leading-[18px] text-bridal-text">
             Food is included in
-            <strong className="not-italic text-bridal-charcoal"> {packageName || "your package"}</strong>.
+            <strong className="font-medium not-italic text-bridal-charcoal"> {packageName || "your package"}</strong>.
             Choosing a menu here tells the kitchen what to cook — it does not add to your total.
           </p>
-        </motion.div>
+        </div>
       )}
 
-      <div className="space-y-3">
-        <RadioGroup value={formData.selectedMenu} onValueChange={handleMenuSelect}>
-          {menus?.map((menu) => {
-            const isSelected = formData.selectedMenu === menu.id
+      <RadioGroup value={formData.selectedMenu} onValueChange={onValueChange} className="gap-2">
+        {menus?.map((menu, i) => {
+          const isSelected = formData.selectedMenu === menu.id
 
-            /* WW-MENU-READ — was four hardcoded section lookups
-               (`items.starters?.items` …), which returned nothing for a menu
-               written in the portal's flat `{ items: [...] }` shape and dropped
-               any section outside those four even in the sectioned shape. The
-               vendor's own section order is preserved. */
-            const sections = menuSections(menu.data)
-            const dishCount = sections.reduce((n, sec) => n + sec.dishes.length, 0)
+          /* WW-MENU-READ — was four hardcoded section lookups
+             (`items.starters?.items` …), which returned nothing for a menu
+             written in the portal's flat `{ items: [...] }` shape and dropped
+             any section outside those four even in the sectioned shape. The
+             vendor's own section order is preserved. */
+          const sections = menuSections(menu.data)
+          const dishCount = sections.reduce((n, sec) => n + sec.dishes.length, 0)
+          const dishNames = sections.flatMap((sec) => sec.dishes.map((d) => d.name))
+          const preview =
+            dishCount > 0
+              ? `${dishCount} ${dishCount === 1 ? "dish" : "dishes"} · ${dishNames.slice(0, 3).join(", ")}${
+                  dishNames.length > 3 ? ` +${dishNames.length - 3}` : ""
+                }`
+              : "Dishes not listed yet"
 
-            return (
-              <motion.div
-                key={menu.id}
-                variants={item}
-                className={`relative rounded-md border overflow-hidden transition-all duration-300 cursor-pointer ${
-                  isSelected
-                    ? 'border-bridal-gold-dark bg-bridal-cream shadow-[0_14px_32px_-18px_rgba(176,125,84,0.5)]'
-                    : 'border-bridal-beige bg-bridal-ivory hover:border-bridal-gold/55 hover:bg-bridal-cream'
+          const panelOpen = panelOverride[menu.id] ?? isSelected
+          const panelId = `menu-dishes-${menu.id}`
+
+          return (
+            <div
+              key={menu.id}
+              // `min-w-0`: this is a grid item (RadioGroup is `grid`), and a
+              // grid item's minimum width is its content's — on a 358px phone
+              // column the row ran to 582px before the title could truncate.
+              className={`relative min-w-0 rounded-[4px] border transition-colors duration-200 motion-safe:animate-stagger-fade-up ${
+                isSelected
+                  ? "border-bridal-gold-dark bg-bridal-cream"
+                  : "border-bridal-beige bg-white hover:bg-bridal-blush/45"
+              }`}
+              style={{ animationDelay: `${Math.min(i + (includedInPackage ? 1 : 0), 8) * 30}ms` }}
+              data-selected={isSelected ? "true" : undefined}
+            >
+              {/* 4px gold rule, drawn top-down on select (§8 card select). */}
+              <span
+                aria-hidden="true"
+                className={`pointer-events-none absolute bottom-0 left-0 top-0 w-1 origin-top rounded-l-[3px] bg-bridal-gold transition-transform duration-200 ease-out ${
+                  isSelected ? "scale-y-100" : "scale-y-0"
                 }`}
-              >
-                {isSelected && (
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-4 right-4 w-7 h-7 rounded-full bg-bridal-gold border border-bridal-gold-dark flex items-center justify-center z-10 shadow-[0_4px_12px_-6px_rgba(176,125,84,0.55)]">
-                    <Check className="w-3.5 h-3.5 text-bridal-charcoal" strokeWidth={3} />
-                  </motion.div>
-                )}
+              />
 
-                <div className="flex items-start gap-4 p-5 sm:p-6">
-                  <RadioGroupItem value={menu.id} id={menu.id} className="mt-2 border-bridal-beige data-[state=checked]:bg-bridal-gold data-[state=checked]:text-bridal-charcoal data-[state=checked]:border-bridal-gold-dark" />
-                  <div className="flex-1">
-                    <div className="flex items-end justify-between gap-3 pr-10">
-                      <Label htmlFor={menu.id} className="font-display italic text-[22px] cursor-pointer text-bridal-charcoal leading-tight">
-                        {menu.title}
-                      </Label>
-                      {/* WW-PKG-UNIT — when the package covers food, the menu's
-                          own rate is not what the customer pays, so showing it
-                          here would be quoting a number that never appears on
-                          their bill. "Included" is both true and reassuring. */}
-                      {includedInPackage ? (
-                        <span className="font-bridal text-[12px] uppercase tracking-[0.18em] font-medium text-bridal-sage leading-none shrink-0">
-                          Included
-                        </span>
-                      ) : (
-                        <span className="font-display italic text-[22px] text-bridal-gold-dark leading-none shrink-0">
-                          Rs. {Number(menu.price)?.toLocaleString()}
-                          {menuIsPerHead(menu) && (
-                            <span className="font-bridal not-italic text-[12px] text-bridal-text-soft"> /plate</span>
-                          )}
-                        </span>
-                      )}
-                    </div>
-
+              <div className="flex min-h-[72px] items-center gap-3 py-2 pl-4 pr-3 xl:[@media(max-height:820px)]:min-h-[64px]">
+                {/* The whole left region is the label, so a tap anywhere on the
+                    title or preview picks the menu; the radio is inside it. */}
+                <Label
+                  htmlFor={menu.id}
+                  className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 self-stretch font-normal leading-normal"
+                >
+                  <RadioGroupItem
+                    value={menu.id}
+                    id={menu.id}
+                    className="h-5 w-5 shrink-0 border-bridal-beige bg-white text-bridal-charcoal transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2 data-[state=checked]:border-bridal-gold-dark data-[state=checked]:bg-bridal-gold data-[state=checked]:text-bridal-charcoal"
+                  />
+                  <span className="block min-w-0 flex-1">
+                    <span className="block truncate font-display text-[22px] italic leading-[28px] text-bridal-charcoal">
+                      {menu.title}
+                    </span>
                     {/* How much food this actually is, stated before the list.
                         A customer comparing three menus needs the shape of each
                         at a glance, and it also makes an EMPTY menu obviously
                         empty rather than looking like a broken card. */}
-                    {dishCount > 0 && (
-                      <p className="mt-2 font-bridal text-[11.5px] text-bridal-text-soft">
-                        {dishCount} {dishCount === 1 ? "dish" : "dishes"}
-                        {sections.length > 1 ? ` across ${sections.length} courses` : ""}
-                      </p>
-                    )}
+                    <span className="block truncate font-bridal text-[12px] leading-[16px] text-bridal-text-soft">
+                      {preview}
+                    </span>
+                  </span>
+                </Label>
 
-                    {sections.length > 0 ? (
-                      <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {sections.map((sec) => (
-                          <div key={sec.key} className="rounded-md bg-bridal-ivory border border-bridal-beige/70 p-4">
-                            {/* A flat menu has no section name; showing an
-                                invented one ("Other") would be worse than
-                                showing the dishes plainly. */}
-                            {sec.label && (
-                              <h4 className="font-bridal text-[10px] uppercase tracking-[0.3em] font-medium text-bridal-gold-dark mb-2">
-                                {sec.label}
-                              </h4>
-                            )}
-                            <ul className="space-y-1">
-                              {sec.dishes.map((dish, j) => (
-                                <li key={`${dish.name}-${j}`} className="font-bridal text-[12.5px] text-bridal-charcoal/85 flex items-start gap-2">
-                                  <span className="w-1 h-1 mt-[7px] rounded-full bg-bridal-gold flex-shrink-0" />
-                                  <span>
-                                    {dish.name}
-                                    {/* Both of these change what the family
-                                        gets or pays, so they belong next to the
-                                        dish and not in a footnote. */}
-                                    {dish.isLive && (
-                                      <span className="ml-1.5 font-bridal text-[10px] uppercase tracking-[0.16em] text-bridal-sage">
-                                        live
-                                      </span>
-                                    )}
-                                    {dish.supplementPerHead > 0 && !includedInPackage && (
-                                      <span className="ml-1.5 font-bridal text-[11px] text-bridal-gold-dark tabular-nums">
-                                        +Rs. {dish.supplementPerHead.toLocaleString()}/plate
-                                      </span>
-                                    )}
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      /* Said plainly instead of rendering an empty card. The
-                         venue has priced this menu but not listed its dishes;
-                         the customer can still choose it and ask. */
-                      <p className="mt-4 font-bridal text-[12.5px] text-bridal-text-soft italic">
-                        This menu&apos;s dishes aren&apos;t listed yet — choose it and the venue
-                        will confirm what&apos;s served.
-                      </p>
-                    )}
-                  </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {/* WW-PKG-UNIT — when the package covers food, the menu's
+                      own rate is not what the customer pays, so showing it
+                      here would be quoting a number that never appears on
+                      their bill. "Included" is both true and reassuring. */}
+                  {includedInPackage ? (
+                    <span className="font-bridal text-[11px] uppercase leading-[14px] tracking-[0.18em] text-[#3F6B43]">
+                      Included
+                    </span>
+                  ) : (
+                    <span className="whitespace-nowrap font-display text-[22px] italic leading-[26px] text-bridal-gold-dark tabular-nums">
+                      Rs {Number(menu.price)?.toLocaleString()}
+                      {menuIsPerHead(menu) && (
+                        <span className="font-bridal text-[12px] not-italic leading-[16px] text-bridal-text-soft"> /plate</span>
+                      )}
+                    </span>
+                  )}
+
+                  {/* Opens the dish list without choosing the menu. */}
+                  <button
+                    type="button"
+                    onClick={() => setPanelOverride((prev) => ({ ...prev, [menu.id]: !panelOpen }))}
+                    aria-expanded={panelOpen}
+                    aria-controls={panelId}
+                    className="inline-flex h-11 shrink-0 items-center gap-1 rounded-full px-2 font-bridal text-[12px] leading-[16px] text-bridal-text-label transition-colors duration-150 hover:text-bridal-gold-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2"
+                  >
+                    <span className="whitespace-nowrap">{panelOpen ? "Hide dishes" : "See dishes"}</span>
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 transition-transform duration-200 ${panelOpen ? "rotate-180" : ""}`}
+                      aria-hidden="true"
+                    />
+                  </button>
                 </div>
-              </motion.div>
-            )
-          })}
-        </RadioGroup>
-      </div>
+              </div>
 
-      <p className="font-bridal text-[12px] text-bridal-text-soft italic">
+              {panelOpen && (
+                <div id={panelId} className="border-t border-bridal-beige pb-3 pl-4 pr-3 pt-2">
+                  {sections.length > 0 ? (
+                    <div
+                      className={`grid grid-cols-1 gap-x-6 gap-y-3 xl:grid-cols-2 ${
+                        panelCap
+                          ? "bridal-scroll max-h-[168px] overflow-y-auto overscroll-contain pr-2 xl:[@media(max-height:820px)]:max-h-[132px]"
+                          : ""
+                      }`}
+                    >
+                      {sections.map((sec) => (
+                        <div key={sec.key} className="min-w-0">
+                          {/* A flat menu has no section name; showing an
+                              invented one ("Other") would be worse than
+                              showing the dishes plainly. */}
+                          {sec.label && (
+                            <h4 className="mb-1 font-bridal text-[10px] uppercase leading-[12px] tracking-[0.18em] text-bridal-gold-dark">
+                              {sec.label}
+                            </h4>
+                          )}
+                          <ul className="space-y-0.5">
+                            {sec.dishes.map((dish, j) => (
+                              <li
+                                key={`${dish.name}-${j}`}
+                                className="flex items-start gap-2 font-bridal text-[12.5px] leading-[18px] text-bridal-charcoal/85"
+                              >
+                                <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-bridal-gold" aria-hidden="true" />
+                                <span className="min-w-0">
+                                  {dish.name}
+                                  {/* Both of these change what the family
+                                      gets or pays, so they belong next to the
+                                      dish and not in a footnote. */}
+                                  {dish.isLive && (
+                                    <span className="ml-1.5 font-bridal text-[10px] uppercase tracking-[0.16em] text-[#3F6B43]">
+                                      live
+                                    </span>
+                                  )}
+                                  {dish.supplementPerHead > 0 && !includedInPackage && (
+                                    <span className="ml-1.5 font-bridal text-[11px] text-bridal-gold-dark tabular-nums">
+                                      +Rs {dish.supplementPerHead.toLocaleString()}/plate
+                                    </span>
+                                  )}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    /* Said plainly instead of rendering an empty card. The
+                       venue has priced this menu but not listed its dishes;
+                       the customer can still choose it and ask. */
+                    <p className="font-bridal text-[12.5px] italic leading-[18px] text-bridal-text-soft">
+                      This menu&apos;s dishes aren&apos;t listed yet — choose it and the venue
+                      will confirm what&apos;s served.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </RadioGroup>
+
+      <p className="mt-4 font-bridal text-[12px] italic leading-[16px] text-bridal-text-soft">
         Menus can be customized for dietary needs. Add notes in the final step.
       </p>
-    </motion.div>
+    </div>
   )
 }

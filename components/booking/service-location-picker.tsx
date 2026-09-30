@@ -48,6 +48,15 @@ interface ServiceLocationPickerProps {
   /** Hides the entire card. Useful when caller already knows the
       service is single-address at the vendor. */
   hidden?: boolean;
+  /**
+   * "card" (default) — today's self-contained card with its own heading, for
+   * any caller that mounts the picker inline.
+   * "sheet" — no outer card and no heading (the desk sheet / phone drawer
+   * that hosts it carries both); the four modes become 64px rows, active =
+   * cream fill + gold-dark border. Ids, aria-pressed, the >=5-char message
+   * and the Suggested chip are the same in both frames.
+   */
+  frame?: "card" | "sheet";
 }
 
 interface ModeMeta {
@@ -99,6 +108,19 @@ const MODES: ModeMeta[] = [
   },
 ];
 
+/** Short mode names for a one-line summary ("At our home · House 42, F-7/2"). */
+export const SERVICE_LOCATION_SHORT_LABELS: Record<ServiceLocationMode, string> = {
+  at_vendor: "At the venue",
+  at_customer_home: "At our home",
+  at_customer_plot: "At our plot",
+  at_third_party: "Different venue",
+};
+
+/** Whether a mode needs a customer-supplied address (same table the picker uses). */
+export function serviceLocationNeedsAddress(mode?: ServiceLocationMode | null): boolean {
+  return !!MODES.find((m) => m.key === mode)?.needsAddress;
+}
+
 const ADDRESS_MIN = 5;
 const ADDRESS_MAX = 1000;
 const NOTES_MAX = 500;
@@ -110,8 +132,10 @@ export function ServiceLocationPicker({
   onChange,
   vendorType,
   hidden,
+  frame = "card",
 }: ServiceLocationPickerProps) {
   if (hidden) return null;
+  const sheet = frame === "sheet";
 
   const selected = MODES.find((m) => m.key === mode);
   const needsAddress = !!selected?.needsAddress;
@@ -135,20 +159,28 @@ export function ServiceLocationPicker({
   })();
 
   return (
-    <div className="rounded-lg border border-bridal-beige bg-white p-4 space-y-4">
-      <div className="flex items-start gap-2">
-        <MapPin className="h-4 w-4 mt-0.5 text-bridal-gold" />
-        <div className="space-y-0.5">
-          <p className="font-display italic text-[16px] text-bridal-charcoal">
-            Where will the service happen?
-          </p>
-          <p className="font-bridal text-[12px] text-bridal-text-soft">
-            Optional — leave blank if the service is at the vendor&apos;s usual address.
-          </p>
+    <div className={sheet ? "space-y-4" : "rounded-lg border border-bridal-beige bg-white p-4 space-y-4"}>
+      {!sheet && (
+        <div className="flex items-start gap-2">
+          <MapPin className="h-4 w-4 mt-0.5 text-bridal-gold" />
+          <div className="space-y-0.5">
+            <p className="font-display italic text-[16px] text-bridal-charcoal">
+              Where will the service happen?
+            </p>
+            <p className="font-bridal text-[12px] text-bridal-text-soft">
+              Optional — leave blank if the service is at the vendor&apos;s usual address.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      {/* One per row, not two.
+        These sit in the options column beside the calendar, which is about
+        490px — so two-up gave each card ~235px and every one wrapped to four
+        lines: a heading, two lines of description, then the italic example over
+        two more. Full width, each is a heading and one line, and the four read
+        as a list you scan rather than a wall you decode. */}
+      <div className="grid grid-cols-1 gap-2">
         {MODES.map((m) => {
           const active = m.key === mode;
           const suggested = suggestedMode === m.key && !mode;
@@ -165,34 +197,72 @@ export function ServiceLocationPicker({
                 })
               }
               className={cn(
-                "relative text-left rounded-lg border p-3.5 transition-all hover:-translate-y-px",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold/50",
-                active
-                  ? cn("ring-2 ring-bridal-gold/40", m.accentClass)
-                  : "border-bridal-beige bg-white hover:border-bridal-beige",
+                "relative text-left transition-colors duration-150",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                sheet
+                  ? cn(
+                      // 64px row; cream + gold-dark when active, blush on hover.
+                      "flex h-16 w-full items-center gap-3 rounded-[4px] border px-4 focus-visible:ring-bridal-gold-dark",
+                      active
+                        ? "border-bridal-gold-dark bg-bridal-cream"
+                        : "border-bridal-beige bg-white hover:bg-bridal-blush/45",
+                    )
+                  : cn(
+                      "rounded-lg border p-4 transition-all hover:-translate-y-px focus-visible:ring-bridal-gold/50",
+                      active
+                        ? cn("ring-2 ring-bridal-gold/40", m.accentClass)
+                        : "border-bridal-beige bg-white hover:border-bridal-beige",
+                    ),
               )}
               aria-pressed={active}
             >
               {suggested && (
-                <span className="absolute top-1.5 right-1.5 text-[9px] uppercase tracking-[0.15em] font-medium text-bridal-gold-dark">
+                <span
+                  className={cn(
+                    "text-[9px] uppercase tracking-[0.15em] font-medium text-bridal-gold-dark",
+                    sheet ? "order-last shrink-0" : "absolute top-1.5 right-1.5",
+                  )}
+                >
                   Suggested
                 </span>
               )}
-              <div className="flex items-start gap-2">
-                <Icon
-                  className={cn(
-                    "h-4 w-4 mt-0.5 shrink-0",
-                    active ? "text-bridal-charcoal" : "text-bridal-text-soft",
+              {sheet ? (
+                <>
+                  <Icon
+                    className={cn("h-4 w-4 shrink-0", active ? "text-bridal-gold-dark" : "text-bridal-text-soft")}
+                    aria-hidden
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-bridal text-[14px] leading-5 text-bridal-charcoal">
+                      {m.title}
+                    </span>
+                    <span className="block truncate font-bridal text-[12px] leading-4 text-bridal-text-soft">
+                      {m.blurb}
+                    </span>
+                  </span>
+                  {active && (
+                    <span className="shrink-0 font-bridal text-[11px] uppercase tracking-[0.18em] text-bridal-gold-dark">
+                      Selected
+                    </span>
                   )}
-                />
-                <div>
-                  <p className="text-sm font-medium text-bridal-charcoal">{m.title}</p>
-                  <p className="text-[11px] text-bridal-text-soft mt-0.5">{m.blurb}</p>
-                  <p className="text-[10px] text-bridal-text-soft/75 mt-1 italic">
-                    e.g. {m.example}
-                  </p>
+                </>
+              ) : (
+                <div className="flex items-start gap-2">
+                  <Icon
+                    className={cn(
+                      "h-4 w-4 mt-0.5 shrink-0",
+                      active ? "text-bridal-charcoal" : "text-bridal-text-soft",
+                    )}
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-bridal-charcoal">{m.title}</p>
+                    <p className="text-[11px] text-bridal-text-soft mt-0.5">{m.blurb}</p>
+                    <p className="text-[10px] text-bridal-text-soft/75 mt-1 italic">
+                      e.g. {m.example}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </button>
           );
         })}
@@ -212,7 +282,10 @@ export function ServiceLocationPicker({
               onChange={(e) =>
                 onChange({ mode, address: e.target.value.slice(0, ADDRESS_MAX), notes })
               }
-              className="text-sm"
+              className={cn(
+                "text-sm",
+                sheet && "h-12 rounded-[4px] border-bridal-beige bg-white font-bridal focus-visible:ring-bridal-gold-dark",
+              )}
               aria-describedby="sl-address-help"
               aria-invalid={addressTooShort}
             />
@@ -240,7 +313,10 @@ export function ServiceLocationPicker({
                 onChange({ mode, address, notes: e.target.value.slice(0, NOTES_MAX) })
               }
               rows={2}
-              className="text-sm resize-none"
+              className={cn(
+                "text-sm resize-none",
+                sheet && "rounded-[4px] border-bridal-beige bg-white font-bridal focus-visible:ring-bridal-gold-dark",
+              )}
             />
             <div className="flex justify-between text-[11px] text-bridal-text-soft/75">
               <span className="flex items-center gap-1">

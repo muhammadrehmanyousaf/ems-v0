@@ -16,6 +16,7 @@
 
 import * as React from 'react';
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { X, Download, Share, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -85,6 +86,7 @@ function markShown(): void {
 }
 
 export function PwaInstallPrompt() {
+  const pathname = usePathname();
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(
     null,
   );
@@ -146,7 +148,9 @@ export function PwaInstallPrompt() {
     setVisible(false);
   };
 
-  if (!visible) return null;
+  // Never on the booking route: it would sit on the pinned action bar, and
+  // a person mid-booking has somewhere to be.
+  if (!visible || /^\/\d+\/booking(\/|$)/.test(pathname ?? "")) return null;
 
   return (
     <div
