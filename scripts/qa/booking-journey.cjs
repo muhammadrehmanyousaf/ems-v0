@@ -271,7 +271,7 @@ async function walk(ctx, viewport) {
   // bookmarks bar and the taskbar, where the document is allowed to scroll).
   const extra = []
   if (flag("all")) {
-    for (const [w, h] of [[1024, 768], [1366, 640], [1093, 614]]) {
+    for (const [w, h] of [[1024, 768], [1366, 640], [1093, 614], [1920, 917]]) {
       const c = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, storageState: STATE })
       extra.push(...(await walk(c, `${w}x${h}`)))
       await c.close()

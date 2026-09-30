@@ -138,6 +138,56 @@ function sameDay(a?: Date, b?: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
 }
 
+/**
+ * A list of choices, the way the vendors step lists vendors: one row each,
+ * the name, a hint, and a tick on the one that is chosen. Used inside a
+ * sheet for the hall and the arrangement, so the step itself never shows a
+ * dropdown.
+ */
+function ChoiceList({
+  options,
+  value,
+  onPick,
+}: {
+  options: { value: string; label: string; hint?: string }[]
+  value: string
+  onPick: (value: string) => void
+}) {
+  return (
+    <div className="space-y-2" role="listbox" aria-label="Choices">
+      {options.map((o, i) => {
+        const on = o.value === value
+        return (
+          <button
+            key={o.value || "__none"}
+            type="button"
+            role="option"
+            aria-selected={on}
+            onClick={() => onPick(o.value)}
+            style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}
+            className={`flex min-h-14 w-full items-center gap-3 rounded-[4px] border px-4 py-2 text-left transition-colors duration-150 motion-safe:animate-stagger-fade-up focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2 ${
+              on ? "border-bridal-gold-dark bg-bridal-cream" : "border-bridal-beige bg-white hover:bg-bridal-blush/45"
+            }`}
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block whitespace-pre font-bridal text-[15px] leading-5 text-bridal-charcoal">{o.label}</span>
+              {o.hint && <span className="block font-bridal text-[12px] leading-4 text-bridal-text-soft">{o.hint}</span>}
+            </span>
+            <span
+              aria-hidden
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                on ? "border-bridal-gold-dark bg-bridal-gold-dark text-bridal-ivory" : "border-bridal-beige bg-white text-transparent"
+              }`}
+            >
+              <Check className="h-3.5 w-3.5" strokeWidth={3} />
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function DateTimeStep({
   formData,
   updateFormData,
@@ -686,6 +736,10 @@ export default function DateTimeStep({
   const { tier, scrollBodyTo, announce } = useBookingShell()
   const slotListRef = useRef<HTMLDivElement>(null)
   const [locationOpen, setLocationOpen] = useState(false)
+  const [hallOpen, setHallOpen] = useState(false)
+  const [arrangementOpen, setArrangementOpen] = useState(false)
+
+
 
   /* The sentence for a clamp the ceiling forced. The effect above lowers
      guestCount when a smaller hall or slot is chosen; this one runs in the same
@@ -796,7 +850,9 @@ export default function DateTimeStep({
   /* Compliance is advisory (never blocks); comfort and minimum are the
      vendor's preferences, not physical or legal limits. */
   const guestNotices: NoticeLine[] = []
-  complianceWarnings.forEach((w, i) => guestNotices.push({ id: `compliance-${i}`, tone: "amber", text: w }))
+  // A venue policy is context for a choice, not a warning on arrival: it
+  // appears once the customer has a date, beside the guests row it concerns.
+  if (selectedDate) complianceWarnings.forEach((w, i) => guestNotices.push({ id: `compliance-${i}`, tone: "amber", text: w }))
   if (clampLine) guestNotices.push({ id: "clamp", tone: "mauve", text: clampLine })
   if (comfortWarning) guestNotices.push({ id: "comfort", tone: "mauve", text: comfortWarning })
   if (belowMinimum) guestNotices.push({ id: "below-min", tone: "mauve", text: belowMinimum })
@@ -970,205 +1026,50 @@ export default function DateTimeStep({
     </span>
   )
 
+  /** One row shape for every detail: question, answer, chevron. */
+  const detailRow = `flex h-14 w-full items-center gap-3 rounded-[4px] border border-bridal-beige bg-white px-4 text-left transition-colors duration-150 hover:bg-bridal-blush/45 ${focusRing}`
+
+  // Hall / space — one row, whichever model the venue uses (mutually exclusive).
+  const hallOptions: { value: string; label: string; hint?: string }[] = showHall
+    ? [
+        { value: "", label: "Whole venue / any hall", hint: "Let the venue decide" },
+        ...subVenueSpaces.map((sp) => ({
+          value: String(sp.id),
+          label: `${"  ".repeat(sp.depth)}${sp.name}`,
+          hint: [sp.kind, sp.fireRatedCapacity ? `up to ${sp.fireRatedCapacity} guests` : null].filter(Boolean).join(" · "),
+        })),
+      ]
+    : [
+        { value: "", label: "Whole venue / any space", hint: "Let the venue decide" },
+        ...spaces.map((sp) => ({
+          value: String(sp.id),
+          label: sp.label,
+          hint: [sp.kind, sp.capacityUnit ? `up to ${sp.capacityUnit} guests` : null].filter(Boolean).join(" · "),
+        })),
+      ]
+  const hallValue = String((showHall ? (formData as any).selectedSubVenueId : (formData as any).selectedResourceId) || "")
+  const hallValueLabel = hallOptions.find((o) => o.value === hallValue)?.label?.trim() || hallOptions[0].label
+  const pickHall = (id: string) => {
+    if (showHall) {
+      // Carry the hall's NAME forward too: later steps only ever had the id,
+      // so Packages could not say "Terrace Lawn package" and Review could not
+      // name the room being booked.
+      const picked = subVenueSpaces.find((sp) => String(sp.id) === String(id))
+      updateFormData((prev) => ({ ...(prev as any), selectedSubVenueId: id, selectedSubVenueName: picked?.name || null }))
+    } else {
+      const picked = spaces.find((sp) => String(sp.id) === String(id))
+      updateFormData((prev) => ({ ...(prev as any), selectedResourceId: id, selectedResourceName: picked?.label || null }))
+    }
+  }
+  const arrangementValueLabel =
+    ARRANGEMENT_CHOICES.find((c) => c.value === formData.requestedGenderMode)?.label || "No preference"
+
   return (
     <TooltipProvider delayDuration={240}>
       <div className="flex w-full flex-col gap-3 xl:grid xl:grid-cols-[332px_minmax(0,1fr)] xl:items-start xl:gap-x-10 xl:gap-y-3 xl:[@media(max-height:820px)]:gap-y-2">
-        {/* ── Control strip: HALL · GUESTS · ARRANGEMENT ─────────────────
-            `contents` on the base layout so each cell is its own 56px row
-            ordered around the calendar and the times; a white 64px strip
-            with hairline dividers at ≥ 1280. Absent cells collapse. */}
-        {hasStrip && (
-          <div className="contents xl:col-span-2 xl:grid xl:h-16 xl:grid-flow-col xl:auto-cols-fr xl:divide-x xl:divide-bridal-beige xl:rounded-[4px] xl:border xl:border-bridal-beige xl:bg-white xl:[@media(max-height:820px)]:h-[60px]">
-            {/* WW-SPACE-FIRST — the space is chosen BEFORE the guest count and
-               the times, because it decides both: the ceiling, the slots, the
-               packages and the menus are all the chosen hall's from the
-               outset. */}
-            {/* F-2 — canonical sub-venue picker (venue-hierarchy). Shown when
-               the venue built ANY space(s); sends subVenueId (the per-hall
-               path). Was gated `> 1`, which silently hid a venue's only hall
-               (QA #19) — now `>= 1` so a single configured space is selectable. */}
-            {showHall && (
-              <div className={`order-2 ${cellBox}`}>
-                <label htmlFor="bk-hall" className={cellLabel}>Hall</label>
-                <select
-                  id="bk-hall"
-                  value={(formData as any).selectedSubVenueId || ""}
-                  onChange={(e) => {
-                    const id = e.target.value
-                    // Carry the hall's NAME forward too. Later steps only ever had
-                    // the id, so the Packages step could not say "Terrace Lawn
-                    // package" and the Review step could not name the room the
-                    // customer is actually booking.
-                    const picked = subVenueSpaces.find((sp) => String(sp.id) === String(id))
-                    updateFormData((prev) => ({
-                      ...(prev as any),
-                      selectedSubVenueId: id,
-                      selectedSubVenueName: picked?.name || null,
-                    }))
-                  }}
-                  className={cellSelect}
-                >
-                  <option value="">Whole venue / any hall</option>
-                  {/* The capacity is on the OPTION, not only in the warning that
-                      fires once a guest count is already too high. A family
-                      picking between halls chooses by how many people it seats;
-                      making them pick first and be corrected second is the wrong
-                      order. */}
-                  {subVenueSpaces.map((sp) => (
-                    <option key={sp.id} value={sp.id}>
-                      {" ".repeat(sp.depth * 2)}{sp.name}{sp.kind ? ` — ${sp.kind}` : ""}
-                      {sp.fireRatedCapacity ? ` (up to ${sp.fireRatedCapacity} guests)` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {/* Which hall / lawn / partition? (BusinessResource model.) Only shown
-               when the venue configured bookable resources AND is NOT using the
-               canonical sub-venue tree. Optional — "whole venue" unpins. */}
-            {showSpace && (
-              <div className={`order-2 ${cellBox}`}>
-                <label htmlFor="bk-space" className={cellLabel}>Space</label>
-                <select
-                  id="bk-space"
-                  value={(formData as any).selectedResourceId || ""}
-                  onChange={(e) => {
-                    const id = e.target.value
-                    const picked = spaces.find((sp) => String(sp.id) === String(id))
-                    updateFormData((prev) => ({
-                      ...(prev as any),
-                      selectedResourceId: id,
-                      selectedResourceName: picked?.label || null,
-                    }))
-                  }}
-                  className={cellSelect}
-                >
-                  <option value="">Whole venue / any space</option>
-                  {spaces.map((sp) => (
-                    <option key={sp.id} value={sp.id}>
-                      {sp.label}{sp.kind ? ` — ${sp.kind}` : ""}
-                      {sp.capacityUnit ? ` (up to ${sp.capacityUnit} guests)` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <NoticeRail lines={hallNotices} max={4} className="order-2 xl:hidden" />
-
-            {/* Guest count. Issue #62: shown only for the vendor types that
-                genuinely price per-guest (see allowlist above) AND when the
-                venue has set min/max capacity. */}
-            {showGuests && (
-              <div className="order-4 flex h-14 items-center justify-between gap-3 rounded-[4px] border border-bridal-beige bg-white px-4 xl:h-auto xl:flex-col xl:items-stretch xl:justify-center xl:gap-1 xl:rounded-none xl:border-0 xl:bg-transparent xl:py-0">
-                <div className="flex min-w-0 flex-col xl:flex-row xl:items-baseline xl:gap-2">
-                  <label
-                    htmlFor="bk-guests"
-                    className="font-bridal text-[10.5px] font-medium uppercase leading-[14px] tracking-[0.18em] text-bridal-text-label"
-                  >
-                    Guests
-                  </label>
-                  {/* Names the limit that is actually in force and where it
-                      comes from. "Max 1200" on a page where the chosen hall
-                      holds 300 is worse than no number at all. */}
-                  {(venue?.minCapacity || activeLimit) && (
-                    <span
-                      className="truncate font-bridal text-[11px] leading-4 text-bridal-text-soft tabular-nums"
-                      // The full sentence ("From 250 · this venue holds 900")
-                      // is the tooltip; the cell is 260px wide and shares it
-                      // with the stepper, so the visible form is the range.
-                      title={[
-                        venue?.minCapacity ? `From ${venue.minCapacity}` : "",
-                        activeLimit ? `${activeLimit.source} ${activeLimit.max}` : "",
-                      ].filter(Boolean).join(" · ")}
-                    >
-                      {venue?.minCapacity && activeLimit
-                        ? `${venue.minCapacity}–${activeLimit.max}`
-                        : venue?.minCapacity
-                          ? `From ${venue.minCapacity}`
-                          : activeLimit
-                            ? `Up to ${activeLimit.max}`
-                            : ""}
-                    </span>
-                  )}
-                </div>
-                <div className="flex shrink-0 items-center gap-1 xl:gap-2">
-                  <button
-                    type="button"
-                    onClick={() => adjust(-10)}
-                    className={`inline-flex h-11 w-11 items-center justify-center rounded-[4px] border border-bridal-beige bg-bridal-cream text-bridal-charcoal transition-all duration-150 hover:bg-bridal-blush/45 motion-safe:active:scale-95 xl:h-10 xl:w-10 xl:rounded-full ${focusRing}`}
-                    aria-label="Decrease guests"
-                  >
-                    <Minus className="h-4 w-4" aria-hidden />
-                  </button>
-                  <input
-                    id="bk-guests"
-                    type="number"
-                    inputMode="numeric"
-                    data-booking-field="guestCount"
-                    min={0}
-                    value={formData.guestCount || ""}
-                    max={activeLimit?.max}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      let n = val === "" ? 0 : parseInt(val, 10)
-                      if (Number.isNaN(n)) n = 0
-                      if (activeLimit && n > activeLimit.max) n = activeLimit.max
-                      updateFormData((prev) => ({ ...prev, guestCount: n }))
-                    }}
-                    placeholder="10"
-                    className={`h-11 w-16 rounded-[4px] border-0 bg-transparent text-center font-display text-[18px] italic leading-6 tabular-nums text-bridal-charcoal outline-none transition-opacity duration-200 xl:h-10 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${focusRing}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => adjust(10)}
-                    className={`inline-flex h-11 w-11 items-center justify-center rounded-[4px] border border-bridal-beige bg-bridal-cream text-bridal-charcoal transition-all duration-150 hover:bg-bridal-blush/45 motion-safe:active:scale-95 xl:h-10 xl:w-10 xl:rounded-full ${focusRing}`}
-                    aria-label="Increase guests"
-                  >
-                    <Plus className="h-4 w-4" aria-hidden />
-                  </button>
-                </div>
-              </div>
-            )}
-            {showGuests && <NoticeRail lines={guestNotices} max={4} className="order-4 xl:hidden" />}
-
-            {/* 10.13 (UC-15) — how the function is arranged.
-
-               `SubVenue.genderMode` has been on every space on the platform
-               since the venue-hierarchy work, and nothing ever compared it to
-               what the customer wanted, because no screen ever asked. A family
-               booking a zenana function into a MIXED hall found out when the
-               guests arrived — and for a lot of Pakistani households that
-               decides whether the women of the family attend at all.
-
-               Optional, and never blocking. A family that states nothing is
-               not refused and is told nothing, which is the honest answer:
-               they have not been checked. */}
-            {showArrangement && (
-              <div className={`order-5 ${cellBox}`}>
-                <label htmlFor="bk-arrangement" className={cellLabel}>Arrangement</label>
-                <select
-                  id="bk-arrangement"
-                  value={formData.requestedGenderMode || ""}
-                  onChange={(e) =>
-                    updateFormData((prev) => ({
-                      ...prev,
-                      requestedGenderMode: (e.target.value || null) as BookingFormData["requestedGenderMode"],
-                    }))
-                  }
-                  className={cellSelect}
-                >
-                  <option value="">No preference</option>
-                  {ARRANGEMENT_CHOICES.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label} — {c.hint}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-        )}
-
+        {/* Hall, guests and arrangement are rows in the details list below the
+            times (same shape as the location row): one line, the current
+            value, a chevron into a clean choice sheet. No selects, no strip. */}
         {/* ── Notice rail (≥ 1280): at most two inline, the rest fold ──── */}
         <NoticeRail lines={railLines} max={2} className="hidden xl:col-span-2 xl:block" />
 
@@ -1374,6 +1275,117 @@ export default function DateTimeStep({
           </section>
           <NoticeRail lines={slotNotices} max={4} className="order-3 xl:hidden" />
 
+          {/* ── Details list: hall · guests · arrangement · location ──────
+              Every row is the same 56px shape — a question, the current
+              answer, a chevron — and every choice opens as a list in a sheet
+              (a bottom drawer on a phone). Nothing here looks like a form. */}
+          {(showHall || showSpace) && (
+            <button
+              type="button"
+              onClick={() => setHallOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={hallOpen}
+              className={`order-2 ${detailRow} xl:mt-4`}
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block font-bridal text-[13px] leading-[18px] text-bridal-text-soft">Which hall?</span>
+                <span className="block truncate font-bridal text-[15px] leading-5 text-bridal-charcoal">{hallValueLabel}</span>
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-bridal-text-soft" aria-hidden />
+            </button>
+          )}
+          <NoticeRail lines={hallNotices} max={4} className="order-2 xl:hidden" />
+          {(showHall || showSpace) && (
+            <DeskSheet open={hallOpen} onOpenChange={setHallOpen} title="Which hall?" description="Pick a specific hall, lawn or partition, or leave it to the venue." doneLabel="Done">
+              <ChoiceList options={hallOptions} value={hallValue} onPick={(v) => { pickHall(v); setHallOpen(false) }} />
+            </DeskSheet>
+          )}
+
+          {showGuests && (
+            <div className={`order-4 ${detailRow} cursor-default hover:bg-white xl:mt-2`}>
+              <label htmlFor="bk-guests" className="min-w-0 flex-1">
+                <span className="block font-bridal text-[13px] leading-[18px] text-bridal-text-soft">How many guests?</span>
+                <span
+                  className="block truncate font-bridal text-[12px] leading-4 text-bridal-text-soft tabular-nums"
+                  title={[venue?.minCapacity ? `From ${venue.minCapacity}` : "", activeLimit ? `${activeLimit.source} ${activeLimit.max}` : ""].filter(Boolean).join(" · ")}
+                >
+                  {venue?.minCapacity && activeLimit
+                    ? `${venue.minCapacity}–${activeLimit.max} guests`
+                    : venue?.minCapacity
+                      ? `From ${venue.minCapacity} guests`
+                      : activeLimit
+                        ? `Up to ${activeLimit.max} guests`
+                        : "Guests"}
+                </span>
+              </label>
+              <div className="flex shrink-0 items-center rounded-full border border-bridal-beige bg-bridal-cream p-0.5">
+                <button
+                  type="button"
+                  onClick={() => adjust(-10)}
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-full text-bridal-charcoal transition-colors duration-150 hover:bg-white motion-safe:active:scale-95 ${focusRing}`}
+                  aria-label="Decrease guests"
+                >
+                  <Minus className="h-4 w-4" aria-hidden />
+                </button>
+                <input
+                  id="bk-guests"
+                  type="number"
+                  inputMode="numeric"
+                  data-booking-field="guestCount"
+                  min={0}
+                  value={formData.guestCount || ""}
+                  max={activeLimit?.max}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    let n = val === "" ? 0 : parseInt(val, 10)
+                    if (Number.isNaN(n)) n = 0
+                    if (activeLimit && n > activeLimit.max) n = activeLimit.max
+                    updateFormData((prev) => ({ ...prev, guestCount: n }))
+                  }}
+                  placeholder="100"
+                  className={`h-9 w-16 border-0 bg-transparent text-center font-bridal text-[15px] font-medium leading-5 tabular-nums text-bridal-charcoal outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${focusRing}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => adjust(10)}
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-full text-bridal-charcoal transition-colors duration-150 hover:bg-white motion-safe:active:scale-95 ${focusRing}`}
+                  aria-label="Increase guests"
+                >
+                  <Plus className="h-4 w-4" aria-hidden />
+                </button>
+              </div>
+            </div>
+          )}
+          {showGuests && <NoticeRail lines={guestNotices} max={4} className="order-4 xl:hidden" />}
+
+          {showArrangement && (
+            <button
+              type="button"
+              onClick={() => setArrangementOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={arrangementOpen}
+              className={`order-5 ${detailRow} xl:mt-2`}
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block font-bridal text-[13px] leading-[18px] text-bridal-text-soft">How is the function arranged?</span>
+                <span className="block truncate font-bridal text-[15px] leading-5 text-bridal-charcoal">{arrangementValueLabel}</span>
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-bridal-text-soft" aria-hidden />
+            </button>
+          )}
+          {showArrangement && (
+            <DeskSheet open={arrangementOpen} onOpenChange={setArrangementOpen} title="How is the function arranged?" description="We check the hall you pick can be arranged that way, and tell the venue.">
+              <ChoiceList
+                options={[{ value: "", label: "No preference", hint: "Decide later with the venue" }, ...ARRANGEMENT_CHOICES.map((c) => ({ value: c.value, label: c.label, hint: c.hint }))]}
+                value={formData.requestedGenderMode || ""}
+                onPick={(v) => {
+                  updateFormData((prev) => ({ ...prev, requestedGenderMode: (v || null) as BookingFormData["requestedGenderMode"] }))
+                  setArrangementOpen(false)
+                }}
+              />
+            </DeskSheet>
+          )}
+
           {/* BK-100.53 — service location. A disclosure row; the four modes,
               the address and the notes live in the desk sheet (a bottom
               drawer on a phone) so they never sit between the customer and
@@ -1383,7 +1395,7 @@ export default function DateTimeStep({
             onClick={() => setLocationOpen(true)}
             aria-haspopup="dialog"
             aria-expanded={locationOpen}
-            className={`order-6 flex h-14 w-full items-center gap-3 rounded-[4px] border border-bridal-beige bg-white px-4 text-left transition-colors duration-150 hover:bg-bridal-blush/45 xl:mt-4 ${focusRing}`}
+            className={`order-6 ${detailRow} xl:mt-2`}
           >
             <MapPin className="h-4 w-4 shrink-0 text-bridal-gold-dark" aria-hidden />
             <span className="min-w-0 flex-1">
