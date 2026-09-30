@@ -8,13 +8,26 @@ import MenuSelectionStep from "@/components/booking/steps/menu-selection-step"
 import VendorSelectionStep from "@/components/booking/steps/vendor-selection-step"
 import EventSelectionStep from "@/components/booking/steps/event-selection-step"
 import EventTabs from "@/components/booking/ui/event-tabs"
-import BookingTopBar from "@/components/booking/ui/booking-rail"
-import MobileSummaryBar from "@/components/booking/ui/mobile-summary-bar"
-import LivePricingPanel from "@/components/booking/ui/live-pricing-panel"
+// The shell: the Stage (venue + ledger), the Desk (one step, its own
+// scroller) and the action bar. See components/booking/shell/*.
+import BookingStage from "@/components/booking/shell/booking-stage"
+import BookingDesk from "@/components/booking/shell/booking-desk"
+import StepFrame from "@/components/booking/shell/step-frame"
+import ActionBar from "@/components/booking/shell/action-bar"
+import StepBreadcrumb, { stepCounter } from "@/components/booking/shell/step-breadcrumb"
+import PhoneHeader from "@/components/booking/shell/phone-header"
+import LedgerSheet from "@/components/booking/shell/ledger-sheet"
+import LeaveDialog, { useBeforeUnload } from "@/components/booking/shell/leave-dialog"
+import { BookingShellContext, useShellTier, type BookingShellApi } from "@/components/booking/shell/booking-shell-context"
+import { buildLedgerRows, buildMoney, guestRowApplies, type ReviewTotalsLike } from "@/components/booking/shell/booking-ledger"
+import { computeBreakdown, formatPKR } from "@/lib/booking/breakdown"
+import { stepHeading, continueLabel, disabledReason, type StepCopyCtx } from "@/lib/booking/step-copy"
+import { venueDetailHref } from "@/lib/booking/venue-href"
+import Link from "next/link"
 import type { BookingFormData, EventVenue, EventBooking, Vendor } from "@/lib/types"
-import { ArrowLeft, ArrowRight, Sparkles, Timer, AlertTriangle } from "lucide-react"
+import { X } from "lucide-react"
 import { BridalButton } from "@/components/bridal/bridal-button"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { BACKEND_URL } from "@/lib/backend-url"
 import { toast } from "../ui/use-toast"
 import { getUser } from "@/hooks/getLoggedinUser"
@@ -104,12 +117,31 @@ export default function BookingForm() {
    * was never offered.
    */
   const [submitError, setSubmitError] = useState<{ message: string; hint?: string } | null>(null)
-  const [bankTransferData, setBankTransferData] = useState<{ bookingId: number; amount: number; paymentType: string; customerEmail?: string; bookingDate?: string } | null>(null)
+  // Keyed by event index. On a multi-function booking the Baraat can be sent
+  // while the Mehndi is still being filled in, and each tab shows its own
+  // outcome. State shape only — the payloads are untouched.
+  const [bankTransfer, setBankTransfer] = useState<Record<number, { bookingId: number; amount: number; paymentType: string; customerEmail?: string; bookingDate?: string }>>({})
   // WW-BOOKING-MODE — set instead of bankTransferData when the venue accepts
   // bookings before payment. Nothing is charged until they do.
-  const [requestSentData, setRequestSentData] = useState<{ bookingId: number; amount: number; bookingDate?: string; guestCount?: number } | null>(null)
+  const [requestSent, setRequestSent] = useState<Record<number, { bookingId: number; amount: number; bookingDate?: string; guestCount?: number }>>({})
   // WW-PRICE0 — drives the price-on-request inquiry dialog on this page.
   const [inquiryOpen, setInquiryOpen] = useState(false)
+
+  // ── Shell state ──
+  const tier = useShellTier()
+  const router = useRouter()
+  const deskBodyRef = useRef<HTMLDivElement>(null)
+  /** +1 forward, −1 back, 0 tab switch — read by the step frame's entrance. */
+  const dirRef = useRef<-1 | 0 | 1>(0)
+  const [reviewTotals, setReviewTotals] = useState<ReviewTotalsLike | null>(null)
+  const [ledgerOpen, setLedgerOpen] = useState(false)
+  const [leaveHref, setLeaveHref] = useState<string | null>(null)
+  const [liveText, setLiveText] = useState("")
+  /** The desk body scrolls on wide screens; the document on a phone. */
+  const scrollDeskTop = () => {
+    if (deskBodyRef.current) deskBodyRef.current.scrollTo({ top: 0 })
+    else window.scrollTo({ top: 0, behavior: "smooth" })
+  }
   /**
    * WW-REQUIREMENTS — what the customer needs the venue to know.
    *
@@ -640,31 +672,44 @@ export default function BookingForm() {
         // for a date the venue may still decline, which then has to be refunded
         // by hand. The server refuses a payment claim in this state too, so a
         // customer who reaches the payment screen by URL is also stopped.
+        // This function is done; the tab shows its outcome and the others
+        // carry on. `isSubmitted` was declared on EventBooking and never set.
+        const sentIndex = activeEventIndex
+        setEvents((prev) => prev.map((e, i) => (i === sentIndex ? { ...e, isSubmitted: true } : e)))
+        dirRef.current = 1
+        scrollDeskTop()
+
         if (requiresVendorApproval(venue)) {
-          setRequestSentData({
+          setRequestSent((prev) => ({
+            ...prev,
+            [sentIndex]: {
+              bookingId: realBookingId,
+              amount: summedDownPayment,
+              bookingDate: typeof currentForm.bookingDate === "string"
+                ? currentForm.bookingDate
+                : currentForm.bookingDate instanceof Date
+                  ? currentForm.bookingDate.toISOString()
+                  : undefined,
+              guestCount: currentForm.guestCount,
+            },
+          }))
+          return
+        }
+
+        setBankTransfer((prev) => ({
+          ...prev,
+          [sentIndex]: {
             bookingId: realBookingId,
             amount: summedDownPayment,
+            paymentType: "down_payment",
+            customerEmail: currentForm.email,
             bookingDate: typeof currentForm.bookingDate === "string"
               ? currentForm.bookingDate
               : currentForm.bookingDate instanceof Date
                 ? currentForm.bookingDate.toISOString()
                 : undefined,
-            guestCount: currentForm.guestCount,
-          })
-          return
-        }
-
-        setBankTransferData({
-          bookingId: realBookingId,
-          amount: summedDownPayment,
-          paymentType: "down_payment",
-          customerEmail: currentForm.email,
-          bookingDate: typeof currentForm.bookingDate === "string"
-            ? currentForm.bookingDate
-            : currentForm.bookingDate instanceof Date
-              ? currentForm.bookingDate.toISOString()
-              : undefined,
-        })
+          },
+        }))
         // The inline Stripe screen that used to run here is gone from THIS
         // flow. It could never complete for a Pakistani venue — Stripe does not
         // onboard Pakistani businesses, so there is no account for the money to
@@ -1029,6 +1074,13 @@ export default function BookingForm() {
             // WW-SETUP-COUNTS — echo the previous step back, so the last
             // screen before sending shows what was actually asked for.
             requirements={requirements}
+            // The shell: "Edit" on a row jumps back to the step that owns it,
+            // the discounted totals feed the Stage, and the legal sentence
+            // says what the button will actually do.
+            onEdit={(k: string) => onJump(k)}
+            onTotalsChange={setReviewTotals}
+            requiresApproval={requiresVendorApproval(venue)}
+            onSignIn={() => router.push("/login")}
           />
         )
         break
@@ -1078,7 +1130,15 @@ export default function BookingForm() {
       return
     }
 
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // A signed-out customer cannot send — the API needs a session. Say so at
+    // the door rather than after a failed request.
+    if (isReviewStep && !user && !userLoading) {
+      router.push("/login")
+      return
+    }
+
+    dirRef.current = 1
+    scrollDeskTop()
 
     if (globalStep === 1) {
       // Initialize per-event flows
@@ -1090,12 +1150,22 @@ export default function BookingForm() {
           email: formData.email || user?.email || '',
           phoneNumber: formData.phoneNumber || user?.phoneNumber || '',
         }
-        const newEvents: EventBooking[] = selectedEvents.map((evt) => ({
-          eventType: evt,
-          formData: { ...base, eventType: evt },
-          currentStep: 0,
-          isSubmitted: false,
-        }))
+        // Keep a function's choices when the customer comes back to add or
+        // remove another one; only brand-new functions start empty. A venue
+        // that states a minimum opens the guest count at that minimum rather
+        // than at 1 — a 1-guest marquee booking (BK-769) is what the old
+        // default produced when nobody touched the field.
+        const minGuests = guestRowApplies(venue) ? Number(venue?.minCapacity) || 0 : 0
+        const newEvents: EventBooking[] = selectedEvents.map((evt) => {
+          const existing = events.find((e) => e.eventType === evt)
+          if (existing) return existing
+          return {
+            eventType: evt,
+            formData: { ...base, eventType: evt, guestCount: Math.max(base.guestCount || 0, minGuests) },
+            currentStep: 0,
+            isSubmitted: false,
+          }
+        })
         setEvents(newEvents)
         setActiveEventIndex(0)
         setGlobalStep(2)
@@ -1130,7 +1200,8 @@ export default function BookingForm() {
   const isReviewStep = globalStep >= 2 && eventStepOrder[events[activeEventIndex]?.currentStep ?? 0]?.key === 'review'
 
   const handleBack = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    dirRef.current = -1
+    scrollDeskTop()
     // CJ-010 — a conflict is about the slot that was submitted. Once the
     // customer steps away it is stale; leaving it up would warn about a time
     // they may have already changed.
@@ -1147,41 +1218,9 @@ export default function BookingForm() {
     // globalStep 1 is the first step — no going back further
   }
 
-  // Show bank transfer instructions for large amounts (> Rs 999,999)
-  // WW-BOOKING-MODE — the venue reviews before payment, so this replaces the
-  // transfer screen entirely. Placed FIRST so it wins if both are somehow set.
-  if (requestSentData) {
-    return (
-      <div className="w-full">
-        <div className="rounded-xl bg-white border border-bridal-beige overflow-hidden p-6 sm:p-8 lg:p-10 shadow-sm">
-          <RequestSentScreen
-            bookingId={requestSentData.bookingId}
-            venueName={venue?.name}
-            bookingDate={requestSentData.bookingDate}
-            guestCount={requestSentData.guestCount}
-            amountDue={requestSentData.amount}
-            whatsappNumber={(venue as any)?.whatsappNumber ?? null}
-          />
-        </div>
-      </div>
-    )
-  }
-
-  if (bankTransferData) {
-    return (
-      <div className="w-full">
-        <div className="rounded-xl bg-white border border-bridal-beige overflow-hidden p-6 sm:p-8 lg:p-10 shadow-sm">
-          <BankTransferScreen
-            bookingId={bankTransferData.bookingId}
-            amount={bankTransferData.amount}
-            paymentType={bankTransferData.paymentType}
-            customerEmail={bankTransferData.customerEmail}
-            bookingDate={bankTransferData.bookingDate}
-          />
-        </div>
-      </div>
-    )
-  }
+  // The request-sent and bank-transfer screens render inside the desk body
+  // (see the shell below), keyed by event, so the Stage stays up and a
+  // multi-function booking can carry on with its other tabs.
 
   /**
    * WW-DIRECT-PAY — both the inline Stripe screen and the post-Stripe success
@@ -1229,8 +1268,7 @@ export default function BookingForm() {
    * already lands on, which exists and works.
    */
   const inquiryOnly = effectiveBookingMode(venue as any) === "inquiry_only"
-  if (!loading && venue && (isUnpricedVendor(venue as any) || wantsQuote || inquiryOnly)) {
-    return (
+  const unpricedNode = !loading && venue && (isUnpricedVendor(venue as any) || wantsQuote || inquiryOnly) ? (
       <div className="w-full">
         <div className="mx-auto max-w-xl rounded-md bg-bridal-cream border border-bridal-beige p-6 sm:p-8 text-center shadow-[0_18px_44px_-32px_rgba(176,125,84,0.4)]">
           <h1 className="font-display italic text-[26px] sm:text-[30px] text-bridal-charcoal leading-tight">
@@ -1268,359 +1306,490 @@ export default function BookingForm() {
           onOpenChange={setInquiryOpen}
         />
       </div>
+    ) : null
+
+  /* ── The shell ─────────────────────────────────────────────────────────
+     Everything from here down is presentation. The Stage (venue + ledger)
+     stays put on the left; the Desk shows one step and scrolls on its own;
+     the action bar is always on screen. The state, the step order, the
+     validation and the submit above are what they were. */
+  const isPhone = tier !== "desk"
+  const requiresApproval = requiresVendorApproval(venue)
+  const vendorTypeName = venue?.vendor?.vendorType || ""
+  const eventStep = events[activeEventIndex]?.currentStep ?? 0
+  const activeKey: string = globalStep === 1 ? "event" : (eventStepOrder[eventStep]?.key ?? "datetime")
+  const sentActive = requestSent[activeEventIndex] || null
+  const bankActive = bankTransfer[activeEventIndex] || null
+  const arrived = !!sentActive || !!bankActive || isSuccessStep
+
+  const copyCtx: StepCopyCtx = {
+    stepIndex: currentDisplayStep,
+    stepCount: allDisplaySteps.length,
+    vendorTypeName,
+    isCarRental,
+    isBridalWear,
+    isWeddingStationery,
+    isVenueBooking,
+    includedInPackage: selectedPackageIncludesFood,
+    hasMenus,
+    hasPackages,
+    venueName: venue?.name || "",
+    eventType: events[activeEventIndex]?.eventType,
+    multiEvent: events.length > 1,
+    unitLabel: unitConfig?.unitLabel,
+    requiresApproval,
+  }
+  const heading = arrived ? null : stepHeading(activeKey, copyCtx)
+
+  const eventLabel =
+    globalStep >= 2
+      ? `${events[activeEventIndex]?.eventType ?? ""}${events.length > 1 ? ` · ${activeEventIndex + 1} of ${events.length}` : ""}`
+      : selectedEvents.length
+        ? selectedEvents.join(", ")
+        : null
+  const ledgerRows = buildLedgerRows({
+    formData: activeFormData,
+    venue,
+    isDirectBooking,
+    hasPackages,
+    hasMenus,
+    sellsByUnit,
+    selectedPackageObj,
+    selectedMenuObj,
+    menuIncluded: selectedPackageIncludesFood,
+    eventStepOrder,
+    currentStepIndex: globalStep >= 2 ? eventStep : -1,
+    globalStep,
+    eventLabel,
+  })
+  const breakdown = computeBreakdown({
+    formData: activeFormData,
+    venue,
+    vendorsDetails: vendorsDetails[activeEventIndex] || [],
+    selectedPackageObj,
+    selectedMenuObj,
+  })
+  const money = buildMoney({
+    formData: activeFormData,
+    venue,
+    vendorsDetails: vendorsDetails[activeEventIndex] || [],
+    selectedPackageObj,
+    selectedMenuObj,
+    requiresApproval,
+    reviewTotals: isReviewStep ? reviewTotals : null,
+    events,
+    sent: sentActive
+      ? { bookingId: sentActive.bookingId, amount: sentActive.amount }
+      : bankActive
+        ? { bookingId: bankActive.bookingId, amount: bankActive.amount }
+        : null,
+  })
+
+  const nextKey = globalStep === 1 ? "datetime" : eventStepOrder[eventStep + 1]?.key
+  const reason = disabledReason(activeKey, activeFormData, {
+    functionCount: selectedEvents.length,
+    needsGuestCount: guestRowApplies(venue),
+    hasPackages,
+  })
+  const advanceDue = (isReviewStep && reviewTotals?.discountedDown) || breakdown.downPayment
+  const ctaLabel = continueLabel({
+    currentKey: activeKey,
+    nextKey,
+    valid: isStepValid,
+    isReview: isReviewStep,
+    requiresApproval,
+    advance: advanceDue > 0 ? formatPKR(advanceDue) : null,
+    functionCount: selectedEvents.length,
+    phone: isPhone,
+    signedIn: !!user || userLoading,
+    ctx: copyCtx,
+    disabledReason: reason,
+  })
+  // One clause on the desk (the review step carries the full sentence); the
+  // phone ledger sheet gets both.
+  const reassurance = requiresApproval
+    ? `Nothing is charged until ${venue?.name || "the venue"} accepts`
+    : "You pay the venue directly · Every payment recorded"
+  const legalLine = requiresApproval
+    ? `Nothing is charged until ${venue?.name || "the venue"} accepts · You pay the venue directly`
+    : "You pay the venue directly · Every payment recorded"
+
+  const venueHref = venueDetailHref(venue, venueId)
+  const dirty = globalStep >= 2 && !arrived && !loading
+  useBeforeUnload(dirty)
+  /** Returns false (and opens the dialog) when leaving would lose work. */
+  const guardNavigate = (href: string): boolean => {
+    if (!dirty) return true
+    setLeaveHref(href)
+    return false
+  }
+  const leaveTo = (href: string) => {
+    if (guardNavigate(href)) router.push(href)
+  }
+
+  /** Back to an earlier step, from the breadcrumb or a ledger row. Forward
+      jumps are ignored — those only ever offer the way back. */
+  const onJump = (key: string) => {
+    const k = key === "events" ? "event" : key
+    setSlotConflict(null)
+    dirRef.current = -1
+    if (k === "event") {
+      if (!isDirectBooking && globalStep >= 2) setGlobalStep(1)
+      scrollDeskTop()
+      return
+    }
+    const target = eventStepOrder.findIndex((s) => s.key === k)
+    if (target < 0 || globalStep < 2 || target >= eventStep) return
+    setEvents((prev) => prev.map((e, i) => (i === activeEventIndex ? { ...e, currentStep: target } : e)))
+    scrollDeskTop()
+  }
+
+  const shellApi: BookingShellApi = {
+    tier,
+    onJump,
+    scrollBodyTo: (el, opts) => el?.scrollIntoView?.({ block: "nearest", ...(opts || {}) }),
+    bodyRef: isPhone ? null : deskBodyRef,
+    announce: setLiveText,
+  }
+
+  // The phone ledger opens itself once on arrival at the review step, so the
+  // breakdown is never hidden on the final screen.
+  useEffect(() => {
+    if (!isPhone || !isReviewStep || !venueId) return
+    const k = `ww-ledger-review-shown:${venueId}`
+    try {
+      if (sessionStorage.getItem(k)) return
+      sessionStorage.setItem(k, "1")
+    } catch {}
+    setLedgerOpen(true)
+  }, [isPhone, isReviewStep, venueId])
+
+  const nextUnsubmittedIndex = events.findIndex((_, i) => i !== activeEventIndex && !requestSent[i] && !bankTransfer[i])
+  const nextUnsubmittedEvent =
+    nextUnsubmittedIndex >= 0 ? { index: nextUnsubmittedIndex, eventType: events[nextUnsubmittedIndex].eventType } : undefined
+  const goToEvent = (i: number) => {
+    dirRef.current = 0
+    setActiveEventIndex(i)
+    scrollDeskTop()
+  }
+
+  const progress = arrived ? 1 : allDisplaySteps.length ? currentDisplayStep / allDisplaySteps.length : 0
+  const pillLabel = sentActive
+    ? `BK-${sentActive.bookingId}`
+    : breakdown.priced
+      ? formatPKR(breakdown.downPayment > 0 ? breakdown.downPayment : breakdown.subtotal)
+      : "Summary"
+
+  const LOCATION_LABEL: Record<string, string> = {
+    at_vendor: "At the venue",
+    at_customer_home: "At our home",
+    at_customer_plot: "At our plot / lawn",
+    at_third_party: "Different venue",
+  }
+  const requirementCount =
+    requirements.tags.length +
+    (requirements.freeText.trim() ? 1 : 0) +
+    Object.keys(requirements.dietary).length +
+    Object.keys(requirements.setup || {}).length
+  const sheetExtraRows = [
+    ...(activeFormData.serviceLocationMode
+      ? [{
+          label: "Location",
+          value: [LOCATION_LABEL[activeFormData.serviceLocationMode] || activeFormData.serviceLocationMode, activeFormData.serviceLocationAddress]
+            .filter(Boolean)
+            .join(" · "),
+        }]
+      : []),
+    ...(requirementCount > 0
+      ? [{ label: "Requirements", value: `${requirementCount} ${requirementCount === 1 ? "note" : "notes"}` }]
+      : []),
+  ]
+
+  // ── Body ──
+  const banners = (
+    <>
+      {/* 03-DRAFT-RESILIENCE — resume banner, only at the entry point.
+          Keyed on the draft identity so a newly loaded draft always gets a
+          fresh instance (its internal `dismissed` latch would otherwise
+          survive a soft navigation). Resume restores the choices but blanks
+          the active event's date and time so they are re-confirmed. */}
+      {pendingDraft && globalStep === 1 && events.length === 0 && (
+        <div className="mb-5">
+          <DraftResumeBanner
+            key={String(pendingDraft.savedAt)}
+            visible={true}
+            title="Resume your booking"
+            meta={`Last edited ${relativeTimeAgo(pendingDraft.savedAt)} — ${pendingDraft.events.length} event${pendingDraft.events.length === 1 ? '' : 's'} · step ${pendingDraft.globalStep}`}
+            warning="Your previous date hold has expired — we'll send you back to the date & time step to re-confirm."
+            onResume={() => {
+              const restoredEvents = pendingDraft.events.map((e, idx) =>
+                idx === pendingDraft.activeEventIndex
+                  ? {
+                      ...e,
+                      currentStep: 0,
+                      formData: { ...e.formData, bookingDate: undefined, timeSlot: '', slotTemplateId: null },
+                    }
+                  : e
+              );
+              setFormData({ ...pendingDraft.formData, bookingDate: undefined, timeSlot: '', slotTemplateId: null });
+              setEvents(restoredEvents);
+              setActiveEventIndex(pendingDraft.activeEventIndex);
+              setGlobalStep(pendingDraft.globalStep);
+              setPendingDraft(null);
+              toast({
+                title: 'Booking restored',
+                description: 'Your vendor and package choices are back. Please re-confirm date and time.',
+              });
+            }}
+            onDiscard={() => {
+              clearDraft();
+              setPendingDraft(null);
+            }}
+          />
+        </div>
+      )}
+
+      {submitError && (
+        <div role="alert" tabIndex={-1} className="mb-5 rounded-[4px] border border-rose-200 bg-rose-50 p-4">
+          <p className="font-bridal text-[14px] font-medium text-rose-900">We couldn&rsquo;t confirm this booking</p>
+          <p className="mt-1 font-bridal text-[13px] leading-[18px] text-rose-800">{submitError.message}</p>
+          {submitError.hint && <p className="mt-2 font-bridal text-[13px] leading-[18px] text-rose-800">{submitError.hint}</p>}
+          <button
+            type="button"
+            onClick={() => setSubmitError(null)}
+            className="mt-3 h-9 rounded-[4px] border border-rose-300 bg-white px-3 font-bridal text-[12px] font-medium text-rose-900 hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+          >
+            Dismiss and try again
+          </button>
+        </div>
+      )}
+
+      {/* CJ-010 — a lost slot is a blocking problem, not a notification. It
+          stays on the page, names the times still free, and offers the way
+          back to the date step. */}
+      {slotConflict && !isSuccessStep && (
+        <div role="alert" aria-live="assertive" className="mb-5 rounded-[4px] border border-rose-200 bg-rose-50 p-4">
+          <p className="font-bridal text-[14px] font-medium text-rose-900">That time was just booked</p>
+          <p className="mt-1 font-bridal text-[13px] leading-[18px] text-rose-800">{slotConflict.message}</p>
+          {slotConflict.available.length > 0 ? (
+            <>
+              <p className="mt-3 font-bridal text-[13px] font-medium text-rose-900">Still free on this date:</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {slotConflict.available.map((slot) => (
+                  <span key={slot} className="rounded-full border border-rose-300 bg-white px-3 py-1 font-bridal text-[12.5px] font-medium text-rose-900">
+                    {slot}
+                  </span>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="mt-3 font-bridal text-[13px] text-rose-800">No other times are free on this date — please choose another day.</p>
+          )}
+          <BridalButton
+            type="button"
+            variant="primary"
+            size="sm"
+            className="mt-4"
+            onClick={() => {
+              setSlotConflict(null)
+              const dateStepIndex = eventStepOrder.findIndex((s) => s.key === "datetime")
+              if (dateStepIndex >= 0) {
+                dirRef.current = -1
+                setEvents((prev) => prev.map((e, idx) => (idx === activeEventIndex ? { ...e, currentStep: dateStepIndex } : e)))
+              }
+            }}
+          >
+            Change date or time
+          </BridalButton>
+        </div>
+      )}
+    </>
+  )
+
+  let bodyNode: React.ReactNode
+  if (loading || userLoading) {
+    bodyNode = (
+      <div className="space-y-6" aria-busy="true" aria-label="Loading booking">
+        <div className="h-3 w-28 rounded bg-bridal-sand animate-pulse" />
+        <div className="h-9 w-80 max-w-full rounded bg-bridal-sand animate-pulse" />
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div key={i} className="h-24 rounded-[4px] bg-bridal-sand animate-pulse" />
+          ))}
+        </div>
+      </div>
+    )
+  } else if (error) {
+    bodyNode = (
+      <div className="mx-auto max-w-md py-10 text-center">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-red-100 bg-red-50">
+          <svg className="h-7 w-7 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+          </svg>
+        </div>
+        <h2 className="font-display italic text-[26px] leading-tight text-bridal-charcoal">Something went wrong</h2>
+        <p className="mx-auto mb-6 mt-2 max-w-sm font-bridal text-[13px] text-bridal-text-soft">{error || 'Unable to load booking details.'}</p>
+        <BridalButton type="button" variant="primary" size="md" onClick={() => window.location.reload()}>
+          Refresh page
+        </BridalButton>
+      </div>
+    )
+  } else if (unpricedNode) {
+    bodyNode = <div className="py-6">{unpricedNode}</div>
+  } else if (sentActive) {
+    bodyNode = (
+      <StepFrame key={`sent-${activeEventIndex}`} stepKey="sent" heading={null} direction={1}>
+        <RequestSentScreen
+          bookingId={sentActive.bookingId}
+          venueName={venue?.name}
+          bookingDate={sentActive.bookingDate}
+          guestCount={sentActive.guestCount}
+          amountDue={sentActive.amount}
+          whatsappNumber={(venue as any)?.whatsappNumber ?? null}
+          nextUnsubmittedEvent={nextUnsubmittedEvent}
+          onContinueNext={goToEvent}
+        />
+      </StepFrame>
+    )
+  } else if (bankActive) {
+    bodyNode = (
+      <StepFrame key={`bank-${activeEventIndex}`} stepKey="bank" heading={null} direction={1}>
+        <BankTransferScreen
+          bookingId={bankActive.bookingId}
+          amount={bankActive.amount}
+          paymentType={bankActive.paymentType}
+          customerEmail={bankActive.customerEmail}
+          bookingDate={bankActive.bookingDate}
+        />
+      </StepFrame>
+    )
+  } else {
+    bodyNode = (
+      <StepFrame
+        key={`${activeEventIndex}-${activeKey}`}
+        stepKey={activeKey}
+        heading={heading}
+        direction={dirRef.current}
+        focusTitle={globalStep >= 2}
+      >
+        {banners}
+        {stepContent}
+      </StepFrame>
     )
   }
 
-  return (
-    <div className="w-full space-y-4 sm:space-y-5">
-      {(loading || userLoading) ? (
-        <div className="rounded-xl bg-white border border-bridal-beige overflow-hidden shadow-sm">
-          <div className="h-16 bg-bridal-sand animate-pulse" />
-          <div className="p-8 space-y-6">
-            <div className="flex gap-3">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-7 flex-1 bg-bridal-sand rounded-md animate-pulse" />
-              ))}
-            </div>
-            <div className="space-y-4">
-              <div className="h-5 w-48 bg-bridal-sand rounded animate-pulse" />
-              <div className="h-12 bg-bridal-sand rounded-md animate-pulse" />
-              <div className="h-12 bg-bridal-sand rounded-md animate-pulse" />
-              <div className="h-12 bg-bridal-sand rounded-md animate-pulse" />
-            </div>
-          </div>
-        </div>
-      ) : error ? (
-        <div className="rounded-xl bg-white p-12 text-center border border-bridal-beige shadow-sm">
-          <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-red-50 border border-red-100 flex items-center justify-center">
-            <svg className="w-7 h-7 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-semibold tracking-tight text-bridal-charcoal mb-2">Something went wrong</h2>
-          <p className="text-[13px] text-bridal-text-soft max-w-sm mx-auto mb-6">{error || 'Unable to load booking details.'}</p>
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-            className="inline-flex items-center justify-center h-10 px-5 rounded-lg bg-bridal-gold-dark hover:bg-bridal-gold-deep text-white text-[13px] font-medium transition-colors"
-          >
-            Refresh page
-          </button>
-        </div>
-      ) : (
-        <>
-          {/* The "Your date is held — 47h 59m left" banner lived here.
-              Removed with the hold itself (founder, 2026-08-29). With no hold
-              being created there is no countdown to show, and a banner
-              promising a reservation the server is not making would be worse
-              than none. The block is gone rather than left dark because
-              `isHolding` is now permanently false; see the note on the
-              commented-out createHold in the date step. */}
+  const showActionBar = !loading && !userLoading && !error && !unpricedNode && !arrived
+  const atFirstStep = globalStep === 1 || (isDirectBooking && globalStep >= 2 && eventStep === 0)
+  const actionBarNode = showActionBar ? (
+    <ActionBar
+      tier={tier}
+      backVisible={!atFirstStep || isPhone}
+      onBack={() => (atFirstStep ? leaveTo(venueHref) : handleBack())}
+      continueLabel={ctaLabel}
+      continueDisabled={!isStepValid}
+      disabledReason={reason}
+      onContinue={handleNext}
+      submitting={isSubmitting}
+      submittingLine="Checking availability with the venue…"
+      reassurance={reassurance}
+    />
+  ) : null
 
-          {/* Stacked layout: horizontal top bar on top, step body below at
-              full width. The top bar carries vendor identity + step list +
-              trust badges. */}
-          <div className="space-y-4 lg:space-y-5">
-
-            {/* Top bar */}
-            <BookingTopBar
-              venue={venue}
-              steps={allDisplaySteps}
-              currentStep={currentDisplayStep}
-              isVenueBooking={isVenueBooking}
-            />
-
-            {/* 03-DRAFT-RESILIENCE — resume banner.
-                Shown only when a saved draft exists AND the couple is still
-                at the entry point (globalStep===1 with no events yet).
-                Resume restores vendor/package/menu choices but resets the
-                active event's date+time so the stale 15-min slot hold is
-                re-acquired on the next step. */}
-            {pendingDraft && globalStep === 1 && events.length === 0 && (
-              <DraftResumeBanner
-                // QA #3 — key on the draft identity so a newly-loaded draft
-                // always gets a FRESH banner instance. The shared banner keeps an
-                // internal `dismissed` latch (set on Resume/Discard); without a
-                // key that latch could survive a soft navigation (Home → back to
-                // vendor → Book) and leave the Resume button inert. Re-keying
-                // guarantees dismissed=false whenever a new draft appears, and
-                // changes nothing for any other form using the banner.
-                key={String(pendingDraft.savedAt)}
-                visible={true}
-                title="Resume your booking"
-                meta={`Last edited ${relativeTimeAgo(pendingDraft.savedAt)} — ${pendingDraft.events.length} event${pendingDraft.events.length === 1 ? '' : 's'} · step ${pendingDraft.globalStep}`}
-                warning="Your previous date hold has expired — we'll send you back to the date & time step to re-confirm."
-                onResume={() => {
-                  // Restore form + events, but blank the active event's
-                  // date/time so the user re-picks (and re-holds) the slot.
-                  const restoredEvents = pendingDraft.events.map((e, idx) =>
-                    idx === pendingDraft.activeEventIndex
-                      ? {
-                          ...e,
-                          currentStep: 0,
-                          formData: {
-                            ...e.formData,
-                            bookingDate: undefined,
-                            timeSlot: '',
-                            slotTemplateId: null,
-                          },
-                        }
-                      : e
-                  );
-                  setFormData({
-                    ...pendingDraft.formData,
-                    bookingDate: undefined,
-                    timeSlot: '',
-                    slotTemplateId: null,
-                  });
-                  setEvents(restoredEvents);
-                  setActiveEventIndex(pendingDraft.activeEventIndex);
-                  setGlobalStep(pendingDraft.globalStep);
-                  setPendingDraft(null);
-                  toast({
-                    title: 'Booking restored',
-                    description: 'Your vendor and package choices are back. Please re-confirm date and time.',
-                  });
-                }}
-                onDiscard={() => {
-                  clearDraft();
-                  setPendingDraft(null);
-                }}
-              />
-            )}
-
-            {/* Two columns from lg up: the decisions on the left, and a summary
-                that stays with you on the right.
-
-                This flow was a single centred column that asked six screens of
-                questions and showed the price at the end. `LivePricingPanel`
-                below — 255 lines that compute the whole breakdown — was written
-                and then never rendered anywhere; the comment on the mobile bar
-                still says it "replaces sticky desktop sidebar". So the desktop
-                had no answer to "what am I buying and what does it cost" at any
-                point before the final screen, which is the thing every booking
-                product puts on the right-hand side and keeps there.
-
-                The proportions are the ones that pattern settled on: content
-                takes the remaining space, the panel is a fixed 360px, and it
-                sticks below the header rather than scrolling away. */}
-            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-
-            {/* Step body — bridal cream card */}
-            {/* No `overflow-hidden`. It was here to clip the children's
-                backgrounds to the rounded corners, and it also silently broke
-                the sticky footer below — a sticky element cannot escape a
-                clipping ancestor, so the action row scrolled away exactly as it
-                had before. The corners are handled by rounding the first and
-                last children instead, which costs two classes and keeps the
-                action reachable. */}
-            <div className="min-w-0 rounded-md bg-bridal-cream border border-bridal-beige shadow-[0_8px_24px_-20px_rgba(176,125,84,0.45)] [&>*:first-child]:rounded-t-md [&>*:last-child]:rounded-b-md">
-
-              {/* Event Tabs */}
-              {/* Only when there is more than one function to switch between.
-                  With a single event this drew a 64px row to hold one pill that
-                  does nothing when you press it — a tab bar with one tab. */}
-              {events.length > 1 && globalStep >= 2 && (
-                <div className="border-b border-bridal-beige/60 px-5 sm:px-7 py-2.5">
-                  <EventTabs
-                    events={events}
-                    activeEventIndex={activeEventIndex}
-                    onTabChange={setActiveEventIndex}
-                  />
-                </div>
-              )}
-
-              {submitError && (
-                <div
-                  role="alert"
-                  className="mx-4 mt-4 rounded-lg border border-rose-300 bg-rose-50 p-4 sm:mx-5 lg:mx-6"
-                  style={{ position: "relative", zIndex: 2 }}
-                >
-                  <p className="text-sm font-semibold text-rose-900">We couldn&rsquo;t confirm this booking</p>
-                  <p className="mt-1 text-sm text-rose-800">{submitError.message}</p>
-                  {submitError.hint && (
-                    <p className="mt-2 text-sm text-rose-800">{submitError.hint}</p>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setSubmitError(null)}
-                    className="mt-3 rounded-md border border-rose-300 bg-white px-3 py-1.5 text-sm font-medium text-rose-900 hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
-                  >
-                    Dismiss and try again
-                  </button>
-                </div>
-              )}
-
-              {/* Step body — tightened padding so compressed steps don't sit
-                  in a sea of empty space */}
-              {/* The extra bottom padding on lg is the height of the pinned
-                  action row. Without it the footer sits over the last thing on
-                  the step — the final week of the calendar disappeared behind
-                  it, including a selected date. */}
-              <div
-                className="p-4 sm:p-5 lg:p-6 lg:pb-20"
-                style={{ position: "relative", zIndex: 2, pointerEvents: "auto" }}
-              >
-                {stepContent}
-              </div>
-
-              {/* CJ-010 — slot conflict. Rendered inline, directly above the
-                  action the customer just pressed, and persistent: losing a slot
-                  is a blocking problem, not a transient notification. Lists the
-                  times the backend confirmed are still free so the next step is
-                  obvious rather than a dead end. */}
-              {slotConflict && !isSuccessStep && (
-                <div
-                  role="alert"
-                  aria-live="assertive"
-                  className="border-t border-rose-200 bg-rose-50 px-5 sm:px-7 py-4"
-                >
-                  <p className="text-sm font-semibold text-rose-900">
-                    That time was just booked
-                  </p>
-                  <p className="mt-1 text-sm text-rose-800">{slotConflict.message}</p>
-
-                  {slotConflict.available.length > 0 ? (
-                    <>
-                      <p className="mt-3 text-sm font-medium text-rose-900">
-                        Still free on this date:
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {slotConflict.available.map((slot) => (
-                          <span
-                            key={slot}
-                            className="rounded-full border border-rose-300 bg-white px-3 py-1 text-sm font-medium text-rose-900"
-                          >
-                            {slot}
-                          </span>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <p className="mt-3 text-sm text-rose-800">
-                      No other times are free on this date — please choose another day.
-                    </p>
-                  )}
-
-                  <BridalButton
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    className="mt-4"
-                    onClick={() => {
-                      setSlotConflict(null)
-                      const dateStepIndex = eventStepOrder.findIndex((s) => s.key === "datetime")
-                      if (dateStepIndex >= 0) {
-                        setEvents((prev) =>
-                          prev.map((e, idx) =>
-                            idx === activeEventIndex ? { ...e, currentStep: dateStepIndex } : e,
-                          ),
-                        )
-                      }
-                    }}
-                  >
-                    Change date or time
-                  </BridalButton>
-                </div>
-              )}
-
-              {/* Footer — Back · Continue, homepage BridalButton language.
-                  Sticky to the bottom of the viewport while this card is in
-                  view. The date step runs well past one screen, and the action
-                  that moves you on was parked at the end of it — so the way to
-                  continue was to scroll looking for it. Pinned, it is where your
-                  hand already is. It releases at the card's end, so it never
-                  floats over the footer or the next section.
-                  `lg:` only, and that is a deliberate stop rather than an
-                  oversight. Pinning it on a phone as well needs it to clear
-                  MobileSummaryBar, which is `fixed bottom-0` — but that bar
-                  hides itself when the subtotal is still zero, so an offset that
-                  assumes it leaves the action floating in the middle of the step
-                  with content visible underneath. It looked broken, so it is
-                  not shipping. The honest fix is to put the action INTO that bar,
-                  which is what a phone wants anyway; that is its own change. */}
-              {!isSuccessStep && (
-                <div className="border-t border-bridal-beige bg-bridal-ivory/95 px-5 sm:px-7 py-3 relative z-10 lg:sticky lg:bottom-0 lg:backdrop-blur-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <BridalButton
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleBack}
-                      disabled={globalStep === 1}
-                      className={globalStep === 1 ? "invisible" : ""}
-                    >
-                      <ArrowLeft className="h-3.5 w-3.5" />
-                      Back
-                    </BridalButton>
-
-                    <BridalButton
-                      type="button"
-                      variant="primary"
-                      size="md"
-                      onClick={handleNext}
-                      loading={isSubmitting}
-                      disabled={!isStepValid && !isSubmitting}
-                    >
-                      {/* WW-APPROVE-VS-CONFIRM — the label has to match what the
-                          click actually does. In request mode it sends a request
-                          and charges nothing: the very next screen says "Nothing
-                          has been charged", so "Pay & confirm" was a promise the
-                          flow immediately contradicted. */}
-                      {isSubmitting
-                        ? "Processing…"
-                        : isReviewStep
-                        ? (requiresVendorApproval(venue) ? "Send request" : "Pay & confirm")
-                        : "Continue"}
-                      {!isSubmitting && <ArrowRight className="h-3.5 w-3.5" />}
-                    </BridalButton>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* The summary column. Hidden below lg, where MobileSummaryBar does
-                the same job as a bar pinned to the bottom of the screen. */}
-            {globalStep >= 2 && !isSuccessStep && (
-              <aside className="hidden lg:block lg:sticky lg:top-6">
-                <LivePricingPanel
-                  formData={activeFormData}
-                  venue={venue}
-                  vendorsDetails={vendorsDetails[activeEventIndex] || []}
-                  selectedPackageObj={selectedPackageObj}
-                  selectedMenuObj={selectedMenuObj}
-                />
-              </aside>
-            )}
-            </div>
-          </div>
-
-          {/* Mobile bottom summary bar — the small-screen form of the sidebar */}
-          {globalStep >= 2 && !isSuccessStep && (
-            <MobileSummaryBar
-              formData={activeFormData}
-              venue={venue}
-              vendorsDetails={vendorsDetails[activeEventIndex] || []}
-              selectedPackageObj={selectedPackageObj}
-              selectedMenuObj={selectedMenuObj}
-            />
-          )}
-
-          {/* Multi-event info banner */}
-          {globalStep >= 2 && events.length > 1 && (
-            <div className="rounded-xl bg-white border border-bridal-beige p-4 text-[13px] text-bridal-text flex items-start gap-3 shadow-sm">
-              <div className="w-8 h-8 rounded-full bg-bridal-sand inline-flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Sparkles className="w-3.5 h-3.5 text-bridal-text" />
-              </div>
-              <div>
-                <p className="text-[14px] font-semibold text-bridal-charcoal mb-0.5">Multiple events booked</p>
-                <p className="text-bridal-text-soft">Complete the form for each event tab and submit them individually.</p>
-              </div>
-            </div>
-          )}
-        </>
+  const topRight = (
+    <>
+      {!user && !userLoading && (
+        <Link
+          href="/login"
+          className="inline-flex h-9 items-center rounded-[4px] px-3 font-bridal text-[12px] font-medium uppercase tracking-[0.16em] text-bridal-mauve transition-colors hover:bg-bridal-blush focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark"
+        >
+          Sign in
+        </Link>
       )}
+      <button
+        type="button"
+        onClick={() => leaveTo(venueHref)}
+        aria-label="Close booking"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-bridal-beige bg-white text-bridal-charcoal transition-colors hover:border-bridal-gold-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2"
+      >
+        <X className="h-4 w-4" aria-hidden />
+      </button>
+    </>
+  )
 
-    </div>
+  const tabsNode =
+    events.length > 1 && globalStep >= 2 && !loading ? (
+      <EventTabs events={events} activeEventIndex={activeEventIndex} onTabChange={goToEvent} />
+    ) : undefined
+
+  const counter = arrived
+    ? requiresApproval ? "Request sent" : "Confirmed"
+    : unpricedNode
+      ? "Enquiry"
+      : stepCounter(allDisplaySteps, currentDisplayStep, copyCtx)
+
+  return (
+    <BookingShellContext.Provider value={shellApi}>
+      {!isPhone && (
+        <BookingStage
+          venue={venue}
+          loading={loading || userLoading}
+          rows={error || unpricedNode ? [] : ledgerRows}
+          money={error || unpricedNode || loading ? null : money}
+          locked={arrived}
+          onJump={onJump}
+          onNavigate={guardNavigate}
+          venueHref={venueHref}
+          packageImage={(selectedPackageObj as any)?.images?.[0] || null}
+          caption={unpricedNode ? "Enquiry" : null}
+        />
+      )}
+      {isPhone && (
+        <PhoneHeader venue={venue} counter={counter} progress={progress} pillLabel={unpricedNode ? "" : pillLabel} onPill={() => setLedgerOpen(true)} />
+      )}
+      <BookingDesk
+        ref={deskBodyRef}
+        tier={tier}
+        breadcrumb={
+          arrived || unpricedNode ? (
+            <p className="font-bridal text-[12px] text-bridal-charcoal">{counter}</p>
+          ) : (
+            <StepBreadcrumb steps={allDisplaySteps} currentIndex={currentDisplayStep} onJump={onJump} ctx={copyCtx} />
+          )
+        }
+        topRight={topRight}
+        tabs={tabsNode}
+        actionBar={actionBarNode}
+      >
+        {bodyNode}
+      </BookingDesk>
+      {isPhone && (
+        <LedgerSheet
+          open={ledgerOpen}
+          onOpenChange={setLedgerOpen}
+          venue={venue}
+          rows={ledgerRows}
+          money={money}
+          locked={arrived}
+          onJump={onJump}
+          extraRows={sheetExtraRows}
+          legal={legalLine}
+        />
+      )}
+      <LeaveDialog
+        open={!!leaveHref}
+        onOpenChange={(o) => {
+          if (!o) setLeaveHref(null)
+        }}
+        onLeave={() => {
+          const h = leaveHref
+          setLeaveHref(null)
+          if (h) router.push(h)
+        }}
+        signedIn={!!user}
+      />
+      <span className="sr-only" aria-live="polite">
+        {liveText}
+      </span>
+    </BookingShellContext.Provider>
   )
 }

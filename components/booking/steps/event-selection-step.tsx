@@ -55,6 +55,17 @@ const eventNote: Record<string, string> = {
   Other: "Tell us what you have in mind",
 }
 
+/**
+ * The step renders no heading of its own: the shell's StepFrame carries
+ * "STEP 1 OF n · EVENT SELECTION", the title and the subtitle. Nor does it
+ * render a running "N functions — …" box any more — the Stage's Event row and
+ * the Continue label ("Continue to date · 2 functions") are the live answer.
+ *
+ * Base layout is drawn for a 544px column (the phone and the narrowest desk):
+ * two columns of 96px horizontal cards. At `xl` (≥1280) the desk is wide
+ * enough for four columns of 183px. Vendors that list four or fewer services
+ * get one unlabelled group in two columns at every width.
+ */
 export default function EventSelectionStep({ selectedEvents = [], onEventToggle, setFormData, formData, venue }: EventSelectionStepProps) {
   const getAvailableEvents = () => {
     if (!venue) return []
@@ -93,10 +104,19 @@ export default function EventSelectionStep({ selectedEvents = [], onEventToggle,
    */
   const marriage = availableEvents.filter((e) => MARRIAGE_EVENTS.has(e))
   const other = availableEvents.filter((e) => !MARRIAGE_EVENTS.has(e))
-  const groups = [
-    { key: "wedding", title: "Wedding functions", events: marriage },
-    { key: "other", title: marriage.length > 0 ? "Other occasions" : "Occasions", events: other },
-  ].filter((g) => g.events.length > 0)
+  // A short list (≤ 4 services) is one group, unlabelled, in two wide columns —
+  // a label over two cards is noise, and four 183px cards in a row is thin.
+  const compact = availableEvents.length <= 4
+  const groups = compact
+    ? [{ key: "all", title: "Occasions", events: availableEvents }]
+    : [
+        { key: "wedding", title: "Wedding functions", events: marriage },
+        { key: "other", title: marriage.length > 0 ? "Other occasions" : "Occasions", events: other },
+      ].filter((g) => g.events.length > 0)
+
+  const gridClass = compact
+    ? "grid grid-cols-2 gap-3"
+    : "grid grid-cols-2 gap-3 xl:grid-cols-4"
 
   const renderCard = (event: string, index: number) => {
     const isSelected = selectedEvents.includes(event)
@@ -116,35 +136,37 @@ export default function EventSelectionStep({ selectedEvents = [], onEventToggle,
         onClick={() => onEventToggle?.(event)}
         // The entrance is CSS, not framer-motion. A JS-driven reveal on this
         // grid once left the whole thing at opacity 0 on production when its
-        // observer failed to attach; a keyframe cannot get stuck that way.
-        style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
-        className={`group relative flex flex-col items-start gap-3 rounded-lg border p-4 text-left animate-stagger-fade-up transition-[border-color,background-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2 ${
+        // observer failed to attach; a keyframe cannot get stuck that way
+        // (the keyframe ends at opacity 1 with `forwards`).
+        style={{ animationDelay: `${Math.min(index, 8) * 30}ms` }}
+        // Vertical: icon above the words. Side by side, a 183px card left
+        // ~105px for text and every note truncated ("Colour, dhol …") and
+        // "Engagement" lost its last letter. Stacked, the words get the full
+        // card width and the card stays 92px, which keeps the two groups
+        // inside the fold at 1366×768.
+        className={`group relative flex h-[92px] min-w-0 flex-col justify-between rounded-[4px] p-3 text-left motion-safe:animate-stagger-fade-up transition-[border-color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2 focus-visible:ring-offset-bridal-ivory ${
           isSelected
-            ? "border-bridal-gold-dark bg-bridal-cream shadow-[0_14px_30px_-20px_rgba(145,101,57,0.55)]"
-            : "border-bridal-beige bg-white hover:border-bridal-gold/60 hover:shadow-[0_14px_30px_-24px_rgba(145,101,57,0.4)]"
+            ? "border-[1.5px] border-bridal-gold-dark bg-bridal-cream"
+            : "border border-bridal-beige bg-white hover:border-bridal-gold/60 hover:bg-bridal-blush/45"
         }`}
       >
         <span
           aria-hidden
-          className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors duration-150 ${
             isSelected
-              ? "bg-bridal-gold-dark text-white"
-              : "bg-bridal-blush/55 text-bridal-mauve group-hover:bg-bridal-gold/20 group-hover:text-bridal-gold-dark"
+              ? "bg-bridal-gold-dark text-bridal-ivory"
+              : "bg-bridal-blush/55 text-bridal-mauve group-hover:bg-bridal-blush"
           }`}
         >
-          <Icon className="h-[18px] w-[18px]" strokeWidth={1.6} />
+          <Icon className="h-[15px] w-[15px]" strokeWidth={1.6} />
         </span>
 
-        <span className="min-w-0">
-          <span
-            className={`block font-display italic text-[17px] leading-tight ${
-              isSelected ? "text-bridal-gold-dark" : "text-bridal-charcoal"
-            }`}
-          >
+        <span className="min-w-0 pr-5">
+          <span className="block truncate font-display italic text-[15px] leading-[20px] text-bridal-charcoal">
             {event}
           </span>
           {note && (
-            <span className="mt-0.5 block font-bridal text-[11.5px] leading-snug text-bridal-text-soft">
+            <span className="block truncate font-bridal text-[11.5px] leading-[14px] text-bridal-text-soft">
               {note}
             </span>
           )}
@@ -152,72 +174,55 @@ export default function EventSelectionStep({ selectedEvents = [], onEventToggle,
 
         {/* The tick sits in the corner rather than replacing anything, so the
             card does not change size when it is chosen and the grid never
-            reflows under the cursor. */}
-        <span
-          aria-hidden
-          className={`absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full border transition-all duration-200 ${
-            isSelected
-              ? "scale-100 border-bridal-gold-dark bg-bridal-gold-dark opacity-100"
-              : "scale-75 border-bridal-beige bg-white opacity-0 group-hover:opacity-60"
-          }`}
-        >
-          <Check className="h-3 w-3 text-white" strokeWidth={3} />
-        </span>
+            reflows under the cursor. It mounts only when selected, so it
+            never rests invisible in the tree. */}
+        {isSelected && (
+          <span
+            aria-hidden
+            className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-bridal-gold-dark text-bridal-ivory motion-safe:animate-scale-in"
+          >
+            <Check className="h-3 w-3" strokeWidth={3} />
+          </span>
+        )}
       </button>
     )
   }
 
-  return (
-    <div className="space-y-8">
-      <header className="max-w-2xl">
-        <p className="font-bridal text-[11px] uppercase tracking-[0.22em] text-bridal-text-label">
-          Step one
-        </p>
-        <h2 className="mt-2 font-display italic text-[30px] sm:text-[38px] leading-[1.1] text-bridal-charcoal">
-          What are you celebrating?
-        </h2>
-        <p className="mt-3 font-bridal text-[14px] leading-relaxed text-bridal-text-soft">
-          Pick every function you want at this venue. Choose more than one and each
-          gets its own date, menu and pricing — you only fill this in once.
-        </p>
-      </header>
+  // The venue has not arrived yet: eight card-shaped placeholders hold the
+  // layout so nothing jumps when the real list lands.
+  if (!venue) {
+    return (
+      <div className="space-y-3" aria-busy="true" aria-label="Loading functions">
+        <div className="h-5 w-40 rounded-full bg-bridal-sand/70" />
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-[92px] rounded-[4px] border border-bridal-beige bg-white motion-safe:animate-pulse" />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
+  if (availableEvents.length === 0) {
+    return (
+      <p className="font-bridal text-[13px] leading-[18px] text-bridal-text-soft">
+        This vendor has not listed any functions yet.
+      </p>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
       {groups.map((group) => (
         <section key={group.key} aria-label={group.title} className="space-y-3">
-          {groups.length > 1 && (
-            <h3 className="font-bridal text-[11px] uppercase tracking-[0.2em] text-bridal-text-label">
+          {!compact && (
+            <h3 className="font-bridal text-[11px] uppercase leading-[20px] tracking-[0.18em] text-bridal-gold-dark">
               {group.title}
             </h3>
           )}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {group.events.map(renderCard)}
-          </div>
+          <div className={gridClass}>{group.events.map(renderCard)}</div>
         </section>
       ))}
-
-      {/* A running answer to "what have I chosen", in words rather than a count
-          in a pill — on a multi-select step the list is the reassurance. */}
-      <div
-        aria-live="polite"
-        className={`rounded-lg border px-4 py-3 transition-colors ${
-          selectedEvents.length > 0
-            ? "border-bridal-gold/45 bg-bridal-cream"
-            : "border-dashed border-bridal-beige bg-transparent"
-        }`}
-      >
-        {selectedEvents.length > 0 ? (
-          <p className="font-bridal text-[13px] leading-relaxed text-bridal-charcoal">
-            <span className="font-display italic text-[15px] text-bridal-gold-dark">
-              {selectedEvents.length} {selectedEvents.length === 1 ? "function" : "functions"}
-            </span>{" "}
-            — {selectedEvents.join(", ")}. You can set the date and details for each one next.
-          </p>
-        ) : (
-          <p className="font-bridal text-[13px] text-bridal-text-soft">
-            Nothing chosen yet — pick at least one function to continue.
-          </p>
-        )}
-      </div>
     </div>
   )
 }

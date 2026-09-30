@@ -240,6 +240,21 @@ const config: Config = {
   				'0%': { opacity: '0', transform: 'translateY(14px)' },
   				'100%': { opacity: '1', transform: 'translateY(0)' },
   			},
+  			// ── Booking shell ─────────────────────────────────────────
+  			// Every one of these ends visible and runs `forwards`; none is
+  			// gated on anything but mounting.
+  			'ledger-fill': {
+  				'0%': { opacity: '0', transform: 'translateY(4px)' },
+  				'100%': { opacity: '1', transform: 'translateY(0)' },
+  			},
+  			'hairline-draw': {
+  				'0%': { transform: 'scaleX(0)' },
+  				'100%': { transform: 'scaleX(1)' },
+  			},
+  			'pop-select': {
+  				'0%': { transform: 'scale(0.94)' },
+  				'100%': { transform: 'scale(1)' },
+  			},
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
@@ -263,6 +278,9 @@ const config: Config = {
   			'petal-fall': 'petal-fall 14s linear infinite',
   			'petal-drift': 'petal-drift 8s ease-in-out infinite',
   			'stagger-fade-up': 'stagger-fade-up 0.5s ease-out forwards',
+  			'ledger-fill': 'ledger-fill 0.24s ease-out forwards',
+  			'hairline-draw': 'hairline-draw 0.3s ease-out forwards',
+  			'pop-select': 'pop-select 0.18s ease-out forwards',
   		}
   	}
   },

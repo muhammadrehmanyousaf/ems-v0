@@ -202,7 +202,15 @@ export function CookieConsent() {
       role="dialog"
       aria-label="Cookie preferences"
       aria-modal="false"
-      className="fixed inset-x-3 bottom-3 sm:left-auto sm:right-4 sm:bottom-4 sm:max-w-md z-[60] rounded-lg border border-bridal-beige bg-bridal-cream shadow-xl"
+      // On the booking route the action bar owns the bottom edge — a phone
+      // pins Back/Continue there, a desk has Continue at the bottom-right —
+      // so the banner lifts above it instead of covering the one button the
+      // page is for.
+      className={`fixed inset-x-3 sm:left-auto sm:right-4 sm:max-w-md z-[60] rounded-lg border border-bridal-beige bg-bridal-cream shadow-xl ${
+        /^\/\d+\/booking(\/|$)/.test(pathname ?? "")
+          ? "bottom-[calc(84px+env(safe-area-inset-bottom,0px))] sm:bottom-[104px]"
+          : "bottom-3 sm:bottom-4"
+      }`}
     >
       {/*
         The category list can be taller than a small phone. Cap it and let it

@@ -20,9 +20,15 @@
  * can match against their bank statement, lets the customer report the transfer
  * in-product, and describes the arrangement accurately: the venue collects, we
  * record it and hold the date.
+ *
+ * Marquee Stage — rendered inside the desk body beside the locked Stage, with
+ * its own heading (an arrival, not a step), left-aligned, cards capped at
+ * 560px; ~900px of content scrolls internally. The amount, the reference and
+ * the venue's account sit above the fold. Every prop, state and API call is
+ * unchanged.
  */
 
-import { Building2, Copy, CheckCircle, Clock, FileText, Home, AlertTriangle, Loader2, Send } from "lucide-react"
+import { Copy, Check, Clock, FileText, Home, AlertTriangle, Loader2, Send } from "lucide-react"
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { errorMessage } from "@/lib/utils/api-error"
@@ -31,6 +37,7 @@ import {
   type PaymentInstructions,
   type ClaimMethod,
 } from "@/lib/api/paymentInstructions"
+import { BridalButton } from "@/components/bridal/bridal-button"
 
 interface BankTransferScreenProps {
   bookingId: number
@@ -48,6 +55,16 @@ const METHOD_LABELS: Record<ClaimMethod, string> = {
   easypaisa: "Easypaisa",
   cash: "Cash",
 }
+
+const FOCUS =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2"
+const LABEL = "font-bridal text-[11px] leading-[14px] uppercase tracking-[0.18em] text-bridal-text-label"
+const CARD = "w-full max-w-[560px] rounded-[4px] border border-bridal-beige bg-white"
+const INPUT = `h-11 w-full rounded-[4px] border border-bridal-beige bg-white px-3 font-bridal text-[14px] text-bridal-charcoal placeholder:text-bridal-text-soft/70 focus:border-bridal-gold-dark ${FOCUS}`
+const COPY_BTN = `inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-bridal-text-soft transition-colors duration-150 hover:bg-bridal-blush/45 hover:text-bridal-gold-dark ${FOCUS}`
+const OUTLINE_LINK = `inline-flex h-12 w-full items-center justify-center gap-2 rounded-[4px] border border-bridal-beige bg-white px-6 font-bridal text-[13px] font-medium uppercase tracking-[0.18em] text-bridal-charcoal transition-colors duration-150 hover:border-bridal-gold-dark hover:text-bridal-gold-dark ${FOCUS}`
+const PRIMARY_LINK = `inline-flex h-12 w-full items-center justify-center gap-2 rounded-[4px] bg-bridal-gold px-6 font-bridal text-[13px] font-medium uppercase tracking-[0.18em] text-bridal-charcoal shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] transition-colors duration-200 hover:bg-bridal-gold-dark hover:text-bridal-ivory ${FOCUS}`
+const stagger = (i: number) => ({ animationDelay: `${Math.min(i, 8) * 30}ms` })
 
 export default function BankTransferScreen({
   bookingId,
@@ -136,83 +153,91 @@ export default function BankTransferScreen({
   const refRequired = method !== "cash"
   const canSubmit = !submitting && (!refRequired || transactionRef.trim().length >= 3)
 
+  const copyIcon = (id: string) =>
+    copied === id
+      ? <Check className="h-4 w-4 text-[#3F6B43] animate-scale-in" strokeWidth={2.5} aria-hidden />
+      : <Copy className="h-4 w-4" aria-hidden />
+
+  let block = 0
+
   return (
-    <div className="flex flex-col items-center py-8 text-center max-w-lg mx-auto">
-      <div className="mb-6 relative">
-        <div className="absolute inset-0 rounded-full bg-bridal-gold/15 blur-2xl scale-110" aria-hidden />
-        <div className="relative rounded-full bg-bridal-cream border border-bridal-gold/55 p-6 shadow-[0_18px_44px_-22px_rgba(176,125,84,0.5)]">
-          <Building2 className="h-12 w-12 text-bridal-gold-dark" strokeWidth={1.5} />
-        </div>
-      </div>
+    <div className="w-full">
+      {/* Heading — the screen's own: an arrival, not a step. */}
+      <header className="animate-stagger-fade-up" style={stagger(block++)}>
+        <p className="font-bridal text-[11px] font-medium uppercase leading-[14px] tracking-[0.18em] text-bridal-gold-dark">
+          Secure your date
+        </p>
+        <h2 className="mt-2 font-display text-[32px] italic leading-[38px] text-bridal-charcoal xl:text-[40px] xl:leading-[44px]">
+          Pay your {typeLabel.toLowerCase()}
+        </h2>
+        <p className="mt-3 max-w-[640px] font-bridal text-[14px] leading-[20px] text-bridal-text-soft">
+          {/* Accurate description of the arrangement. The venue collects; we record
+              it and hold the date. Nothing is held by Wedding Wala. */}
+          Your venue collects this payment directly. Tell us once you&apos;ve sent it and
+          we&apos;ll hold your date while they confirm.
+        </p>
+      </header>
 
-      <p className="font-bridal text-[10.5px] uppercase tracking-[0.4em] font-medium text-bridal-gold-dark mb-3">
-        Secure your date
-      </p>
-      <h2 className="font-display italic text-[34px] sm:text-[40px] text-bridal-charcoal mb-2 leading-[1.05]">
-        Pay your {typeLabel.toLowerCase()}
-      </h2>
-      <div className="mx-auto mt-1 mb-5 h-[1px] w-20 bg-gradient-to-r from-transparent via-bridal-gold to-transparent" />
-      <p className="font-bridal text-[14px] text-bridal-text-soft mb-8 max-w-sm">
-        {/* Accurate description of the arrangement. The venue collects; we record
-            it and hold the date. Nothing is held by Wedding Wala. */}
-        Your venue collects this payment directly. Tell us once you&apos;ve sent it and
-        we&apos;ll hold your date while they confirm.
-      </p>
-
-      {/* Amount */}
-      <div className="w-full relative rounded-md bg-bridal-charcoal text-bridal-ivory text-left overflow-hidden mb-6 shadow-[0_24px_60px_-30px_rgba(44,24,16,0.6)]">
-        <div className="absolute inset-0 bg-mughal-jaal opacity-[0.08] pointer-events-none" />
-        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-bridal-gold to-transparent" />
-        <div className="relative px-6 py-6">
-          <p className="font-bridal text-[10px] uppercase tracking-[0.4em] font-medium text-bridal-gold mb-2">
+      {/* Amount — the one figure that must be unmistakable, on solid charcoal. */}
+      <section
+        aria-label="Amount to transfer"
+        className="relative mt-6 w-full max-w-[560px] overflow-hidden rounded-[4px] bg-bridal-charcoal px-4 py-3 text-bridal-ivory animate-stagger-fade-up"
+        style={stagger(block++)}
+      >
+        <div className="pointer-events-none absolute inset-0 bg-mughal-jaal opacity-[0.08]" aria-hidden />
+        <div className="relative">
+          <p className="font-bridal text-[11px] uppercase leading-[14px] tracking-[0.18em] text-bridal-gold">
             Amount to transfer
           </p>
-          <p className="font-display italic text-[44px] sm:text-[48px] text-bridal-ivory leading-none">
+          <p className="mt-1 font-display text-[32px] italic leading-[38px] tabular-nums text-bridal-ivory">
             Rs. {Number(dueAmount).toLocaleString()}
           </p>
-          <div className="flex items-center justify-between mt-4 font-bridal text-[12px]">
-            <span className="uppercase tracking-[0.22em] text-bridal-gold/85">{typeLabel}</span>
-            <span className="text-bridal-ivory/75">Booking #{bookingId}</span>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 font-bridal text-[12px] leading-[16px]">
+            <span className="uppercase tracking-[0.18em] text-bridal-gold">{typeLabel}</span>
+            <span className="text-bridal-ivory/80">
+              Booking #{bookingId}
+              {bookingDate ? ` · Event: ${formatDate(bookingDate)}` : ""}
+            </span>
           </div>
-          {bookingDate && (
-            <p className="font-bridal text-[11.5px] text-bridal-ivory/65 mt-1.5">Event: {formatDate(bookingDate)}</p>
-          )}
         </div>
-      </div>
+      </section>
 
       {/* Reference — the single most useful field for the venue, so it gets its
           own block rather than a bullet buried in an instructions list. */}
-      <div className="w-full rounded-md border border-bridal-gold/45 bg-bridal-cream px-5 py-4 text-left mb-6">
-        <p className="font-bridal text-[10px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark mb-1.5">
-          Put this reference on your transfer
-        </p>
-        <div className="flex items-center justify-between gap-3">
-          <p className="font-display italic text-[26px] text-bridal-charcoal leading-none">{reference}</p>
-          <button
-            type="button"
-            onClick={() => copy(reference, "ref")}
-            className="p-2.5 rounded-full text-bridal-text-soft hover:text-bridal-gold-dark hover:bg-bridal-blush/55 transition-colors"
-            title="Copy reference"
-          >
-            {copied === "ref" ? <CheckCircle className="w-4 h-4 text-bridal-sage" strokeWidth={2} /> : <Copy className="w-4 h-4" />}
-          </button>
+      <section
+        aria-label="Transfer reference"
+        className={`${CARD} mt-3 flex min-h-[72px] items-center justify-between gap-3 border-bridal-gold-dark px-4 py-2 animate-stagger-fade-up`}
+        style={stagger(block++)}
+      >
+        <div className="min-w-0">
+          <p className={LABEL}>Put this reference on your transfer</p>
+          <p className="mt-0.5 font-display text-[22px] italic leading-[26px] tabular-nums text-bridal-charcoal">{reference}</p>
+          <p className="font-bridal text-[12px] leading-[16px] text-bridal-text-soft">
+            It&apos;s how the venue finds your payment in their account.
+          </p>
         </div>
-        <p className="font-bridal text-[12px] text-bridal-text-soft mt-2">
-          It&apos;s how the venue finds your payment in their account.
-        </p>
-      </div>
+        <button
+          type="button"
+          onClick={() => copy(reference, "ref")}
+          className={COPY_BTN}
+          title="Copy reference"
+          aria-label={copied === "ref" ? "Reference copied" : "Copy reference"}
+        >
+          {copyIcon("ref")}
+        </button>
+      </section>
 
       {loading && (
-        <div className="w-full flex items-center justify-center gap-2 py-8 text-bridal-text-soft font-bridal text-[13px]">
-          <Loader2 className="w-4 h-4 animate-spin" /> Loading the venue&apos;s account details…
+        <div className="mt-3 flex h-12 w-full max-w-[560px] items-center gap-2 font-bridal text-[13px] leading-[18px] text-bridal-text-soft">
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Loading the venue&apos;s account details…
         </div>
       )}
 
       {!loading && loadError && (
-        <div className="w-full rounded-md border border-bridal-coral/45 bg-bridal-blush/40 px-5 py-4 text-left mb-6">
-          <p className="font-bridal text-[13px] text-bridal-charcoal flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 mt-0.5 text-bridal-coral shrink-0" />
-            <span>{loadError} You can still contact the venue directly to arrange payment.</span>
+        <div className="mt-3 flex w-full max-w-[560px] items-start gap-2 rounded-[4px] border border-rose-200 bg-rose-50 px-4 py-3" role="alert">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" aria-hidden />
+          <p className="font-bridal text-[13px] leading-[18px] text-rose-800">
+            {loadError} You can still contact the venue directly to arrange payment.
           </p>
         </div>
       )}
@@ -220,14 +245,14 @@ export default function BankTransferScreen({
       {/* The venue's real accounts. Rendered only when the venue has published
           one — never a placeholder, and never a guess. */}
       {!loading && vendorsWithAccounts.map((vendor) => (
-        <div
+        <section
           key={vendor.businessId}
-          className="w-full rounded-md border border-bridal-beige bg-bridal-cream overflow-hidden mb-6 shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)]"
+          aria-label={`Transfer to ${vendor.businessName || "the venue"}`}
+          className={`${CARD} mt-3 animate-stagger-fade-up`}
+          style={stagger(block++)}
         >
-          <div className="px-5 py-3 bg-bridal-ivory border-b border-bridal-beige text-left">
-            <p className="font-bridal text-[10.5px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark">
-              Transfer to {vendor.businessName || "the venue"}
-            </p>
+          <div className="flex h-9 items-center border-b border-bridal-beige px-4">
+            <p className={LABEL}>Transfer to {vendor.businessName || "the venue"}</p>
           </div>
           {vendor.accounts.map((acc) => {
             /**
@@ -256,53 +281,56 @@ export default function BankTransferScreen({
                   ...(acc.branchCode ? [{ label: "Branch code", value: acc.branchCode }] : []),
                 ]
             return (
-            <div key={acc.id} className="divide-y divide-bridal-beige/70">
+            <dl key={acc.id}>
               {/* Which rail this block is, and whether we have checked it.
                   Both matter BEFORE the customer transfers, so both sit above
                   the number rather than in a footnote under it. */}
-              <div className="flex items-center justify-between gap-2 px-5 py-2.5 bg-bridal-ivory/60">
-                <span className="font-bridal text-[11px] uppercase tracking-[0.2em] font-medium text-bridal-charcoal">
+              <div className="flex min-h-[36px] items-center justify-between gap-2 border-b border-bridal-beige bg-bridal-sand/50 px-4 py-1">
+                <span className="font-bridal text-[12px] uppercase leading-[16px] tracking-[0.18em] text-bridal-charcoal">
                   {rail}
                 </span>
                 {acc.isVerified === false && (
-                  <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 font-bridal text-[10px] uppercase tracking-[0.14em] font-medium text-amber-800">
-                    <AlertTriangle className="w-3 h-3" />
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-bridal text-[10px] uppercase leading-[12px] tracking-[0.14em] text-amber-800">
+                    <AlertTriangle className="h-3 w-3" aria-hidden />
                     Not yet checked by us
                   </span>
                 )}
               </div>
-              {rows.map(({ label, value }) => (
-                <div key={label} className="flex items-center justify-between px-5 py-3.5">
-                  <div className="text-left min-w-0">
-                    <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">{label}</p>
-                    <p className="font-bridal text-[13.5px] font-medium text-bridal-charcoal mt-0.5 truncate">{value}</p>
+              {rows.map(({ label, value }, i) => (
+                <div
+                  key={label}
+                  className="flex min-h-[44px] items-center justify-between gap-3 border-b border-bridal-beige px-4 last:border-b-0 animate-stagger-fade-up"
+                  style={stagger(i)}
+                >
+                  <div className="min-w-0">
+                    <dt className={LABEL}>{label}</dt>
+                    <dd className="truncate font-bridal text-[14px] leading-[20px] tabular-nums text-bridal-charcoal" title={value}>{value}</dd>
                   </div>
                   <button
                     type="button"
                     onClick={() => copy(value, `${acc.id}-${label}`)}
-                    className="ml-3 p-2.5 rounded-full text-bridal-text-soft hover:text-bridal-gold-dark hover:bg-bridal-blush/55 transition-colors"
+                    className={`-mr-2 ${COPY_BTN}`}
                     title={`Copy ${label.toLowerCase()}`}
+                    aria-label={copied === `${acc.id}-${label}` ? `${label} copied` : `Copy ${label.toLowerCase()}`}
                   >
-                    {copied === `${acc.id}-${label}`
-                      ? <CheckCircle className="w-4 h-4 text-bridal-sage" strokeWidth={2} />
-                      : <Copy className="w-4 h-4" />}
+                    {copyIcon(`${acc.id}-${label}`)}
                   </button>
                 </div>
               ))}
-            </div>
+            </dl>
             )
           })}
-        </div>
+        </section>
       ))}
 
       {/* No published account is a normal state, not an error. Say what to do
           instead of showing an account that isn't theirs. */}
       {!loading && !loadError && vendorsWithAccounts.length === 0 && (
-        <div className="w-full rounded-md border border-bridal-beige bg-bridal-ivory/60 px-5 py-4 text-left mb-6">
-          <p className="font-bridal text-[13px] text-bridal-text leading-relaxed">
+        <div className={`${CARD} mt-3 px-4 py-3`}>
+          <p className="font-bridal text-[13px] leading-[18px] text-bridal-text">
             This venue hasn&apos;t published bank details yet. Contact them to arrange
             payment{instructions?.vendors?.[0]?.whatsappNumber
-              ? <> — WhatsApp <strong className="text-bridal-charcoal">{instructions.vendors[0].whatsappNumber}</strong></>
+              ? <> — WhatsApp <strong className="font-medium text-bridal-charcoal">{instructions.vendors[0].whatsappNumber}</strong></>
               : null}.
           </p>
         </div>
@@ -311,139 +339,147 @@ export default function BankTransferScreen({
       {/* Report the transfer, in-product. This is what replaces "send a
           screenshot to a hardcoded WhatsApp number". */}
       {!loading && !claimed && instructions?.paymentType && (
-        <div className="w-full rounded-md border border-bridal-beige bg-bridal-cream px-5 py-5 text-left mb-6">
-          <p className="font-bridal text-[10.5px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark mb-3">
-            Already sent it?
-          </p>
+        <section aria-label="Report your transfer" className={`${CARD} mt-3 animate-stagger-fade-up`} style={stagger(block++)}>
+          <div className="flex h-9 items-center border-b border-bridal-beige px-4">
+            <p className={LABEL}>Already sent it?</p>
+          </div>
+          <div className="space-y-3 px-4 py-3">
+            <div>
+              <label htmlFor="bank-claim-method" className={`mb-1 block ${LABEL}`}>How you paid</label>
+              <select
+                id="bank-claim-method"
+                value={method}
+                onChange={(e) => setMethod(e.target.value as ClaimMethod)}
+                className={INPUT}
+              >
+                {(Object.keys(METHOD_LABELS) as ClaimMethod[]).map((m) => (
+                  <option key={m} value={m}>{METHOD_LABELS[m]}</option>
+                ))}
+              </select>
+            </div>
 
-          <label className="block font-bridal text-[11px] uppercase tracking-[0.2em] text-bridal-text-label mb-1.5">How you paid</label>
-          <select
-            value={method}
-            onChange={(e) => setMethod(e.target.value as ClaimMethod)}
-            className="w-full h-10 rounded-[4px] border border-bridal-beige bg-bridal-ivory px-3 font-bridal text-[13.5px] text-bridal-charcoal mb-3 focus:border-bridal-gold outline-none"
-          >
-            {(Object.keys(METHOD_LABELS) as ClaimMethod[]).map((m) => (
-              <option key={m} value={m}>{METHOD_LABELS[m]}</option>
-            ))}
-          </select>
+            {refRequired && (
+              <div>
+                <label htmlFor="bank-claim-ref" className={`mb-1 block ${LABEL}`}>
+                  Transaction reference
+                </label>
+                <input
+                  id="bank-claim-ref"
+                  value={transactionRef}
+                  onChange={(e) => setTransactionRef(e.target.value)}
+                  placeholder="From your bank's confirmation SMS or app"
+                  maxLength={120}
+                  className={INPUT}
+                />
+                <p className="mt-1 font-bridal text-[12px] leading-[16px] text-bridal-text-soft">
+                  The venue matches this against their statement.
+                </p>
+              </div>
+            )}
 
-          {refRequired && (
-            <>
-              <label className="block font-bridal text-[11px] uppercase tracking-[0.2em] text-bridal-text-label mb-1.5">
-                Transaction reference
+            {/* The screenshot. Optional, and said to be optional — a customer
+                hunting for a file on a phone at 11pm is a place people abandon,
+                and the reference is what the venue actually searches on. */}
+            <div>
+              <label htmlFor="bank-claim-proof" className={`mb-1 block ${LABEL}`}>
+                Screenshot or receipt <span className="normal-case tracking-normal text-bridal-text-soft">(optional)</span>
               </label>
               <input
-                value={transactionRef}
-                onChange={(e) => setTransactionRef(e.target.value)}
-                placeholder="From your bank's confirmation SMS or app"
-                maxLength={120}
-                className="w-full h-10 rounded-[4px] border border-bridal-beige bg-bridal-ivory px-3 font-bridal text-[13.5px] text-bridal-charcoal mb-1 focus:border-bridal-gold outline-none"
+                id="bank-claim-proof"
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+                className={`block w-full font-bridal text-[13px] leading-[18px] text-bridal-text file:mr-3 file:h-11 file:rounded-[4px] file:border file:border-bridal-beige file:bg-white file:px-3 file:font-bridal file:text-[12px] file:text-bridal-charcoal hover:file:border-bridal-gold-dark ${FOCUS}`}
               />
-              <p className="font-bridal text-[11.5px] text-bridal-text-soft mb-3">
-                The venue matches this against their statement.
+              <p className="mt-1 font-bridal text-[12px] leading-[16px] text-bridal-text-soft">
+                {proofFile ? `Attached: ${proofFile.name}` : "Helps the venue confirm faster. Max 8 MB."}
               </p>
-            </>
-          )}
+            </div>
 
-          {/* The screenshot. Optional, and said to be optional — a customer
-              hunting for a file on a phone at 11pm is a place people abandon,
-              and the reference is what the venue actually searches on. */}
-          <label className="block font-bridal text-[11px] uppercase tracking-[0.2em] text-bridal-text-label mb-1.5">
-            Screenshot or receipt <span className="normal-case tracking-normal text-bridal-text-soft">(optional)</span>
-          </label>
-          <input
-            type="file"
-            accept="image/*,application/pdf"
-            onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
-            className="w-full font-bridal text-[13px] text-bridal-text mb-1 file:mr-3 file:rounded-[3px] file:border file:border-bridal-beige file:bg-bridal-ivory file:px-3 file:py-1.5 file:font-bridal file:text-[12px] file:text-bridal-charcoal hover:file:border-bridal-gold"
-          />
-          <p className="font-bridal text-[11.5px] text-bridal-text-soft mb-3">
-            {proofFile ? `Attached: ${proofFile.name}` : "Helps the venue confirm faster. Max 8 MB."}
-          </p>
+            <div>
+              <label htmlFor="bank-claim-notes" className={`mb-1 block ${LABEL}`}>
+                Anything else? <span className="normal-case tracking-normal text-bridal-text-soft">(optional)</span>
+              </label>
+              <textarea
+                id="bank-claim-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={2}
+                maxLength={1000}
+                placeholder="e.g. sent from my father's account"
+                className={`w-full resize-y rounded-[4px] border border-bridal-beige bg-white px-3 py-2 font-bridal text-[14px] leading-[20px] text-bridal-charcoal placeholder:text-bridal-text-soft/70 focus:border-bridal-gold-dark ${FOCUS}`}
+              />
+            </div>
 
-          <label className="block font-bridal text-[11px] uppercase tracking-[0.2em] text-bridal-text-label mb-1.5">
-            Anything else? <span className="normal-case tracking-normal text-bridal-text-soft">(optional)</span>
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-            maxLength={1000}
-            placeholder="e.g. sent from my father's account"
-            className="w-full rounded-[4px] border border-bridal-beige bg-bridal-ivory px-3 py-2 font-bridal text-[13.5px] text-bridal-charcoal mb-3 resize-y focus:border-bridal-gold outline-none"
-          />
+            {claimError && (
+              <p className="font-bridal text-[12px] leading-[16px] text-rose-800" role="alert">{claimError}</p>
+            )}
 
-          {claimError && (
-            <p className="font-bridal text-[12.5px] text-bridal-coral mb-3">{claimError}</p>
-          )}
-
-          <button
-            type="button"
-            disabled={!canSubmit}
-            onClick={submitClaim}
-            className="inline-flex items-center justify-center gap-2 w-full h-11 rounded-[4px] bg-bridal-charcoal text-bridal-ivory hover:bg-bridal-gold-dark disabled:opacity-50 disabled:cursor-not-allowed font-bridal text-[12px] uppercase tracking-[0.22em] font-medium transition-colors"
-          >
-            {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-            {submitting ? "Sending…" : "I've sent the payment"}
-          </button>
-          {refRequired && transactionRef.trim().length > 0 && transactionRef.trim().length < 3 && (
-            <p className="font-bridal text-[11.5px] text-bridal-coral mt-2">
-              Add the full reference from your bank.
-            </p>
-          )}
-        </div>
+            <BridalButton
+              type="button"
+              variant="primary"
+              size="lg"
+              block
+              disabled={!canSubmit}
+              onClick={submitClaim}
+            >
+              {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Send className="h-3.5 w-3.5" aria-hidden />}
+              {submitting ? "Sending…" : "I've sent the payment"}
+            </BridalButton>
+            {refRequired && transactionRef.trim().length > 0 && transactionRef.trim().length < 3 && (
+              <p className="font-bridal text-[12px] leading-[16px] text-rose-800">
+                Add the full reference from your bank.
+              </p>
+            )}
+          </div>
+        </section>
       )}
 
       {claimed && (
-        <div className="w-full rounded-md border border-bridal-sage/50 bg-bridal-sage/10 px-5 py-4 text-left mb-6">
-          <p className="font-bridal text-[13px] text-bridal-charcoal flex items-start gap-2">
-            <CheckCircle className="w-4 h-4 mt-0.5 text-bridal-sage shrink-0" />
-            <span>
+        <div className="mt-3 flex w-full max-w-[560px] items-start gap-2 rounded-[4px] border border-bridal-sage/45 bg-bridal-sage/15 px-4 py-3" role="status">
+          <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#3F6B43]" strokeWidth={2.5} aria-hidden />
+          <div className="min-w-0">
+            <p className="font-bridal text-[13px] leading-[18px] text-[#3F6B43]">
               Thanks — we&apos;ve told the venue. They&apos;ll confirm once it shows in their
               account, and you&apos;ll see the booking update.
-            </span>
-          </p>
-          {proofWarning && (
-            <p className="font-bridal text-[12.5px] text-bridal-text-soft mt-2 pl-6">
-              {proofWarning}
             </p>
-          )}
+            {proofWarning && (
+              <p className="mt-1 font-bridal text-[12px] leading-[16px] text-bridal-text-soft">
+                {proofWarning}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
       {/* Honest disclosure. The previous copy claimed Wedding Wala holds the
           deposit and refunds it if the vendor declines — neither of which is
           true, and the first is not something a non-EMI may lawfully do. */}
-      <div className="w-full rounded-md border border-bridal-beige bg-bridal-ivory/60 px-5 py-4 text-left mb-6">
-        <p className="font-bridal text-[10.5px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark mb-2 flex items-center gap-1.5">
-          <Clock className="w-3.5 h-3.5" /> How this works
-        </p>
-        <ul className="font-bridal text-[12.5px] text-bridal-text space-y-1.5 list-disc list-inside leading-relaxed">
+      <section aria-label="How this works" className={`${CARD} mt-3 animate-stagger-fade-up`} style={stagger(block++)}>
+        <div className="flex h-9 items-center gap-1.5 border-b border-bridal-beige px-4">
+          <Clock className="h-3.5 w-3.5 text-bridal-gold-dark" aria-hidden />
+          <p className={LABEL}>How this works</p>
+        </div>
+        <ul className="list-inside list-disc space-y-1 px-4 py-3 font-bridal text-[12px] leading-[16px] text-bridal-text">
           <li>You pay the venue directly. Wedding Wala records the payment and holds your date — we don&apos;t hold the money.</li>
           <li>Refunds and cancellation terms are the venue&apos;s, agreed when you booked.</li>
           <li>Bank transfers carry no chargeback rights, so keep your receipt.</li>
           <li>
             Read the{" "}
-            <a href="/refund-policy" target="_blank" rel="noopener noreferrer" className="text-bridal-gold hover:underline">Refund Policy</a>
+            <a href="/refund-policy" target="_blank" rel="noopener noreferrer" className={`text-bridal-gold-dark underline underline-offset-4 ${FOCUS}`}>Refund Policy</a>
             {" "}and{" "}
-            <a href="/cancellation-policy" target="_blank" rel="noopener noreferrer" className="text-bridal-gold hover:underline">Cancellation Policy</a>.
+            <a href="/cancellation-policy" target="_blank" rel="noopener noreferrer" className={`text-bridal-gold-dark underline underline-offset-4 ${FOCUS}`}>Cancellation Policy</a>.
           </li>
         </ul>
-      </div>
+      </section>
 
-      <div className="flex flex-col sm:flex-row gap-3 w-full">
-        <Link
-          href="/user/bookings"
-          className="inline-flex items-center justify-center gap-2 flex-1 h-12 px-5 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] transition-all duration-300"
-        >
-          <FileText className="h-3.5 w-3.5" />
+      <div className="mt-6 grid w-full max-w-[560px] grid-cols-1 gap-3 xl:grid-cols-2 animate-stagger-fade-up" style={stagger(block++)}>
+        <Link href="/user/bookings" className={PRIMARY_LINK}>
+          <FileText className="h-3.5 w-3.5" aria-hidden />
           View my bookings
         </Link>
-        <Link
-          href="/"
-          className="inline-flex items-center justify-center gap-2 flex-1 h-12 px-5 rounded-[4px] border border-bridal-beige bg-bridal-cream text-bridal-charcoal hover:border-bridal-gold/55 hover:text-bridal-gold-dark font-bridal text-[12px] uppercase tracking-[0.22em] font-medium transition-colors"
-        >
-          <Home className="h-3.5 w-3.5" />
+        <Link href="/" className={OUTLINE_LINK}>
+          <Home className="h-3.5 w-3.5" aria-hidden />
           Back to home
         </Link>
       </div>

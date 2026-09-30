@@ -1,11 +1,23 @@
 "use client"
 
-import { CheckCircle, Printer, Home, Calendar, Clock, Users, MapPin, Package, Building, Camera, Palette, Star, Sparkles } from "lucide-react"
-import { Button } from "@/components/ui/button"
+/**
+ * Vendor (non-venue) confirmation — the `success` step in `eventStepOrder`.
+ *
+ * Marquee Stage — renders in the desk body beside the locked Stage, owns its
+ * heading (an arrival, 40/44 per §9), sits left-aligned with the card capped
+ * at 560px, and scrolls internally past the fold (the customer, vendor and
+ * event sections come first; package, extra vendors and the total follow).
+ * Confetti stays (pay mode only) and is skipped under reduced motion. Every
+ * prop is unchanged; the figures are shown in rupees — the "$" this screen
+ * printed was never the currency of anything booked here.
+ */
+
+import { Check, Printer, Home, Calendar, Users, MapPin, Package, Building, Camera, Palette, Star, Sparkles } from "lucide-react"
 import type { BookingFormData, Vendor } from "@/lib/types"
 import confetti from "canvas-confetti"
-import { useEffect } from "react"
+import { useEffect, type ReactNode } from "react"
 import { slotText } from "@/lib/booking/slot-vocabulary"
+import { BridalButton } from "@/components/bridal/bridal-button"
 
 interface VendorSuccessStepProps {
   formData: BookingFormData
@@ -15,10 +27,36 @@ interface VendorSuccessStepProps {
   bookingResponse?: any // Add booking response to access nested data
 }
 
-export default function VendorSuccessStep({ 
-  formData, 
-  vendor, 
-  selectedPackageObj, 
+const LABEL = "font-bridal text-[11px] leading-[14px] uppercase tracking-[0.18em] text-bridal-text-label"
+const stagger = (i: number) => ({ animationDelay: `${Math.min(i, 8) * 30}ms` })
+const rs = (v: unknown) => {
+  const n = Number(v)
+  return Number.isFinite(n) ? `Rs. ${n.toLocaleString()}` : String(v ?? "")
+}
+
+/** One 36px fact row: 13px label at left, 15px italic value at right. */
+function Fact({ label, value, className = "" }: { label: string; value: ReactNode; className?: string }) {
+  return (
+    <div className={`flex min-h-[36px] items-center justify-between gap-3 border-b border-bridal-beige ${className}`}>
+      <dt className="shrink-0 font-bridal text-[13px] leading-[18px] text-bridal-text-soft">{label}</dt>
+      <dd className="min-w-0 truncate text-right font-display text-[15px] italic leading-[20px] text-bridal-charcoal">{value}</dd>
+    </div>
+  )
+}
+
+function SectionHead({ icon: Icon, children }: { icon: any; children: ReactNode }) {
+  return (
+    <h4 className={`flex h-9 items-center gap-2 ${LABEL}`}>
+      <Icon className="h-3.5 w-3.5 text-bridal-gold-dark" aria-hidden />
+      {children}
+    </h4>
+  )
+}
+
+export default function VendorSuccessStep({
+  formData,
+  vendor,
+  selectedPackageObj,
   vendorDetails,
   bookingResponse
 }: VendorSuccessStepProps) {
@@ -29,6 +67,9 @@ export default function VendorSuccessStep({
   const bookingData = bookingResponse?.data;
 
   useEffect(() => {
+    // §8 — reduced motion: no confetti at all.
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return
+
     // Trigger confetti animation on component mount
     const duration = 3 * 1000
     const animationEnd = Date.now() + duration
@@ -86,268 +127,212 @@ export default function VendorSuccessStep({
     const vt = Array.isArray(vendorType) ? vendorType[0] : vendorType
     switch (vt?.toLowerCase()) {
       case 'photographer':
-        return <Camera className="h-8 w-8" />
+        return <Camera className="h-5 w-5" />
       case 'makeup artist':
-        return <Palette className="h-8 w-8" />
+        return <Palette className="h-5 w-5" />
       case 'henna artist':
-        return <Palette className="h-8 w-8" />
+        return <Palette className="h-5 w-5" />
       case 'decorator':
-        return <Palette className="h-8 w-8" />
+        return <Palette className="h-5 w-5" />
       case 'catering':
-        return <Package className="h-8 w-8" />
+        return <Package className="h-5 w-5" />
       default:
-        return <Sparkles className="h-8 w-8" />
+        return <Sparkles className="h-5 w-5" />
     }
   }
 
-  // Bridal palette — every vendor type gets the same charcoal+gold accent so the
-  // success card feels like a single brand statement, not a rainbow.
-  const getVendorColor = (_vendorType?: string | string[]) => "from-bridal-charcoal to-bridal-charcoal/85"
+  const vendorType = vendor?.vendor?.vendorType || vendorData?.type || vendorData?.subBusinessType
+  let block = 0
 
   return (
-    <div className="flex flex-col items-center justify-center py-10 text-center">
-      {/* Success crown */}
-      <div className="mb-7 relative">
-        <div className="absolute inset-0 rounded-full bg-bridal-gold/15 blur-2xl scale-110" aria-hidden />
-        <div className="relative rounded-full bg-bridal-cream border border-bridal-gold/55 p-7 shadow-[0_18px_44px_-22px_rgba(176,125,84,0.55)]">
-          <CheckCircle className="h-16 w-16 text-bridal-gold-dark" strokeWidth={1.5} />
-        </div>
-      </div>
-
-      {/* Main Success Message */}
-      <div className="mb-9 text-center">
-        <p className="font-bridal text-[10.5px] uppercase tracking-[0.4em] font-medium text-bridal-gold-dark mb-3">
+    <div className="w-full">
+      {/* Heading — the screen's own: an arrival, not a step. */}
+      <header className="animate-stagger-fade-up" style={stagger(block++)}>
+        <p className="flex items-center gap-2 font-bridal text-[11px] font-medium uppercase leading-[14px] tracking-[0.18em] text-bridal-gold-dark">
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-bridal-gold-dark text-white motion-safe:animate-scale-in">
+            <Check className="h-3 w-3" strokeWidth={3} aria-hidden />
+          </span>
           Confirmed
         </p>
-        <h2 className="mb-4 font-display italic text-[40px] sm:text-[52px] text-bridal-charcoal leading-[1.05]">
+        <h2 className="mt-2 font-display text-[32px] italic leading-[38px] text-bridal-charcoal xl:text-[40px] xl:leading-[44px]">
           Your booking is confirmed
         </h2>
-        <div className="mx-auto mb-4 h-[1px] w-24 bg-gradient-to-r from-transparent via-bridal-gold to-transparent" />
-        <p className="font-bridal text-[15px] text-bridal-text-soft max-w-md mx-auto">
+        <span aria-hidden className="mt-3 block h-px w-16 origin-left bg-bridal-gold motion-safe:animate-hairline-draw" />
+        <p className="mt-3 max-w-[640px] font-bridal text-[14px] leading-[20px] text-bridal-text-soft">
           A confirmation email is on its way to{" "}
-          <span className="font-display italic text-[16px] text-bridal-gold-dark">{formData.email}</span>
+          <span className="font-display italic text-bridal-gold-dark">{formData.email}</span>
         </p>
-      </div>
+      </header>
 
-      {/* Main Booking Card */}
-      <div className="mb-10 w-full max-w-3xl overflow-hidden rounded-md border border-bridal-beige bg-bridal-cream shadow-[0_28px_60px_-32px_rgba(176,125,84,0.5)]">
-        {/* Vendor Header */}
-        <div className={`relative bg-gradient-to-r ${getVendorColor(vendor?.vendor?.vendorType || vendorData?.type || vendorData?.subBusinessType)} px-8 py-6 text-left overflow-hidden`}>
-          <div className="absolute inset-0 bg-mughal-jaal opacity-[0.08] pointer-events-none" />
-          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-bridal-gold to-transparent" />
-          <div className="relative flex items-center gap-4">
-            <div className="rounded-full bg-bridal-gold/95 text-bridal-charcoal p-3.5">
-              {getVendorIcon(vendor?.vendor?.vendorType || vendorData?.type || vendorData?.subBusinessType)}
+      {/* Main Booking Card — capped at 560, white on ivory, no shadow. */}
+      <section
+        aria-label="Booking summary"
+        className="mt-6 w-full max-w-[560px] rounded-[4px] border border-bridal-beige bg-white animate-stagger-fade-up"
+        style={stagger(block++)}
+      >
+        {/* Vendor Header — charcoal + gold for every vendor type, one brand
+            statement rather than a rainbow. */}
+        <div className="relative overflow-hidden rounded-t-[3px] bg-bridal-charcoal px-4 py-3">
+          <div className="pointer-events-none absolute inset-0 bg-mughal-jaal opacity-[0.08]" aria-hidden />
+          <div className="relative flex items-center gap-3">
+            <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bridal-gold text-bridal-charcoal">
+              {getVendorIcon(vendorType)}
             </div>
-            <div>
-              <p className="font-bridal text-[10px] uppercase tracking-[0.32em] font-medium text-bridal-gold-dark mb-0.5">
+            <div className="min-w-0">
+              <p className="font-bridal text-[11px] uppercase leading-[14px] tracking-[0.18em] text-bridal-gold">
                 Booked with
               </p>
-              <h3 className="font-display italic text-[24px] text-bridal-ivory leading-tight">
+              <h3 className="truncate font-display text-[22px] italic leading-[26px] text-bridal-ivory">
                 {vendorData?.name || vendorData?.businessName || vendor?.name || 'Vendor'}
               </h3>
-              <p className="font-bridal text-[12px] text-bridal-ivory/75 capitalize mt-1">
+              <p className="truncate font-bridal text-[12px] capitalize leading-[16px] text-bridal-ivory/80">
                 {vendor?.vendor?.vendorType || vendorData?.type || 'Service Provider'}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="p-8">
+        <div className="px-4 pb-4">
           {/* Customer Information */}
-          <div className="mb-8">
-            <h4 className="mb-4 font-bridal text-[10.5px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark flex items-center gap-2">
-              <Users className="h-3.5 w-3.5 text-bridal-gold" />
-              Customer Information
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center justify-between border-b border-dashed border-bridal-beige pb-3">
-                <span className="font-bridal text-[12.5px] text-bridal-text-soft">Name:</span>
-                <span className="font-display italic text-[15px] text-bridal-charcoal">{bookingData?.customerName || formData.username}</span>
-              </div>
-              <div className="flex items-center justify-between border-b border-dashed border-bridal-beige pb-3">
-                <span className="font-bridal text-[12.5px] text-bridal-text-soft">Email:</span>
-                <span className="font-display italic text-[15px] text-bridal-charcoal">{bookingData?.customerEmail || formData.email}</span>
-              </div>
-              <div className="flex items-center justify-between border-b border-dashed border-bridal-beige pb-3">
-                <span className="font-bridal text-[12.5px] text-bridal-text-soft">Phone:</span>
-                <span className="font-display italic text-[15px] text-bridal-charcoal">{bookingData?.customerPhone || formData.phoneNumber}</span>
-              </div>
-                             <div className="flex items-center justify-between border-b border-dashed border-bridal-beige pb-3">
-                 <span className="font-bridal text-[12.5px] text-bridal-text-soft">Guest Count:</span>
-                 <span className="font-display italic text-[15px] text-bridal-charcoal">
-                   {formData.guestCount && formData.guestCount > 0 ? `${formData.guestCount} guests` : "Not specified"}
-                 </span>
-               </div>
-            </div>
+          <div className="pt-1">
+            <SectionHead icon={Users}>Customer information</SectionHead>
+            <dl className="grid grid-cols-1 xl:grid-cols-2 xl:gap-x-6">
+              <Fact label="Name" value={bookingData?.customerName || formData.username} />
+              <Fact label="Email" value={bookingData?.customerEmail || formData.email} />
+              <Fact label="Phone" value={bookingData?.customerPhone || formData.phoneNumber} />
+              <Fact
+                label="Guest count"
+                value={formData.guestCount && formData.guestCount > 0 ? `${formData.guestCount} guests` : "Not specified"}
+              />
+            </dl>
           </div>
 
           {/* Vendor Details */}
-          <div className="mb-8">
-            <h4 className="mb-4 font-bridal text-[10.5px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark flex items-center gap-2">
-              <Building className="h-3.5 w-3.5 text-bridal-gold" />
-              Vendor Details
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center justify-between border-b border-dashed border-bridal-beige pb-3">
-                <span className="font-bridal text-[12.5px] text-bridal-text-soft">Business Name:</span>
-                <span className="font-display italic text-[15px] text-bridal-charcoal">{vendorData?.name || vendorData?.businessName || 'N/A'}</span>
-              </div>
-              <div className="flex items-center justify-between border-b border-dashed border-bridal-beige pb-3">
-                <span className="font-bridal text-[12.5px] text-bridal-text-soft">Specialization:</span>
-                <span className="font-display italic text-[15px] text-bridal-charcoal capitalize">{vendorData?.type || vendorData?.subBusinessType || 'N/A'}</span>
-              </div>
+          <div className="pt-3">
+            <SectionHead icon={Building}>Vendor details</SectionHead>
+            <dl className="grid grid-cols-1 xl:grid-cols-2 xl:gap-x-6">
+              <Fact label="Business name" value={vendorData?.name || vendorData?.businessName || 'N/A'} />
+              <Fact label="Specialization" value={<span className="capitalize">{vendorData?.type || vendorData?.subBusinessType || 'N/A'}</span>} />
               {(vendorData?.location || vendorData?.city) && (
-                <div className="flex items-center justify-between border-b border-dashed border-bridal-beige pb-3">
-                  <span className="font-bridal text-[12.5px] text-bridal-text-soft">Location:</span>
-                  <span className="font-display italic text-[15px] text-bridal-charcoal">{vendorData?.location || vendorData?.city}</span>
-                </div>
+                <Fact label="Location" value={vendorData?.location || vendorData?.city} />
               )}
               {vendorData?.rating && (
-                <div className="flex items-center justify-between border-b border-dashed border-bridal-beige pb-3">
-                  <span className="font-bridal text-[12.5px] text-bridal-text-soft">Rating:</span>
-                  <span className="font-display italic text-[15px] text-bridal-charcoal flex items-center gap-1">
-                    <Star className="h-4 w-4 text-bridal-gold fill-bridal-gold" />
-                    {vendorData.rating}/5
-                  </span>
-                </div>
+                <Fact
+                  label="Rating"
+                  value={
+                    <span className="inline-flex items-center gap-1">
+                      <Star className="h-3.5 w-3.5 fill-bridal-gold text-bridal-gold" aria-hidden />
+                      {vendorData.rating}/5
+                    </span>
+                  }
+                />
               )}
-            </div>
+            </dl>
           </div>
 
           {/* Event Details */}
-          <div className="mb-8">
-            <h4 className="mb-4 font-bridal text-[10.5px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark flex items-center gap-2">
-              <Calendar className="h-3.5 w-3.5 text-bridal-gold" />
-              Event Details
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             <div className="flex items-center justify-between border-b border-dashed border-bridal-beige pb-3">
-                 <span className="font-bridal text-[12.5px] text-bridal-text-soft">Event Type:</span>
-                 <span className="font-display italic text-[15px] text-bridal-charcoal">{formData.eventType || bookingData?.eventType || "Wedding"}</span>
-               </div>
-               <div className="flex items-center justify-between border-b border-dashed border-bridal-beige pb-3">
-                 <span className="font-bridal text-[12.5px] text-bridal-text-soft">Event Date:</span>
-                 <span className="font-display italic text-[15px] text-bridal-charcoal">
-                   {formData.bookingDate ? new Date(formData.bookingDate).toLocaleDateString() : 
-                    bookingData?.bookingDate ? new Date(bookingData.bookingDate).toLocaleDateString() : "N/A"}
-                 </span>
-               </div>
-               <div className="flex items-center justify-between border-b border-dashed border-bridal-beige pb-3">
-                 <span className="font-bridal text-[12.5px] text-bridal-text-soft">Time Slot:</span>
-                 <span className="font-display italic text-[15px] text-bridal-charcoal">
-                   {timeSlotText || "N/A"}
-                 </span>
-               </div>
-            </div>
+          <div className="pt-3">
+            <SectionHead icon={Calendar}>Event details</SectionHead>
+            <dl className="grid grid-cols-1 xl:grid-cols-2 xl:gap-x-6">
+              <Fact label="Event type" value={formData.eventType || bookingData?.eventType || "Wedding"} />
+              <Fact
+                label="Event date"
+                value={
+                  formData.bookingDate ? new Date(formData.bookingDate).toLocaleDateString() :
+                  bookingData?.bookingDate ? new Date(bookingData.bookingDate).toLocaleDateString() : "N/A"
+                }
+              />
+              <Fact label="Time slot" value={timeSlotText || "N/A"} />
+            </dl>
           </div>
 
           {/* Selected Package */}
           {(packageData || formData.selectedPackage) && (
-            <div className="mb-8">
-              <h4 className="mb-4 font-bridal text-[10.5px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark flex items-center gap-2">
-                <Package className="h-3.5 w-3.5 text-bridal-gold" />
-                Selected Package
-              </h4>
-              <div className="rounded-md bg-bridal-cream p-6 border border-bridal-gold/45 shadow-[0_18px_44px_-32px_rgba(176,125,84,0.4)]">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bridal text-[12.5px] text-bridal-text-soft">Package Name:</span>
-                    <span className="font-display italic text-[15px] text-bridal-charcoal">
-                      {packageData?.name || formData.selectedPackage}
-                    </span>
-                  </div>
+            <div className="pt-3">
+              <SectionHead icon={Package}>Selected package</SectionHead>
+              <div className="rounded-[4px] border border-bridal-gold-dark bg-bridal-cream px-4 py-1">
+                <dl>
+                  <Fact label="Package name" value={packageData?.name || formData.selectedPackage} className="border-bridal-beige/70" />
                   {packageData?.price && (
-                    <div className="flex items-center justify-between">
-                      <span className="font-bridal text-[12.5px] text-bridal-text-soft">Package Price:</span>
-                      <span className="font-display italic text-[20px] text-bridal-gold-dark">${packageData.price}</span>
-                    </div>
+                    <Fact
+                      label="Package price"
+                      value={<span className="tabular-nums text-bridal-gold-dark">{rs(packageData.price)}</span>}
+                      className="border-bridal-beige/70 last:border-b-0"
+                    />
                   )}
-                  {packageData?.description && (
-                    <div className="md:col-span-2">
-                      <span className="font-bridal text-[12.5px] text-bridal-text-soft">Description:</span>
-                      <p className="text-bridal-charcoal mt-1">{packageData.description}</p>
-                    </div>
-                  )}
-                  {packageData?.features && packageData.features.length > 0 && (
-                    <div className="md:col-span-2">
-                      <span className="font-bridal text-[12.5px] text-bridal-text-soft">Features:</span>
-                      <ul className="mt-2 space-y-1">
-                        {packageData.features.map((feature: string, index: number) => (
-                          <li key={index} className="flex items-center text-bridal-charcoal">
-                            <span className="mr-2 text-bridal-gold">•</span>
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
+                </dl>
+                {packageData?.description && (
+                  <div className="py-2">
+                    <p className="font-bridal text-[13px] leading-[18px] text-bridal-text-soft">Description</p>
+                    <p className="mt-1 font-bridal text-[14px] leading-[20px] text-bridal-charcoal">{packageData.description}</p>
+                  </div>
+                )}
+                {packageData?.features && packageData.features.length > 0 && (
+                  <div className="py-2">
+                    <p className="font-bridal text-[13px] leading-[18px] text-bridal-text-soft">Features</p>
+                    <ul className="mt-1 space-y-1">
+                      {packageData.features.map((feature: string, index: number) => (
+                        <li key={index} className="flex items-start font-bridal text-[14px] leading-[20px] text-bridal-charcoal">
+                          <span className="mr-2 text-bridal-gold-dark" aria-hidden>•</span>
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           {/* Additional Vendors */}
           {vendorDetails && vendorDetails.length > 0 && (
-            <div className="mb-8">
-              <h4 className="mb-4 font-bridal text-[10.5px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark flex items-center gap-2">
-                <MapPin className="h-3.5 w-3.5 text-bridal-gold" />
-                Additional Vendors
-              </h4>
-              <div className="space-y-3">
-                {vendorDetails.map((vendor, index) => (
-                  <div key={index} className="rounded-md bg-bridal-ivory p-4 border border-bridal-beige">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-bridal text-[12.5px] text-bridal-text-soft font-medium">Vendor {index + 1}:</span>
-                      <span className="font-display italic text-[15px] text-bridal-charcoal">{vendor.name}</span>
-                    </div>
-                    <div className="text-sm font-bridal text-[12.5px] text-bridal-text-soft capitalize">
-                      {vendor.type}
-                    </div>
-                  </div>
+            <div className="pt-3">
+              <SectionHead icon={MapPin}>Additional vendors</SectionHead>
+              <ul className="space-y-2">
+                {vendorDetails.map((v, index) => (
+                  <li key={index} className="flex min-h-[44px] items-center justify-between gap-3 rounded-[4px] border border-bridal-beige bg-bridal-ivory px-3 py-1">
+                    <span className="font-bridal text-[13px] leading-[18px] text-bridal-text-soft">Vendor {index + 1}</span>
+                    <span className="min-w-0 text-right">
+                      <span className="block truncate font-display text-[15px] italic leading-[20px] text-bridal-charcoal">{v.name}</span>
+                      <span className="block truncate font-bridal text-[12px] capitalize leading-[16px] text-bridal-text-soft">{v.type}</span>
+                    </span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           )}
 
           {/* Total Amount */}
-          <div className="mt-8 rounded-md bg-bridal-cream p-6 border border-bridal-gold/45 shadow-[0_18px_44px_-32px_rgba(176,125,84,0.4)] relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-bridal-gold to-transparent" />
-            <div className="flex items-end justify-between">
+          <div className="mt-4 rounded-[4px] border border-bridal-gold-dark bg-bridal-cream px-4 py-2">
+            <div className="flex min-h-[40px] items-center justify-between gap-3">
               <div>
-                <p className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-text-label mb-1">Total amount</p>
-                <p className="font-display italic text-[18px] text-bridal-charcoal leading-none">All inclusive</p>
+                <p className={LABEL}>Total amount</p>
+                <p className="font-bridal text-[12px] leading-[16px] text-bridal-text-soft">All inclusive</p>
               </div>
-              <span className="font-display italic text-[36px] text-bridal-gold-dark leading-none">${bookingData?.totalAmount || formData.totalPrice}</span>
+              <span className="font-display text-[22px] italic leading-[26px] tabular-nums text-bridal-gold-dark">
+                {rs(bookingData?.totalAmount || formData.totalPrice)}
+              </span>
             </div>
             {bookingData?.downPayment && (
-              <div className="mt-4 pt-4 border-t border-bridal-beige/70 flex items-center justify-between font-bridal text-[12.5px]">
-                <span className="text-bridal-text-soft uppercase tracking-[0.18em] text-[10.5px] font-medium">Down payment required</span>
-                <span className="font-display italic text-[18px] text-bridal-charcoal">${bookingData.downPayment}</span>
+              <div className="mt-2 flex min-h-[32px] items-center justify-between gap-3 border-t border-bridal-beige/70 pt-2">
+                <span className={LABEL}>Down payment required</span>
+                <span className="font-display text-[18px] italic leading-[24px] tabular-nums text-bridal-charcoal">{rs(bookingData.downPayment)}</span>
               </div>
             )}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Action Buttons */}
-      <div className="flex flex-col space-y-3 sm:flex-row sm:space-x-3 sm:space-y-0">
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="inline-flex items-center justify-center gap-2 h-12 rounded-[4px] border border-bridal-beige bg-bridal-cream hover:border-bridal-gold/55 hover:text-bridal-gold-dark text-bridal-charcoal font-bridal text-[12px] uppercase tracking-[0.22em] font-medium px-7 transition-colors"
-        >
-          <Printer className="h-3.5 w-3.5" />
+      {/* Action Buttons — the shell's action bar is hidden on arrival; these act. */}
+      <div className="mt-6 flex w-full max-w-[560px] flex-col gap-3 xl:flex-row animate-stagger-fade-up" style={stagger(block++)}>
+        <BridalButton type="button" variant="outline" size="lg" className="xl:flex-1" onClick={() => window.print()}>
+          <Printer className="h-3.5 w-3.5" aria-hidden />
           Print receipt
-        </button>
-        <button
-          type="button"
-          onClick={() => (window.location.href = "/")}
-          className="inline-flex items-center justify-center gap-2 h-12 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium px-7 shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] transition-all duration-300"
-        >
-          <Home className="h-3.5 w-3.5" />
+        </BridalButton>
+        <BridalButton type="button" variant="primary" size="lg" className="xl:flex-1" onClick={() => (window.location.href = "/")}>
+          <Home className="h-3.5 w-3.5" aria-hidden />
           Return home
-        </button>
+        </BridalButton>
       </div>
     </div>
   )

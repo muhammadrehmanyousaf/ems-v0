@@ -14,8 +14,9 @@
  * four cars had no way to say so.
  *
  * This step is the missing question, and it is the ONLY thing on the screen —
- * for this vendor it is the entire rate card, so burying it under a heading
- * would misrepresent what is being bought.
+ * for this vendor it is the entire rate card. The shell's StepFrame renders
+ * the title ("How many cars do you need?") and the subtitle; this component
+ * renders the stepper, the floor/ceiling lines and the priced line.
  *
  * ── Everything here is stated before Review, not after ────────────────────
  *
@@ -26,8 +27,7 @@
  * is the billed quantity's total, never the requested one's.
  */
 
-import { motion } from "framer-motion"
-import { Minus, Plus, Info } from "lucide-react"
+import { Minus, Plus } from "lucide-react"
 import {
   type UnitConfig,
   unitLineFor,
@@ -45,6 +45,12 @@ interface Props {
 
 const money = (n: number) => `Rs ${Math.round(n).toLocaleString("en-PK")}`
 
+const FOCUS_RING =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2"
+
+// 48px circles at base (phone), 56px from xl.
+const CIRCLE = `flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-bridal-beige bg-white text-bridal-charcoal transition-colors duration-150 hover:border-bridal-gold-dark hover:bg-bridal-blush/45 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-bridal-beige disabled:hover:bg-white xl:h-14 xl:w-14 ${FOCUS_RING}`
+
 export default function UnitQuantityStep({ config, quantity, onChange, vendorName }: Props) {
   const line = unitLineFor(config, quantity)
 
@@ -57,105 +63,92 @@ export default function UnitQuantityStep({ config, quantity, onChange, vendorNam
   const step = (delta: number) =>
     onChange(Math.min(MAX_UNIT_QTY, Math.max(floor, line.requestedQty + delta)))
 
+  const unitWord =
+    line.requestedQty === 1
+      ? config.unitLabel
+      : /^[A-Za-z]+$/.test(config.unitLabel) && !config.unitLabel.endsWith("s")
+        ? `${config.unitLabel}s`
+        : config.unitLabel
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="font-display italic text-[24px] sm:text-[28px] text-bridal-charcoal leading-tight">
-          How many {config.unitLabel}
-          {/^[A-Za-z]+$/.test(config.unitLabel) && !config.unitLabel.endsWith("s") ? "s" : ""} do you
-          need?
-        </h2>
-        <p className="mt-1 text-sm text-bridal-charcoal/70">
-          {vendorName ? `${vendorName} charges` : "Charged"} {money(config.unitPrice)} per{" "}
-          {config.unitLabel}.
-        </p>
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl border border-bridal-charcoal/10 bg-white p-6 sm:p-8"
+    <div className="mx-auto w-full max-w-[560px]">
+      {/* Stepper row — 120px, centred */}
+      <div
+        className="animate-stagger-fade-up flex h-[120px] items-center justify-center gap-6"
+        style={{ animationDelay: "0ms" }}
       >
-        <div className="flex items-center justify-center gap-6">
-          <button
-            type="button"
-            onClick={() => step(-1)}
-            disabled={atFloor}
-            aria-label={`One fewer ${config.unitLabel}`}
-            className="flex h-12 w-12 items-center justify-center rounded-full border border-bridal-charcoal/15 text-bridal-charcoal transition hover:bg-bridal-charcoal/5 disabled:cursor-not-allowed disabled:opacity-30"
-          >
-            <Minus className="h-5 w-5" />
-          </button>
+        <button
+          type="button"
+          onClick={() => step(-1)}
+          disabled={atFloor}
+          aria-label={`One fewer ${config.unitLabel}`}
+          className={CIRCLE}
+        >
+          <Minus className="h-5 w-5" aria-hidden />
+        </button>
 
-          <div className="min-w-[7rem] text-center">
-            <div
-              className="font-display text-[44px] leading-none text-bridal-charcoal tabular-nums"
-              aria-live="polite"
-            >
-              {line.requestedQty}
-            </div>
-            <div className="mt-1 text-xs uppercase tracking-wide text-bridal-charcoal/50">
-              {config.unitLabel}
-              {line.requestedQty === 1 ? "" : /^[A-Za-z]+$/.test(config.unitLabel) && !config.unitLabel.endsWith("s") ? "s" : ""}
-            </div>
+        <div className="min-w-[128px] text-center">
+          <div
+            className="font-display text-[64px] italic leading-[72px] tabular-nums text-bridal-charcoal"
+            aria-live="polite"
+          >
+            {line.requestedQty}
           </div>
-
-          <button
-            type="button"
-            onClick={() => step(1)}
-            disabled={atCeiling}
-            aria-label={`One more ${config.unitLabel}`}
-            className="flex h-12 w-12 items-center justify-center rounded-full border border-bridal-charcoal/15 text-bridal-charcoal transition hover:bg-bridal-charcoal/5 disabled:cursor-not-allowed disabled:opacity-30"
-          >
-            <Plus className="h-5 w-5" />
-          </button>
+          <div className="font-bridal text-[11px] font-medium uppercase leading-[14px] tracking-[0.18em] text-bridal-gold-dark">
+            {unitWord}
+          </div>
         </div>
 
-        {/*
-          The minimum is stated wherever it is binding, not only when it bites.
-          A customer who never tries to go below three still deserves to know
-          three is the floor before they reach Review.
-        */}
+        <button
+          type="button"
+          onClick={() => step(1)}
+          disabled={atCeiling}
+          aria-label={`One more ${config.unitLabel}`}
+          className={CIRCLE}
+        >
+          <Plus className="h-5 w-5" aria-hidden />
+        </button>
+      </div>
+
+      {/*
+        The minimum is stated wherever it is binding, not only when it bites.
+        A customer who never tries to go below three still deserves to know
+        three is the floor before they reach Review.
+      */}
+      <div className="animate-stagger-fade-up mt-4 text-center" style={{ animationDelay: "30ms" }}>
         {config.minUnitQty ? (
-          <p className="mt-5 flex items-start justify-center gap-2 text-center text-xs text-bridal-charcoal/60">
-            <Info className="mt-[1px] h-3.5 w-3.5 shrink-0" />
-            <span>
-              This vendor takes bookings of {describeUnitQty(config.unitLabel, config.minUnitQty)} or
-              more.
-            </span>
+          <p className="font-bridal text-[13px] leading-[24px] text-bridal-text-soft">
+            {vendorName || "This vendor"} takes bookings of{" "}
+            <span className="tabular-nums">{describeUnitQty(config.unitLabel, config.minUnitQty)}</span> or more.
           </p>
         ) : null}
 
         {atCeiling ? (
-          <p className="mt-3 text-center text-xs text-bridal-charcoal/60">
-            {MAX_UNIT_QTY} is the most that can be booked online — message the vendor for a larger
-            order.
+          <p className="font-bridal text-[13px] leading-[24px] text-bridal-text-soft">
+            <span className="tabular-nums">{MAX_UNIT_QTY}</span> is the most that can be booked online — message the vendor for a
+            larger order.
           </p>
         ) : null}
+      </div>
 
-        <div className="mt-6 border-t border-bridal-charcoal/10 pt-5">
-          <div className="flex items-baseline justify-between">
-            <span className="text-sm text-bridal-charcoal/70">
-              {describeUnitQty(config.unitLabel, line.billedQty)} × {money(config.unitPrice)}
-            </span>
-            <span className="font-display text-[22px] text-bridal-charcoal tabular-nums">
-              {money(line.total)}
-            </span>
-          </div>
-          {/*
-            Only reachable if the floor is somehow bypassed, but it is carried
-            because the server carries it: a customer shown a quantity they did
-            not ask for is owed the reason on the same screen as the number.
-          */}
-          {line.liftedByMinimum ? (
-            <p className="mt-2 text-xs text-bridal-charcoal/60">
-              You asked for {describeUnitQty(config.unitLabel, line.requestedQty)}. The vendor's
-              minimum is {describeUnitQty(config.unitLabel, line.billedQty)}, so that is what is
-              billed.
-            </p>
-          ) : null}
-        </div>
-      </motion.div>
+      {/* Hairline, then the priced line: "3 cars × Rs 25,000 = Rs 75,000" */}
+      <div className="animate-stagger-fade-up mt-4 border-t border-bridal-beige pt-4 text-center" style={{ animationDelay: "60ms" }}>
+        <p className="font-display text-[22px] italic leading-[26px] tabular-nums text-bridal-charcoal" data-booking-unit-line>
+          {describeUnitQty(config.unitLabel, line.billedQty)} × {money(config.unitPrice)} ={" "}
+          <span className="text-bridal-gold-dark">{money(line.total)}</span>
+        </p>
+        {/*
+          Only reachable if the floor is somehow bypassed, but it is carried
+          because the server carries it: a customer shown a quantity they did
+          not ask for is owed the reason on the same screen as the number.
+        */}
+        {line.liftedByMinimum ? (
+          <p className="mt-2 font-bridal text-[12px] leading-[16px] text-bridal-text-soft">
+            You asked for {describeUnitQty(config.unitLabel, line.requestedQty)}. The vendor&rsquo;s minimum is{" "}
+            {describeUnitQty(config.unitLabel, line.billedQty)}, so that is what is billed.
+          </p>
+        ) : null}
+      </div>
     </div>
   )
 }
