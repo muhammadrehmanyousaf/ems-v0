@@ -7,14 +7,15 @@
  * Steps render none of their own headings any more — six different <h2>
  * treatments were the reason the journey read as six unrelated pages. The
  * frame is re-keyed by the shell on every step change, so the enter motion
- * runs on mount, unconditionally, and ends visible. There is no observer here
- * and nothing rests at opacity 0: the outage of 2026-09-29 came from a reveal
- * gated on `useInView`, and this component is the reason it cannot recur on
- * this route.
+ * runs on mount, unconditionally, and ends visible.
+ *
+ * The entrance is a CSS keyframe, not framer-motion: this was the only thing
+ * on the main path still pulling the animation library into the route's first
+ * load, for a 220ms slide. A keyframe with `forwards` cannot get stuck at
+ * opacity 0 and costs nothing to download. `--bk-dx` carries the direction.
  */
 
-import { useEffect, useRef, type ReactNode } from "react"
-import { motion, useReducedMotion } from "framer-motion"
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react"
 import type { StepHeading } from "@/lib/booking/step-copy"
 
 interface StepFrameProps {
@@ -28,7 +29,6 @@ interface StepFrameProps {
 }
 
 export default function StepFrame({ stepKey, heading, direction, focusTitle = true, children }: StepFrameProps) {
-  const reduce = useReducedMotion()
   const titleRef = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
@@ -39,10 +39,9 @@ export default function StepFrame({ stepKey, heading, direction, focusTitle = tr
 
   return (
     <div data-booking-step={stepKey} className="booking-step">
-      <motion.div
-        initial={reduce ? false : { opacity: 0, x: 16 * direction }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.22, ease: "easeOut" }}
+      <div
+        className="motion-safe:animate-booking-step-in"
+        style={{ "--bk-dx": `${16 * direction}px` } as CSSProperties}
       >
         {heading && (
           <header className="booking-step-heading mb-5 xl:mb-6">
@@ -64,7 +63,7 @@ export default function StepFrame({ stepKey, heading, direction, focusTitle = tr
           </header>
         )}
         {children}
-      </motion.div>
+      </div>
     </div>
   )
 }

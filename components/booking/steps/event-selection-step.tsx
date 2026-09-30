@@ -144,7 +144,7 @@ export default function EventSelectionStep({ selectedEvents = [], onEventToggle,
         // "Engagement" lost its last letter. Stacked, the words get the full
         // card width and the card stays 92px, which keeps the two groups
         // inside the fold at 1366×768.
-        className={`group relative flex h-[92px] min-w-0 flex-col justify-between rounded-[4px] p-3 text-left motion-safe:animate-stagger-fade-up transition-[border-color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2 focus-visible:ring-offset-bridal-ivory ${
+        className={`group relative flex h-[92px] min-w-0 flex-col justify-between rounded-[4px] p-3 text-left motion-safe:animate-stagger-fade-up transition-[border-color,background-color,transform] duration-150 motion-safe:hover:-translate-y-px motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2 focus-visible:ring-offset-bridal-ivory ${
           isSelected
             ? "border-[1.5px] border-bridal-gold-dark bg-bridal-cream"
             : "border border-bridal-beige bg-white hover:border-bridal-gold/60 hover:bg-bridal-blush/45"

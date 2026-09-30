@@ -191,7 +191,7 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
             style={{ animationDelay: `${Math.min(idx, 8) * 30}ms` }}
           >
             <div
-              className={`relative flex h-full flex-col rounded-[4px] border transition-[border-color,background-color] duration-150 ${
+              className={`relative flex h-full flex-col rounded-[4px] border transition-[border-color,background-color,transform] duration-150 motion-safe:group-hover:-translate-y-px motion-safe:group-active:scale-[0.99] ${
                 isSelected
                   ? "border-bridal-gold-dark bg-bridal-cream"
                   : "border-bridal-beige bg-white group-hover:border-bridal-gold/60 group-hover:bg-bridal-blush/45"

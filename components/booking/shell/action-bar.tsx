@@ -49,6 +49,10 @@ export default function ActionBar({
 
   const continueBtn = (
     <BridalButton
+      // Re-keyed on validity so the button pops once the moment it becomes
+      // pressable — the customer's eye is on the control they just used, and
+      // the pop says "that was enough" without a toast.
+      key={disabled ? "off" : "on"}
       type="button"
       variant={disabled ? "outline" : "primary"}
       size="md"
@@ -58,7 +62,7 @@ export default function ActionBar({
       aria-describedby={disabled && disabledReason ? "bk-continue-reason" : undefined}
       data-booking-action="continue"
       className={`transition-colors duration-200 ${phone ? "h-12 flex-1" : "h-12 min-w-[220px]"} ${
-        disabled ? "!opacity-100 text-bridal-text-soft border-bridal-beige bg-bridal-cream" : ""
+        disabled ? "!opacity-100 text-bridal-text-soft border-bridal-beige bg-bridal-cream" : "motion-safe:animate-pop-select"
       }`}
     >
       {submitting ? "Sending…" : continueLabel}

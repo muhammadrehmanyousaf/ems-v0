@@ -903,7 +903,7 @@ export default function DateTimeStep({
                 : disabled
                   ? "cursor-not-allowed text-bridal-text-soft/50 line-through decoration-1"
                   : isSelected
-                    ? "bg-bridal-gold-dark text-white"
+                    ? "bg-bridal-gold-dark text-white motion-safe:animate-pop-select"
                     : isToday
                       ? "ring-1 ring-inset ring-bridal-gold-dark text-bridal-charcoal hover:bg-bridal-blush/45"
                       : "text-bridal-charcoal hover:bg-bridal-cream"
@@ -959,7 +959,7 @@ export default function DateTimeStep({
       state === "disabled"
         ? "cursor-not-allowed border-bridal-beige bg-bridal-ivory text-bridal-text-soft/60"
         : state === "selected"
-          ? "border-bridal-gold bg-bridal-gold text-bridal-charcoal"
+          ? "border-bridal-gold bg-bridal-gold text-bridal-charcoal motion-safe:animate-pop-select"
           : "border-bridal-beige bg-white text-bridal-charcoal hover:bg-bridal-blush/45"
     }`
 

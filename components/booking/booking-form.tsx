@@ -32,8 +32,12 @@ import { BACKEND_URL } from "@/lib/backend-url"
 import { toast } from "../ui/use-toast"
 import { getUser } from "@/hooks/getLoggedinUser"
 import axiosInstance from '@/lib/axiosConfig'
-import SuccessStep from "./steps/success-step"
-import VendorSuccessStep from "./steps/vendor-success-step"
+import dynamic from "next/dynamic"
+// The end-of-flow screens are split out of the route's first load: they carry
+// framer-motion and canvas-confetti, and nobody needs them before the last
+// step. `ssr: false` — they only ever render after a client-side submit.
+const SuccessStep = dynamic(() => import("./steps/success-step"), { ssr: false })
+const VendorSuccessStep = dynamic(() => import("./steps/vendor-success-step"), { ssr: false })
 import { VendorAPI } from "@/lib/api/vendors"
 // WW-PRICE0 — an unpriced vendor can't be booked (server 400s); offer the
 // inquiry instead of dead-ending the customer. This page is the choke point.
@@ -45,12 +49,12 @@ import { menuChargeFor } from "@/lib/pricing/menu"
 import { composeLineTotal, packageIncludesFood } from "@/lib/pricing/package"
 import { readUnitConfig, sellsByTheUnit, unitLineFor } from "@/lib/pricing/per-unit"
 import UnitQuantityStep from "./steps/unit-quantity-step"
-import VendorInquiryDialog from "@/components/VendorInquiryDialog"
+const VendorInquiryDialog = dynamic(() => import("@/components/VendorInquiryDialog"), { ssr: false })
 import { useDateHold } from "@/hooks/use-date-hold"
 import { useBookingDraft } from "@/hooks/use-booking-draft"
-import BankTransferScreen from "./steps/bank-transfer-screen"
+const BankTransferScreen = dynamic(() => import("./steps/bank-transfer-screen"), { ssr: false })
 // WW-BOOKING-MODE — venues that accept a booking before asking for payment.
-import RequestSentScreen from "./steps/request-sent-screen"
+const RequestSentScreen = dynamic(() => import("./steps/request-sent-screen"), { ssr: false })
 import { requiresVendorApproval, effectiveBookingMode } from "@/lib/booking/booking-mode"
 // WW-REQUIREMENTS — the free-text field the flow never had. Everything a family
 // actually needs to say went to WhatsApp instead.

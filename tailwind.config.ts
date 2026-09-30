@@ -255,6 +255,11 @@ const config: Config = {
   				'0%': { transform: 'scale(0.94)' },
   				'100%': { transform: 'scale(1)' },
   			},
+  			// Step entrance; `--bk-dx` is +16px forward, −16px back, 0 on a tab switch.
+  			'booking-step-in': {
+  				'0%': { opacity: '0', transform: 'translateX(var(--bk-dx, 0px))' },
+  				'100%': { opacity: '1', transform: 'translateX(0)' },
+  			},
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
@@ -281,6 +286,7 @@ const config: Config = {
   			'ledger-fill': 'ledger-fill 0.24s ease-out forwards',
   			'hairline-draw': 'hairline-draw 0.3s ease-out forwards',
   			'pop-select': 'pop-select 0.18s ease-out forwards',
+  			'booking-step-in': 'booking-step-in 0.22s ease-out forwards',
   		}
   	}
   },
