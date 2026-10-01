@@ -70,7 +70,57 @@ export interface UpgradeRequestRow {
   upgradeRequestedAt: string | null;
 }
 
+/** What the portal gate and the billing page read. Set only by Safepay webhooks. */
+export type BillingAccess = "active" | "past_due" | "pending" | "none";
+
+export interface BillingSubscriptionRow {
+  reference: string;
+  tier: string;
+  status: "pending" | "active" | "payment_failed" | "cancelled" | "superseded" | "lapsed";
+  activatedAt: string | null;
+  currentPeriodEndsAt: string | null;
+  failedAt: string | null;
+  cancelledAt: string | null;
+  lastEventType: string | null;
+  lastEventAt: string | null;
+  createdAt: string;
+}
+
+export interface BillingStatus {
+  access: BillingAccess;
+  tier: string;
+  /** BILLING_ENFORCE=1 on the server: the portal is closed without a paid plan. */
+  enforced: boolean;
+  environment: "sandbox" | "live";
+  subscriptionEndsAt: string | null;
+  subscription: BillingSubscriptionRow | null;
+}
+
+export interface CheckoutStart {
+  checkoutUrl: string;
+  reference: string;
+  tier: string;
+  amountPkrMonthly: number;
+  environment: "sandbox" | "live";
+}
+
 export class SubscriptionAPI {
+  /** Where the vendor stands with Safepay right now. */
+  static async getBillingStatus(): Promise<BillingStatus> {
+    const res = await axiosInstance.get("/api/v1/subscriptions/status");
+    return res.data?.data as BillingStatus;
+  }
+
+  /**
+   * Start a hosted Safepay checkout for a tier. The server creates the
+   * pending record and returns the URL; the browser is then sent there. The
+   * amount is the server's — only the tier name travels.
+   */
+  static async startCheckout(tier: string): Promise<CheckoutStart> {
+    const res = await axiosInstance.post("/api/v1/subscriptions/checkout", { tier });
+    return res.data?.data as CheckoutStart;
+  }
+
   /**
    * WWL-443 — this used to `catch { return null }`. The view then rendered
    * `plans = []`, so a failed request produced a billing page with NO PLANS ON
