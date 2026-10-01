@@ -104,7 +104,39 @@ export interface CheckoutStart {
   environment: "sandbox" | "live";
 }
 
+/** One successful subscription charge — the row behind a receipt. */
+export interface SubscriptionPaymentRow {
+  id: number;
+  receiptNo: string;
+  tier: string;
+  transactionId: string | null;
+  amountPaisas: number;
+  currency: string;
+  periodStart: string;
+  periodEnd: string;
+  paidAt: string;
+  environment: "sandbox" | "live";
+}
+
+export interface SubscriptionReceipt {
+  receipt: SubscriptionPaymentRow & { user?: { fullName: string | null; email: string | null; phoneNumber: string | null } };
+  planName: string;
+  issuer: { name: string; legalName: string; ntn: string; address: string; email: string; taxNote: string };
+}
+
 export class SubscriptionAPI {
+  /** Every successful charge, newest first. */
+  static async listPayments(): Promise<SubscriptionPaymentRow[]> {
+    const res = await axiosInstance.get("/api/v1/subscriptions/payments");
+    return (res.data?.data?.payments ?? []) as SubscriptionPaymentRow[];
+  }
+
+  /** One receipt by number; only the payer's own. */
+  static async getReceipt(receiptNo: string): Promise<SubscriptionReceipt> {
+    const res = await axiosInstance.get(`/api/v1/subscriptions/payments/${encodeURIComponent(receiptNo)}`);
+    return res.data?.data as SubscriptionReceipt;
+  }
+
   /** Where the vendor stands with Safepay right now. */
   static async getBillingStatus(): Promise<BillingStatus> {
     const res = await axiosInstance.get("/api/v1/subscriptions/status");
