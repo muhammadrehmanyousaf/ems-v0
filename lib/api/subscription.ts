@@ -124,7 +124,31 @@ export interface SubscriptionReceipt {
   issuer: { name: string; legalName: string; ntn: string; address: string; email: string; taxNote: string };
 }
 
+/** Super-admin: one Safepay subscription row with its vendor. */
+export interface AdminSafepayRow extends BillingSubscriptionRow {
+  id: number;
+  userId: number;
+  environment: "sandbox" | "live";
+  safepaySubscriptionId: string | null;
+  lastTransactionId: string | null;
+  amountPaisas: number | null;
+  user: { id: number; fullName: string | null; email: string | null; phoneNumber: string | null; vendorType: string | null; subscriptionTier: string; subscriptionEndsAt: string | null } | null;
+}
+
+export interface AdminSafepayLedger {
+  environment: "sandbox" | "live";
+  enforced: boolean;
+  subscriptions: AdminSafepayRow[];
+}
+
 export class SubscriptionAPI {
+  /** Super-admin: every Safepay subscription row, newest first. */
+  static async adminListSafepaySubscriptions(): Promise<AdminSafepayLedger> {
+    const res = await axiosInstance.get("/api/v1/subscriptions/admin/safepay/subscriptions");
+    const d = res.data?.data ?? {};
+    return { environment: d.environment ?? "live", enforced: !!d.enforced, subscriptions: d.subscriptions ?? [] };
+  }
+
   /** Every successful charge, newest first. */
   static async listPayments(): Promise<SubscriptionPaymentRow[]> {
     const res = await axiosInstance.get("/api/v1/subscriptions/payments");
