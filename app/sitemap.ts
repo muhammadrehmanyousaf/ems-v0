@@ -131,6 +131,7 @@ function buildCoreShard(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/terms`, lastModified: now, changeFrequency: "yearly", priority: 0.4 },
     { url: `${SITE_URL}/refund-policy`, lastModified: now, changeFrequency: "yearly", priority: 0.4 },
     { url: `${SITE_URL}/cancellation-policy`, lastModified: now, changeFrequency: "yearly", priority: 0.4 },
+    { url: `${SITE_URL}/vendor-subscription-policy`, lastModified: now, changeFrequency: "yearly", priority: 0.4 },
     { url: `${SITE_URL}/service-delivery-policy`, lastModified: now, changeFrequency: "yearly", priority: 0.4 },
     { url: `${SITE_URL}/cookie-policy`, lastModified: now, changeFrequency: "yearly", priority: 0.4 },
     { url: `${SITE_URL}/acceptable-use`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },

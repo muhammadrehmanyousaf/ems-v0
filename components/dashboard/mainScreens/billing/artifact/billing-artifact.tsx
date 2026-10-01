@@ -199,7 +199,7 @@ function buildContent(d: MyPlanData, status: BillingStatus | null, mode: ReturnM
       <td>${r.pro ? `<span class="yes">${svg(IC.check, 2.4)}</span>` : `<span class="no">${svg(IC.dash, 2)}</span>`}</td>
       <td>${r.premium ? `<span class="yes">${svg(IC.check, 2.4)}</span>` : `<span class="no">${svg(IC.dash, 2)}</span>`}</td></tr>`).join("")}</tbody></table></div></div>` : ""
 
-  const note = `<div class="card"><div class="note"><b>Payment Safepay ke zariye hoti hai</b> — card ki tafseel hum kabhi nahi dekhte na rakhte hain. Subscription har mahina khud renew hoti hai; jab chahein cancel kar sakte hain. ${escHtml(d.pricing?.taxNote || "")}</div></div>`
+  const note = `<div class="card"><div class="note"><b>Payment Safepay ke zariye hoti hai</b> — card ki tafseel hum kabhi nahi dekhte na rakhte hain. Subscription har mahina khud renew hoti hai; jab chahein cancel kar sakte hain. ${escHtml(d.pricing?.taxNote || "")} <a href="/vendor-subscription-policy" target="_blank" rel="noopener" style="color:var(--accent-ink);text-decoration:underline">Subscription policy</a></div></div>`
 
   const declineLine = d.lastDecline && !d.pendingUpgradeTier
     ? `<div class="card" style="margin-bottom:16px;padding:12px 16px;display:flex;gap:10px;align-items:flex-start;background:var(--bad-wash);border-color:transparent"><span style="color:var(--bad);flex:none">${svg(IC.clock)}</span><div style="font-size:12.5px;color:var(--ink-2)"><b style="color:var(--bad)">Pichli upgrade request (${escHtml(d.lastDecline.tierName || tierName(d.lastDecline.tier))}) manzoor nahi hui${d.lastDecline.declinedAt ? ` · ${fmtDate(d.lastDecline.declinedAt)}` : ""}.</b>${d.lastDecline.reason ? `<div style="margin-top:3px">Wajah: ${escHtml(d.lastDecline.reason)}</div>` : ""}</div></div>`
