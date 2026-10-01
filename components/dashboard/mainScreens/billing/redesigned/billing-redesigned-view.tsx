@@ -31,6 +31,7 @@ import { showSuccessToast } from "@/lib/toast/undo"
 import { errorMessage } from "@/lib/utils/api-error"
 import { cn } from "@/lib/utils"
 import { DangerousAction } from "@/components/dashboard/primitives/dangerous-action"
+import { SubscribeButton, CheckoutReturnBanner, BillingStatusCard } from "@/components/dashboard/billing/plan-wall"
 
 const TIER_RANK: Record<SubscriptionTier, number> = { free: 0, pro: 1, premium: 2 }
 
@@ -85,6 +86,9 @@ export function BillingRedesignedView() {
     queryKey: ["billing-redesigned"],
     queryFn: () => SubscriptionAPI.getMyPlan(),
   })
+  // Where the vendor stands with Safepay. Only webhooks change this.
+  const billing = useQuery({ queryKey: ["billing-status"], queryFn: () => SubscriptionAPI.getBillingStatus(), staleTime: 15_000 })
+  const paidActive = billing.data?.access === "active"
 
   const upgrade = useMutation({
     mutationFn: (v: { tier: SubscriptionTier; replacePending: boolean }) =>
@@ -146,6 +150,12 @@ export function BillingRedesignedView() {
         title="Plan & billing"
         description="Your subscription and what each tier unlocks."
       />
+
+      {/* Back from Safepay: waits for the webhook, never trusts the redirect. */}
+      <React.Suspense fallback={null}>
+        <CheckoutReturnBanner />
+      </React.Suspense>
+      {billing.data && billing.data.subscription && <BillingStatusCard status={billing.data} />}
 
       {/* Current plan summary */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl border border-border bg-card p-4 shadow-sm">
@@ -366,39 +376,15 @@ export function BillingRedesignedView() {
                        reach out to set it up". Three descriptions of the same
                        act, and only the two that appear AFTER the click say it
                        is a request. */
-                    <DangerousAction
-                      title={replaces ? `Ask for ${p.name} instead?` : `Request the ${p.name} plan?`}
-                      consequence={
-                        <>
-                          {replaces && (
-                            <p className="mb-2 font-medium text-foreground">
-                              This replaces your outstanding request for {replaces}. Only one request
-                              can be open at a time, and the old one will not be kept.
-                            </p>
-                          )}
-                          <p>
-                            {p.pricePkrMonthly > 0
-                              ? `This asks us to switch you to ${p.name} at Rs ${p.pricePkrMonthly.toLocaleString()}/month. Requesting a plan is not an agreement to pay — we confirm with you before anything is charged.`
-                              : `This asks us to switch you to ${p.name}.`}{" "}
-                            Nothing is charged now and this is not an agreement to pay — we review it
-                            and contact you to confirm before anything starts.
-                          </p>
-                        </>
-                      }
-                      confirmLabel={replaces ? "Replace request" : "Send request"}
-                      confirmVariant="default"
-                      disabled={upgrade.isPending}
-                      onConfirm={() =>
-                        upgrade.mutate({ tier: p.tier as SubscriptionTier, replacePending: !!pending })
-                      }
-                    >
-                      <Button className="h-11 w-full" disabled={upgrade.isPending}>
-                        {upgrade.isPending && upgrade.variables?.tier === p.tier && (
-                          <Spinner size={14} className="mr-2" />
-                        )}
-                        {replaces ? "Request instead" : "Request upgrade"}
-                      </Button>
-                    </DangerousAction>
+                    /* The plan is bought, not requested: a Safepay hosted
+                       checkout for this tier. If online payment is not yet
+                       switched on, the button says so and nothing is charged. */
+                    <SubscribeButton
+                      tier={p.tier}
+                      name={p.name || p.tier}
+                      pricePkrMonthly={p.pricePkrMonthly}
+                      isCurrent={isCurrent && paidActive}
+                    />
                   )}
                 </div>
               </div>

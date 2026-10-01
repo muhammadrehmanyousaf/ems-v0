@@ -16,6 +16,9 @@ import NextTopLoader from "nextjs-toploader"
 // SSR locale always falls back to English.
 import { LocaleProvider } from "@/lib/i18n/useT"
 import { ProductTourProvider } from "@/components/dashboard/tour/product-tour"
+// The portal paywall: with BILLING_ENFORCE on, a vendor without a paid
+// Safepay plan sees the plan wall on every route except Billing.
+import { BillingGate } from "@/components/dashboard/billing/billing-gate"
 
 export const metadata: Metadata = {
   title: "Wedding Wala — Dashboard",
@@ -67,7 +70,9 @@ const layout = ({ children }: { children: React.ReactNode }) => {
                 vendors (no per-route rebuild flash; artifact + React pages both
                 render inside it) and the classic sidebar for admins. See
                 dashboard-chrome.tsx. */}
-            <DashboardChrome>{children}</DashboardChrome>
+            <DashboardChrome>
+              <BillingGate>{children}</BillingGate>
+            </DashboardChrome>
             </ProductTourProvider>
           </ReviewProfileGate>
         </LocaleProvider>
