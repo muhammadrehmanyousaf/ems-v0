@@ -36,6 +36,7 @@ const STATUS_STYLE: Record<AdminSafepayRow["status"], { label: string; cls: stri
   payment_failed: { label: "Past due", cls: "border-amber-200 bg-amber-50 text-amber-800" },
   paused: { label: "Paused", cls: "border-sky-200 bg-sky-50 text-sky-800" },
   pending: { label: "Pending", cls: "border-neutral-200 bg-neutral-50 text-neutral-700" },
+  abandoned: { label: "Abandoned", cls: "border-neutral-200 bg-white text-neutral-500" },
   cancelled: { label: "Cancelled", cls: "border-rose-200 bg-rose-50 text-rose-800" },
   superseded: { label: "Superseded", cls: "border-neutral-200 bg-white text-neutral-500" },
   lapsed: { label: "Lapsed", cls: "border-neutral-200 bg-white text-neutral-500" },

@@ -76,7 +76,7 @@ export type BillingAccess = "active" | "past_due" | "pending" | "none";
 export interface BillingSubscriptionRow {
   reference: string;
   tier: string;
-  status: "pending" | "active" | "payment_failed" | "paused" | "cancelled" | "superseded" | "lapsed";
+  status: "pending" | "abandoned" | "active" | "payment_failed" | "paused" | "cancelled" | "superseded" | "lapsed";
   activatedAt: string | null;
   currentPeriodEndsAt: string | null;
   failedAt: string | null;
@@ -93,7 +93,10 @@ export interface BillingStatus {
   enforced: boolean;
   environment: "sandbox" | "live";
   subscriptionEndsAt: string | null;
+  /** The row that governs access: the live one, else a cancelled one with paid days left, else the newest. */
   subscription: BillingSubscriptionRow | null;
+  /** A checkout started in the last two hours that Safepay has not confirmed yet. */
+  pending: { reference: string; tier: string; createdAt: string } | null;
 }
 
 export interface CheckoutStart {
@@ -153,6 +156,8 @@ export interface AdminSafepayLedger {
 /** What switching plans would mean, before the vendor commits. */
 export interface PlanChangePreview {
   allowed: boolean;
+  /** The base plan is cancelled with paid days left: a new checkout reactivates it with those days as credit. */
+  reactivation?: boolean;
   currentTier: string;
   currentPlanName: string;
   newTier: string;
