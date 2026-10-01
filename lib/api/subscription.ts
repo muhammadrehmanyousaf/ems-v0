@@ -76,7 +76,7 @@ export type BillingAccess = "active" | "past_due" | "pending" | "none";
 export interface BillingSubscriptionRow {
   reference: string;
   tier: string;
-  status: "pending" | "active" | "payment_failed" | "cancelled" | "superseded" | "lapsed";
+  status: "pending" | "active" | "payment_failed" | "paused" | "cancelled" | "superseded" | "lapsed";
   activatedAt: string | null;
   currentPeriodEndsAt: string | null;
   failedAt: string | null;
@@ -116,6 +116,9 @@ export interface SubscriptionPaymentRow {
   periodEnd: string;
   paidAt: string;
   environment: "sandbox" | "live";
+  /** Recorded refunds against this charge, in paisas (0 when none). */
+  refundedPaisas?: number;
+  refundedAt?: string | null;
 }
 
 export interface SubscriptionReceipt {
@@ -132,6 +135,12 @@ export interface AdminSafepayRow extends BillingSubscriptionRow {
   safepaySubscriptionId: string | null;
   lastTransactionId: string | null;
   amountPaisas: number | null;
+  replacesSubscriptionId?: number | null;
+  creditDays?: number | null;
+  pausedAt?: string | null;
+  cancelReason?: string | null;
+  cancelledBy?: string | null;
+  reconciledAt?: string | null;
   user: { id: number; fullName: string | null; email: string | null; phoneNumber: string | null; vendorType: string | null; subscriptionTier: string; subscriptionEndsAt: string | null } | null;
 }
 
@@ -141,7 +150,67 @@ export interface AdminSafepayLedger {
   subscriptions: AdminSafepayRow[];
 }
 
+/** What switching plans would mean, before the vendor commits. */
+export interface PlanChangePreview {
+  allowed: boolean;
+  currentTier: string;
+  currentPlanName: string;
+  newTier: string;
+  newPlanName: string;
+  sameTier: boolean;
+  unusedDays: number;
+  creditDays: number;
+  chargeNowPaisas: number;
+  newPeriodEndsAt: string;
+  oldPeriodEndsAt: string | null;
+}
+
+export interface AdminSafepayPaymentRow extends SubscriptionPaymentRow {
+  refundReason: string | null;
+  refundRef: string | null;
+  user: { id: number; fullName: string | null; email: string | null; phoneNumber: string | null } | null;
+}
+
 export class SubscriptionAPI {
+  /** Vendor: preview a plan change (or a card change on the same tier). */
+  static async changePlanPreview(tier: string): Promise<PlanChangePreview> {
+    const res = await axiosInstance.get(`/api/v1/subscriptions/change-preview?tier=${encodeURIComponent(tier)}`);
+    return res.data?.data as PlanChangePreview;
+  }
+
+  /** Vendor: start the hosted checkout for the new plan; the old one is cancelled once Safepay confirms. */
+  static async startPlanChange(tier: string): Promise<CheckoutStart & { replaces: { tier: string; creditDays: number } }> {
+    const res = await axiosInstance.post("/api/v1/subscriptions/change-plan", { tier });
+    return res.data?.data;
+  }
+
+  /** Vendor: cancel at Safepay and locally; access runs to the paid period end. */
+  static async cancelSubscription(reason?: string): Promise<{ access: BillingAccess; subscriptionEndsAt: string | null; subscription: BillingSubscriptionRow | null }> {
+    const res = await axiosInstance.post("/api/v1/subscriptions/cancel", reason ? { reason } : {});
+    return res.data?.data;
+  }
+
+  // Super-admin actions on one subscription row
+  static async adminSubscriptionAction(id: number, action: "cancel" | "pause" | "resume" | "reconcile", body: Record<string, unknown> = {}): Promise<{ message: string; subscription: AdminSafepayRow }> {
+    const res = await axiosInstance.post(`/api/v1/subscriptions/admin/safepay/subscriptions/${id}/${action}`, body);
+    return { message: res.data?.message, subscription: res.data?.data?.subscription };
+  }
+
+  static async adminReconcileAll(): Promise<{ checked: number; changed: number; failed: number }> {
+    const res = await axiosInstance.post("/api/v1/subscriptions/admin/safepay/reconcile", {});
+    return res.data?.data;
+  }
+
+  static async adminListPayments(): Promise<AdminSafepayPaymentRow[]> {
+    const res = await axiosInstance.get("/api/v1/subscriptions/admin/safepay/payments");
+    return (res.data?.data?.payments ?? []) as AdminSafepayPaymentRow[];
+  }
+
+  static async adminRecordRefund(paymentId: number, body: { amountPaisas: number; reason?: string; ref?: string }): Promise<AdminSafepayPaymentRow> {
+    const res = await axiosInstance.post(`/api/v1/subscriptions/admin/safepay/payments/${paymentId}/refund`, body);
+    return res.data?.data?.payment;
+  }
+
   /** Super-admin: every Safepay subscription row, newest first. */
   static async adminListSafepaySubscriptions(): Promise<AdminSafepayLedger> {
     const res = await axiosInstance.get("/api/v1/subscriptions/admin/safepay/subscriptions");

@@ -93,6 +93,12 @@ export default function ReceiptPage() {
               <td className="py-3 pr-4 font-semibold" colSpan={2}>Total paid</td>
               <td className="whitespace-nowrap py-3 text-right text-lg font-semibold tabular-nums">{pkr(r.amountPaisas)}</td>
             </tr>
+            {!!r.refundedPaisas && r.refundedPaisas > 0 && (
+              <tr className="border-t border-neutral-200 text-amber-800">
+                <td className="py-3 pr-4" colSpan={2}>Refunded{r.refundedAt ? ` on ${fmtDate(r.refundedAt)}` : ""}</td>
+                <td className="whitespace-nowrap py-3 text-right font-semibold tabular-nums">− {pkr(r.refundedPaisas)}</td>
+              </tr>
+            )}
           </tfoot>
         </table>
 
