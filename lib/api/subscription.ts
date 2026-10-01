@@ -57,6 +57,9 @@ export interface MyPlanData {
   comparison?: PlanComparisonRow[];
   pricing?: PricingNote;
   tierNames?: Record<string, string>;
+  /** Our free trial (no card). 0 = off. */
+  trialDays?: number;
+  trialEligible?: boolean;
 }
 
 export interface UpgradeRequestRow {
@@ -76,8 +79,9 @@ export type BillingAccess = "active" | "past_due" | "pending" | "none";
 export interface BillingSubscriptionRow {
   reference: string;
   tier: string;
-  status: "pending" | "abandoned" | "active" | "payment_failed" | "paused" | "cancelled" | "superseded" | "lapsed";
+  status: "pending" | "abandoned" | "active" | "payment_failed" | "paused" | "trialing" | "cancelled" | "superseded" | "lapsed";
   activatedAt: string | null;
+  trialEndsAt?: string | null;
   currentPeriodEndsAt: string | null;
   failedAt: string | null;
   cancelledAt: string | null;
@@ -158,6 +162,8 @@ export interface PlanChangePreview {
   allowed: boolean;
   /** The base plan is cancelled with paid days left: a new checkout reactivates it with those days as credit. */
   reactivation?: boolean;
+  /** The base plan is a running free trial: paying now carries the unused trial days over. */
+  fromTrial?: boolean;
   currentTier: string;
   currentPlanName: string;
   newTier: string;
@@ -186,6 +192,12 @@ export class SubscriptionAPI {
   /** Vendor: start the hosted checkout for the new plan; the old one is cancelled once Safepay confirms. */
   static async startPlanChange(tier: string): Promise<CheckoutStart & { replaces: { tier: string; creditDays: number } }> {
     const res = await axiosInstance.post("/api/v1/subscriptions/change-plan", { tier });
+    return res.data?.data;
+  }
+
+  /** Vendor: start the free trial (ours, no card). Once per vendor. */
+  static async startTrial(tier: string): Promise<{ trialEndsAt: string; access: BillingAccess; subscription: BillingSubscriptionRow | null }> {
+    const res = await axiosInstance.post("/api/v1/subscriptions/trial", { tier });
     return res.data?.data;
   }
 
