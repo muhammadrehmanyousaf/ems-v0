@@ -27,7 +27,7 @@ import {
   type BillingStatus,
   type SubscriptionPaymentRow,
 } from "@/lib/api/subscription"
-import { useArtifactShell, pkNum, escHtml, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, pkNum, escHtml, errorBannerHtml, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const RANK: Record<string, number> = { free: 0, pro: 1, premium: 2, elite: 3 }
 function fmtDate(s?: string | null) { if (!s) return "—"; const d = new Date(s); return isNaN(d.getTime()) ? String(s) : d.toLocaleDateString("en-PK", { day: "numeric", month: "long", year: "numeric" }) }
@@ -82,21 +82,31 @@ const EXTRA_CSS = String.raw`
 
 type ReturnMode = "return" | "cancel" | null
 
+/** A subscription that is still renewing (or retrying): plan changes apply to it. A cancelled one still has access but needs a fresh subscribe. */
+const LIVE_STATUSES = ["active", "payment_failed", "paused"]
+function isLive(status: BillingStatus | null): boolean {
+  return !!status && (status.access === "active" || status.access === "past_due") && !!status.subscription && LIVE_STATUSES.includes(status.subscription.status)
+}
+
 function planCard(p: PlanCatalogEntry, d: MyPlanData, status: BillingStatus | null): string {
   const paidActive = status?.access === "active" || status?.access === "past_due"
+  const live = isLive(status)
   // Same rule as the current-plan card: when Safepay says the plan is paid,
   // the tier it reports is the truth, not the catalogue's cached tier.
   const cur = (paidActive && status?.tier ? status.tier : d.currentTier) as SubscriptionTier
-  const isCur = p.tier === cur && paidActive
+  const isCur = p.tier === cur && live
   const knownRanks = RANK[p.tier] != null && RANK[cur] != null
-  const definitelyLower = paidActive && knownRanks && RANK[p.tier] < RANK[cur]
+  const lower = live && knownRanks && RANK[p.tier] < RANK[cur]
   const highlights = (p.highlights || []).map((h) => `<div class="feat">${svg(IC.check, 2.4)} ${escHtml(h)}</div>`).join("")
   const caps = (p.caps || []).map((c) => `<div class="cap">${svg(IC.dash, 2)} ${escHtml(c)}</div>`).join("")
   let foot = ""
-  if (isCur) foot = `<div class="badge-cur">${svg(IC.check, 2.4)} Aapka plan · active</div>`
-  else if (definitelyLower) foot = `<div class="badge-inc">Aapke plan mein shamil</div>`
-  else if (p.pricePkrMonthly > 0 && paidActive)
-    foot = `<a class="btn btn-ghost" href="mailto:info@weddingwala.pk?subject=${encodeURIComponent("Plan change to " + p.name)}" title="Aapka plan active hai — badalne ke liye hum se rabta karein">Plan badlein · hum se rabta</a>`
+  if (isCur)
+    foot = `<div class="badge-cur">${svg(IC.check, 2.4)} Aapka plan · active</div><button class="btn btn-ghost sm" style="margin-top:8px;width:100%" data-change-plan="${escHtml(p.tier)}" title="Naya card save karne ke liye dobara subscribe karein — bache hue din poore carry hote hain">Card badlein</button>`
+  else if (lower && p.pricePkrMonthly > 0)
+    foot = `<button class="btn btn-ghost" data-change-plan="${escHtml(p.tier)}" aria-label="Switch down to ${escHtml(p.name)} for Rs ${pkNum(p.pricePkrMonthly)} a month">${escHtml(p.name)} par aayein · <span class="rs">Rs</span> ${pkNum(p.pricePkrMonthly)} / mahina</button>`
+  else if (lower) foot = `<div class="badge-inc">Aapke plan mein shamil</div>`
+  else if (p.pricePkrMonthly > 0 && live)
+    foot = `<button class="btn btn-primary" data-change-plan="${escHtml(p.tier)}" aria-label="Switch to ${escHtml(p.name)} for Rs ${pkNum(p.pricePkrMonthly)} a month with Safepay">${svg(IC.card)} ${escHtml(p.name)} par switch · <span class="rs">Rs</span> ${pkNum(p.pricePkrMonthly)} / mahina</button>`
   else if (p.pricePkrMonthly > 0)
     foot = `<button class="btn btn-primary" data-subscribe="${escHtml(p.tier)}" aria-label="Subscribe to ${escHtml(p.name)} for Rs ${pkNum(p.pricePkrMonthly)} a month with Safepay">${svg(IC.card)} Subscribe · <span class="rs">Rs</span> ${pkNum(p.pricePkrMonthly)} / mahina</button>`
   else foot = `<div class="badge-inc">Muft</div>`
@@ -125,17 +135,25 @@ function statusCard(status: BillingStatus | null): string {
   const pill: Record<string, [string, string]> = {
     active: ["ok", "Active"], past_due: ["warn", "Payment fail — retry ho rahi hai"], pending: ["info", "Payment ka intezaar"], none: ["bad", "Koi active plan nahi"],
   }
-  const [tone, label] = pill[status.access] || ["mut", status.access]
+  let [tone, label] = pill[status.access] || ["mut", status.access]
+  if (s.status === "cancelled") [tone, label] = ["mut", "Cancelled"]
+  else if (s.status === "paused") [tone, label] = ["info", "Paused"]
   const extra =
     status.access === "past_due"
-      ? `<div class="sp-s" style="color:var(--warn)">Is mahine ki payment nahi hui. Safepay dobara koshish karega; portal ${escHtml(fmtDate(status.subscriptionEndsAt))} tak khula rahega. Apna card ya account check karein, ya neeche se dobara subscribe karein.</div>`
+      ? `<div class="sp-s" style="color:var(--warn)">Is mahine ki payment nahi hui. Safepay dobara koshish karega; portal ${escHtml(fmtDate(status.subscriptionEndsAt))} tak khula rahega. Apna card ya account check karein, ya "Card badlein" se naya card lagayein.</div>`
       : s.status === "cancelled"
-        ? `<div class="sp-s">Subscription cancel ho chuki hai. ${escHtml(fmtDate(status.subscriptionEndsAt))} tak access rahegi; jab chahein dobara subscribe karein.</div>`
-        : ""
+        ? `<div class="sp-s">Subscription cancel ho chuki hai. ${escHtml(fmtDate(status.subscriptionEndsAt))} tak access rahegi; jab chahein neeche se dobara subscribe karein.</div>`
+        : s.status === "paused"
+          ? `<div class="sp-s">Subscription rok di gayi hai — koi charge nahi ho raha. ${escHtml(fmtDate(status.subscriptionEndsAt))} tak access rahegi. Dobara chalu karwane ke liye hum se rabta karein.</div>`
+          : ""
+  const canCancel = LIVE_STATUSES.includes(s.status)
+  const cancelBtn = canCancel
+    ? `<div style="margin-top:10px"><button class="btn btn-ghost sm" data-cancel-plan data-until="${escHtml(fmtDate(status.subscriptionEndsAt))}">Plan cancel karein</button></div>`
+    : ""
   return `<div class="sp" role="status">${svg(IC.lock)}<div style="flex:1;min-width:0">
     <div class="sp-t">Subscription <span class="st ${tone}" style="margin-left:8px">${escHtml(label)}</span>${status.environment === "sandbox" ? ` <span class="st mut" style="margin-left:6px">Sandbox</span>` : ""}</div>
-    <dl class="sp-grid"><div><dt>Paid until</dt><dd>${escHtml(fmtDate(s.currentPeriodEndsAt))}</dd></div><div><dt>Portal open until</dt><dd>${escHtml(fmtDate(status.subscriptionEndsAt))}</dd></div><div><dt>Billing</dt><dd>Monthly · Safepay</dd></div></dl>
-    ${extra}</div></div>`
+    <dl class="sp-grid"><div><dt>Paid until</dt><dd>${escHtml(fmtDate(s.currentPeriodEndsAt))}</dd></div><div><dt>Portal open until</dt><dd>${escHtml(fmtDate(status.subscriptionEndsAt))}</dd></div><div><dt>Billing</dt><dd>${s.status === "cancelled" ? "Band — koi charge nahi" : "Monthly · Safepay"}</dd></div></dl>
+    ${extra}${cancelBtn}</div></div>`
 }
 
 function historyCard(payments: SubscriptionPaymentRow[] | undefined): string {
@@ -145,7 +163,7 @@ function historyCard(payments: SubscriptionPaymentRow[] | undefined): string {
     <td><span class="rs">Rs</span> ${pkNum(Math.round(r.amountPaisas / 100))}</td>
     <td>${escHtml(r.tier)}</td>
     <td>${escHtml(fmtDate(r.periodStart))} – ${escHtml(fmtDate(r.periodEnd))}</td>
-    <td style="font-variant-numeric:tabular-nums">${escHtml(r.receiptNo)}</td>
+    <td style="font-variant-numeric:tabular-nums">${escHtml(r.receiptNo)}${r.refundedPaisas && r.refundedPaisas > 0 ? ` <span class="st warn" style="margin-left:6px">Refund <span class="rs">Rs</span> ${pkNum(Math.round(r.refundedPaisas / 100))}</span>` : ""}</td>
     <td style="text-align:right"><a class="btn btn-ghost sm" href="/dashboard/billing/receipt/${encodeURIComponent(r.receiptNo)}">Receipt</a></td>
   </tr>`).join("")
   return `<div class="card" style="margin-bottom:16px"><div class="card-h" style="padding:14px 16px 6px"><div><h2 style="font-size:13.5px;font-weight:600">Billing history</h2><div class="sub">Har mahine ki payment aur uski receipt.</div></div></div>
@@ -196,6 +214,11 @@ export function BillingArtifact() {
   React.useEffect(() => {
     const m = params?.get("checkout")
     setMode(m === "return" || m === "cancel" ? m : null)
+    // Safepay appends its own query (plan_id, auth_token, …) after ours when
+    // it sends the vendor back; keep only the part we use.
+    if ((m === "return" || m === "cancel") && typeof window !== "undefined" && /auth_token=|plan_id=/.test(window.location.search)) {
+      window.history.replaceState(null, "", `/dashboard/billing?checkout=${m}`)
+    }
   }, [params])
   const [waited, setWaited] = React.useState(0)
 
@@ -235,23 +258,20 @@ export function BillingArtifact() {
     const s = shadowRef.current
     if (!s || !ready || bound.current) return
     bound.current = true
-    s.addEventListener("click", async (e) => {
-      const t = e.target as HTMLElement
-      if (t.closest("[data-retry]")) { qc.invalidateQueries({ queryKey: ["billing-art"] }); qc.invalidateQueries({ queryKey: ["billing-status"] }); return }
-      if (t.closest("[data-dismiss-return]")) { window.history.replaceState(null, "", "/dashboard/billing"); setMode(null); return }
-      const sub = t.closest("[data-subscribe]") as HTMLElement | null
-      if (!sub?.dataset.subscribe) return
-      const tier = sub.dataset.subscribe as SubscriptionTier
-      const btn = sub as HTMLButtonElement; btn.disabled = true
+    const msgOf = (err: unknown) => (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+    const codeOf = (err: unknown) => (err as { response?: { data?: { data?: { code?: string } } } })?.response?.data?.data?.code
+    const refresh = () => { qc.invalidateQueries({ queryKey: ["billing-status"] }); qc.invalidateQueries({ queryKey: ["billing-art"] }); qc.invalidateQueries({ queryKey: ["billing-payments"] }) }
+
+    // Leave for Safepay's hosted page. Nothing is charged until the vendor
+    // approves there; nothing activates until Safepay tells our server.
+    const goToSafepay = async (btn: HTMLButtonElement, tier: SubscriptionTier, start: () => Promise<{ checkoutUrl: string }>) => {
+      btn.disabled = true
       const label = btn.innerHTML; btn.innerHTML = "Safepay khul raha hai…"
       try {
-        const r = await SubscriptionAPI.startCheckout(tier)
-        // Leave for Safepay's hosted page. Nothing is charged until the vendor
-        // approves there; nothing activates until Safepay tells our server.
+        const r = await start()
         window.location.assign(r.checkoutUrl)
       } catch (err: unknown) {
-        const e2 = err as { response?: { data?: { message?: string; data?: { code?: string } } } }
-        const code = e2?.response?.data?.data?.code
+        const code = codeOf(err)
         if (code === "PAYMENTS_NOT_CONFIGURED") {
           // Online payment not switched on yet: fall back to the request queue, and say so.
           try {
@@ -259,19 +279,88 @@ export function BillingArtifact() {
             toast.success("Online payment abhi on nahi hai — aapki request team ko bhej di, hum rabta karenge")
             qc.invalidateQueries({ queryKey: ["billing-art"] })
           } catch (err2: unknown) {
-            toast.error((err2 as { response?: { data?: { message?: string } } })?.response?.data?.message || "Request nahi gayi — dobara koshish karein")
+            toast.error(msgOf(err2) || "Request nahi gayi — dobara koshish karein")
           }
-        } else if (code === "ACTIVE_SUBSCRIPTION") {
-          // The screen was stale: a plan is already live. Nothing was charged.
-          // Refresh, so the cards switch to the plan-change state.
-          toast.error(e2?.response?.data?.message || "Aapka plan pehle se active hai — kuch charge nahi hua")
-          qc.invalidateQueries({ queryKey: ["billing-status"] })
-          qc.invalidateQueries({ queryKey: ["billing-art"] })
+        } else if (code === "ACTIVE_SUBSCRIPTION" || code === "NO_ACTIVE_PLAN") {
+          // The screen was stale. Nothing was charged; refresh so the cards match the server.
+          toast.error(msgOf(err) || "Plan ki haalat badal gayi thi — kuch charge nahi hua")
+          refresh()
         } else {
-          toast.error(e2?.response?.data?.message || "Payment shuru nahi ho saki — kuch charge nahi hua, dobara koshish karein")
+          toast.error(msgOf(err) || "Payment shuru nahi ho saki — kuch charge nahi hua, dobara koshish karein")
         }
         btn.disabled = false; btn.innerHTML = label
       }
+    }
+
+    s.addEventListener("click", async (e) => {
+      const t = e.target as HTMLElement
+      if (t.closest("[data-retry]")) { refresh(); return }
+      if (t.closest("[data-dismiss-return]")) { window.history.replaceState(null, "", "/dashboard/billing"); setMode(null); return }
+
+      // Cancel: at Safepay first, then here. Access runs to the paid period end.
+      const cancelBtn = t.closest("[data-cancel-plan]") as HTMLButtonElement | null
+      if (cancelBtn) {
+        const until = cancelBtn.dataset.until || "paid period ke aakhir"
+        openConfirm(s, {
+          title: "Plan cancel karein?",
+          message: `Aage koi charge nahi hoga. Portal ${until} tak khula rahega, phir band ho jayega — aapki bookings, khata aur records mehfooz rehte hain aur listing couples ko dikhti rahegi. Jab chahein dobara subscribe kar sakte hain.`,
+          confirmLabel: "Haan, cancel karein",
+          cancelLabel: "Rehne dein",
+          onConfirm: async () => {
+            cancelBtn.disabled = true
+            try {
+              const r = await SubscriptionAPI.cancelSubscription()
+              toast.success(`Plan cancel ho gaya — access ${fmtDate(r.subscriptionEndsAt)} tak rahegi`)
+              refresh()
+            } catch (err: unknown) {
+              toast.error(msgOf(err) || "Cancel nahi ho saka — dobara koshish karein ya hum se rabta karein")
+              cancelBtn.disabled = false
+            }
+          },
+        })
+        return
+      }
+
+      // Plan change (or a card change on the same tier): preview, confirm, then a new checkout.
+      const change = t.closest("[data-change-plan]") as HTMLButtonElement | null
+      if (change?.dataset.changePlan) {
+        const tier = change.dataset.changePlan as SubscriptionTier
+        change.disabled = true
+        try {
+          const pv = await SubscriptionAPI.changePlanPreview(tier)
+          const rs = (paisas: number) => `Rs ${pkNum(Math.round(paisas / 100))}`
+          const message = pv.sameTier
+            ? `Safepay par naya card save hoga aur aaj ${rs(pv.chargeNowPaisas)} charge hoga. Purane plan ke bache ${pv.unusedDays} din poore ke poore naye mein shamil hain — plan ${fmtDate(pv.newPeriodEndsAt)} tak chalega, phir har mahina khud renew. Purana card wala subscription khud cancel ho jayega; koi double charge nahi.`
+            : `Aaj ${rs(pv.chargeNowPaisas)} charge hoga (Safepay). ${pv.currentPlanName} ke bache ${pv.unusedDays} din = ${pv.newPlanName} par ${pv.creditDays} din credit; naya plan ${fmtDate(pv.newPeriodEndsAt)} tak chalega, phir har mahina khud renew. Purana plan khud cancel ho jayega; koi double charge nahi.`
+          openConfirm(s, {
+            title: pv.sameTier ? "Card badlein" : `${pv.newPlanName} par switch karein?`,
+            message,
+            confirmLabel: pv.sameTier ? "Safepay par jaayein" : `Haan, ${pv.newPlanName} lein`,
+            cancelLabel: "Rehne dein",
+            danger: false,
+            onConfirm: () => { void goToSafepay(change, tier, () => SubscriptionAPI.startPlanChange(tier)) },
+          })
+        } catch (err: unknown) {
+          if (codeOf(err) === "NO_ACTIVE_PLAN") { toast.error("Koi active plan nahi — neeche se subscribe karein"); refresh() }
+          else toast.error(msgOf(err) || "Preview nahi mila — dobara koshish karein")
+        } finally {
+          change.disabled = false
+        }
+        return
+      }
+
+      // First subscribe: say what Safepay will ask for, so nobody is surprised by its login page.
+      const sub = t.closest("[data-subscribe]") as HTMLButtonElement | null
+      if (!sub?.dataset.subscribe) return
+      const tier = sub.dataset.subscribe as SubscriptionTier
+      openConfirm(s, {
+        title: "Safepay par payment",
+        message: "Aap Safepay ke secure page par jayenge. Wahan ek Safepay account banta hai (email + password), card save hota hai, aur har mahina khud charge hota hai. Hum card ki tafseel kabhi nahi dekhte. Jab tak aap wahan approve na karein, kuch charge nahi hota.",
+        confirmLabel: "Safepay par jaayein",
+        cancelLabel: "Rehne dein",
+        danger: false,
+        onConfirm: () => { void goToSafepay(sub, tier, () => SubscriptionAPI.startCheckout(tier)) },
+      })
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready])
