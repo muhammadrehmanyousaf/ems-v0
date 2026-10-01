@@ -90,7 +90,7 @@ type ReturnMode = "return" | "cancel" | null
  */
 type PlanView =
   | { kind: "none"; staleCheckout: boolean }
-  | { kind: "pending"; tier: string; minutes: number }
+  | { kind: "pending"; tier: string; minutes: number; liveTier: string | null }
   | { kind: "live"; tier: string }
   | { kind: "cancelled_days"; tier: string; until: string | null }
 const LIVE_STATUSES = ["active", "payment_failed", "paused"]
@@ -99,9 +99,10 @@ const PENDING_LOCK_MINUTES = 15
 function planViewOf(status: BillingStatus | null): PlanView {
   if (!status) return { kind: "none", staleCheckout: false }
   const pendingMinutes = status.pending ? Math.max(0, Math.round((Date.now() - new Date(status.pending.createdAt).getTime()) / 60000)) : null
-  if (status.pending && pendingMinutes !== null && pendingMinutes < PENDING_LOCK_MINUTES) return { kind: "pending", tier: status.pending.tier, minutes: pendingMinutes }
   const s = status.subscription
   const hasAccess = status.access === "active" || status.access === "past_due"
+  if (status.pending && pendingMinutes !== null && pendingMinutes < PENDING_LOCK_MINUTES)
+    return { kind: "pending", tier: status.pending.tier, minutes: pendingMinutes, liveTier: s && LIVE_STATUSES.includes(s.status) && hasAccess ? s.tier : null }
   if (s && LIVE_STATUSES.includes(s.status) && hasAccess) return { kind: "live", tier: s.tier }
   if (s && s.status === "cancelled" && hasAccess) return { kind: "cancelled_days", tier: s.tier, until: s.currentPeriodEndsAt || status.subscriptionEndsAt }
   return { kind: "none", staleCheckout: !!status.pending }
@@ -128,7 +129,9 @@ function planCard(p: PlanCatalogEntry, d: MyPlanData, view: PlanView): string {
     isCur = view.tier === p.tier
     foot = isCur
       ? `<div class="badge-cur">${svg(IC.spin)} Safepay se confirmation ka intezaar</div>`
-      : priceBtn(p, "btn-ghost", "", "Intezaar karein", `${p.name}: a checkout is already in progress`, true)
+      : view.liveTier === p.tier
+        ? `<div class="badge-cur">${svg(IC.check, 2.4)} Aapka plan · active</div><div class="badge-inc" style="margin-top:8px">Naye plan ki confirmation ka intezaar</div>`
+        : priceBtn(p, "btn-ghost", "", "Intezaar karein", `${p.name}: a checkout is already in progress`, true)
   } else if (view.kind === "live") {
     const cur = view.tier
     isCur = p.tier === cur
@@ -182,7 +185,7 @@ function statusCard(status: BillingStatus | null): string {
   let [tone, label] = pill[status.access] || ["mut", status.access]
   if (s.status === "cancelled") [tone, label] = ["mut", "Cancelled"]
   else if (s.status === "paused") [tone, label] = ["info", "Paused"]
-  else if (s.status === "pending") [tone, label] = ["info", "Payment ka intezaar"]
+  else if (s.status === "pending") [tone, label] = planViewOf(status).kind === "pending" ? ["info", "Payment ka intezaar"] : ["mut", "Checkout poora nahi hua"]
   else if (s.status === "payment_failed") [tone, label] = ["warn", "Payment fail — retry ho rahi hai"]
   else if (s.status === "active") [tone, label] = ["ok", "Active"]
   const extra =
@@ -229,10 +232,16 @@ function buildContent(d: MyPlanData, status: BillingStatus | null, mode: ReturnM
     : view.kind === "none" && view.staleCheckout
       ? `<span class="pending">${svg(IC.clock)} Pichla checkout poora nahi hua tha — jab chahein dobara koshish karein</span>`
       : d.pendingUpgradeTier ? `<span class="pending">${svg(IC.clock)} Upgrade request: ${escHtml(tierName(d.pendingUpgradeTier))} (review mein)</span>` : ""
+  // The line under "Aapka plan" answers to the same state as the cards; the
+  // catalogue payload's dates are never shown when Safepay says there is no plan.
   const endsLine =
     view.kind === "cancelled_days"
       ? `Cancel ho chuka · ${view.until ? fmtDate(view.until) : fmtDate(d.subscriptionEndsAt)} tak chalega`
-      : d.subscriptionEndsAt ? `${d.subscriptionExpired ? "Khatam hua" : "Chalta hai"} ${fmtDate(d.subscriptionEndsAt)}` : paidActive ? "Monthly" : "Abhi koi paid plan nahi"
+      : !paidActive
+        ? "Abhi koi paid plan nahi"
+        : status?.subscriptionEndsAt
+          ? `Chalta hai ${fmtDate(status.subscriptionEndsAt)}`
+          : d.subscriptionEndsAt ? `${d.subscriptionExpired ? "Khatam hua" : "Chalta hai"} ${fmtDate(d.subscriptionEndsAt)}` : "Monthly"
 
   const cur = `<div class="card cur-plan"><span class="cur-ic">${svg(TIER_ICON[effectiveTier] || IC.bolt, 1.8)}</span>
     <div class="cur-main"><div class="cur-t">Aapka plan: ${escHtml(paidActive ? curPlan?.name || tierName(effectiveTier) : "Koi plan nahi")}</div><div class="cur-s">${escHtml(endsLine)}${paidActive && curPlan?.tagline ? ` · ${escHtml(curPlan.tagline)}` : ""}</div></div>${pendingLine}</div>`
