@@ -45,13 +45,15 @@ const STATUS_STYLE: Record<AdminSafepayRow["status"], { label: string; cls: stri
 type LedgerAction = "cancel" | "pause" | "resume" | "reconcile";
 
 /** Every Safepay subscription row, with the numbers an owner looks at first, and the actions on each. */
-function SafepayLedger({ ledger, loading, busyId, onAction, onReconcileAll, reconcilingAll }: {
+function SafepayLedger({ ledger, loading, busyId, onAction, onReconcileAll, reconcilingAll, onResetSandbox, resettingSandbox }: {
   ledger: AdminSafepayLedger | null; loading: boolean; busyId: number | null;
   onAction: (row: AdminSafepayRow, action: LedgerAction, body?: Record<string, unknown>) => void;
   onReconcileAll: () => void; reconcilingAll: boolean;
+  onResetSandbox: () => void; resettingSandbox: boolean;
 }) {
   const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [cancelReason, setCancelReason] = useState("");
+  const [confirmReset, setConfirmReset] = useState(false);
   const rows = ledger?.subscriptions ?? [];
   const count = (s: AdminSafepayRow["status"]) => rows.filter((r) => r.status === s).length;
   const mrrPaisas = rows.filter((r) => r.status === "active" || r.status === "payment_failed").reduce((a, r) => a + (r.amountPaisas || 0), 0);
@@ -77,8 +79,22 @@ function SafepayLedger({ ledger, loading, busyId, onAction, onReconcileAll, reco
               <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" disabled={reconcilingAll} onClick={onReconcileAll} title="Compare every live row with Safepay and repair a missed webhook">
                 {reconcilingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Sync with Safepay
               </Button>
+              {ledger.environment === "sandbox" && (
+                <Button size="sm" variant="outline" className="h-7 gap-1 text-xs text-rose-700 border-rose-200" disabled={resettingSandbox} onClick={() => setConfirmReset((v) => !v)} title="Before live keys go in: cancel sandbox subscriptions at Safepay, delete sandbox rows, return test vendors to free">
+                  Clear sandbox data
+                </Button>
+              )}
             </div>
           )}
+        {confirmReset && ledger?.environment === "sandbox" && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-rose-200 bg-rose-50/50 px-3 py-2 text-xs text-rose-900">
+            <span>This cancels every sandbox subscription at Safepay, deletes all sandbox subscriptions, receipts and webhook events, and returns the affected vendors to the free tier. Live data is never touched. Do this once, right before the live keys go in.</span>
+            <Button size="sm" className="h-7" disabled={resettingSandbox} onClick={() => { onResetSandbox(); setConfirmReset(false); }}>
+              {resettingSandbox ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Yes, clear sandbox data"}
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7" onClick={() => setConfirmReset(false)}>Keep</Button>
+          </div>
+        )}
         </div>
         {!loading && rows.length > 0 && (
           <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
@@ -355,6 +371,18 @@ export default function AdminSubscriptionsView() {
       toast.error(e?.response?.data?.message || "Sync failed");
     } finally { setReconcilingAll(false); }
   };
+  const [resettingSandbox, setResettingSandbox] = useState(false);
+  const resetSandbox = async () => {
+    setResettingSandbox(true);
+    try {
+      const r = await SubscriptionAPI.adminResetSandbox();
+      toast.success(r.message || "Sandbox data cleared");
+      if (r.result?.cancelFailed?.length) toast.error(`Could not cancel at Safepay: ${r.result.cancelFailed.join("; ")}`);
+      loadLedger(); loadPayments(); load();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || "Could not clear sandbox data");
+    } finally { setResettingSandbox(false); }
+  };
   const [refundBusyId, setRefundBusyId] = useState<number | null>(null);
   const recordRefund = async (p: AdminSafepayPaymentRow, body: { amountPaisas: number; reason?: string; ref?: string }) => {
     setRefundBusyId(p.id);
@@ -392,7 +420,7 @@ export default function AdminSubscriptionsView() {
 
   return (
     <div className="space-y-4">
-    <SafepayLedger ledger={ledger} loading={ledgerLoading} busyId={ledgerBusyId} onAction={ledgerAction} onReconcileAll={reconcileAll} reconcilingAll={reconcilingAll} />
+    <SafepayLedger ledger={ledger} loading={ledgerLoading} busyId={ledgerBusyId} onAction={ledgerAction} onReconcileAll={reconcileAll} reconcilingAll={reconcilingAll} onResetSandbox={resetSandbox} resettingSandbox={resettingSandbox} />
     <SafepayPayments payments={payments} loading={paymentsLoading} busyId={refundBusyId} onRefund={recordRefund} />
     <Card>
       <CardHeader className="pb-3">

@@ -201,6 +201,12 @@ export class SubscriptionAPI {
     return { message: res.data?.message, subscription: res.data?.data?.subscription };
   }
 
+  /** Super-admin, sandbox only: cancel sandbox subscriptions at Safepay, delete sandbox rows, return vendors to free. */
+  static async adminResetSandbox(): Promise<{ message: string; result: { rows: number; cancelledAtSafepay: number; cancelFailed: string[]; receipts: number; events: number; usersReset: number } }> {
+    const res = await axiosInstance.post("/api/v1/subscriptions/admin/safepay/sandbox-reset", {});
+    return { message: res.data?.message, result: res.data?.data };
+  }
+
   static async adminReconcileAll(): Promise<{ checked: number; changed: number; failed: number }> {
     const res = await axiosInstance.post("/api/v1/subscriptions/admin/safepay/reconcile", {});
     return res.data?.data;
