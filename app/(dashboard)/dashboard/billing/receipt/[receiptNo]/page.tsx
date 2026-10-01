@@ -104,7 +104,7 @@ export default function ReceiptPage() {
 
         <footer className="mt-8 space-y-2 text-xs text-neutral-500">
           <p>{data.issuer.taxNote}</p>
-          <p>This receipt confirms a subscription payment to Wedding Wala for use of the vendor portal. It is not an invoice for any wedding booking. Subscriptions renew monthly and can be cancelled from Billing; no refunds are made for partial months.</p>
+          <p>This receipt confirms a subscription payment to Wedding Wala for use of the vendor portal. It is not an invoice for any wedding booking. Subscriptions renew monthly and can be cancelled from Billing; no refunds are made for partial months. Full terms: <a className="underline" href="/vendor-subscription-policy">weddingwala.pk/vendor-subscription-policy</a>.</p>
         </footer>
       </article>
     </div>
