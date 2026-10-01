@@ -17,7 +17,7 @@ const { chromium } = require("C:/Projects/ems-v0/node_modules/playwright");
 
 const SITE = (process.argv.find((a) => a.startsWith("--site=")) || "").split("=")[1] || "https://www.weddingwala.pk";
 const EMAIL = "muhammadrehmanyousaf786@gmail.com";
-const PASSWORD = "mian@A12345";
+const PASSWORD = process.env.WW_QA_VENDOR_PASSWORD || (() => { throw new Error("Set WW_QA_VENDOR_PASSWORD") })();
 
 const SCREENS = [
   ["overview", "/dashboard"],
