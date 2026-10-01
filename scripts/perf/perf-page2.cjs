@@ -103,7 +103,7 @@ async function measure(ctx, label, url, settleMs, readyCheck) {
   if (await cc.count().catch(() => 0)) { await cc.click().catch(() => {}); await lp.waitForTimeout(600); }
   if (await lp.locator('input[type="email"]').count().catch(() => 0)) {
     await lp.fill('input[type="email"]', "muhammadrehmanyousaf786@gmail.com");
-    await lp.fill('input[type="password"]', "mian@A12345");
+    await lp.fill('input[type="password"]', process.env.WW_QA_VENDOR_PASSWORD || (() => { throw new Error("Set WW_QA_VENDOR_PASSWORD") })());
     await lp.getByRole("button", { name: /sign in/i }).first().click();
     await lp.waitForTimeout(20000);
   }
