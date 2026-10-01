@@ -5,8 +5,8 @@ import { Separator } from '@/components/ui/separator';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Dashboard : Plan upgrades',
-  description: 'Review and activate vendor plan-upgrade requests.',
+  title: 'Dashboard : Subscriptions',
+  description: 'Safepay subscriptions ledger and the manual upgrade queue.',
 };
 
 export default function Page() {
@@ -15,8 +15,8 @@ export default function Page() {
       <PageContainer>
         <div className="space-y-4">
           <Heading
-            title="Plan upgrades"
-            description="Vendor upgrade requests — confirm payment offline, then activate."
+            title="Subscriptions"
+            description="Every paid vendor plan from Safepay, and the manual upgrade queue."
           />
           <Separator />
           <AdminSubscriptionsView />

@@ -236,7 +236,7 @@ export function buildAdminSections(role: DashboardRole): NavSection[] {
   // Both were additionally flag-dark, so vendors could request an upgrade
   // (/subscriptions/request-upgrade is live) into a queue no admin could open.
   const operations = data.adminOperations.filter((i) => {
-    if (i.name === "Promotions" || i.name === "Plan upgrades") return isSuper
+    if (i.name === "Promotions" || i.name === "Subscriptions") return isSuper
     return true
   })
 

@@ -155,7 +155,7 @@ export const data = {
     { name: "Complaints",     url: "/dashboard/admin/complaints",   icon: MessageSquareWarning },
     { name: "Activity & audit", url: "/dashboard/admin/activity",   icon: Activity },
     { name: "Promotions",     url: "/dashboard/admin/promotions",   icon: Megaphone },
-    { name: "Plan upgrades",  url: "/dashboard/admin/subscriptions", icon: CreditCard },
+    { name: "Subscriptions",  url: "/dashboard/admin/subscriptions", icon: CreditCard },
     // NO Bookings / Payments here. Both routes render VENDOR-scoped screens
     // (/dashboard/payments calls PaymentsAPI.getVendorRevenue()), so an admin
     // — who owns no business — got empty tables and Rs 0 tiles. The
