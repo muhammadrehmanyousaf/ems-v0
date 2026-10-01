@@ -25,6 +25,7 @@ import {
   type SubscriptionTier,
   type PlanCatalogEntry,
   type BillingStatus,
+  type SubscriptionPaymentRow,
 } from "@/lib/api/subscription"
 import { useArtifactShell, pkNum, escHtml, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
@@ -82,8 +83,10 @@ const EXTRA_CSS = String.raw`
 type ReturnMode = "return" | "cancel" | null
 
 function planCard(p: PlanCatalogEntry, d: MyPlanData, status: BillingStatus | null): string {
-  const cur = d.currentTier
   const paidActive = status?.access === "active" || status?.access === "past_due"
+  // Same rule as the current-plan card: when Safepay says the plan is paid,
+  // the tier it reports is the truth, not the catalogue's cached tier.
+  const cur = (paidActive && status?.tier ? status.tier : d.currentTier) as SubscriptionTier
   const isCur = p.tier === cur && paidActive
   const knownRanks = RANK[p.tier] != null && RANK[cur] != null
   const definitelyLower = paidActive && knownRanks && RANK[p.tier] < RANK[cur]
@@ -92,6 +95,8 @@ function planCard(p: PlanCatalogEntry, d: MyPlanData, status: BillingStatus | nu
   let foot = ""
   if (isCur) foot = `<div class="badge-cur">${svg(IC.check, 2.4)} Aapka plan · active</div>`
   else if (definitelyLower) foot = `<div class="badge-inc">Aapke plan mein shamil</div>`
+  else if (p.pricePkrMonthly > 0 && paidActive)
+    foot = `<a class="btn btn-ghost" href="mailto:info@weddingwala.pk?subject=${encodeURIComponent("Plan change to " + p.name)}" title="Aapka plan active hai — badalne ke liye hum se rabta karein">Plan badlein · hum se rabta</a>`
   else if (p.pricePkrMonthly > 0)
     foot = `<button class="btn btn-primary" data-subscribe="${escHtml(p.tier)}" aria-label="Subscribe to ${escHtml(p.name)} for Rs ${pkNum(p.pricePkrMonthly)} a month with Safepay">${svg(IC.card)} Subscribe · <span class="rs">Rs</span> ${pkNum(p.pricePkrMonthly)} / mahina</button>`
   else foot = `<div class="badge-inc">Muft</div>`
@@ -133,7 +138,21 @@ function statusCard(status: BillingStatus | null): string {
     ${extra}</div></div>`
 }
 
-function buildContent(d: MyPlanData, status: BillingStatus | null, mode: ReturnMode, waited: number): string {
+function historyCard(payments: SubscriptionPaymentRow[] | undefined): string {
+  if (!payments || payments.length === 0) return ""
+  const rows = payments.map((r) => `<tr>
+    <td>${escHtml(fmtDate(r.paidAt))}</td>
+    <td><span class="rs">Rs</span> ${pkNum(Math.round(r.amountPaisas / 100))}</td>
+    <td>${escHtml(r.tier)}</td>
+    <td>${escHtml(fmtDate(r.periodStart))} – ${escHtml(fmtDate(r.periodEnd))}</td>
+    <td style="font-variant-numeric:tabular-nums">${escHtml(r.receiptNo)}</td>
+    <td style="text-align:right"><a class="btn btn-ghost sm" href="/dashboard/billing/receipt/${encodeURIComponent(r.receiptNo)}">Receipt</a></td>
+  </tr>`).join("")
+  return `<div class="card" style="margin-bottom:16px"><div class="card-h" style="padding:14px 16px 6px"><div><h2 style="font-size:13.5px;font-weight:600">Billing history</h2><div class="sub">Har mahine ki payment aur uski receipt.</div></div></div>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Taareekh</th><th>Raqam</th><th>Plan</th><th>Period</th><th>Receipt no.</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`
+}
+
+function buildContent(d: MyPlanData, status: BillingStatus | null, mode: ReturnMode, waited: number, payments?: SubscriptionPaymentRow[]): string {
   const paidActive = status?.access === "active" || status?.access === "past_due"
   // When Safepay says the plan is paid, the tier it reports is the truth.
   const effectiveTier = (paidActive && status?.tier ? status.tier : d.currentTier) as SubscriptionTier
@@ -162,7 +181,7 @@ function buildContent(d: MyPlanData, status: BillingStatus | null, mode: ReturnM
 
   return `
   <div class="head"><div><h1>Plan & billing</h1><div class="sub">Apna plan chunein — payment Safepay par hoti hai aur har mahina khud renew hoti hai.</div></div></div>
-  ${returnBanner(mode, status, waited)}${statusCard(status)}${cur}${declineLine}${plans}${comparison}${note}
+  ${returnBanner(mode, status, waited)}${statusCard(status)}${cur}${declineLine}${plans}${historyCard(payments)}${comparison}${note}
   <div class="foot">WeddingWala vendor console · Billing</div>`
 }
 
@@ -194,8 +213,9 @@ export function BillingArtifact() {
     return () => clearInterval(t)
   }, [mode])
   React.useEffect(() => {
-    if (billing.data?.access === "active") qc.invalidateQueries({ queryKey: ["billing-art"] })
+    if (billing.data?.access === "active") { qc.invalidateQueries({ queryKey: ["billing-art"] }); qc.invalidateQueries({ queryKey: ["billing-payments"] }) }
   }, [billing.data?.access, qc])
+  const payments = useQuery({ queryKey: ["billing-payments"], queryFn: () => SubscriptionAPI.listPayments(), staleTime: 30_000 })
 
   const pendingRef = React.useRef<SubscriptionTier | null>(null)
   pendingRef.current = data?.pendingUpgradeTier ?? null
@@ -206,9 +226,9 @@ export function BillingArtifact() {
     const wwc = s.getElementById("wwc"); if (!wwc) return
     if (isError) { wwc.innerHTML = `<div class="head"><div><h1>Plan & billing</h1></div></div>${errorBannerHtml()}`; return }
     if (!data) { wwc.innerHTML = `<div class="loadwrap">Plan load ho raha hai…</div>`; return }
-    wwc.innerHTML = buildContent(data, billing.data ?? null, mode, waited)
+    wwc.innerHTML = buildContent(data, billing.data ?? null, mode, waited, payments.data)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, data, isError, billing.data, mode, waited >= 120])
+  }, [ready, data, isError, billing.data, mode, waited >= 120, payments.data])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
@@ -241,6 +261,12 @@ export function BillingArtifact() {
           } catch (err2: unknown) {
             toast.error((err2 as { response?: { data?: { message?: string } } })?.response?.data?.message || "Request nahi gayi — dobara koshish karein")
           }
+        } else if (code === "ACTIVE_SUBSCRIPTION") {
+          // The screen was stale: a plan is already live. Nothing was charged.
+          // Refresh, so the cards switch to the plan-change state.
+          toast.error(e2?.response?.data?.message || "Aapka plan pehle se active hai — kuch charge nahi hua")
+          qc.invalidateQueries({ queryKey: ["billing-status"] })
+          qc.invalidateQueries({ queryKey: ["billing-art"] })
         } else {
           toast.error(e2?.response?.data?.message || "Payment shuru nahi ho saki — kuch charge nahi hua, dobara koshish karein")
         }
