@@ -122,7 +122,10 @@ function returnBanner(mode: ReturnMode, status: BillingStatus | null, waitedSeco
   if (!mode) return ""
   if (mode === "cancel")
     return `<div class="sp" role="status">${svg(IC.card)}<div><div class="sp-t">Checkout cancel hua</div><div class="sp-s">Kuch charge nahi hua. Jab chahein plan chun lein.</div><button class="btn btn-ghost sm" data-dismiss-return>Theek hai</button></div></div>`
-  if (status?.access === "active")
+  // "Payment received" only when the NEWEST subscription is the active one.
+  // Access alone is not proof: a cancelled plan with days left keeps access
+  // "active" while the new payment is still pending.
+  if (status?.subscription?.status === "active")
     return `<div class="sp ok" role="status">${svg(IC.check, 2.4)}<div><div class="sp-t">Payment mil gayi — aapka plan active hai</div><div class="sp-s">Safepay ne payment confirm kar di. Portal ${status.subscriptionEndsAt ? `${escHtml(fmtDate(status.subscriptionEndsAt))} tak` : ""} khula hai aur har mahina khud renew hoga.</div><a class="btn btn-primary sm" href="/dashboard">Portal kholein</a></div></div>`
   if (waitedSeconds >= 120)
     return `<div class="sp warn" role="status">${svg(IC.alert)}<div><div class="sp-t">Safepay se abhi tak confirmation nahi aayi</div><div class="sp-s">Agar aapne payment poori ki hai to Safepay ki confirmation aate hi yahan dikhegi — dobara payment na karein. Agar decline hui thi to neeche se dobara koshish karein.</div><button class="btn btn-ghost sm" data-dismiss-return>Theek hai</button></div></div>`
@@ -135,9 +138,14 @@ function statusCard(status: BillingStatus | null): string {
   const pill: Record<string, [string, string]> = {
     active: ["ok", "Active"], past_due: ["warn", "Payment fail — retry ho rahi hai"], pending: ["info", "Payment ka intezaar"], none: ["bad", "Koi active plan nahi"],
   }
+  // The pill describes the newest subscription row, not the access flag: a
+  // cancelled plan with days left keeps access open while a new one is pending.
   let [tone, label] = pill[status.access] || ["mut", status.access]
   if (s.status === "cancelled") [tone, label] = ["mut", "Cancelled"]
   else if (s.status === "paused") [tone, label] = ["info", "Paused"]
+  else if (s.status === "pending") [tone, label] = ["info", "Payment ka intezaar"]
+  else if (s.status === "payment_failed") [tone, label] = ["warn", "Payment fail — retry ho rahi hai"]
+  else if (s.status === "active") [tone, label] = ["ok", "Active"]
   const extra =
     status.access === "past_due"
       ? `<div class="sp-s" style="color:var(--warn)">Is mahine ki payment nahi hui. Safepay dobara koshish karega; portal ${escHtml(fmtDate(status.subscriptionEndsAt))} tak khula rahega. Apna card ya account check karein, ya "Card badlein" se naya card lagayein.</div>`
