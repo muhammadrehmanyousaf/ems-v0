@@ -91,9 +91,9 @@ type ReturnMode = "return" | "cancel" | null
 type PlanView =
   | { kind: "none"; staleCheckout: boolean }
   | { kind: "pending"; tier: string; minutes: number; liveTier: string | null }
-  | { kind: "live"; tier: string }
+  | { kind: "live"; tier: string; trialEndsAt: string | null }
   | { kind: "cancelled_days"; tier: string; until: string | null }
-const LIVE_STATUSES = ["active", "payment_failed", "paused"]
+const LIVE_STATUSES = ["active", "payment_failed", "paused", "trialing"]
 /** A checkout Safepay has not confirmed within this long is treated as walked away from. */
 const PENDING_LOCK_MINUTES = 15
 function planViewOf(status: BillingStatus | null): PlanView {
@@ -103,7 +103,7 @@ function planViewOf(status: BillingStatus | null): PlanView {
   const hasAccess = status.access === "active" || status.access === "past_due"
   if (status.pending && pendingMinutes !== null && pendingMinutes < PENDING_LOCK_MINUTES)
     return { kind: "pending", tier: status.pending.tier, minutes: pendingMinutes, liveTier: s && LIVE_STATUSES.includes(s.status) && hasAccess ? s.tier : null }
-  if (s && LIVE_STATUSES.includes(s.status) && hasAccess) return { kind: "live", tier: s.tier }
+  if (s && LIVE_STATUSES.includes(s.status) && hasAccess) return { kind: "live", tier: s.tier, trialEndsAt: s.status === "trialing" ? s.trialEndsAt || s.currentPeriodEndsAt : null }
   if (s && s.status === "cancelled" && hasAccess) return { kind: "cancelled_days", tier: s.tier, until: s.currentPeriodEndsAt || status.subscriptionEndsAt }
   return { kind: "none", staleCheckout: !!status.pending }
 }
@@ -137,7 +137,10 @@ function planCard(p: PlanCatalogEntry, d: MyPlanData, view: PlanView): string {
     isCur = p.tier === cur
     const knownRanks = RANK[p.tier] != null && RANK[cur] != null
     const lower = knownRanks && RANK[p.tier] < RANK[cur]
-    if (isCur)
+    if (isCur && view.trialEndsAt)
+      // A running free trial: the plan is theirs until the trial ends; paying now carries the rest over.
+      foot = `<div class="badge-cur">${svg(IC.check, 2.4)} Free trial · ${escHtml(fmtDate(view.trialEndsAt))} tak</div><div style="margin-top:8px">${priceBtn(p, "btn-primary", tierAttr, "Abhi subscribe karein", `Subscribe to ${p.name} now for Rs ${pkNum(p.pricePkrMonthly)} a month with Safepay; unused trial days carry over`)}</div>`
+    else if (isCur)
       foot = `<div class="badge-cur">${svg(IC.check, 2.4)} Aapka plan · active</div><button class="btn btn-ghost sm" style="margin-top:8px;width:100%" ${tierAttr} title="Naya card save karne ke liye dobara subscribe karein — bache hue din poore carry hote hain">Card badlein</button>`
     else if (lower) foot = priceBtn(p, "btn-ghost", tierAttr, `${escHtml(p.name)} par aayein`, `Switch down to ${p.name} for Rs ${pkNum(p.pricePkrMonthly)} a month`)
     else foot = priceBtn(p, "btn-primary", tierAttr, `${escHtml(p.name)} par switch`, `Switch to ${p.name} for Rs ${pkNum(p.pricePkrMonthly)} a month with Safepay`)
@@ -150,7 +153,12 @@ function planCard(p: PlanCatalogEntry, d: MyPlanData, view: PlanView): string {
       foot = `<div class="badge-inc">Aapka plan · cancel ho chuka${until ? ` · ${escHtml(until)} tak chalega` : ""}</div><div style="margin-top:8px">${priceBtn(p, "btn-primary", tierAttr, "Dobara chalu karein", `Resume ${p.name} for Rs ${pkNum(p.pricePkrMonthly)} a month with Safepay`)}</div>`
     else foot = priceBtn(p, "btn-ghost", tierAttr, `${escHtml(p.name)} lein`, `Take ${p.name} for Rs ${pkNum(p.pricePkrMonthly)} a month with Safepay`)
   } else {
-    foot = priceBtn(p, "btn-primary", `data-subscribe="${escHtml(p.tier)}"`, "Subscribe", `Subscribe to ${p.name} for Rs ${pkNum(p.pricePkrMonthly)} a month with Safepay`)
+    const subscribeBtn = priceBtn(p, "btn-primary", `data-subscribe="${escHtml(p.tier)}"`, "Subscribe", `Subscribe to ${p.name} for Rs ${pkNum(p.pricePkrMonthly)} a month with Safepay`)
+    const days = d.trialDays || 0
+    // A vendor who never had a plan may start our free trial (no card) instead of paying today.
+    foot = d.trialEligible && days > 0
+      ? `<button class="btn btn-primary" data-trial="${escHtml(p.tier)}" data-trial-days="${days}" data-plan-name="${escHtml(p.name)}" aria-label="Start a ${days}-day free trial of ${escHtml(p.name)}">${svg(IC.check, 2.4)} ${days} din muft azmaayein</button><div style="margin-top:8px">${priceBtn(p, "btn-ghost", `data-subscribe="${escHtml(p.tier)}"`, "Ya abhi subscribe karein", `Subscribe to ${p.name} for Rs ${pkNum(p.pricePkrMonthly)} a month with Safepay`)}</div>`
+      : subscribeBtn
   }
   return `<div class="plan${isCur ? " cur" : ""}">
     <div class="plan-h"><div class="plan-top"><span class="plan-ic">${svg(TIER_ICON[p.tier] || IC.star, 1.8)}</span><div><div class="plan-nm">${escHtml(p.name)}</div><div class="plan-tag">${escHtml(p.tagline || "")}</div></div></div>
@@ -185,6 +193,7 @@ function statusCard(status: BillingStatus | null): string {
   let [tone, label] = pill[status.access] || ["mut", status.access]
   if (s.status === "cancelled") [tone, label] = ["mut", "Cancelled"]
   else if (s.status === "paused") [tone, label] = ["info", "Paused"]
+  else if (s.status === "trialing") [tone, label] = ["ok", "Free trial"]
   else if (s.status === "pending") [tone, label] = planViewOf(status).kind === "pending" ? ["info", "Payment ka intezaar"] : ["mut", "Checkout poora nahi hua"]
   else if (s.status === "payment_failed") [tone, label] = ["warn", "Payment fail — retry ho rahi hai"]
   else if (s.status === "active") [tone, label] = ["ok", "Active"]
@@ -195,14 +204,16 @@ function statusCard(status: BillingStatus | null): string {
         ? `<div class="sp-s">Subscription cancel ho chuki hai. ${escHtml(fmtDate(status.subscriptionEndsAt))} tak access rahegi; jab chahein neeche se dobara subscribe karein.</div>`
         : s.status === "paused"
           ? `<div class="sp-s">Subscription rok di gayi hai — koi charge nahi ho raha. ${escHtml(fmtDate(status.subscriptionEndsAt))} tak access rahegi. Dobara chalu karwane ke liye hum se rabta karein.</div>`
-          : ""
+          : s.status === "trialing"
+            ? `<div class="sp-s">Free trial ${escHtml(fmtDate(s.trialEndsAt || s.currentPeriodEndsAt))} tak chalega — koi card nahi, koi charge nahi. Us se pehle subscribe karein to portal bina rukay chalta rahega aur bache din paid plan mein shamil ho jate hain.</div>`
+            : ""
   const canCancel = LIVE_STATUSES.includes(s.status)
   const cancelBtn = canCancel
     ? `<div style="margin-top:10px"><button class="btn btn-ghost sm" data-cancel-plan data-until="${escHtml(fmtDate(status.subscriptionEndsAt))}">Plan cancel karein</button></div>`
     : ""
   return `<div class="sp" role="status">${svg(IC.lock)}<div style="flex:1;min-width:0">
     <div class="sp-t">Subscription <span class="st ${tone}" style="margin-left:8px">${escHtml(label)}</span>${status.environment === "sandbox" ? ` <span class="st mut" style="margin-left:6px">Sandbox</span>` : ""}</div>
-    <dl class="sp-grid"><div><dt>Paid until</dt><dd>${escHtml(fmtDate(s.currentPeriodEndsAt))}</dd></div><div><dt>Portal open until</dt><dd>${escHtml(fmtDate(status.subscriptionEndsAt))}</dd></div><div><dt>Billing</dt><dd>${s.status === "cancelled" ? "Band — koi charge nahi" : "Monthly · Safepay"}</dd></div></dl>
+    <dl class="sp-grid"><div><dt>${s.status === "trialing" ? "Trial until" : "Paid until"}</dt><dd>${escHtml(fmtDate(s.status === "trialing" ? s.trialEndsAt || s.currentPeriodEndsAt : s.currentPeriodEndsAt))}</dd></div><div><dt>Portal open until</dt><dd>${escHtml(fmtDate(status.subscriptionEndsAt))}</dd></div><div><dt>Billing</dt><dd>${s.status === "cancelled" ? "Band — koi charge nahi" : s.status === "trialing" ? "Free trial · koi charge nahi" : "Monthly · Safepay"}</dd></div></dl>
     ${extra}${cancelBtn}</div></div>`
 }
 
@@ -237,7 +248,9 @@ function buildContent(d: MyPlanData, status: BillingStatus | null, mode: ReturnM
   const endsLine =
     view.kind === "cancelled_days"
       ? `Cancel ho chuka · ${view.until ? fmtDate(view.until) : fmtDate(d.subscriptionEndsAt)} tak chalega`
-      : !paidActive
+      : view.kind === "live" && view.trialEndsAt
+        ? `Free trial · ${fmtDate(view.trialEndsAt)} tak`
+        : !paidActive
         ? "Abhi koi paid plan nahi"
         : status?.subscriptionEndsAt
           ? `Chalta hai ${fmtDate(status.subscriptionEndsAt)}`
@@ -385,6 +398,34 @@ export function BillingArtifact() {
         return
       }
 
+      // Free trial (ours, no card): confirm, then it starts at once.
+      const trialBtn = t.closest("[data-trial]") as HTMLButtonElement | null
+      if (trialBtn?.dataset.trial) {
+        const tier = trialBtn.dataset.trial as SubscriptionTier
+        const days = trialBtn.dataset.trialDays || ""
+        const planName = trialBtn.dataset.planName || "plan"
+        openConfirm(s, {
+          title: `${days} din muft trial shuru karein?`,
+          message: `Koi card nahi, koi charge nahi. ${planName} ke saare features ${days} din ke liye khul jayenge. Trial ke baad portal band ho jata hai jab tak aap subscribe na karein — aur jo din bach jayen, woh paid plan mein shamil ho jate hain. Trial ek hi baar milta hai.`,
+          confirmLabel: "Trial shuru karein",
+          cancelLabel: "Rehne dein",
+          danger: false,
+          onConfirm: async () => {
+            trialBtn.disabled = true
+            try {
+              const r = await SubscriptionAPI.startTrial(tier)
+              toast.success(`Free trial shuru — ${fmtDate(r.trialEndsAt)} tak`)
+              refresh()
+            } catch (err: unknown) {
+              toast.error(msgOf(err) || "Trial shuru nahi ho saka — dobara koshish karein")
+              trialBtn.disabled = false
+              refresh()
+            }
+          },
+        })
+        return
+      }
+
       // Plan change (or a card change on the same tier): preview, confirm, then a new checkout.
       const change = t.closest("[data-change-plan]") as HTMLButtonElement | null
       if (change?.dataset.changePlan) {
@@ -393,15 +434,17 @@ export function BillingArtifact() {
         try {
           const pv = await SubscriptionAPI.changePlanPreview(tier)
           const rs = (paisas: number) => `Rs ${pkNum(Math.round(paisas / 100))}`
-          const message = pv.reactivation
+          const message = pv.fromTrial
+            ? `Aapka free trial chal raha hai (${pv.unusedDays} din baki). Aaj ${rs(pv.chargeNowPaisas)} charge hoga (Safepay) aur trial ke bache din ${pv.sameTier ? "poore ke poore" : `${pv.newPlanName} par ${pv.creditDays} din ban kar`} paid plan mein shamil honge — plan ${fmtDate(pv.newPeriodEndsAt)} tak chalega, phir har mahina khud renew.`
+            : pv.reactivation
             ? `Aapka ${pv.currentPlanName} plan cancel tha, lekin ${pv.unusedDays} din ab bhi aapke hain. Aaj ${rs(pv.chargeNowPaisas)} charge hoga (Safepay) aur woh din ${pv.sameTier ? "poore ke poore" : `${pv.newPlanName} par ${pv.creditDays} din ban kar`} naye plan mein shamil honge — plan ${fmtDate(pv.newPeriodEndsAt)} tak chalega, phir har mahina khud renew.`
             : pv.sameTier
               ? `Safepay par naya card save hoga aur aaj ${rs(pv.chargeNowPaisas)} charge hoga. Purane plan ke bache ${pv.unusedDays} din poore ke poore naye mein shamil hain — plan ${fmtDate(pv.newPeriodEndsAt)} tak chalega, phir har mahina khud renew. Purana card wala subscription khud cancel ho jayega; koi double charge nahi.`
               : `Aaj ${rs(pv.chargeNowPaisas)} charge hoga (Safepay). ${pv.currentPlanName} ke bache ${pv.unusedDays} din = ${pv.newPlanName} par ${pv.creditDays} din credit; naya plan ${fmtDate(pv.newPeriodEndsAt)} tak chalega, phir har mahina khud renew. Purana plan khud cancel ho jayega; koi double charge nahi.`
           openConfirm(s, {
-            title: pv.reactivation ? (pv.sameTier ? `${pv.newPlanName} dobara chalu karein?` : `${pv.newPlanName} lein?`) : pv.sameTier ? "Card badlein" : `${pv.newPlanName} par switch karein?`,
+            title: pv.fromTrial ? (pv.sameTier ? "Abhi subscribe karein?" : `${pv.newPlanName} lein?`) : pv.reactivation ? (pv.sameTier ? `${pv.newPlanName} dobara chalu karein?` : `${pv.newPlanName} lein?`) : pv.sameTier ? "Card badlein" : `${pv.newPlanName} par switch karein?`,
             message,
-            confirmLabel: pv.reactivation ? "Safepay par jaayein" : pv.sameTier ? "Safepay par jaayein" : `Haan, ${pv.newPlanName} lein`,
+            confirmLabel: pv.fromTrial || pv.reactivation ? "Safepay par jaayein" : pv.sameTier ? "Safepay par jaayein" : `Haan, ${pv.newPlanName} lein`,
             cancelLabel: "Rehne dein",
             danger: false,
             onConfirm: () => { void goToSafepay(change, tier, () => SubscriptionAPI.startPlanChange(tier)) },
