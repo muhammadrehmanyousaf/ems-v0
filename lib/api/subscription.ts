@@ -29,6 +29,8 @@ export interface PlanComparisonRow {
   free: boolean;
   pro: boolean;
   premium: boolean;
+  /** The public "Premium" plan; absent on an older API response. */
+  elite?: boolean;
 }
 
 export interface PricingNote {
