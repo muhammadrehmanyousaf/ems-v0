@@ -217,12 +217,12 @@ function statusCard(status: BillingStatus | null): string {
     ${extra}${cancelBtn}</div></div>`
 }
 
-function historyCard(payments: SubscriptionPaymentRow[] | undefined): string {
+function historyCard(payments: SubscriptionPaymentRow[] | undefined, planName: (tier: string) => string): string {
   if (!payments || payments.length === 0) return ""
   const rows = payments.map((r) => `<tr>
     <td>${escHtml(fmtDate(r.paidAt))}</td>
     <td><span class="rs">Rs</span> ${pkNum(Math.round(r.amountPaisas / 100))}</td>
-    <td>${escHtml(r.tier)}</td>
+    <td>${escHtml(planName(r.tier))}</td>
     <td>${escHtml(fmtDate(r.periodStart))} – ${escHtml(fmtDate(r.periodEnd))}</td>
     <td style="font-variant-numeric:tabular-nums">${escHtml(r.receiptNo)}${r.refundedPaisas && r.refundedPaisas > 0 ? ` <span class="st warn" style="margin-left:6px">Refund <span class="rs">Rs</span> ${pkNum(Math.round(r.refundedPaisas / 100))}</span>` : ""}</td>
     <td style="text-align:right"><a class="btn btn-ghost sm" href="/dashboard/billing/receipt/${encodeURIComponent(r.receiptNo)}">Receipt</a></td>
@@ -276,7 +276,7 @@ function buildContent(d: MyPlanData, status: BillingStatus | null, mode: ReturnM
 
   return `
   <div class="head"><div><h1>Plan & billing</h1><div class="sub">Apna plan chunein — payment Safepay par hoti hai aur har mahina khud renew hoti hai.</div></div></div>
-  ${returnBanner(mode, status, waited)}${statusCard(status)}${cur}${declineLine}${plans}${historyCard(payments)}${comparison}${note}
+  ${returnBanner(mode, status, waited)}${statusCard(status)}${cur}${declineLine}${plans}${historyCard(payments, (t) => tierName(t as SubscriptionTier))}${comparison}${note}
   <div class="foot">WeddingWala vendor console · Billing</div>`
 }
 
