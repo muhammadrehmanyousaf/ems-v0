@@ -303,8 +303,17 @@ export function BillingArtifact() {
   const billing = useQuery({
     queryKey: ["billing-status"],
     queryFn: () => SubscriptionAPI.getBillingStatus(),
-    // Back from checkout: ask every 3s until Safepay's webhook has landed (or 2 min).
-    refetchInterval: (q) => (mode === "return" && q.state.data?.access !== "active" && waited < 120 ? 3000 : false),
+    // Back from checkout: ask until Safepay's webhook has landed. A vendor who is already
+    // active (upgrading, or re-subscribing on a cancelled plan with days left) still has a
+    // checkout in flight, so "access is active" must NOT stop the polling: wait for `pending`
+    // to clear. Every 3s for the first 2 min, then every 10s up to 15 min (Safepay retries an
+    // undelivered event about every 5 min).
+    refetchInterval: (q) => {
+      if (mode !== "return") return false
+      const inFlight = !!q.state.data?.pending || q.state.data?.access !== "active"
+      if (!inFlight) return false
+      return waited < 120 ? 3000 : waited < 900 ? 10_000 : false
+    },
     staleTime: 10_000,
   })
   React.useEffect(() => {
@@ -312,9 +321,18 @@ export function BillingArtifact() {
     const t = setInterval(() => setWaited((s) => s + 3), 3000)
     return () => clearInterval(t)
   }, [mode])
+  // Refresh the plan and the receipts whenever the governing subscription changes (new row,
+  // new status, checkout cleared), not only when access flips: an upgrade keeps access active.
+  const billingSig = `${billing.data?.access}|${billing.data?.subscription?.reference}|${billing.data?.subscription?.status}|${billing.data?.pending ? "p" : "-"}`
+  const prevBillingSig = React.useRef<string | null>(null)
   React.useEffect(() => {
-    if (billing.data?.access === "active") { qc.invalidateQueries({ queryKey: ["billing-art"] }); qc.invalidateQueries({ queryKey: ["billing-payments"] }) }
-  }, [billing.data?.access, qc])
+    if (!billing.data) return
+    if (prevBillingSig.current !== null && prevBillingSig.current !== billingSig) {
+      qc.invalidateQueries({ queryKey: ["billing-art"] }); qc.invalidateQueries({ queryKey: ["billing-payments"] })
+    }
+    prevBillingSig.current = billingSig
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [billingSig, qc])
   const payments = useQuery({ queryKey: ["billing-payments"], queryFn: () => SubscriptionAPI.listPayments(), staleTime: 30_000 })
 
   const pendingRef = React.useRef<SubscriptionTier | null>(null)
