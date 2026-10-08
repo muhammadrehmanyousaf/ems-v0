@@ -12,6 +12,7 @@
  *   - validateNtn             — 7-13 digits, optional dash
  */
 
+import { FieldLabel } from "@/components/ui/field-help";
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -73,9 +74,9 @@ export const TrustSignalsSection = () => {
     <SectionCard title="Trust signals" icon={ShieldCheck}>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>
+          <FieldLabel help="ownerName">
             Owner name <span className="text-neutral-400 text-xs">(optional)</span>
-          </Label>
+          </FieldLabel>
           <Input
             placeholder="e.g. Ali Hassan"
             value={formData.ownerName}
@@ -86,7 +87,7 @@ export const TrustSignalsSection = () => {
           />
         </div>
         <div className="space-y-2">
-          <Label>Years in business</Label>
+          <FieldLabel help="yearsInBusiness">Years in business</FieldLabel>
           <Input
             type="number"
             inputMode="numeric"
@@ -104,7 +105,7 @@ export const TrustSignalsSection = () => {
           />
         </div>
         <div className="space-y-2">
-          <Label>Weddings completed</Label>
+          <FieldLabel help="weddingsCompleted">Weddings completed</FieldLabel>
           <Input
             type="number"
             inputMode="numeric"
@@ -121,10 +122,10 @@ export const TrustSignalsSection = () => {
           />
         </div>
         <div className="space-y-2">
-          <Label className="flex items-center gap-1.5">
+          <FieldLabel help="whatsappNumber" className="flex items-center gap-1.5">
             <MessageCircle className="h-3.5 w-3.5 text-bridal-gold" />
             WhatsApp number
-          </Label>
+          </FieldLabel>
           <div className="flex">
             <div className="flex items-center px-3 border border-r-0 rounded-l-md bg-gray-50 text-sm text-gray-500">
               +92
@@ -157,12 +158,12 @@ export const TrustSignalsSection = () => {
       </div>
 
       <div className="space-y-2 mt-4">
-        <Label>
+        <FieldLabel help="ownerBio">
           Owner bio{" "}
           <span className="text-neutral-400 text-xs">
             (optional — shows on your public profile)
           </span>
-        </Label>
+        </FieldLabel>
         <Textarea
           placeholder="A short story of your craft, training, and what makes your work different…"
           value={formData.ownerBio}
@@ -175,7 +176,7 @@ export const TrustSignalsSection = () => {
       </div>
 
       <div className="space-y-2 mt-4">
-        <Label>Languages spoken</Label>
+        <FieldLabel help="languagesSpoken">Languages spoken</FieldLabel>
         <div className="flex flex-wrap gap-2">
           {KNOWN_LANGUAGES.map((lang) => {
             const checked = (formData.languagesSpoken || []).includes(lang);
@@ -209,7 +210,7 @@ export const VerificationSection = () => {
         confirms with FBR. Verified vendors rank higher in search.
       </p>
       <div className="space-y-2">
-        <Label>NTN number</Label>
+        <FieldLabel help="ntnNumber">NTN number</FieldLabel>
         <Input
           placeholder="e.g. 1234567-8"
           value={formData.ntnNumber}

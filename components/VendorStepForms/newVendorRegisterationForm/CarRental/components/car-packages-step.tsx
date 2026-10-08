@@ -1,5 +1,6 @@
 'use client';
 
+import { FieldLabel } from "@/components/ui/field-help";
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -214,9 +215,9 @@ const CarPackagesStep = ({ errors, setErrors }: CarPackagesStepProps) => {
 
                     {/* Cars in this package */}
                     <div className="space-y-3">
-                        <Label className="text-sm font-medium text-neutral-700">
+                        <FieldLabel help="carPackageCars" className="text-sm font-medium text-neutral-700">
                             Cars Included <span className="text-red-500">*</span>
-                        </Label>
+                        </FieldLabel>
                         <p className="text-xs text-neutral-500 -mt-1">
                             Select car types from your fleet and set quantities for this package.
                         </p>
@@ -330,9 +331,9 @@ const CarPackagesStep = ({ errors, setErrors }: CarPackagesStepProps) => {
 
                     {/* Cities Covered */}
                     <div className="space-y-2">
-                        <Label className="text-sm font-medium text-neutral-700">
+                        <FieldLabel help="coveredCities" className="text-sm font-medium text-neutral-700">
                             Cities Covered <span className="text-red-500">*</span>
-                        </Label>
+                        </FieldLabel>
                         {cities.length === 0 ? (
                             <p className="text-xs text-amber-600">
                                 No cities found. Please add cities in the Business Details step.
@@ -366,9 +367,9 @@ const CarPackagesStep = ({ errors, setErrors }: CarPackagesStepProps) => {
                     {/* Total Price */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                            <Label className="text-sm font-medium text-neutral-700">
+                            <FieldLabel help="carPackageTotalPrice" className="text-sm font-medium text-neutral-700">
                                 Total Price (PKR) <span className="text-red-500">*</span>
-                            </Label>
+                            </FieldLabel>
                             <Input
                                 type="number"
                                 placeholder="e.g. 100000"

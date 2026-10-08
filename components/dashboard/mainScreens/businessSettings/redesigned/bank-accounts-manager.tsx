@@ -8,6 +8,7 @@
  * numbers are masked on read by the backend.
  */
 
+import { HelpRow } from "@/components/ui/field-help"
 import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
@@ -192,7 +193,7 @@ export function BankAccountsManager() {
             {/* WW-DIRECT-PAY — which rail, chosen first, because it decides
                 which of the fields below even apply. */}
             <div className="space-y-1.5">
-              <label className={labelCls} htmlFor="bank-type">How can customers pay you?</label>
+              <HelpRow help="bankPayMethod"><label className={labelCls} htmlFor="bank-type">How can customers pay you?</label></HelpRow>
               <div id="bank-type" className="flex flex-wrap gap-2">
                 {ACCOUNT_TYPES.map((t) => {
                   const active = (form.accountType ?? "bank") === t.value
@@ -236,12 +237,12 @@ export function BankAccountsManager() {
               </div>
               )}
               <div className="space-y-1.5">
-                <label className={labelCls} htmlFor="bank-holder">{isWallet ? "Registered name" : "Account holder"}</label>
+                <HelpRow help={isWallet ? "walletRegisteredName" : "accountTitle"}><label className={labelCls} htmlFor="bank-holder">{isWallet ? "Registered name" : "Account holder"}</label></HelpRow>
                 <input id="bank-holder" className={cn(inputCls, shown.accountHolderName && ERROR_INPUT_CLS)} value={form.accountHolderName ?? ""} onChange={(e) => { set("accountHolderName", e.target.value); touch("accountHolderName") }} onBlur={() => touch("accountHolderName")} maxLength={120} placeholder={isWallet ? "Name the wallet is registered in" : "As on the account"} {...fieldAria("bank-holder", shown.accountHolderName)} />
                 <FieldError id="bank-holder" message={shown.accountHolderName} />
               </div>
               <div className="space-y-1.5">
-                <label className={labelCls} htmlFor="bank-acct">{isWallet ? "Mobile number" : "Account number"}</label>
+                <HelpRow help={isWallet ? "walletMobileNumber" : "accountNumber"}><label className={labelCls} htmlFor="bank-acct">{isWallet ? "Mobile number" : "Account number"}</label></HelpRow>
                 <input id="bank-acct" inputMode="numeric" autoComplete="off" className={cn(inputCls, shown.accountNumber && ERROR_INPUT_CLS)} value={form.accountNumber ?? ""} onChange={(e) => { set("accountNumber", e.target.value); touch("accountNumber") }} onBlur={() => touch("accountNumber")} maxLength={isWallet ? 13 : 26} placeholder={editingId ? "Leave blank to keep current" : isWallet ? "03001234567" : "Account / 16-digit"} {...fieldAria("bank-acct", shown.accountNumber)} />
                 <FieldError id="bank-acct" message={shown.accountNumber} />
               </div>
@@ -250,13 +251,13 @@ export function BankAccountsManager() {
                   into them; not showing them is the honest form. */}
               {!isWallet && (
               <div className="space-y-1.5">
-                <label className={labelCls} htmlFor="bank-iban">IBAN</label>
+                <HelpRow help="iban"><label className={labelCls} htmlFor="bank-iban">IBAN</label></HelpRow>
                 <input id="bank-iban" autoComplete="off" autoCapitalize="characters" spellCheck={false} className={cn(inputCls, shown.iban && ERROR_INPUT_CLS, "uppercase")} value={form.iban ?? ""} onChange={(e) => { set("iban", e.target.value.toUpperCase()); touch("iban") }} onBlur={() => touch("iban")} maxLength={29} placeholder="PK00XXXX0000000000000000" {...fieldAria("bank-iban", shown.iban)} />
                 <FieldError id="bank-iban" message={shown.iban} />
               </div>
               )}
               {!isWallet && (
-              <div className="space-y-1.5"><label className={labelCls}>Branch code</label><input className={inputCls} value={form.branchCode ?? ""} onChange={(e) => set("branchCode", e.target.value)} placeholder="Optional" /></div>
+              <div className="space-y-1.5"><HelpRow help="branchCode"><label className={labelCls}>Branch code</label></HelpRow><input className={inputCls} value={form.branchCode ?? ""} onChange={(e) => set("branchCode", e.target.value)} placeholder="Optional" /></div>
               )}
               <label className="flex items-center gap-2 self-end pb-1.5 text-sm"><input type="checkbox" className="h-4 w-4" checked={Boolean(form.isActive)} onChange={(e) => set("isActive", e.target.checked)} /> Make this the default payout account</label>
             </div>

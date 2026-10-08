@@ -9,6 +9,7 @@
  *   guestsPerHourCapacity, travelsToBridalHome, teamSize
  */
 
+import { AutoFieldLabel, FieldLabel } from "@/components/ui/field-help";
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +39,7 @@ const HennaArtistSpecialtyTrust = () => {
     opts?: { min?: number; max?: number },
   ) => (
     <div className="space-y-2" key={key}>
-      <Label>{label}</Label>
+      <AutoFieldLabel field={key}>{label}</AutoFieldLabel>
       <Input
         type="number"
         inputMode="numeric"
@@ -84,7 +85,7 @@ const HennaArtistSpecialtyTrust = () => {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Paste type</Label>
+            <FieldLabel help="naturalOrChemicalPaste">Paste type</FieldLabel>
             <Select
               value={(tsd.naturalOrChemicalPaste as string) || ""}
               onValueChange={(v) => setTsd("naturalOrChemicalPaste", v)}

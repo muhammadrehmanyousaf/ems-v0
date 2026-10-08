@@ -10,6 +10,7 @@
  *   mahramOnlyAvailable, backToBackCapacityPerDay, previousBridalEventsCount
  */
 
+import { AutoFieldLabel, FieldLabel } from "@/components/ui/field-help";
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,7 +52,7 @@ const MakeupArtistSpecialtyTrust = () => {
     opts?: { min?: number; max?: number },
   ) => (
     <div className="space-y-2" key={key}>
-      <Label>{label}</Label>
+      <AutoFieldLabel field={key}>{label}</AutoFieldLabel>
       <Input
         type="number"
         inputMode="numeric"
@@ -94,7 +95,7 @@ const MakeupArtistSpecialtyTrust = () => {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Bride only, or family included?</Label>
+            <FieldLabel help="brideOnlyOrFamilyIncluded">Bride only, or family included?</FieldLabel>
             <Select
               value={(tsd.brideOnlyOrFamilyIncluded as string) || ""}
               onValueChange={(v) => setTsd("brideOnlyOrFamilyIncluded", v)}
@@ -110,7 +111,7 @@ const MakeupArtistSpecialtyTrust = () => {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Trial policy</Label>
+            <FieldLabel help="trialPolicy">Trial policy</FieldLabel>
             <Select
               value={(tsd.trialPolicy as string) || ""}
               onValueChange={(v) => setTsd("trialPolicy", v)}

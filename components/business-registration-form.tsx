@@ -1,5 +1,6 @@
 "use client";
 
+import { HelpRow } from "@/components/ui/field-help";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PersonalDetailsStep } from "./steps/personal-details-step";
 import { BusinessTypeStep } from "./steps/business-type-step";
@@ -1286,10 +1287,12 @@ export function BusinessRegistrationForm() {
                       <BridalCrown className="mb-2">
                         Step 1 — Your Craft
                       </BridalCrown>
-                      <BridalTitle size="h3" className="mb-1.5">
-                        Choose your{" "}
-                        <span className="text-bridal-gold-dark">business type</span>
-                      </BridalTitle>
+                      <HelpRow help="businessType" className="mb-1.5 justify-center">
+                        <BridalTitle size="h3" className="mb-0">
+                          Choose your{" "}
+                          <span className="text-bridal-gold-dark">business type</span>
+                        </BridalTitle>
+                      </HelpRow>
                       <p className="font-bridal text-bridal-text-soft text-[12.5px] leading-snug max-w-sm mx-auto">
                         Select the category that best describes your wedding
                         services. We&apos;ll tailor the rest of the form to

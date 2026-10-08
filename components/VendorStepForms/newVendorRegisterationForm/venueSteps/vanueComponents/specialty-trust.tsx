@@ -15,6 +15,7 @@
  *   valetParkingIncluded, generatorKw, wifiAvailable
  */
 
+import { AutoFieldLabel, FieldLabel } from "@/components/ui/field-help";
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,7 +38,7 @@ const VenueSpecialtyTrust = () => {
     opts?: { min?: number; max?: number },
   ) => (
     <div className="space-y-2" key={key}>
-      <Label>{label}</Label>
+      <AutoFieldLabel field={key}>{label}</AutoFieldLabel>
       <Input
         type="number"
         inputMode="numeric"
@@ -68,7 +69,7 @@ const VenueSpecialtyTrust = () => {
           {numberInput("groomRoomCount", "Groom rooms", "e.g. 1", { min: 0, max: 20 })}
           {numberInput("generatorKw", "Generator capacity (kW)", "e.g. 200", { min: 0, max: 5000 })}
           <div className="space-y-2">
-            <Label>Noise curfew time</Label>
+            <FieldLabel help="noiseCurfewTime">Noise curfew time</FieldLabel>
             <Input
               type="time"
               value={(tsd.noiseCurfewTime as string) || ""}

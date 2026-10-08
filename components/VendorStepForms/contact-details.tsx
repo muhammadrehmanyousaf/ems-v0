@@ -1,3 +1,5 @@
+import { FieldLabel } from '../ui/field-help';
+import type { FieldHelpKey } from '@/lib/field-help';
 import React, { useState } from 'react';
 import { Input } from '../ui/input';
 import FileUploader from './file-uploader';
@@ -16,14 +18,14 @@ const ContactDetails = ({ setErrors, errors, setFile, file }: ContactDetailsProp
     const { setFormData, formData } = useFormContext();
 
     const formFields = [
-        { name: 'name', label: 'Brand Name', place: 'Enter your Brand Name' },
-        { name: 'secondaryContactNumber', label: 'Secondary Contact Number (optional)', place: '3001234567', type: 'tel' },
-        { name: 'instagram', label: 'Instagram Link (optional)', place: 'Enter your Instagram link' },
-        { name: 'facebook', label: 'Facebook Link (optional)', place: 'Enter your Facebook link' },
-        { name: 'city', label: 'City', place: 'Enter your city' },
-        { name: 'subArea', label: 'Sub Area', place: 'Enter your sub area (e.g., G-10 Markaz)' },
-        { name: 'officeAddress', label: 'Office Address', place: 'Enter your office address here' },
-        { name: 'officeGoogleLink', label: 'Office Google map link (optional)', place: 'Enter here your Google map link' },
+        { name: 'name', help: 'brandName' as FieldHelpKey, label: 'Brand Name', place: 'Enter your Brand Name' },
+        { name: 'secondaryContactNumber', help: 'secondaryContactNumber' as FieldHelpKey, label: 'Secondary Contact Number (optional)', place: '3001234567', type: 'tel' },
+        { name: 'instagram', help: 'instagram' as FieldHelpKey, label: 'Instagram Link (optional)', place: 'Enter your Instagram link' },
+        { name: 'facebook', help: 'facebook' as FieldHelpKey, label: 'Facebook Link (optional)', place: 'Enter your Facebook link' },
+        { name: 'city', help: 'city' as FieldHelpKey, label: 'City', place: 'Enter your city' },
+        { name: 'subArea', help: 'subArea' as FieldHelpKey, label: 'Sub Area', place: 'Enter your sub area (e.g., G-10 Markaz)' },
+        { name: 'officeAddress', help: 'officeAddress' as FieldHelpKey, label: 'Office Address', place: 'Enter your office address here' },
+        { name: 'officeGoogleLink', help: 'officeGoogleLink' as FieldHelpKey, label: 'Office Google map link (optional)', place: 'Enter here your Google map link' },
     ];
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
@@ -99,7 +101,7 @@ const ContactDetails = ({ setErrors, errors, setFile, file }: ContactDetailsProp
                             {errors.profilePicture && <p className="text-xs text-red-500">{errors.profilePicture}</p>}
                         </div>
                         <div className='space-y-2 w-full'>
-                            <Label>{field.label}</Label>
+                            <FieldLabel help={field.help}>{field.label}</FieldLabel>
                             <Input
                                 placeholder={field.place}
                                 className='w-full'
@@ -111,7 +113,7 @@ const ContactDetails = ({ setErrors, errors, setFile, file }: ContactDetailsProp
                     </div>
                 ) : (
                     <div key={field.name} className="space-y-2">
-                        <Label>{field.label}</Label>
+                        <FieldLabel help={field.help}>{field.label}</FieldLabel>
                         <div className="flex">
                             <div className="flex items-center justify-center px-3 border border-r-0 rounded-l-md bg-gray-50">
                                 <Flag className="w-4 h-4 text-gray-500" />
@@ -144,7 +146,7 @@ const ContactDetails = ({ setErrors, errors, setFile, file }: ContactDetailsProp
 
             {formFields.slice(2).map((field, i) => (
                 <div key={i} className='space-y-2 w-full'>
-                    <Label>{field.label}</Label>
+                    <FieldLabel help={field.help}>{field.label}</FieldLabel>
                     <Input
                         placeholder={field.place}
                         className='w-full'

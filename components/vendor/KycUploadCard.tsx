@@ -2,6 +2,8 @@
 
 // 01-VR-ENHANCE-V1-FE — vendor KYC upload + status card.
 
+import { HelpRow } from "@/components/ui/field-help"
+import type { FieldHelpKey } from "@/lib/field-help"
 import { useEffect, useRef, useState } from "react"
 import { Upload, FileText, Loader2, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -24,6 +26,19 @@ const REQUIRED_DOC_TYPES: VendorDocumentType[] = [
   "utility_bill",
   "bank_attestation",
 ]
+
+/** One "?" per document: what it is and, for the identity ones, who sees it. */
+const DOC_HELP: Partial<Record<VendorDocumentType, FieldHelpKey>> = {
+  cnic_front: "docCnicFront",
+  cnic_back: "docCnicBack",
+  ntn: "docNtn",
+  utility_bill: "docUtilityBill",
+  bank_attestation: "docBankAttestation",
+  shop_lease: "docShopLease",
+  insurance: "docInsurance",
+  vehicle_registration: "docVehicleRegistration",
+  halal_cert: "docHalalCert",
+}
 
 const OPTIONAL_DOC_TYPES: VendorDocumentType[] = [
   "shop_lease",
@@ -98,10 +113,12 @@ export function KycUploadCard({ businessId }: KycUploadCardProps) {
         <div className="flex items-start gap-3 min-w-0">
           <FileText className="w-4 h-4 mt-1 text-bridal-charcoal" />
           <div className="min-w-0">
-            <p className="text-sm font-medium text-bridal-charcoal truncate">
-              {DOCUMENT_TYPE_LABELS[type]}
-              {required && <span className="ml-1 text-bridal-coral text-xs">*</span>}
-            </p>
+            <HelpRow help={DOC_HELP[type]} className="min-w-0">
+              <p className="text-sm font-medium text-bridal-charcoal truncate">
+                {DOCUMENT_TYPE_LABELS[type]}
+                {required && <span className="ml-1 text-bridal-coral text-xs">*</span>}
+              </p>
+            </HelpRow>
             {doc ? (
               <p className="text-xs text-bridal-text-soft truncate">
                 Uploaded {new Date(doc.createdAt).toLocaleDateString()}

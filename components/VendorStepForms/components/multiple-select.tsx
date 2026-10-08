@@ -1,3 +1,5 @@
+import { HelpRow } from '@/components/ui/field-help'
+import type { FieldHelpKey } from '@/lib/field-help'
 import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Check, X } from 'lucide-react'
 import React from 'react'
@@ -5,6 +7,8 @@ import { cn } from '@/lib/utils'
 
 interface MultipleSelectComponent {
     label: string,
+    /** Optional key into lib/field-help.ts: puts a "?" beside the label. */
+    help?: FieldHelpKey,
     data: { value: string, label: string }[],
     handleSelectOption: (id: string) => void,
     selectedOption: string[];
@@ -13,6 +17,7 @@ interface MultipleSelectComponent {
 
 const MultipleSelect: React.FC<MultipleSelectComponent> = ({
     label,
+    help,
     data,
     handleSelectOption,
     selectedOption,
@@ -29,9 +34,11 @@ const MultipleSelect: React.FC<MultipleSelectComponent> = ({
 
     return (
         <div className="space-y-3">
-            <p className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">
-                {label}
-            </p>
+            <HelpRow help={help}>
+                <p className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">
+                    {label}
+                </p>
+            </HelpRow>
             <Select>
                 <SelectTrigger
                     className={cn(

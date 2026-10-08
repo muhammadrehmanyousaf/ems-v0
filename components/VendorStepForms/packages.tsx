@@ -1,3 +1,4 @@
+import { FieldLabel, HelpRow } from "@/components/ui/field-help";
 import React from "react";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -177,9 +178,9 @@ const Packages = ({ setErrors, errors }: PackagesProps) => {
 
                     <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                            <Label className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">
+                            <FieldLabel help={isMenuType ? "menuName" : "packageName"} className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">
                                 {itemLabel} Name
-                            </Label>
+                            </FieldLabel>
                             <Input
                                 placeholder={`Enter ${itemLabel.toLowerCase()} name`}
                                 value={pkg.name}
@@ -191,9 +192,9 @@ const Packages = ({ setErrors, errors }: PackagesProps) => {
                             )}
                         </div>
                         <div className="space-y-1.5">
-                            <Label className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">
+                            <FieldLabel help="packagePrice" className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">
                                 Price (Rs.)
-                            </Label>
+                            </FieldLabel>
                             <Input
                                 type="number"
                                 min="0"
@@ -217,7 +218,7 @@ const Packages = ({ setErrors, errors }: PackagesProps) => {
                     {categories.length > 0 && (
                         <section className="space-y-3 mt-6">
                             <div className="flex items-center gap-3">
-                                <span className="bridal-label">What&apos;s included</span>
+                                <HelpRow help="packageIncludes"><span className="bridal-label">What&apos;s included</span></HelpRow>
                                 <span className="flex-1 h-px bg-gradient-to-r from-bridal-beige via-bridal-beige/40 to-transparent" />
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
