@@ -239,7 +239,7 @@ function buildContent(d: MyPlanData, status: BillingStatus | null, mode: ReturnM
   const tierName = (t: SubscriptionTier) => d.tierNames?.[t] || d.plans.find((p) => p.tier === t)?.name || t
   const view = planViewOf(status)
   const pendingLine = view.kind === "pending"
-    ? `<span class="pending">${svg(IC.spin)} ${escHtml(tierName(view.tier as SubscriptionTier))} ka checkout chal raha hai (${view.minutes} min) — Safepay confirm karte hi update hoga</span>`
+    ? `<span class="pending">${svg(IC.spin)} ${escHtml(tierName(view.tier as SubscriptionTier))} ka checkout chal raha hai (${view.minutes} min) — Safepay confirm karte hi update hoga</span> <button class="btn btn-ghost sm" data-cancel-checkout>Checkout cancel karein</button>`
     : view.kind === "none" && view.staleCheckout
       ? `<span class="pending">${svg(IC.clock)} Pichla checkout poora nahi hua tha — jab chahein dobara koshish karein</span>`
       : d.pendingUpgradeTier ? `<span class="pending">${svg(IC.clock)} Upgrade request: ${escHtml(tierName(d.pendingUpgradeTier))} (review mein)</span>` : ""
@@ -298,6 +298,13 @@ export function BillingArtifact() {
       window.history.replaceState(null, "", `/dashboard/billing?checkout=${m}`)
     }
   }, [params])
+  // Safepay's "Cancel and return" brings the vendor here with ?checkout=cancel: they are not paying, so free the
+  // checkout now instead of showing "checkout chal raha hai" for 15 minutes. A late payment would still activate the plan.
+  React.useEffect(() => {
+    if (mode !== "cancel") return
+    SubscriptionAPI.cancelCheckout().catch(() => {}).finally(() => { qc.invalidateQueries({ queryKey: ["billing-status"] }); qc.invalidateQueries({ queryKey: ["billing-art"] }) })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode])
   const [waited, setWaited] = React.useState(0)
 
   const { data, isError } = useQuery({ queryKey: ["billing-art"], queryFn: () => SubscriptionAPI.getMyPlan() })
@@ -392,6 +399,19 @@ export function BillingArtifact() {
       const t = e.target as HTMLElement
       if (t.closest("[data-retry]")) { refresh(); return }
       if (t.closest("[data-dismiss-return]")) { window.history.replaceState(null, "", "/dashboard/billing"); setMode(null); return }
+      const abandonBtn = t.closest("[data-cancel-checkout]") as HTMLButtonElement | null
+      if (abandonBtn) {
+        abandonBtn.disabled = true
+        try {
+          await SubscriptionAPI.cancelCheckout()
+          toast.success("Checkout cancel ho gaya — kuch charge nahi hua. Ab aap koi bhi plan chun sakte hain")
+        } catch (err: unknown) {
+          toast.error(codeOf(err) === "PAYMENT_IN_FLIGHT" ? "Safepay abhi aapki payment confirm kar raha hai — thori dair intezaar karein" : msgOf(err) || "Checkout cancel nahi ho saka — dobara koshish karein")
+          abandonBtn.disabled = false
+        }
+        refresh()
+        return
+      }
 
       // Cancel: at Safepay first, then here. Access runs to the paid period end.
       const cancelBtn = t.closest("[data-cancel-plan]") as HTMLButtonElement | null

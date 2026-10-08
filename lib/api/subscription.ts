@@ -204,6 +204,12 @@ export class SubscriptionAPI {
   }
 
   /** Vendor: cancel at Safepay and locally; access runs to the paid period end. */
+  /** The vendor walked away from (or cancelled on) Safepay: free the screen at once. */
+  static async cancelCheckout(): Promise<{ cancelled: number }> {
+    const res = await axiosInstance.post("/api/v1/subscriptions/checkout/cancel", {});
+    return res.data?.data;
+  }
+
   static async cancelSubscription(reason?: string): Promise<{ access: BillingAccess; subscriptionEndsAt: string | null; subscription: BillingSubscriptionRow | null }> {
     const res = await axiosInstance.post("/api/v1/subscriptions/cancel", reason ? { reason } : {});
     return res.data?.data;
