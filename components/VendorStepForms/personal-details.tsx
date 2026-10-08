@@ -1,3 +1,5 @@
+import { FieldLabel } from "@/components/ui/field-help";
+import type { FieldHelpKey } from "@/lib/field-help";
 import React, { useEffect, useRef, useState } from "react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
@@ -50,30 +52,35 @@ const PersonalDetails = ({
       label: "Full Name",
       place: "Enter your full name here",
       name: "fullName",
+      help: "fullName" as FieldHelpKey,
     },
     {
       label: "Email",
       place: "Enter your email here",
       type: "email",
       name: "email",
+      help: "email" as FieldHelpKey,
     },
     {
       label: "Phone Number",
       place: "3001234567",
       type: "tel",
       name: "phoneNumber",
+      help: "phoneNumber" as FieldHelpKey,
     },
     {
       label: "Password",
       place: "***********",
       type: "password",
       name: "password",
+      help: "password" as FieldHelpKey,
     },
     {
       label: "Re-enter Password",
       place: "***********",
       type: "password",
       name: "re_enterPassword",
+      help: "confirmPassword" as FieldHelpKey,
     },
   ];
 
@@ -131,7 +138,7 @@ const PersonalDetails = ({
     <div className="space-y-6">
       {/* Profile Image Picker */}
       <div className="flex flex-col items-center gap-2">
-        <Label className="self-start">Profile Photo <span className="text-neutral-400 text-xs">(optional)</span></Label>
+        <FieldLabel help="profilePhoto" wrapperClassName="self-start">Profile Photo <span className="text-neutral-400 text-xs">(optional)</span></FieldLabel>
         <div className="relative group">
           <input
             ref={fileInputRef}
@@ -173,7 +180,7 @@ const PersonalDetails = ({
 
       {formFields.map((field) => (
         <div key={field.name} className="space-y-2">
-          <Label>{field.label}</Label>
+          <FieldLabel help={field.help}>{field.label}</FieldLabel>
           {field.name === "phoneNumber" ? (
             <div className="flex">
               <div className="flex items-center justify-center px-3 border border-r-0 rounded-l-md bg-gray-50">

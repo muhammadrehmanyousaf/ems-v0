@@ -1,3 +1,4 @@
+import { FieldLabel } from "@/components/ui/field-help";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -174,12 +175,12 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
       <SectionCard title="Basic Information">
         <div className="space-y-4">
           <div>
-            <Label
+            <FieldLabel help="businessName"
               htmlFor="name"
               className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label"
             >
               Business Name
-            </Label>
+            </FieldLabel>
             <Input
               id="name"
               placeholder="Enter your business name"
@@ -199,12 +200,12 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
           </div>
 
           <div>
-            <Label
+            <FieldLabel help="businessDescription"
               htmlFor="description"
               className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label"
             >
               Business Description
-            </Label>
+            </FieldLabel>
             <Textarea
               id="description"
               placeholder="Describe your photography services"
@@ -235,7 +236,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
         <div className="space-y-6">
           <div>
             <MultipleRadio
-              label="Photography Type"
+              label="Photography Type" help="serviceTypes"
               data={types}
               handleSelect={(value: string, index: number) => {
                 handleSelectSubBusinessType(value, index);
@@ -255,7 +256,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
 
           <div>
             <MultipleSelect
-              label="Expertise"
+              label="Expertise" help="expertise"
               placeholder="Select Expertise"
               data={Expertise}
               handleSelectOption={(value: string) => {
@@ -285,7 +286,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
         <div className="space-y-6">
           <div>
             <MultipleSelect
-              label="Services & Amenities"
+              label="Services & Amenities" help="servicesAmenities"
               placeholder="Select Services & Amenities"
               data={amenitiesData}
               handleSelectOption={(value: string) => {
@@ -310,7 +311,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
 
           <div>
             <MultipleRadio
-              label="Staff Gender"
+              label="Staff Gender" help="staffGender"
               data={staff}
               handleSelect={(type: string, index: number) => {
                 handleSelectStaff(type, index);
@@ -334,12 +335,12 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
       <SectionCard title="Pricing & Policies">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
-            <Label
+            <FieldLabel help="downPayment"
               htmlFor="downPayment"
               className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label"
             >
               Down Payment
-            </Label>
+            </FieldLabel>
             <div className="flex gap-2.5 mt-1.5">
               <Select
                 value={downPaymentType}
@@ -425,9 +426,9 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
           </div>
 
           <div>
-            <Label className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">
+            <FieldLabel help="cancellationPolicy" className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">
               Cancellation Policy
-            </Label>
+            </FieldLabel>
             <Select value={cancellation} onValueChange={setCancellation}>
               <SelectTrigger
                 className={`mt-1.5 h-11 ${

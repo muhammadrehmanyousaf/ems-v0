@@ -1,5 +1,6 @@
 'use client';
 
+import { FieldLabel } from "@/components/ui/field-help";
 import React, { useCallback, useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -371,9 +372,9 @@ const CarDetailsStep = ({ errors, setErrors }: CarDetailsStepProps) => {
                     {/* Row 3: Price + Units Available */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                            <Label className="text-sm font-medium text-neutral-700">
+                            <FieldLabel help="pricePerEvent" className="text-sm font-medium text-neutral-700">
                                 Price per Event (PKR) <span className="text-red-500">*</span>
-                            </Label>
+                            </FieldLabel>
                             <Input
                                 type="number"
                                 placeholder="e.g. 15000"
@@ -390,16 +391,7 @@ const CarDetailsStep = ({ errors, setErrors }: CarDetailsStepProps) => {
                             )}
                         </div>
                         <div className="space-y-1.5">
-                            <div className="flex items-center gap-1.5">
-                                <Label className="text-sm font-medium text-neutral-700">Units Available</Label>
-                                <div className="group relative flex items-center">
-                                    <span className="w-4 h-4 rounded-full bg-neutral-200 text-neutral-500 text-[10px] font-bold flex items-center justify-center cursor-default select-none">i</span>
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex items-center whitespace-nowrap bg-neutral-800 text-white text-xs rounded-lg px-3 py-1.5 shadow-lg z-10 pointer-events-none">
-                                        Number of Cars Available for this Model
-                                        <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-neutral-800" />
-                                    </div>
-                                </div>
-                            </div>
+                            <FieldLabel help="unitsAvailable" className="text-sm font-medium text-neutral-700">Units Available</FieldLabel>
                             <Input
                                 type="number"
                                 placeholder="e.g. 3"

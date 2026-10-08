@@ -1,5 +1,6 @@
 'use client';
 
+import { FieldLabel } from "@/components/ui/field-help";
 import React, { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -68,9 +69,9 @@ const CarRentalBusinessDetails = ({ errors, setErrors }: BusinessDetailsProps) =
                         <h3 className="text-lg font-semibold text-neutral-800 mb-4">Business Overview</h3>
                         <div className="space-y-4">
                             <div>
-                                <Label htmlFor="description" className="text-sm font-medium text-neutral-700">
+                                <FieldLabel help="businessDescription" htmlFor="description" className="text-sm font-medium text-neutral-700">
                                     Business Description
-                                </Label>
+                                </FieldLabel>
                                 <Textarea
                                     id="description"
                                     placeholder="Describe your car rental services, fleet, and experience..."
@@ -92,9 +93,9 @@ const CarRentalBusinessDetails = ({ errors, setErrors }: BusinessDetailsProps) =
                     <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-neutral-200">
                         <h3 className="text-lg font-semibold text-neutral-800 mb-4">Service Area</h3>
                         <div>
-                            <Label className="text-sm font-medium text-neutral-700 block mb-2">
+                            <FieldLabel help="coveredCities" className="text-sm font-medium text-neutral-700 block mb-2">
                                 Cities Covered
-                            </Label>
+                            </FieldLabel>
                             <p className="text-xs text-neutral-500 mb-3">Select the cities where you provide car rental services.</p>
                             <div className="flex flex-wrap gap-2">
                                 {CITIES.map((city) => {
@@ -127,7 +128,7 @@ const CarRentalBusinessDetails = ({ errors, setErrors }: BusinessDetailsProps) =
                         <h3 className="text-lg font-semibold text-neutral-800 mb-4">Pricing & Payment</h3>
                         <div className="space-y-4">
                             <div>
-                                <Label className="text-sm font-medium text-neutral-700">Down Payment</Label>
+                                <FieldLabel help="downPayment" className="text-sm font-medium text-neutral-700">Down Payment</FieldLabel>
                                 <div className="flex gap-3 mt-1">
                                     <Select
                                         value={downPaymentType}
@@ -173,9 +174,9 @@ const CarRentalBusinessDetails = ({ errors, setErrors }: BusinessDetailsProps) =
                     <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-neutral-200">
                         <h3 className="text-lg font-semibold text-neutral-800 mb-4">Business Policy</h3>
                         <div>
-                            <Label className="text-sm font-medium text-neutral-700 block mb-1">
+                            <FieldLabel help="cancellationPolicy" className="text-sm font-medium text-neutral-700 block mb-1">
                                 Cancellation Policy
-                            </Label>
+                            </FieldLabel>
                             <Select
                                 value={formData.cancelationPolicy}
                                 onValueChange={(value) => {

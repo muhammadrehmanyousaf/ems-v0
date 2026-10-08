@@ -1,3 +1,4 @@
+import { FieldLabel } from "@/components/ui/field-help";
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -127,7 +128,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
             <SectionCard title="Basic Information">
                 <div className="space-y-4">
                     <div>
-                        <Label htmlFor="name" className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">Business Name</Label>
+                        <FieldLabel help="businessName" htmlFor="name" className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">Business Name</FieldLabel>
                         <Input
                             id="name"
                             placeholder="Enter your business name"
@@ -138,7 +139,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                         {errors.name && <p className="text-bridal-coral text-[12px] mt-1">{errors.name}</p>}
                     </div>
                     <div>
-                        <Label htmlFor="description" className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">Business Description</Label>
+                        <FieldLabel help="businessDescription" htmlFor="description" className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">Business Description</FieldLabel>
                         <Textarea
                             id="description"
                             placeholder="Describe your henna services"
@@ -155,7 +156,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                 <div className="space-y-6">
                     <div>
                         <MultipleRadio
-                            label="Henna Style"
+                            label="Henna Style" help="serviceTypes"
                             data={types}
                             handleSelect={(value: string, index: number) => {
                                 handleSelectSubBusinessType(value, index);
@@ -167,7 +168,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                     </div>
                     <div>
                         <MultipleSelect
-                            label="Expertise"
+                            label="Expertise" help="expertise"
                             placeholder="Select Expertise"
                             data={Expertise}
                             handleSelectOption={(value: string) => {
@@ -187,7 +188,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                 <div className="space-y-6">
                     <div>
                         <MultipleSelect
-                            label="Services & Amenities"
+                            label="Services & Amenities" help="servicesAmenities"
                             placeholder="Select Services & Amenities"
                             data={amenitiesData}
                             handleSelectOption={(value: string) => {
@@ -202,7 +203,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                     </div>
                     <div>
                         <MultipleRadio
-                            label="Staff Gender"
+                            label="Staff Gender" help="staffGender"
                             data={staff}
                             handleSelect={(type: string, index: number) => {
                                 handleSelectStaff(type, index);
@@ -218,7 +219,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
             <SectionCard title="Pricing & Policies">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                        <Label htmlFor="downPayment" className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">Down Payment</Label>
+                        <FieldLabel help="downPayment" htmlFor="downPayment" className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">Down Payment</FieldLabel>
                         <div className="flex gap-2.5 mt-1.5">
                             <Select
                                 value={downPaymentType}
@@ -268,7 +269,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                         {errors.downPayment && <p className="text-bridal-coral text-[12px] mt-1">{errors.downPayment}</p>}
                     </div>
                     <div>
-                        <Label className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">Cancellation Policy</Label>
+                        <FieldLabel help="cancellationPolicy" className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">Cancellation Policy</FieldLabel>
                         <Select value={cancellation} onValueChange={setCancellation}>
                             <SelectTrigger className={`mt-1.5 h-11 ${errors.cancelationPolicy ? "border-bridal-coral" : "border-bridal-beige"}`}>
                                 <SelectValue placeholder="Select cancellation policy" />

@@ -1,9 +1,13 @@
+import { HelpRow } from "@/components/ui/field-help";
+import type { FieldHelpKey } from "@/lib/field-help";
 import React from "react";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MultipleRadioComponent {
   label: string;
+  /** Optional key into lib/field-help.ts: puts a "?" beside the label. */
+  help?: FieldHelpKey;
   data: { value: string; label?: string; icon?: any }[];
   handleSelect: (type: string, index: number) => void;
   selectedIndexes: number[];
@@ -11,6 +15,7 @@ interface MultipleRadioComponent {
 
 const MultipleRadio: React.FC<MultipleRadioComponent> = ({
   label,
+  help,
   data,
   handleSelect,
   selectedIndexes,
@@ -19,9 +24,11 @@ const MultipleRadio: React.FC<MultipleRadioComponent> = ({
 
   return (
     <div>
-      <p className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">
-        {label}
-      </p>
+      <HelpRow help={help}>
+        <p className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">
+          {label}
+        </p>
+      </HelpRow>
       <div className="mt-3 flex flex-wrap items-center gap-2.5">
         {data.map((type, index) => {
           const isSelected = selectedIndexes.includes(index);

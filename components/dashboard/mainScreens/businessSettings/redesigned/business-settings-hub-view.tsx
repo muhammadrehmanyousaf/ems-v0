@@ -9,6 +9,8 @@
  * Route /dashboard/settings, on whichever business `?biz=` names.
  */
 
+import { HelpRow } from "@/components/ui/field-help"
+import type { FieldHelpKey } from "@/lib/field-help"
 import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -966,14 +968,14 @@ export function BusinessSettingsHubView() {
                   five Profile labels had htmlFor null and no input carried an
                   id. Two labelling conventions in one hub. */}
               <Section icon="Building2" title="Profile" desc="How your business appears to couples.">
-                <Row id="biz-name" label="Business name">
+                <Row id="biz-name" label="Business name" help="businessName">
                   <input id="biz-name" className={inputCls} value={form.name ?? ""} onChange={(e) => set("name", e.target.value)} />
                 </Row>
-                <Row id="biz-desc" label="Description">
+                <Row id="biz-desc" label="Description" help="businessDescription">
                   <textarea id="biz-desc" className={cn(inputCls, "h-28 resize-y py-2")} value={form.description ?? ""} onChange={(e) => set("description", e.target.value)} placeholder="Tell couples what makes you special…" />
                 </Row>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Row id="biz-city" label="City">
+                  <Row id="biz-city" label="City" help="city">
                     <input
                       id="biz-city"
                       list="ww-cities"
@@ -992,11 +994,11 @@ export function BusinessSettingsHubView() {
                       </p>
                     )}
                   </Row>
-                  <Row id="biz-subarea" label="Area / locality">
+                  <Row id="biz-subarea" label="Area / locality" help="subArea">
                     <input id="biz-subarea" className={inputCls} value={form.subArea ?? ""} onChange={(e) => set("subArea", e.target.value)} />
                   </Row>
                 </div>
-                <Row id="biz-logo" label="Brand logo URL">
+                <Row id="biz-logo" label="Brand logo URL" help="brandLogoUrl">
                   <input
                     id="biz-logo"
                     type="url"
@@ -1024,7 +1026,7 @@ export function BusinessSettingsHubView() {
                   set — could only ever hold vendors who happened to fill it in on
                   the day they registered.
                 */}
-                <Row id="biz-ntn" label="NTN (tax registration)">
+                <Row id="biz-ntn" label="NTN (tax registration)" help="ntnNumber">
                   <input
                     id="biz-ntn"
                     inputMode="numeric"
@@ -1062,7 +1064,7 @@ export function BusinessSettingsHubView() {
               {/* WW-PRICING-OVERHAUL — vendor chooses how they are booked. "Auto"
                   ("" -> null) keeps the legacy inferred behaviour (byte-for-byte
                   unchanged), so nothing changes until the vendor picks a mode. */}
-              <Row label="How you charge">
+              <Row label="How you charge" help="pricingMode">
                 <select
                   id="biz-pricingmode"
                   className={inputCls}
@@ -1160,7 +1162,7 @@ export function BusinessSettingsHubView() {
                 )}
               </Row>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <Row label="Starting price (Rs)">
+                <Row label="Starting price (Rs)" help="startingPrice">
                   <input
                     id="biz-minprice" type="number" min={0} step="1" inputMode="numeric"
                     className={cn(inputCls, "tabular-nums", pricingErrs.minimumPrice && ERROR_INPUT_CLS)}
@@ -1170,7 +1172,7 @@ export function BusinessSettingsHubView() {
                   />
                   <FieldError id="biz-minprice" message={pricingErrs.minimumPrice} />
                 </Row>
-                <Row label="Min guests">
+                <Row label="Min guests" help="minCapacity">
                   <input
                     id="biz-mincap" type="number" min={0} step="1" inputMode="numeric"
                     className={cn(inputCls, "tabular-nums", pricingErrs.minCapacity && ERROR_INPUT_CLS)}
@@ -1180,7 +1182,7 @@ export function BusinessSettingsHubView() {
                   />
                   <FieldError id="biz-mincap" message={pricingErrs.minCapacity} />
                 </Row>
-                <Row label="Max guests">
+                <Row label="Max guests" help="maxCapacity">
                   <input
                     id="biz-maxcap" type="number" min={1} step="1" inputMode="numeric"
                     className={cn(inputCls, "tabular-nums", pricingErrs.maxCapacity && ERROR_INPUT_CLS)}
@@ -1192,13 +1194,13 @@ export function BusinessSettingsHubView() {
                 </Row>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Row label="Advance type">
+                <Row label="Advance type" help="downPaymentType">
                   <select className={inputCls} value={form.downPaymentType ?? "Percentage"} onChange={(e) => set("downPaymentType", e.target.value)}>
                     <option value="Percentage">Percentage</option>
                     <option value="Fixed Amount">Fixed amount</option>
                   </select>
                 </Row>
-                <Row label={form.downPaymentType === "Fixed Amount" ? "Advance (Rs)" : "Advance (%)"}>
+                <Row label={form.downPaymentType === "Fixed Amount" ? "Advance (Rs)" : "Advance (%)"} help="downPayment">
                   <input
                     id="biz-advance" type="number" min={0}
                     max={form.downPaymentType === "Fixed Amount" ? undefined : 100}
@@ -1211,7 +1213,7 @@ export function BusinessSettingsHubView() {
                   <FieldError id="biz-advance" message={pricingErrs.downPayment} />
                 </Row>
               </div>
-              <Row id="biz-cancellation" label="Cancellation policy"><textarea id="biz-cancellation" className={cn(inputCls, "h-24 resize-y py-2")} value={form.cancelationPolicy ?? ""} onChange={(e) => set("cancelationPolicy", e.target.value)} placeholder="e.g. Advance non-refundable within 30 days of event." /></Row>
+              <Row id="biz-cancellation" label="Cancellation policy" help="cancellationPolicyText"><textarea id="biz-cancellation" className={cn(inputCls, "h-24 resize-y py-2")} value={form.cancelationPolicy ?? ""} onChange={(e) => set("cancelationPolicy", e.target.value)} placeholder="e.g. Advance non-refundable within 30 days of event." /></Row>
 
               {/* WW-BOOKING-MODE — the flow has been instant-book: a customer
                   picks a date, pays, and the vendor finds out afterwards. No
@@ -1223,7 +1225,7 @@ export function BusinessSettingsHubView() {
                   beside the advance and cancellation terms because these are
                   all "how you sell"; a dedicated Booking rules tab is the
                   eventual home once the other rules land. */}
-              <Row id="biz-booking-mode" label="When a customer books">
+              <Row id="biz-booking-mode" label="When a customer books" help="bookingMode">
                 <select
                   id="biz-booking-mode"
                   className={inputCls}
@@ -1431,10 +1433,12 @@ function Section({ icon, title, desc, children }: { icon: IconName; title: strin
   )
 }
 
-function Row({ id, label, children }: { id?: string; label: string; children: React.ReactNode }) {
+function Row({ id, label, help, children }: { id?: string; label: string; help?: FieldHelpKey; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className={labelCls}>{label}</label>
+      <HelpRow help={help}>
+        <label htmlFor={id} className={labelCls}>{label}</label>
+      </HelpRow>
       {children}
     </div>
   )

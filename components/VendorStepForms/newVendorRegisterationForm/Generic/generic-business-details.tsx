@@ -28,6 +28,7 @@
  * Layer 3.
  */
 
+import { FieldLabel } from "@/components/ui/field-help";
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -112,9 +113,9 @@ const GenericBusinessDetails = ({
       <SectionCard title="About your service">
         <div className="space-y-3">
           <div>
-            <Label className="text-xs uppercase tracking-[0.18em]">
+            <FieldLabel help="genericSubType" className="text-xs uppercase tracking-[0.18em]">
               Sub-type <span className="text-neutral-400">(optional)</span>
-            </Label>
+            </FieldLabel>
             <Input
               className="h-10 text-sm"
               placeholder='e.g. "Traditional dhol players" / "Imported fresh florist" / "Mughlai mithai specialist"'
@@ -140,9 +141,9 @@ const GenericBusinessDetails = ({
           </div>
 
           <div>
-            <Label className="text-xs uppercase tracking-[0.18em]">
+            <FieldLabel help="businessDescription" className="text-xs uppercase tracking-[0.18em]">
               Description <span className="text-red-500">*</span>
-            </Label>
+            </FieldLabel>
             <Textarea
               className="text-sm resize-none"
               rows={4}
@@ -158,9 +159,9 @@ const GenericBusinessDetails = ({
       </SectionCard>
 
       <SectionCard title="Team">
-        <Label className="text-xs uppercase tracking-[0.18em] mb-2 block">
+        <FieldLabel help="staffGender" className="text-xs uppercase tracking-[0.18em] mb-2 block">
           Staff (gender) <span className="text-red-500">*</span>
-        </Label>
+        </FieldLabel>
         <p className="text-[11px] text-neutral-500 mb-3">
           Pakistani families often filter for female-only or mahram-only crews. Pick all that apply.
         </p>
@@ -185,9 +186,9 @@ const GenericBusinessDetails = ({
       <SectionCard title="Pricing & policies">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <Label className="text-xs uppercase tracking-[0.18em]">
+            <FieldLabel help="downPaymentType" className="text-xs uppercase tracking-[0.18em]">
               Down-payment type <span className="text-red-500">*</span>
-            </Label>
+            </FieldLabel>
             <Select
               value={formData.downPaymentType || ""}
               onValueChange={(v) => handleChange("downPaymentType", v)}
@@ -208,9 +209,9 @@ const GenericBusinessDetails = ({
             )}
           </div>
           <div>
-            <Label className="text-xs uppercase tracking-[0.18em]">
+            <FieldLabel help="downPayment" className="text-xs uppercase tracking-[0.18em]">
               Down-payment amount <span className="text-red-500">*</span>
-            </Label>
+            </FieldLabel>
             <Input
               type="number"
               inputMode="numeric"
@@ -238,9 +239,9 @@ const GenericBusinessDetails = ({
         </div>
 
         <div className="mt-4">
-          <Label className="text-xs uppercase tracking-[0.18em]">
+          <FieldLabel help="cancellationPolicy" className="text-xs uppercase tracking-[0.18em]">
             Cancellation policy <span className="text-red-500">*</span>
-          </Label>
+          </FieldLabel>
           <p className="text-[11px] text-neutral-500 mb-2">
             You can switch to one of our structured presets later (Flexible / Standard / Strict) from your business settings.
           </p>

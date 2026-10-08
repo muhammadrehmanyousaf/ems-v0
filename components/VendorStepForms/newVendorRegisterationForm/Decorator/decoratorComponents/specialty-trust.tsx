@@ -10,6 +10,7 @@
  *   fabricCustomizationCapable, carriesInventoryAcrossCities
  */
 
+import { AutoFieldLabel, FieldLabel } from "@/components/ui/field-help";
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,7 +50,7 @@ const DecoratorSpecialtyTrust = () => {
     opts?: { min?: number; max?: number },
   ) => (
     <div className="space-y-2" key={key}>
-      <Label>{label}</Label>
+      <AutoFieldLabel field={key}>{label}</AutoFieldLabel>
       <Input
         type="number"
         inputMode="numeric"
@@ -77,7 +78,7 @@ const DecoratorSpecialtyTrust = () => {
       <SectionCard title="Decoration specialty" icon={Wand}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Stage only or full venue?</Label>
+            <FieldLabel help="stageOnlyOrFullVenue">Stage only or full venue?</FieldLabel>
             <Select
               value={(tsd.stageOnlyOrFullVenue as string) || ""}
               onValueChange={(v) => setTsd("stageOnlyOrFullVenue", v)}
@@ -109,7 +110,7 @@ const DecoratorSpecialtyTrust = () => {
             </Select>
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label>Price range — flowers vs themed decor (PKR)</Label>
+            <FieldLabel help="flowersVsThemeDecorPriceRange">Price range — flowers vs themed decor (PKR)</FieldLabel>
             <Input
               placeholder="e.g. 150000-500000"
               value={(tsd.flowersVsThemeDecorPriceRange as string) || ""}

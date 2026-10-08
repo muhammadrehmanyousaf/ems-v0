@@ -11,6 +11,7 @@
  *   waitersPerHundredGuests, chefOnSiteAtEvent, tastingPolicy, leftoverPolicy
  */
 
+import { AutoFieldLabel, FieldLabel } from "@/components/ui/field-help";
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,7 +53,7 @@ const CatererSpecialtyTrust = () => {
     opts?: { min?: number; max?: number },
   ) => (
     <div className="space-y-2" key={key}>
-      <Label>{label}</Label>
+      <AutoFieldLabel field={key}>{label}</AutoFieldLabel>
       <Input
         type="number"
         inputMode="numeric"
@@ -75,7 +76,7 @@ const CatererSpecialtyTrust = () => {
 
   const textInput = (key: string, label: string, placeholder: string, max = 200) => (
     <div className="space-y-2" key={key}>
-      <Label>{label}</Label>
+      <AutoFieldLabel field={key}>{label}</AutoFieldLabel>
       <Input
         placeholder={placeholder}
         value={(tsd[key] as string) || ""}
@@ -98,7 +99,7 @@ const CatererSpecialtyTrust = () => {
           {textInput("halalCertIssuer", "Halal cert issuer", "e.g. Halal Foundation Pakistan")}
           {textInput("halalCertNumber", "Halal cert number", "e.g. HFP-12345")}
           <div className="space-y-2">
-            <Label>Tasting policy</Label>
+            <FieldLabel help="tastingPolicy">Tasting policy</FieldLabel>
             <Select
               value={(tsd.tastingPolicy as string) || ""}
               onValueChange={(v) => setTsd("tastingPolicy", v)}
@@ -115,7 +116,7 @@ const CatererSpecialtyTrust = () => {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Leftover policy</Label>
+            <FieldLabel help="leftoverPolicy">Leftover policy</FieldLabel>
             <Select
               value={(tsd.leftoverPolicy as string) || ""}
               onValueChange={(v) => setTsd("leftoverPolicy", v)}

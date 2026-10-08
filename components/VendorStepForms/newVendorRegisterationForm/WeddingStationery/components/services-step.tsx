@@ -1,5 +1,6 @@
 'use client';
 
+import { FieldLabel } from "@/components/ui/field-help";
 import React from 'react';
 import { Label } from '@/components/ui/label';
 import {
@@ -105,9 +106,9 @@ const ServicesStep = ({ errors, setErrors }: ServicesStepProps) => {
             <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-neutral-200">
                 <h3 className="text-lg font-semibold text-neutral-800 mb-4">Production Turnaround</h3>
                 <div className="max-w-xs">
-                    <Label className="text-sm font-medium text-neutral-700 block mb-1">
+                    <FieldLabel help="productionTime" className="text-sm font-medium text-neutral-700 block mb-1">
                         Typical production time <span className="text-red-500">*</span>
-                    </Label>
+                    </FieldLabel>
                     <p className="text-xs text-neutral-500 mb-2">
                         How long does it take from order confirmation to delivery?
                     </p>

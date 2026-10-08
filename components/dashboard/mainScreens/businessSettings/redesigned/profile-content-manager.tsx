@@ -11,6 +11,8 @@
  * redesigned managers. Renders inside the settings hub's "Listing content" tab.
  */
 
+import { HelpRow } from "@/components/ui/field-help"
+import type { FieldHelpKey } from "@/lib/field-help"
 import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation } from "@tanstack/react-query"
@@ -280,8 +282,8 @@ export function ProfileContentManager({
   return (
     <div className="space-y-6">
       <Group icon="ShieldCheck" title="About & credibility" desc="Owner story, experience and trust signals couples look for.">
-        <Field id="lc-owner-name" label="Owner / lead name"><input id="lc-owner-name" className={inputCls} value={ownerName} onChange={(e) => setOwnerName(e.target.value)} /></Field>
-        <Field id="lc-owner-bio" label="About the owner"><textarea id="lc-owner-bio" className={cn(inputCls, "h-24 resize-y py-2")} value={ownerBio} onChange={(e) => setOwnerBio(e.target.value)} placeholder="A short bio shown in your listing's team area" /></Field>
+        <Field id="lc-owner-name" label="Owner / lead name" help="ownerName"><input id="lc-owner-name" className={inputCls} value={ownerName} onChange={(e) => setOwnerName(e.target.value)} /></Field>
+        <Field id="lc-owner-bio" label="About the owner" help="ownerBio"><textarea id="lc-owner-bio" className={cn(inputCls, "h-24 resize-y py-2")} value={ownerBio} onChange={(e) => setOwnerBio(e.target.value)} placeholder="A short bio shown in your listing's team area" /></Field>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {/*
             Verified live: saving weddingsCompleted = -10 round-tripped to a 400
@@ -289,14 +291,14 @@ export function ProfileContentManager({
             The earlier fix here made that message legible; these bounds stop the
             trip being made at all. Same floor as type-specific-manager.
           */}
-          <Field id="lc-years" label="Years in business"><input id="lc-years" type="number" min={0} max={200} step={1} inputMode="numeric" className={inputCls} value={years} onChange={(e) => setYears(e.target.value)} /></Field>
-          <Field id="lc-weddings" label="Weddings completed"><input id="lc-weddings" type="number" min={0} max={200000} step={1} inputMode="numeric" className={inputCls} value={weddings} onChange={(e) => setWeddings(e.target.value)} /></Field>
+          <Field id="lc-years" label="Years in business" help="yearsInBusiness"><input id="lc-years" type="number" min={0} max={200} step={1} inputMode="numeric" className={inputCls} value={years} onChange={(e) => setYears(e.target.value)} /></Field>
+          <Field id="lc-weddings" label="Weddings completed" help="weddingsCompleted"><input id="lc-weddings" type="number" min={0} max={200000} step={1} inputMode="numeric" className={inputCls} value={weddings} onChange={(e) => setWeddings(e.target.value)} /></Field>
         </div>
-        <Field group label="Languages spoken">
+        <Field group label="Languages spoken" help="languagesSpoken">
           <ChipRow id="lc-languages" options={LANGUAGES.map((l) => [l, l])} selected={languages} onToggle={(v) => toggle(languages, setLanguages, v)} />
         </Field>
         <SwitchRow label="Carries event / equipment insurance" checked={hasInsurance} onChange={setHasInsurance} />
-        <Field label="Backup arrangement"><textarea className={cn(inputCls, "h-20 resize-y py-2")} value={backup} onChange={(e) => setBackup(e.target.value)} placeholder="What happens if something goes wrong on the day" /></Field>
+        <Field label="Backup arrangement" help="backupArrangement"><textarea className={cn(inputCls, "h-20 resize-y py-2")} value={backup} onChange={(e) => setBackup(e.target.value)} placeholder="What happens if something goes wrong on the day" /></Field>
         <Repeater
           id="lc-awards"
           label="Awards & recognition"
@@ -404,7 +406,7 @@ export function ProfileContentManager({
           * does not fail loudly; it publishes a number that never rings, and
           * the vendor concludes the marketplace sends no enquiries.
           */}
-        <Field id="lc-whatsapp" label="WhatsApp number (bookings)" hint="This is the number couples message from your public listing.">
+        <Field id="lc-whatsapp" label="WhatsApp number (bookings)" help="whatsappNumber" hint="This is the number couples message from your public listing.">
           <input
             id="lc-whatsapp"
             type="tel"
@@ -421,7 +423,7 @@ export function ProfileContentManager({
       </Group>
 
       <Group icon="MapPin" title="Service area & hours" desc="Where you work, when you're open, and what you cater.">
-        <Field label="Cities you cover">
+        <Field label="Cities you cover" help="coveredCities">
           <div className="flex gap-2">
             <input className={inputCls} value={cityDraft} onChange={(e) => setCityDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCity() } }} placeholder="Add a city and press Enter" />
             <Button type="button" variant="outline" size="sm" onClick={addCity}>Add</Button>
@@ -461,7 +463,7 @@ export function ProfileContentManager({
         <Field label="Dietary options">
           <ChipRow options={DIETARY.map(([v, l]) => [v, l])} selected={dietary} onToggle={(v) => toggle(dietary, setDietary, v)} />
         </Field>
-        <Field label="Booking unit label"><input className={inputCls} value={guestLabel} onChange={(e) => setGuestLabel(e.target.value)} placeholder="e.g. per event, per 100 guests, per day" /></Field>
+        <Field label="Booking unit label" help="bookingUnitLabel"><input className={inputCls} value={guestLabel} onChange={(e) => setGuestLabel(e.target.value)} placeholder="e.g. per event, per 100 guests, per day" /></Field>
       </Group>
 
       <Group icon="Building2" title="Venue & capacity" desc="For venues and spaces — the realistic numbers couples compare on.">
@@ -470,7 +472,7 @@ export function ProfileContentManager({
             {VENUE_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </Field>
-        <Field label="Guest capacity">
+        <Field label="Guest capacity" help="guestCapacityKinds">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
             {(["comfortCapacity", "seatedCapacity", "standingCapacity", "indoorCapacity", "outdoorCapacity"] as const).map((k) => (
               <div key={k}>
@@ -484,8 +486,8 @@ export function ProfileContentManager({
           <ChipRow id="lc-amenities" options={VENUE_AMENITIES.map(([v, l]) => [v, l])} selected={amenities} onToggle={(v) => toggle(amenities, setAmenities, v)} />
         </Field>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Legal guest cap"><input type="number" min={0} step={1} inputMode="numeric" className={inputCls} value={legalCap} onChange={(e) => setLegalCap(e.target.value)} /></Field>
-          <Field id="lc-closing" label="Event closing time">
+          <Field label="Legal guest cap" help="legalGuestCap"><input type="number" min={0} step={1} inputMode="numeric" className={inputCls} value={legalCap} onChange={(e) => setLegalCap(e.target.value)} /></Field>
+          <Field id="lc-closing" label="Event closing time" help="eventClosingTime">
             <input
               id="lc-closing"
               className={cn(inputCls, closingErr && ERROR_INPUT_CLS)}
@@ -500,7 +502,7 @@ export function ProfileContentManager({
         <SwitchRow label="One-dish policy applies" checked={oneDish} onChange={setOneDish} />
         <SwitchRow label="Event needs a permit" checked={requiresPermit} onChange={setRequiresPermit} />
         {requiresPermit && (
-          <Field id="lc-permit" label="Permit checklist link">
+          <Field id="lc-permit" label="Permit checklist link" help="permitChecklistLink">
             <input
               id="lc-permit"
               type="url"
@@ -515,7 +517,7 @@ export function ProfileContentManager({
           </Field>
         )}
         <SwitchRow label="Couples may bring outside vendors" checked={outsideAllowed} onChange={setOutsideAllowed} />
-        {outsideAllowed && <Field label="Outside-vendor fee (Rs)"><input type="number" min={0} step="any" inputMode="decimal" className={inputCls} value={outsideFee} onChange={(e) => setOutsideFee(e.target.value)} placeholder="e.g. 50000" /></Field>}
+        {outsideAllowed && <Field label="Outside-vendor fee (Rs)" help="outsideVendorFee"><input type="number" min={0} step="any" inputMode="decimal" className={inputCls} value={outsideFee} onChange={(e) => setOutsideFee(e.target.value)} placeholder="e.g. 50000" /></Field>}
       </Group>
 
       <div className="flex flex-wrap items-center justify-end gap-3">
@@ -552,10 +554,12 @@ function Group({ icon, title, desc, children }: { icon: IconName; title: string;
  * label did nothing. Optional, because the group headings that carry no single
  * control still use this wrapper.
  */
-function Field({ id, label, hint, group, children }: {
+function Field({ id, label, hint, help, group, children }: {
   id?: string
   label: string
   hint?: string
+  /** Optional key into lib/field-help.ts: puts a "?" beside the label. */
+  help?: FieldHelpKey
   /** A set of controls rather than one — chips, switches. `htmlFor` has nothing
    *  single to point at, so it announces as a labelled group instead. */
   group?: boolean
@@ -564,7 +568,7 @@ function Field({ id, label, hint, group, children }: {
   if (group) {
     return (
       <div className="space-y-1.5" role="group" aria-label={label}>
-        <span className={cn(labelCls, "block")}>{label}</span>
+        <HelpRow help={help}><span className={cn(labelCls, "block")}>{label}</span></HelpRow>
         {children}
         {hint && <p className="text-[11px] leading-snug text-muted-foreground">{hint}</p>}
       </div>
@@ -572,7 +576,9 @@ function Field({ id, label, hint, group, children }: {
   }
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className={labelCls}>{label}</label>
+      <HelpRow help={help}>
+        <label htmlFor={id} className={labelCls}>{label}</label>
+      </HelpRow>
       {children}
       {hint && <p className="text-[11px] leading-snug text-muted-foreground">{hint}</p>}
     </div>

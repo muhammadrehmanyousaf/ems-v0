@@ -1,3 +1,4 @@
+import { FieldLabel } from "@/components/ui/field-help";
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -203,7 +204,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                     selectedIndexes={selectedTypeIndexes}
                 /> */}
                 {/* {errors.subBusinessType && <p className="text-xs text-red-500">{errors.subBusinessType}</p>} */}
-                <Label>Type of Venue</Label>
+                <FieldLabel help="venueType">Type of Venue</FieldLabel>
                 <RadioButton
                     data={types}
                     selectedOption={selectedTypes}
@@ -219,7 +220,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
             </div>
             <div>
                 <MultipleSelect
-                    label="Expertise"
+                    label="Expertise" help="expertise"
                     placeholder="Select Expertise"
                     data={Expertise}
                     handleSelectOption={(value: string) => {
@@ -240,7 +241,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
             <div className="space-y-8">
                 <section>
                     <MultipleSelect
-                        label="Amenities"
+                        label="Amenities" help="venueAmenities"
                         placeholder="Select Amenities"
                         data={amenitiesData}
                         handleSelectOption={(value: string) => {
@@ -257,7 +258,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                     {errors.amenities && <p className="text-xs text-red-500">{errors.amenities}</p>}
                 </section>
                 <section className="space-y-3">
-                    <Label>Maximum People Capacity</Label>
+                    <FieldLabel help="maxCapacity">Maximum People Capacity</FieldLabel>
                     <Input
                         type="number"
                         placeholder="Enter maximum people capacity"
@@ -276,7 +277,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                     {errors.maxCapacity && <p className="text-xs text-red-500">{errors.maxCapacity}</p>}
                 </section>
                 <section className="space-y-3">
-                    <Label>Minimum People Capacity</Label>
+                    <FieldLabel help="minCapacity">Minimum People Capacity</FieldLabel>
                     <Input
                         type="number"
                         placeholder="Enter minimum people capacity"
@@ -295,7 +296,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                     {errors.minCapacity && <p className="text-xs text-red-500">{errors.minCapacity}</p>}
                 </section>
                 <section>
-                    <Label>Catering</Label>
+                    <FieldLabel help="cateringOption">Catering</FieldLabel>
                     <MultipleRadio
                         label=""
                         data={catering}
@@ -335,7 +336,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                 </section>
                 {parking === 'yes' && (
                     <section className="space-y-3">
-                        <Label>Car Parking Capacity</Label>
+                        <FieldLabel help="carParkingCapacity">Car Parking Capacity</FieldLabel>
                         <Input
                             type="number"
                             placeholder="Enter car parking capacity"
@@ -357,7 +358,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
             </div>
             <section>
                 <MultipleRadio
-                    label="Staff"
+                    label="Staff" help="staffGender"
                     data={staff}
                     handleSelect={handleSelectStaff}
                     selectedIndexes={selectedStaffIndexes}
@@ -365,7 +366,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                 {errors.staff && <p className="text-xs text-red-500">{errors.staff}</p>}
             </section>
             <section className="space-y-3">
-                <Label>Description</Label>
+                <FieldLabel help="businessDescription">Description</FieldLabel>
                 <Textarea
                     placeholder="Enter Description"
                     name="description"
@@ -381,7 +382,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                 {errors.description && <p className="text-xs text-red-500">{errors.description}</p>}
             </section>
             <section className="space-y-3">
-                <Label>Aditional Information</Label>
+                <FieldLabel help="additionalInfo">Aditional Information</FieldLabel>
                 <Textarea
                     placeholder="Enter Aditional Information"
                     value={formData.additionalInfo || ''}
@@ -395,7 +396,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                 />
             </section>
             <section className="space-y-3">
-                <Label>Down Payment Type</Label>
+                <FieldLabel help="downPaymentType">Down Payment Type</FieldLabel>
                 <Select
                     value={downPaymentType}
                     onValueChange={(value) => {
@@ -419,7 +420,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
             </section>
 
             <section className="space-y-3">
-                <Label>Down Payment</Label>
+                <FieldLabel help="downPayment">Down Payment</FieldLabel>
                 <Input
                     type="number"
                     placeholder="Enter Down Payment"
@@ -444,7 +445,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                 />
             </section>
             <section>
-                <Label>Cancellation Policy</Label>
+                <FieldLabel help="cancellationPolicy">Cancellation Policy</FieldLabel>
                 <RadioButton
                     data={cancellationData}
                     selectedOption={cancellation}

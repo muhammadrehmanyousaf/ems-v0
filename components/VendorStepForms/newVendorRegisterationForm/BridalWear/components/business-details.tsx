@@ -1,5 +1,6 @@
 'use client';
 
+import { FieldLabel } from "@/components/ui/field-help";
 import React, { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -65,9 +66,9 @@ const BridalWearBusinessDetails = ({ errors, setErrors }: BusinessDetailsProps) 
                     <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-neutral-200">
                         <h3 className="text-lg font-semibold text-neutral-800 mb-4">Business Overview</h3>
                         <div>
-                            <Label htmlFor="bw-description" className="text-sm font-medium text-neutral-700">
+                            <FieldLabel help="businessDescription" htmlFor="bw-description" className="text-sm font-medium text-neutral-700">
                                 Business Description <span className="text-red-500">*</span>
-                            </Label>
+                            </FieldLabel>
                             <Textarea
                                 id="bw-description"
                                 placeholder="Describe your bridal wear store, specialties, and years of experience..."
@@ -88,9 +89,9 @@ const BridalWearBusinessDetails = ({ errors, setErrors }: BusinessDetailsProps) 
                     <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-neutral-200">
                         <h3 className="text-lg font-semibold text-neutral-800 mb-4">Service Area</h3>
                         <div>
-                            <Label className="text-sm font-medium text-neutral-700 block mb-2">
+                            <FieldLabel help="coveredCities" className="text-sm font-medium text-neutral-700 block mb-2">
                                 Cities Served
-                            </Label>
+                            </FieldLabel>
                             <p className="text-xs text-neutral-500 mb-3">
                                 Select cities where you offer delivery or home visits.
                             </p>
@@ -125,9 +126,9 @@ const BridalWearBusinessDetails = ({ errors, setErrors }: BusinessDetailsProps) 
                         <h3 className="text-lg font-semibold text-neutral-800 mb-4">Pricing & Payment</h3>
                         <div className="space-y-4">
                             <div>
-                                <Label className="text-sm font-medium text-neutral-700">
+                                <FieldLabel help="downPayment" className="text-sm font-medium text-neutral-700">
                                     Down Payment <span className="text-red-500">*</span>
-                                </Label>
+                                </FieldLabel>
                                 <div className="flex gap-3 mt-1">
                                     <Select
                                         value={downPaymentType}
@@ -173,9 +174,9 @@ const BridalWearBusinessDetails = ({ errors, setErrors }: BusinessDetailsProps) 
                     <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-neutral-200">
                         <h3 className="text-lg font-semibold text-neutral-800 mb-4">Business Policy</h3>
                         <div>
-                            <Label className="text-sm font-medium text-neutral-700 block mb-1">
+                            <FieldLabel help="cancellationPolicy" className="text-sm font-medium text-neutral-700 block mb-1">
                                 Cancellation Policy <span className="text-red-500">*</span>
-                            </Label>
+                            </FieldLabel>
                             <Select
                                 value={formData.cancelationPolicy}
                                 onValueChange={(value) => {

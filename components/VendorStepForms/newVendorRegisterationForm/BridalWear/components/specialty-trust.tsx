@@ -9,6 +9,7 @@
  *   alterationPolicy, depositRefundable
  */
 
+import { AutoFieldLabel, FieldLabel } from "@/components/ui/field-help";
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +39,7 @@ const BridalWearSpecialtyTrust = () => {
     opts?: { min?: number; max?: number },
   ) => (
     <div className="space-y-2" key={key}>
-      <Label>{label}</Label>
+      <AutoFieldLabel field={key}>{label}</AutoFieldLabel>
       <Input
         type="number"
         inputMode="numeric"
@@ -66,7 +67,7 @@ const BridalWearSpecialtyTrust = () => {
       <SectionCard title="Bridal wear specialty" icon={Shirt}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Rent or sale?</Label>
+            <FieldLabel help="rentOrSale">Rent or sale?</FieldLabel>
             <Select
               value={(tsd.rentOrSale as string) || ""}
               onValueChange={(v) => setTsd("rentOrSale", v)}
@@ -102,7 +103,7 @@ const BridalWearSpecialtyTrust = () => {
           {numberInput("stitchingTurnaroundWeeks", "Stitching turnaround (weeks)", "e.g. 6", { min: 1, max: 52 })}
           {numberInput("fittingsIncluded", "Fittings included", "e.g. 3", { min: 0, max: 20 })}
           <div className="space-y-2 sm:col-span-2">
-            <Label>Alteration policy</Label>
+            <FieldLabel help="alterationPolicy">Alteration policy</FieldLabel>
             <Input
               placeholder="e.g. Free within 2 weeks of fitting, paid after"
               value={(tsd.alterationPolicy as string) || ""}

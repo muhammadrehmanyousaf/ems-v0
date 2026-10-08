@@ -1,5 +1,6 @@
 "use client";
 
+import { FieldLabel } from "@/components/ui/field-help";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormData, formSchema } from "@/lib/formSchema/vendor-schema";
@@ -34,7 +35,7 @@ export function PersonalDetailsStep({ onSubmit }: FormInterface) {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* Full Name */}
       <div className="space-y-2">
-        <Label htmlFor="name">Full Name *</Label>
+        <FieldLabel help="fullName" htmlFor="name">Full Name *</FieldLabel>
         <Input
           id="name"
           {...register("name")}
@@ -45,7 +46,7 @@ export function PersonalDetailsStep({ onSubmit }: FormInterface) {
 
       {/* Email */}
       <div className="space-y-2">
-        <Label htmlFor="email">Email *</Label>
+        <FieldLabel help="email" htmlFor="email">Email *</FieldLabel>
         <Input
           id="email"
           type="email"
@@ -57,7 +58,7 @@ export function PersonalDetailsStep({ onSubmit }: FormInterface) {
 
       {/* Contact Number */}
       <div className="space-y-2">
-        <Label htmlFor="phoneNumber">Contact Number *</Label>
+        <FieldLabel help="phoneNumber" htmlFor="phoneNumber">Contact Number *</FieldLabel>
         <div className="flex">
           <div className="flex items-center justify-center px-3 border border-r-0 rounded-l-md bg-gray-50">
             <Flag className="w-4 h-4 text-gray-500" />
@@ -76,7 +77,7 @@ export function PersonalDetailsStep({ onSubmit }: FormInterface) {
 
       {/* Password */}
       <div className="space-y-2">
-        <Label htmlFor="password">Password *</Label>
+        <FieldLabel help="password" htmlFor="password">Password *</FieldLabel>
         <PasswordInput
           id="password"
           {...register("password")}
@@ -87,7 +88,7 @@ export function PersonalDetailsStep({ onSubmit }: FormInterface) {
 
       {/* Confirm Password */}
       <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Retype Password *</Label>
+        <FieldLabel help="confirmPassword" htmlFor="confirmPassword">Retype Password *</FieldLabel>
         <PasswordInput
           id="confirmPassword"
           {...register("confirmPassword")}

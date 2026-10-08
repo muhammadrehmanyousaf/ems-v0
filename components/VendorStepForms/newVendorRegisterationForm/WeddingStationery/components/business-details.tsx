@@ -1,5 +1,6 @@
 'use client';
 
+import { FieldLabel } from "@/components/ui/field-help";
 import React, { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -60,9 +61,9 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetailsProps) => {
                     <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-neutral-200">
                         <h3 className="text-lg font-semibold text-neutral-800 mb-4">Business Overview</h3>
                         <div>
-                            <Label htmlFor="ws-description" className="text-sm font-medium text-neutral-700">
+                            <FieldLabel help="businessDescription" htmlFor="ws-description" className="text-sm font-medium text-neutral-700">
                                 Business Description <span className="text-red-500">*</span>
-                            </Label>
+                            </FieldLabel>
                             <Textarea
                                 id="ws-description"
                                 placeholder="Describe your stationery business, specialties, and years of experience..."
@@ -83,9 +84,9 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetailsProps) => {
                     <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-neutral-200">
                         <h3 className="text-lg font-semibold text-neutral-800 mb-4">Delivery Coverage</h3>
                         <div>
-                            <Label className="text-sm font-medium text-neutral-700 block mb-2">
+                            <FieldLabel help="coveredCities" className="text-sm font-medium text-neutral-700 block mb-2">
                                 Cities You Deliver To
-                            </Label>
+                            </FieldLabel>
                             <p className="text-xs text-neutral-500 mb-3">
                                 Select cities where you offer delivery or courier services.
                             </p>
@@ -120,9 +121,9 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetailsProps) => {
                         <h3 className="text-lg font-semibold text-neutral-800 mb-4">Pricing & Payment</h3>
                         <div className="space-y-4">
                             <div>
-                                <Label className="text-sm font-medium text-neutral-700">
+                                <FieldLabel help="downPayment" className="text-sm font-medium text-neutral-700">
                                     Advance Payment <span className="text-red-500">*</span>
-                                </Label>
+                                </FieldLabel>
                                 <p className="text-xs text-neutral-500 mb-2">
                                     How much advance do you require to start the order?
                                 </p>
@@ -167,17 +168,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetailsProps) => {
 
                             {/* Starting Price */}
                             <div>
-                                <Label htmlFor="ws-min-price" className="text-sm font-medium text-neutral-700 flex items-center gap-1">
-                                    Starting Price (PKR)
-                                    {/* QA #1 — info icon/message beside Starting Price. */}
-                                    <span
-                                        className="inline-flex cursor-help"
-                                        aria-label="About starting price"
-                                        title={"Shown to couples as “From Rs X” on your listing. Set your lowest real order/package price — you can add detailed packages later."}
-                                    >
-                                        <Info className="w-3.5 h-3.5 text-neutral-400" aria-hidden />
-                                    </span>
-                                </Label>
+                                <FieldLabel help="startingPrice" htmlFor="ws-min-price" className="text-sm font-medium text-neutral-700">Starting Price (PKR)</FieldLabel>
                                 <p className="text-xs text-neutral-500 mb-1">Lowest price for any order or package. Shown on your listing as &ldquo;From Rs X&rdquo;.</p>
                                 <Input
                                     id="ws-min-price"
@@ -202,9 +193,9 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetailsProps) => {
                     <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-neutral-200">
                         <h3 className="text-lg font-semibold text-neutral-800 mb-4">Business Policy</h3>
                         <div>
-                            <Label className="text-sm font-medium text-neutral-700 block mb-1">
+                            <FieldLabel help="cancellationPolicy" className="text-sm font-medium text-neutral-700 block mb-1">
                                 Cancellation Policy <span className="text-red-500">*</span>
-                            </Label>
+                            </FieldLabel>
                             <p className="text-xs text-neutral-500 mb-2">
                                 Once printing starts, most orders cannot be cancelled. Set your policy clearly.
                             </p>

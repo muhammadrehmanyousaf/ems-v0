@@ -18,6 +18,7 @@
  * succeeds; the vendor just has a lower completenessScore.
  */
 
+import { FieldLabel } from "@/components/ui/field-help";
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,7 +68,7 @@ const PhotographerSpecialtyTrust = () => {
       <SectionCard title="Photography specialty" icon={Camera}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Primary style</Label>
+            <FieldLabel help="photographyStyle">Primary style</FieldLabel>
             <Select
               value={(tsd.photographyStyle as string) || ""}
               onValueChange={(v) => setTsd("photographyStyle", v)}
@@ -85,7 +86,7 @@ const PhotographerSpecialtyTrust = () => {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Delivery turnaround (weeks)</Label>
+            <FieldLabel help="deliveryTurnaroundWeeks">Delivery turnaround (weeks)</FieldLabel>
             <Input
               type="number"
               inputMode="numeric"
@@ -102,7 +103,7 @@ const PhotographerSpecialtyTrust = () => {
             />
           </div>
           <div className="space-y-2">
-            <Label>Edit revisions included</Label>
+            <FieldLabel help="editRevisionsIncluded">Edit revisions included</FieldLabel>
             <Input
               type="number"
               inputMode="numeric"
@@ -119,7 +120,7 @@ const PhotographerSpecialtyTrust = () => {
             />
           </div>
           <div className="space-y-2">
-            <Label>Weddings completed as lead</Label>
+            <FieldLabel help="weddingsCompletedAsLead">Weddings completed as lead</FieldLabel>
             <Input
               type="number"
               inputMode="numeric"
@@ -135,7 +136,7 @@ const PhotographerSpecialtyTrust = () => {
             />
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label>RAW photo handover policy</Label>
+            <FieldLabel help="rawPhotoHandoverPolicy">RAW photo handover policy</FieldLabel>
             <Select
               value={(tsd.rawPhotoHandoverPolicy as string) || ""}
               onValueChange={(v) => setTsd("rawPhotoHandoverPolicy", v)}

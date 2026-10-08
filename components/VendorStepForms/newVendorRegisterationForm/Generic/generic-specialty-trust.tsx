@@ -21,6 +21,7 @@
  * category UX.
  */
 
+import { FieldLabel } from "@/components/ui/field-help";
 import * as React from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -60,10 +61,10 @@ const GenericSpecialtyTrust = () => {
           release; for now, fill in what matters.
         </p>
         <div className="space-y-2">
-          <Label className="text-xs">
+          <FieldLabel help="serviceHighlights" className="text-xs">
             Service highlights{" "}
             <span className="text-neutral-400">(optional)</span>
-          </Label>
+          </FieldLabel>
           <Textarea
             className="text-sm resize-none"
             rows={5}

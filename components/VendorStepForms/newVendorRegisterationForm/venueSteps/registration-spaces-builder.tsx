@@ -9,6 +9,7 @@
  * Self-gates on isVenueHierarchyOn() → renders NOTHING (and adds nothing to the
  * payload) until enabled, so signup is byte-identical by default.
  */
+import { FieldHelp, HelpRow } from "@/components/ui/field-help";
 import * as React from "react";
 
 export const REG_SPACES_KEY = "ww_reg_spaces_tree";
@@ -87,7 +88,7 @@ export function RegistrationSpacesBuilder(): React.ReactElement | null {
 
   return (
     <div className="mt-6 rounded-xl border border-dashed border-roze-default/40 p-4">
-      <p className="text-sm font-semibold text-roze-default">Your spaces (optional)</p>
+      <HelpRow help="venueSpaces"><p className="text-sm font-semibold text-roze-default">Your spaces (optional)</p></HelpRow>
       <p className="mb-3 text-xs text-gray-500">Map your halls, floors and partitions so guests can book a specific space. Skip if you rent your venue as one unit.</p>
 
       {ordered.length > 0 && (
@@ -110,7 +111,7 @@ export function RegistrationSpacesBuilder(): React.ReactElement | null {
         {parentTmpId != null && <button type="button" onClick={() => setParentTmpId(null)} className="text-xs text-gray-500 underline">↑ top level</button>}
         <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="name (e.g. Ground Floor)" className="w-40 rounded border px-2 py-1 text-sm" />
         <input type="number" value={cap} onChange={(e) => setCap(e.target.value)} placeholder="guests" className="w-20 rounded border px-2 py-1 text-sm" />
-        <label className="flex items-center gap-1 text-xs text-gray-500"><input type="checkbox" checked={wholeDay} onChange={(e) => setWholeDay(e.target.checked)} /> whole-day only</label>
+        <span className="flex items-center gap-1.5"><label className="flex items-center gap-1 text-xs text-gray-500"><input type="checkbox" checked={wholeDay} onChange={(e) => setWholeDay(e.target.checked)} /> whole-day only</label><FieldHelp field="spaceWholeDayOnly" align="center" /></span>
         <button type="button" onClick={add} disabled={!name.trim()} className="rounded bg-roze-default px-3 py-1 text-sm text-white disabled:opacity-50">Add</button>
       </div>
     </div>
