@@ -11,6 +11,7 @@ import { useSearchParams } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { LeadAPI, type Lead, type LeadStatus, type LeadSource, type LeadEventType, type CreateLeadInput, type UpdateLeadInput } from "@/lib/api/leads"
+import { LEAD_STAGE } from "@/lib/lead-stage"
 import { venueSpacesApi, type SubVenueNode } from "@/lib/api/venueSpaces"
 import { openBookingForm, bookingIdFromSaved } from "@/components/dashboard/mainScreens/artifact/booking-form"
 import { StaffAPI } from "@/lib/api/staff"
@@ -34,15 +35,9 @@ function relTime(s?: string | null) {
   const mo = Math.floor(days / 30); return `${mo} mahine pehle`
 }
 
-const STAGE: Record<LeadStatus, { label: string; tone: string; tab: string }> = {
-  new: { label: "Naya", tone: "info", tab: "new" },
-  contacted: { label: "Raabta hua", tone: "warn", tab: "contacted" },
-  qualified: { label: "Visit tay", tone: "info", tab: "qualified" },
-  quoted: { label: "Quote bheja", tone: "warn", tab: "quoted" },
-  booked: { label: "Jeeta", tone: "ok", tab: "booked" },
-  lost: { label: "Khoya", tone: "bad", tab: "lost" },
-  archived: { label: "Archive", tone: "mut", tab: "archived" },
-}
+// The stage vocabulary is shared with the Overview (lib/lead-stage.ts), so a
+// lead reads "Naya" on both screens, not "Naya" here and "New" there.
+const STAGE: Record<LeadStatus, { label: string; tone: string; tab: string }> = LEAD_STAGE
 const SOURCE: Record<LeadSource, { label: string; color: string }> = {
   whatsapp: { label: "WhatsApp", color: "var(--ok)" },
   instagram: { label: "Instagram", color: "#C4708A" },

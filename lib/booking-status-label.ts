@@ -49,6 +49,21 @@ export function bookingStatusLabel(row: BookingStatusRow | null | undefined): st
   return row?.vendorApprovedAt ? "Awaiting payment" : "Pending approval";
 }
 
+export type StatusTone = "ok" | "mut" | "bad" | "info" | "warn";
+
+/**
+ * The colour a booking status pill wears. One function, so the Bookings list and
+ * the Overview cards cannot give the same status two different looks.
+ */
+export function bookingStatusTone(status?: string | null): StatusTone {
+  const v = (status || "").toLowerCase();
+  if (v.includes("confirm")) return "ok";
+  if (v.includes("complete")) return "mut";
+  if (v.includes("cancel")) return "bad";
+  if (v.includes("await") || v.includes("pending") || v.includes("request")) return "info";
+  return "warn";
+}
+
 /** True when this booking is still waiting on the vendor's accept/decline. */
 export function needsVendorApproval(row: BookingStatusRow | null | undefined): boolean {
   return !!row?.status && AWAITING_VENDOR.includes(row.status) && !row.vendorApprovedAt;

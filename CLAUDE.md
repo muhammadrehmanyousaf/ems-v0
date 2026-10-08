@@ -41,11 +41,12 @@ The baseline keys errors by `file|TScode`, never by line number. Adding an error
 ### Parity guards — cheap, fast, and they catch real regressions
 
 ```bash
-npm run guards               # all five
+npm run guards               # all six
 npm run guard:deposit        # deposit terms mirror the server
 npm run guard:space-fit      # space-fit rules mirror src/utils/spaceRequirements.js
 npm run guard:fx             # the indicative-price wiring
 npm run guard:amenities      # what the vendor ticked is what the couple reads
+npm run guard:overview       # the vendor Overview's chart maths + row wording (rules live in the backend's vendorOverviewService)
 # (plan-events-shape has no individual alias — run it via `npm run guards`)
 ```
 

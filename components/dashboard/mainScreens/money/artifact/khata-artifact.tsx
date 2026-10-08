@@ -15,6 +15,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { AnalyticsAPI, type ReceivablesData } from "@/lib/api/analytics"
 import { ReceiptsAPI, type PaymentReceipt } from "@/lib/api/paymentReceipts"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 import { useArtifactShell, pkNum, escHtml, initialsOf, initTablePager, setPagerFilter, errorBannerHtml, restoreTab, savePref } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { openRecordPaymentDrawer } from "@/components/dashboard/mainScreens/artifact/record-payment"
 
@@ -73,7 +74,30 @@ function classify(r: PaymentReceipt): "aya" | "wapsi" | "settled" {
 }
 const rdate = (r: PaymentReceipt) => r.receivedDate || r.createdAt
 
-function buildContent(receipts: PaymentReceipt[], rec: ReceivablesData | null | undefined, kulAya: number): string {
+/**
+ * "Kul aya (is saal)" — money that came IN, from 1 January to today, straight
+ * off the ledger rows below it. Refunds (Wapsi) are not subtracted: they have
+ * their own tile, and the Overview's "Khata — aya paisa" tile and Revenue chart
+ * are exactly this figure (backend: services/vendorOverviewService.js reads the
+ * same receipts with the same refund test as `classify` above).
+ *
+ * It used to be /analytics/kpis' totalRevenue — the downPayment of bookings
+ * whose EVENT falls this year — which counts an advance for next December but
+ * not one taken in December for next January, so the tile and the ledger under
+ * it were two different answers to "how much came in this year".
+ */
+function receivedThisYear(receipts: PaymentReceipt[]): number {
+  const today = todayInKarachi()
+  const year = today.slice(0, 4)
+  return receipts.reduce((s, r) => {
+    const d = String(rdate(r)).slice(0, 10)
+    if (d.slice(0, 4) !== year || d > today || classify(r) === "wapsi") return s
+    return s + Math.abs(num(r.amount))
+  }, 0)
+}
+
+function buildContent(receipts: PaymentReceipt[], rec: ReceivablesData | null | undefined): string {
+  const kulAya = receivedThisYear(receipts)
   // Ledger rows from real receipts. Refunds are logged as negative amounts (or
   // notes marked "refund") → Wapsi; "settle" notes → Settled; everything else
   // is money in → Aya. Then top A/R outstanding as Baqaya-due rows.
@@ -134,7 +158,7 @@ function buildContent(receipts: PaymentReceipt[], rec: ReceivablesData | null | 
     ${rows.length ? `<div class="tbl-foot"><span id="rowcount">${rows.length} entries</span></div>` : `<div class="empty">Abhi koi entry nahi.</div>`}</div>`
 
   const tiles = `<div class="sumrow">
-    <div class="sumtile in"><div class="l"><i></i> Kul aya (is saal)</div><div class="v tnum"><span class="rs">Rs</span> ${pkNum(kulAya)}</div><div class="d">received</div></div>
+    <div class="sumtile in"><div class="l"><i></i> Kul aya (is saal)</div><div class="v tnum"><span class="rs">Rs</span> ${pkNum(kulAya)}</div><div class="d">1 Jan se aaj tak · wapsi alag</div></div>
     <div class="sumtile due"><div class="l"><i></i> Baqaya</div><div class="v tnum"><span class="rs">Rs</span> ${pkNum(num(rec?.totals?.grandOutstanding))}</div><div class="d"><b>${num(rec?.totals?.customerCount)}</b> customers par</div></div>
     <div class="sumtile out"><div class="l"><i></i> Wapsi (di gayi)</div><div class="v tnum"><span class="rs">Rs</span> ${pkNum(wapsiTotal)}</div><div class="d">${wapsiRx.length} refund${wapsiRx.length === 1 ? "" : "s"}</div></div>
     <div class="sumtile mon"><div class="l"><i></i> Is mahine</div><div class="v tnum"><span class="rs">Rs</span> ${pkNum(monthTotal)}</div><div class="d">${monthReceipts.length} payments</div></div>
@@ -153,7 +177,6 @@ export function KhataArtifact() {
   // mixed in, contradicting the per-venue Baqaya / Kul-aya tiles.
   const receiptsQ = useQuery({ queryKey: ["khata-receipts", activeBusinessId], queryFn: () => ReceiptsAPI.list(activeBusinessId ? { businessId: activeBusinessId } : {}) })
   const recQ = useQuery({ queryKey: ["khata-receivables", activeBusinessId], queryFn: () => AnalyticsAPI.getReceivables(activeBusinessId) })
-  const kpiQ = useQuery({ queryKey: ["khata-kpis", activeBusinessId], queryFn: () => AnalyticsAPI.getDashboardKpis("this_year", undefined, undefined, activeBusinessId) })
   const qc = useQueryClient()
 
   const bound = React.useRef(false)
@@ -162,17 +185,16 @@ export function KhataArtifact() {
     if (!s || !ready) return
     const head = `<div class="head"><div><h1>Khata</h1><div class="sub">Har booking ka paisa — kya aya, kya baqaya, kya wapsi.</div></div><div class="head-actions"><button class="btn btn-ghost" data-act="export-table"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Export</button><button class="btn btn-primary" data-nav-btn="/dashboard/receipts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> Payment record</button></div></div>`
     const wwc = s.getElementById("wwc"); if (!wwc) return
-    const anyError = receiptsQ.isError || recQ.isError || kpiQ.isError
+    const anyError = receiptsQ.isError || recQ.isError
     // Show a load state until the queries resolve — otherwise the tiles render
     // zero values + an empty ledger during the fetch, reading as "no money".
-    if (!anyError && (receiptsQ.isLoading || recQ.isLoading || kpiQ.isLoading)) {
+    if (!anyError && (receiptsQ.isLoading || recQ.isLoading)) {
       wwc.innerHTML = head + `<div class="loadwrap">Khata load ho raha hai…</div>`
       return
     }
     const receipts = receiptsQ.data?.receipts ?? []
-    const kulAya = num(kpiQ.data?.totalRevenue?.value)
     const banner = anyError ? errorBannerHtml() : ""
-    wwc.innerHTML = head + banner + buildContent(receipts, recQ.data, kulAya)
+    wwc.innerHTML = head + banner + buildContent(receipts, recQ.data)
     // Shared paginator owns row visibility — tabs + search + paging stay in sync.
     initTablePager(s, { pageSize: 25 })
     restoreTab(s, "tab:khata", (f) => setPagerFilter(s, (tr) => f === "all" || tr.dataset.status === f))
@@ -180,7 +202,7 @@ export function KhataArtifact() {
       bound.current = true
       s.addEventListener("click", (e) => {
         const t = e.target as HTMLElement
-        if (t.closest("[data-retry]")) { ["khata-receipts", "khata-receivables", "khata-kpis"].forEach((k) => qc.invalidateQueries({ queryKey: [k] })); return }
+        if (t.closest("[data-retry]")) { ["khata-receipts", "khata-receivables"].forEach((k) => qc.invalidateQueries({ queryKey: [k] })); return }
         // Inline record-payment on a Baqaya-due row — no round-trip to Receipts.
         const rec = t.closest("[data-rec]") as HTMLElement | null
         if (rec?.dataset.rec) {
@@ -202,7 +224,7 @@ export function KhataArtifact() {
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, receiptsQ.data, recQ.data, kpiQ.data, receiptsQ.isError, recQ.isError, kpiQ.isError, receiptsQ.isLoading, recQ.isLoading, kpiQ.isLoading])
+  }, [ready, receiptsQ.data, recQ.data, receiptsQ.isError, recQ.isError, receiptsQ.isLoading, recQ.isLoading])
 
   return <div ref={hostRef} />
 }
