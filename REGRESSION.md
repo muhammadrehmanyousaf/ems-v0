@@ -19,7 +19,7 @@ has its own section below.
 | HTTP | backend | **154 passed / 10 skipped / 0 failed** (14 suites, needs PGlite) |
 | Migrations | backend | **322 applied / 0 failed** |
 | Typecheck ratchet | frontend | **121 known errors, 0 new** |
-| Parity guards | frontend | **5/5 suites pass** |
+| Parity guards | frontend | **6/6 suites pass** |
 | Production build | frontend | **exit 0**, `Compiled successfully` |
 | Cypress | frontend | 73 specs — see §4, these hit PRODUCTION |
 | Playwright | frontend | 4 specs — **headed only**, never headless |
@@ -97,6 +97,7 @@ still agree. Run the matching guard after touching:
 | `guard:fx` | indicative-price wiring — **inverted**: now asserts venue pages do NOT show a converted price |
 | `guard:amenities` | amenity keys/labels on either side |
 | `plan-events-shape` (via `npm run guards`) | the Shaadi Plan checkout envelope |
+| `guard:overview` | the vendor Overview — chart arithmetic (`lib/utils/overview-chart.ts`), row wording (`overview-model.ts`), and that the screen reads the one `overview` request. The server-side rules are `tests/unit/vendorOverviewService.test.js` + `tests/http/vendorOverview.http.test.js` in the backend |
 
 ### E2E runs against live production — read `cypress/README.md` first
 

@@ -12,7 +12,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useFetchData } from "@/hooks/use-fetch-data"
 import { bookedOn, receivedOn, outstandingOn, isCancelledBooking } from "@/lib/utils/booking-money"
 import { spaceNameOf } from "@/lib/utils/booking-space"
-import { bookingStatusLabel } from "@/lib/booking-status-label"
+import { bookingStatusLabel, bookingStatusTone as tone } from "@/lib/booking-status-label"
 import type { BookingData } from "@/lib/dashboard-types"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useBusiness } from "@/context/BusinessContext"
@@ -27,14 +27,6 @@ function fmtDate(s?: string): { main: string; sub: string } {
   const d = new Date(s)
   if (isNaN(d.getTime())) return { main: String(s), sub: "" }
   return { main: d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }), sub: d.toLocaleTimeString("en-PK", { hour: "numeric", minute: "2-digit" }) }
-}
-function tone(status?: string): string {
-  const v = (status || "").toLowerCase()
-  if (v.includes("confirm")) return "ok"
-  if (v.includes("complete")) return "mut"
-  if (v.includes("cancel")) return "bad"
-  if (v.includes("await") || v.includes("pending") || v.includes("request")) return "info"
-  return "warn"
 }
 function bucket(status?: string): "confirmed" | "pending" | "done" {
   const v = (status || "").toLowerCase()

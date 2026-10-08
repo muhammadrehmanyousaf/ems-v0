@@ -7,129 +7,99 @@
  *
  * The sample's CSS + shell live in a Shadow DOM so its generic class names
  * cannot collide with the app's global styles. The content is rebuilt from live
- * data (KPIs, revenue trend, occupancy, upcoming events, leads, profile
- * completeness) whenever a query resolves. Nav uses client routing; theme
- * follows the active dashboard theme; the sidebar shows the real business/user.
+ * data whenever a query resolves. Nav uses client routing; theme follows the
+ * active dashboard theme; the sidebar shows the real business/user.
+ *
+ * ── One source for every figure ───────────────────────────────────────────
+ *
+ * Everything the KPI tiles, the two event cards, the unanswered-enquiries strip
+ * and the Revenue chart show comes from ONE response — `overview` in
+ * /analytics/dashboard?sections=overview,… — built by one set of rules on the
+ * server (backend: services/vendorOverviewService.js). This file draws what it
+ * is given and decides nothing about which record belongs where:
+ *
+ *   Aane wale events   open bookings dated today or later, soonest first
+ *   Tawajjo chahiye    open bookings whose date has passed, completed bookings
+ *                      that still owe money, and enquiries nobody has answered
+ *   Revenue            Khata receipts by the month they were received, the 12
+ *                      months ending this month, nothing from a month not begun
+ *
+ * A booking is in exactly one of those, so the cards cannot contradict each
+ * other, and the tile counts are counts of the same lists. The Baqaya tile is
+ * the Khata receivables total itself. Rows are worded by lib/utils/overview-model
+ * (the same status text/colour functions the Bookings list uses, the Leads
+ * screen's stage table), and the chart's arithmetic is lib/utils/overview-chart —
+ * both are checked by scripts/overview-check.mts.
  */
 
 import * as React from "react"
-import { useQuery } from "@tanstack/react-query"
-import { getActionSummary } from "@/lib/api/bookingOrder"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useUser } from "@/context/UserContext"
 import { useBusiness } from "@/context/BusinessContext"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
-import { useArtifactShell } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
-import { AnalyticsAPI } from "@/lib/api/analytics"
-import { BusinessesAPI, ReviewsAPI } from "@/lib/api/dashboard"
-import { LeadAPI, type Lead } from "@/lib/api/leads"
+import { useArtifactShell, pkNum, escHtml, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { AnalyticsAPI, type DashboardOverview, type OverviewMonth } from "@/lib/api/analytics"
+import { ReviewsAPI } from "@/lib/api/dashboard"
 import { CompletenessAPI, type BusinessCompleteness } from "@/lib/api/completeness"
 import { listRefundObligations } from "@/lib/api/bookingOrder"
-import { BusinessHealthAPI } from "@/lib/api/businessHealth"
+import { lastMonths, summariseRange, periodLabel, layoutChart, monthShort, monthLong, type MonthPoint } from "@/lib/utils/overview-chart"
+import { bookingRowVm, leadRowVm, enquiryBanner, attentionIsClear, kpiCards, moreCount, initialsOf, type RowVm, type LeadRowVm, type KpiVm } from "@/lib/utils/overview-model"
 
 /* ── helpers ─────────────────────────────────────────────────── */
 const n = (v: unknown) => (v == null ? 0 : Number(v) || 0)
-// Pakistani digit grouping: 18,45,000 (2,2,3).
-function pkNum(v: number): string {
-  const s = Math.round(Math.abs(v)).toString()
-  if (s.length <= 3) return (v < 0 ? "-" : "") + s
-  const last3 = s.slice(-3)
-  const rest = s.slice(0, -3).replace(/\B(?=(\d{2})+(?!\d))/g, ",")
-  return (v < 0 ? "-" : "") + rest + "," + last3
-}
-const esc = (s: unknown) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string))
-const initials = (s?: string | null) =>
-  (s || "?").trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase() || "?"
-const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
-function shortDate(s?: string | null): string {
-  if (!s) return "—"
-  const d = new Date(s)
-  if (isNaN(d.getTime())) return String(s)
-  return d.toLocaleDateString("en-PK", { day: "numeric", month: "short" })
-}
-function relDays(s?: string | null): string {
-  if (!s) return ""
-  const d = new Date(s).getTime()
-  if (isNaN(d)) return ""
-  const days = Math.floor((Date.now() - d) / 86400000)
-  if (days <= 0) return "aaj"
-  if (days === 1) return "1 din"
-  return `${days} din`
-}
-const bookingTone = (s?: string) => {
-  const v = (s || "").toLowerCase()
-  if (v.includes("confirm")) return "ok"
-  if (v.includes("complete")) return "info"
-  if (v.includes("cancel")) return "bad"
-  return "warn"
-}
-/**
- * Payment progress from the AMOUNT columns, never the paymentStatus flag. The
- * flag is unreliable (a Pending booking can hold a real advance — see
- * booking-money.ts), so the old flag-based bar fabricated a hard-coded 55% for
- * "Partial" and showed 0% "Advance ka intezar" on bookings that were part-paid.
- * When the endpoint hasn't sent `downPayment` yet, we show NO bar rather than
- * guess — honesty over a fabricated number.
- */
-const payMeta = (b: { totalAmount?: number | string | null; downPayment?: number | string | null; status?: string }): { show: boolean; pct: number; zero: boolean; cap: string } => {
-  const total = n(b.totalAmount)
-  if (b.downPayment == null || total <= 0) return { show: false, pct: 0, zero: true, cap: "" }
-  const cancelled = /cancel|refund/.test((b.status || "").toLowerCase())
-  const paid = Math.max(0, n(b.downPayment))
-  if (cancelled) return { show: true, pct: 0, zero: true, cap: paid > 0 ? "Cancel · refund dena hai" : "Cancel" }
-  const pct = Math.min(100, Math.round((paid / total) * 100))
-  const cap = paid >= total - 1 ? "Poora mila" : paid > 0 ? `Rs ${pkNum(paid)} aaya` : "Advance baaqi"
-  return { show: true, pct, zero: paid <= 0, cap }
-}
+
+/** How many rows each card draws. The server sends up to five. */
+const SHOW_EVENTS = 4
+const SHOW_CLOSING = 4
+const SHOW_UNPAID = 3
+const SHOW_LEADS = 3
 
 /* ── data model the content builder consumes ─────────────────── */
-interface EventRow { id: number; ini: string; title: string; tone: string; toneLabel: string; date: string; amount: number; payShow: boolean; payPct: number; payZero: boolean; payCap: string }
-interface LeadRow { id: number; ini: string; name: string; ageLabel: string; ageTone: string; meta: string }
 interface ArtData {
+  /** The Overview request itself failed, or came back without the overview section. */
+  failed: boolean
   loading: boolean
-  moneyErr: boolean
-  kpis: { bookings: number; bookingsDelta: number; revenue: number; revenueDelta: number; due: number; upcoming: number }
-  series: { m: string; v: number }[] // revenue in lakh
-  bookingSeries: number[]
-  foot: { total: number; avg: number; best: string }
-  occ: { pct: number; bookedDays: number; emptyDays: number }
-  events: EventRow[]
-  leads: LeadRow[]
+  o: DashboardOverview | null
+  baqaya: { total: number; customers: number } | null
+  occ: { pct: number; bookedDays: number; emptyDays: number } | null
   profile: { score: number; title: string; body: string; items: { label: string; pts: number }[]; remaining: number } | null
   rating: { avg: number; count: number; newThisMonth: number; quote: string; by: string; avatars: string[] } | null
   wapsi: { total: number; rows: { id: number; booking: number; amount: number; disputed: boolean; days: number }[]; oldestDays: number; oldestBooking: number } | null
-  /** WW-WORKLIST — events that happened and were never closed, and money owed after delivery. */
-  work: {
-    pastOpen: { id: number; customerName: string | null; bookingDate: string; status: string; balance: number }[]
-    unpaid: { id: number; customerName: string | null; bookingDate: string; balance: number }[]
-    unpaidTotal: number
-    /** WW-HEALTH — enquiries nobody has replied to, and how long the oldest has waited. */
-    unanswered: number
-    oldestUnansweredHours: number
-  } | null
 }
 
 /* ── content HTML built from live data ───────────────────────── */
-function chip(delta: number): string {
-  if (!isFinite(delta) || delta === 0) return `<span class="chip">—</span>`
+function chip(delta: number | null, tag: string): string {
+  if (delta == null || !isFinite(delta) || delta === 0) return `<span class="chip">${escHtml(tag || "—")}</span>`
   const up = delta > 0
   return `<span class="chip ${up ? "up" : "down"}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="${up ? "M7 17 17 7M17 7H8M17 7v9" : "M7 7 17 17M17 17H8M17 17V8"}"/></svg> ${Math.abs(Math.round(delta))}%</span>`
 }
-function kpiCard(label: string, valHtml: string, note: string, k: number, chipHtml: string, href?: string): string {
-  return `<div class="kpi"${href ? ` data-nav-btn="${href}"` : ""}><div class="k-row"><span class="k-label">${esc(label)}</span>${chipHtml}</div><div class="k-val tnum">${valHtml}</div><div class="k-note">${esc(note)}</div><svg class="k-spark" data-k="${k}" aria-hidden="true"></svg></div>`
+function kpiCard(k: KpiVm, idx: number): string {
+  const val = k.value == null ? "—" : k.kind === "money" ? `<span class="rs">Rs</span>${pkNum(k.value)}` : String(k.value)
+  const spark = k.spark ? `<svg class="k-spark" data-k="${idx}" aria-hidden="true"></svg>` : `<div class="k-spark-gap" aria-hidden="true"></div>`
+  return `<div class="kpi"${k.href ? ` data-nav-btn="${k.href}"` : ""}><div class="k-row"><span class="k-label">${escHtml(k.label)}</span>${chip(k.delta, k.tag)}</div><div class="k-val tnum">${val}</div><div class="k-note">${escHtml(k.note)}</div>${spark}</div>`
 }
-const guestSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/></svg>`
 const calSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg>`
 const chevSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg>`
 const clockSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`
 
-function eventRowHtml(e: EventRow, i: number): string {
-  const bar = !e.payShow ? "" : e.payZero ? `<div class="paybar"><span class="zero"></span></div>` : `<div class="paybar"><span style="width:${e.payPct}%"></span></div>`
-  const capHtml = e.payShow ? `<div class="pay-cap">${esc(e.payCap)}</div>` : ""
-  return `<div class="row${i === 0 ? " hl today" : ""}"${e.id ? ` data-nav-btn="/dashboard/bookings/${e.id}"` : ""}><span class="ava" aria-hidden="true">${esc(e.ini)}</span><div class="r-main"><div class="r-title">${esc(e.title)} <span class="st ${e.tone}"><i></i> ${esc(e.toneLabel)}</span></div><div class="r-meta"><span class="mi">${calSvg} ${esc(e.date)}</span></div>${bar}${capHtml}</div><div class="r-amt"><div class="a-val tnum">Rs ${pkNum(e.amount)}</div></div></div>`
+/**
+ * THE booking row. Both event cards draw through this one function — the right
+ * hand card used to build its rows by hand with a class the shell styles as
+ * `text-align:right`, which is why its name, pill, date and amount stacked into a
+ * right-aligned column instead of sitting in the left card's two-column row.
+ */
+function bookingRowHtml(v: RowVm): string {
+  const bar = !v.bar.show ? "" : v.bar.zero ? `<div class="paybar"><span class="zero"></span></div>` : `<div class="paybar"><span style="width:${v.bar.pct}%"></span></div>`
+  const cap = v.bar.show && v.bar.pct < 100 ? `<div class="pay-cap">${escHtml(v.bar.caption)}</div>` : ""
+  const amt = `${v.amount ? `<div class="a-val tnum">Rs ${pkNum(v.amount)}</div>` : ""}${v.amountCap.text ? `<div class="a-cap ${v.amountCap.tone}">${escHtml(v.amountCap.text)}</div>` : ""}`
+  return `<div class="row${v.isToday ? " hl today" : ""}" data-nav-btn="${v.href}"><span class="ava" aria-hidden="true">${escHtml(v.ini)}</span><div class="r-main"><div class="r-title">${escHtml(v.title)} <span class="st ${v.pill.tone}"><i></i> ${escHtml(v.pill.label)}</span></div><div class="r-meta"><span class="mi kindref">${escHtml(v.ref)}</span>${v.what ? `<span class="mi">${escHtml(v.what)}</span>` : ""}<span class="mi">${calSvg} ${escHtml(v.when)}</span></div>${bar}${cap}</div><div class="r-amt">${amt}</div></div>`
 }
-function leadRowHtml(l: LeadRow): string {
-  return `<div class="row"><span class="ava" aria-hidden="true">${esc(l.ini)}</span><div class="r-main"><div class="r-title">${esc(l.name)} <span class="st ${l.ageTone}"><i></i> ${esc(l.ageLabel)}</span></div><div class="r-meta"><span class="mi">${esc(l.meta)}</span></div></div><button class="btn btn-ghost sm" data-nav-btn="${l.id ? `/dashboard/leads/${l.id}` : "/dashboard/leads"}">Jawab dein</button></div>`
+function leadRowHtml(l: LeadRowVm): string {
+  return `<div class="row" data-nav-btn="${l.href}"><span class="ava" aria-hidden="true">${escHtml(l.ini)}</span><div class="r-main"><div class="r-title">${escHtml(l.title)} <span class="st ${l.pill.tone}"><i></i> ${escHtml(l.pill.label)}</span></div><div class="r-meta"><span class="mi kindref">${escHtml(l.ref)}</span>${l.what ? `<span class="mi">${escHtml(l.what)}</span>` : ""}<span class="mi">${escHtml(l.waiting)}</span></div></div><button class="btn btn-ghost sm" data-nav-btn="${l.href}">Jawab dein</button></div>`
 }
+const emptyRow = (msg: string, action = "") => `<div class="row"><div class="r-main"><div class="r-meta">${escHtml(msg)}</div></div>${action}</div>`
+const moreLine = (more: number, noun: string, href: string) => (more > 0 ? `<div class="list-more">+${more} aur ${escHtml(noun)} — <a data-nav href="${href}">sab dekhein</a></div>` : "")
+
 function ratingCard(r: ArtData["rating"]): string {
   if (!r || !r.count) {
     return `<div class="card" style="flex:1"><div class="card-h"><div><h2>Aapki rating</h2></div></div><div class="rev-body"><div style="color:var(--ink-3);font-size:12.5px">Abhi koi review nahi — pehli booking complete hone par customers rate karenge.</div></div></div>`
@@ -137,10 +107,10 @@ function ratingCard(r: ArtData["rating"]): string {
   const full = Math.max(0, Math.min(5, Math.round(r.avg)))
   const stars = "★".repeat(full) + "☆".repeat(5 - full)
   const avatars = r.avatars.length
-    ? `<div class="rev-avatars" aria-hidden="true">${r.avatars.map((a) => `<span>${esc(a)}</span>`).join("")}</div>`
+    ? `<div class="rev-avatars" aria-hidden="true">${r.avatars.map((a) => `<span>${escHtml(a)}</span>`).join("")}</div>`
     : ""
   const quote = r.quote
-    ? `<div class="rev-quote">${avatars}<p>&ldquo;${esc(r.quote)}&rdquo;</p>${r.by ? `<div class="rev-by">— ${esc(r.by)}</div>` : ""}</div>`
+    ? `<div class="rev-quote">${avatars}<p>&ldquo;${escHtml(r.quote)}&rdquo;</p>${r.by ? `<div class="rev-by">— ${escHtml(r.by)}</div>` : ""}</div>`
     : ""
   return `<div class="card" style="flex:1"><div class="card-h"><div><h2>Aapki rating</h2></div><span class="st ok"><i></i> Verified</span></div>
     <div class="rev-body"><div class="rev-score"><div class="rev-num tnum">${r.avg.toFixed(1)}</div>
@@ -150,7 +120,7 @@ function ratingCard(r: ArtData["rating"]): string {
 function wapsiCard(w: ArtData["wapsi"]): string {
   const head = `<div class="card-h"><div><h2>Wapsi — jo dena hai</h2><div class="sub">Cancel hui bookings ke refund</div></div><a class="link" data-nav href="/dashboard/receivables">Khata ${chevSvg}</a></div>`
   if (!w || !w.rows.length) {
-    return `<div class="card">${head}<div class="list"><div class="row"><div class="r-main"><div class="r-meta">Koi wapsi baaki nahi — sab settle. 🎉</div></div></div></div></div>`
+    return `<div class="card">${head}<div class="list"><div class="row"><div class="r-main"><div class="r-meta">Koi wapsi baaki nahi — sab settle.</div></div></div></div></div>`
   }
   const rows = w.rows.map((o) => {
     const badge = o.disputed ? `<span class="st bad"><i></i> Nahi mila</span>` : `<span class="st warn"><i></i> Dena hai</span>`
@@ -167,111 +137,95 @@ function wapsiCard(w: ArtData["wapsi"]): string {
 }
 
 /**
- * WW-WORKLIST — the two states nothing surfaced anywhere.
+ * "Tawajjo chahiye" — the three things that are costing the vendor now:
+ * enquiries nobody has answered, bookings whose date has passed without being
+ * closed, and money owed on bookings that are done.
  *
- * Nothing in this platform closes a booking once its date passes: no cron, no
- * prompt. A live check found real bookings sitting past their event date in
- * Pending / Awaiting Payment / Confirmed. The review request and the final
- * balance chase are both triggered off completion, so neither ever happened.
+ * Nothing in this platform closes a booking when its date passes — no cron, no
+ * prompt — so the review request and the final-balance chase (both triggered by
+ * completion) never fire. This is the prompt. It is deliberately NOT automation:
+ * completing a booking also settles money, and this codebase never closes money
+ * without a human saying so.
  *
- * Deliberately a prompt, not automation. Completing a booking also settles
- * money, and this codebase never closes money without a human saying so — the
- * refund handshake is built on exactly that principle.
+ * Always drawn, with an honest "all clear" line, so the card does not vanish and
+ * pull the one beside it across the grid.
  */
-function workCard(w: ArtData["work"]): string {
-  if (!w) return ""
-  const past = w.pastOpen || []
-  const unpaid = w.unpaid || []
-  const unanswered = w.unanswered || 0
-  if (!past.length && !unpaid.length && !unanswered) return ""
-
-  const row = (id: number, when: string, who: string | null, amt: number, tag: string) =>
-    `<div class="r" data-nav="/dashboard/bookings/${id}" role="button" style="cursor:pointer">
-      <div class="r-main"><div class="r-title">${esc(who || "Booking #" + id)} <span class="st warn"><i></i> ${esc(tag)}</span></div>
-      <div class="r-meta">${esc(when)}</div></div>
-      <div class="r-amt">${amt > 0 ? `<div class="a-val tnum">Rs ${pkNum(amt)}</div><div class="a-cap due">baqaya</div>` : ""}</div></div>`
-
-  const pastRows = past.slice(0, 4).map((b) => row(b.id, b.bookingDate, b.customerName, b.balance, "band karein")).join("")
-  const unpaidRows = unpaid.slice(0, 4).map((b) => row(b.id, b.bookingDate, b.customerName, b.balance, "paisa baqaya")).join("")
-
-  /**
-   * WW-HEALTH — unanswered enquiries, first, because it is the only row here
-   * that is still losing business rather than merely recording it.
-   *
-   * `/analytics/health-signals` has computed this the whole time. Its only
-   * consumer was a React view that the artifact port replaced, so the number
-   * went nowhere: 62 enquiries unanswered on the test account, the oldest
-   * waiting 116 days. A couple who does not hear back books someone else.
-   */
-  const waited =
-    w.oldestUnansweredHours >= 48
-      ? `${Math.floor(w.oldestUnansweredHours / 24)} din`
-      : `${Math.max(1, Math.round(w.oldestUnansweredHours))} ghante`
-  const leadBlock = unanswered
-    ? `<div class="owe urgent"><span class="o-cap">${unanswered} poochh-gichh ka jawab nahi diya${w.oldestUnansweredHours > 0 ? ` — sab se purani ${esc(waited)} se` : ""}</span><a class="link" data-nav href="/dashboard/leads">Leads kholein ${chevSvg}</a></div>`
+function attentionCard(o: DashboardOverview): string {
+  const head = `<div class="card-h"><div><h2>Tawajjo chahiye</h2><div class="sub">Jawab, guzri tareekhon ki bookings aur baqaya raqam</div></div><a class="link" data-nav href="/dashboard/bookings">Sab bookings ${chevSvg}</a></div>`
+  if (attentionIsClear(o)) {
+    return `<div class="card">${head}<div class="list">${emptyRow("Sab theek hai — koi unanswered puchh-gichh, guzri hui khuli booking ya baqaya nahi.")}</div></div>`
+  }
+  const today = o.today
+  const banner = enquiryBanner(o.enquiries)
+  const leadBlock = banner
+    ? `<div class="owe urgent"><span class="o-cap">${escHtml(banner.headline)}${banner.oldest ? ` — ${escHtml(banner.oldest)}` : ""}</span><a class="link" data-nav href="/dashboard/leads">Leads kholein ${chevSvg}</a></div>${banner.stale ? `<div class="o-note">${escHtml(banner.stale)}</div>` : ""}`
     : ""
 
-  const head = `<div class="card-h"><div><h2>Tawajjo chahiye</h2><div class="sub">Jawab, ho chuke events aur baqaya raqam</div></div><a class="link" data-nav href="/dashboard/bookings">Sab bookings ${chevSvg}</a></div>`
-  const pastBlock = past.length
-    ? `<div class="owe"><span class="o-cap">${past.length} event ho chuke, band nahi hue</span></div><div class="list">${pastRows}</div>`
+  const closing = o.needsClosing.items.slice(0, SHOW_CLOSING)
+  const closingBlock = o.needsClosing.count
+    ? `<div class="owe"><span class="o-cap">${o.needsClosing.count} booking ki tareekh guzar gayi, abhi band nahi hui</span></div><div class="list">${closing.map((r) => bookingRowHtml(bookingRowVm(r, today))).join("")}</div>${moreLine(moreCount(o.needsClosing.count, closing.length), "bookings", "/dashboard/bookings")}`
     : ""
-  const unpaidBlock = unpaid.length
-    ? `<div class="owe"><span class="o-cap">Event ke baad baqaya</span><span class="o-val tnum">Rs ${pkNum(w.unpaidTotal)}</span></div><div class="list">${unpaidRows}</div>`
+
+  const unpaid = o.deliveredUnpaid.items.slice(0, SHOW_UNPAID)
+  const unpaidBlock = o.deliveredUnpaid.count
+    ? `<div class="owe"><span class="o-cap">Mukammal events ka baqaya · ${o.deliveredUnpaid.count} booking${o.deliveredUnpaid.count === 1 ? "" : "s"}</span><span class="o-val tnum">Rs ${pkNum(o.deliveredUnpaid.total)}</span></div><div class="list">${unpaid.map((r) => bookingRowHtml(bookingRowVm(r, today))).join("")}</div>${moreLine(moreCount(o.deliveredUnpaid.count, unpaid.length), "bookings", "/dashboard/receivables")}`
     : ""
-  return `<div class="card">${head}${leadBlock}${pastBlock}${unpaidBlock}</div>`
+
+  return `<div class="card">${head}${leadBlock}${closingBlock}${unpaidBlock}</div>`
 }
 
-/**
- * WW-DUESCOPE — the two "baqaya" figures are different questions.
- *
- * The KPI below counts what is outstanding on bookings whose EVENT falls in
- * the selected range (this year). Receivables sums every open instalment
- * whatever the date, including next season's. On the test account that is
- * Rs 2,37,41,619 here and Rs 2,73,21,489 there — and the "chase" chip links
- * straight from one to the other, so a vendor saw the number change as they
- * clicked. Both are correct; calling this one "abhi tak pending" is what made
- * them read as a contradiction, so it now names its own scope.
- */
+/* ── the revenue chart ───────────────────────────────────────── */
+function chartFootHtml(s: ReturnType<typeof summariseRange>): string {
+  const rs = `<span class="rs">Rs</span>`
+  const best = s.best ? `${escHtml(monthShort(s.best.key))} · ${(s.best.value / 100000).toFixed(1)} L` : "—"
+  return `<div><span class="cf-cap">Kul · ${escHtml(periodLabel(s))}</span><span class="cf-val tnum">${s.hasData ? `${rs} ${pkNum(s.total)}` : "—"}</span></div><div><span class="cf-cap">Ausat / mahina · ${s.months} mahine par</span><span class="cf-val tnum">${s.average == null ? "—" : `${rs} ${pkNum(s.average)}`}</span></div><div><span class="cf-cap">Sab se acha mahina</span><span class="cf-val tnum">${best}</span></div>`
+}
+
+const RANGE_NOTE: Record<number, string> = { 3: "pichle 3 mahine", 6: "pichle 6 mahine", 12: "pichle 12 mahine" }
+
 function buildContent(d: ArtData, greeting: string, todayStr: string): string {
-  const k = d.kpis
-  const dash = (x: string) => (d.moneyErr ? "—" : x)
-  const kpiRow = `<section class="kpis" aria-label="Key figures">
-    ${kpiCard("Is mahine bookings", dash(String(k.bookings)), "is saal", 0, chip(k.bookingsDelta))}
-    ${kpiCard("Khata — aya paisa", dash(`<span class="rs">Rs</span>${pkNum(k.revenue)}`), "is saal received", 1, chip(k.revenueDelta))}
-    ${kpiCard("Baqaya — vasool karna", dash(`<span class="rs">Rs</span>${pkNum(k.due)}`), "is saal ke events ka", 2, `<span class="chip">chase</span>`, "/dashboard/receivables")}
-    ${kpiCard("Aane wale (7 din)", dash(String(k.upcoming)), "agle hafte ki bookings", 3, `<span class="chip">7d</span>`, "/dashboard/calendar")}
-  </section>`
+  const head = headHtml(greeting, todayStr)
+  const o = d.o
+  if (!o) return head
+  const kpiRow = `<section class="kpis" aria-label="Key figures">${kpiCards(o, d.baqaya).map(kpiCard).join("")}</section>`
 
-  const chartFoot = `<div class="chart-foot"><div><span class="cf-cap">Kul is saal</span><span class="cf-val tnum"><span class="rs">Rs</span> ${pkNum(d.foot.total)}</span></div><div><span class="cf-cap">Ausat / mahina</span><span class="cf-val tnum"><span class="rs">Rs</span> ${pkNum(d.foot.avg)}</span></div><div><span class="cf-cap">Sab se acha</span><span class="cf-val tnum">${esc(d.foot.best)}</span></div></div>`
-
-  const off = (263.9 * (1 - Math.max(0, Math.min(100, d.occ.pct)) / 100)).toFixed(1)
-  const occCard = `<div class="card"><div class="card-h"><div><h2>Saal ki occupancy</h2></div><a class="link" data-nav href="/dashboard/calendar">Calendar ${chevSvg}</a></div><div class="occ-in"><div class="ring"><svg width="104" height="104" viewBox="0 0 104 104"><circle cx="52" cy="52" r="42" fill="none" stroke="var(--surface-3)" stroke-width="10"/><circle cx="52" cy="52" r="42" fill="none" stroke="var(--accent)" stroke-width="10" stroke-linecap="round" stroke-dasharray="263.9" stroke-dashoffset="${off}" transform="rotate(-90 52 52)"/></svg><div class="r-mid"><div><div class="r-pct tnum">${Math.round(d.occ.pct)}%</div><div class="r-cap">booked</div></div></div></div><div class="occ-legend"><div class="occ-row"><span class="ol"><i style="background:var(--accent)"></i> Booked</span><b class="tnum">${d.occ.bookedDays} din</b></div><div class="occ-row"><span class="ol"><i style="background:var(--border-2)"></i> Khaali</span><b class="tnum">${d.occ.emptyDays} din</b></div></div></div></div>`
+  const occ = d.occ
+  const off = (263.9 * (1 - Math.max(0, Math.min(100, occ ? occ.pct : 0)) / 100)).toFixed(1)
+  const occCard = `<div class="card"><div class="card-h"><div><h2>Saal ki occupancy</h2></div><a class="link" data-nav href="/dashboard/calendar">Calendar ${chevSvg}</a></div><div class="occ-in"><div class="ring"><svg width="104" height="104" viewBox="0 0 104 104"><circle cx="52" cy="52" r="42" fill="none" stroke="var(--surface-3)" stroke-width="10"/><circle cx="52" cy="52" r="42" fill="none" stroke="var(--accent)" stroke-width="10" stroke-linecap="round" stroke-dasharray="263.9" stroke-dashoffset="${off}" transform="rotate(-90 52 52)"/></svg><div class="r-mid"><div><div class="r-pct tnum">${occ ? `${Math.round(occ.pct)}%` : "—"}</div><div class="r-cap">booked</div></div></div></div><div class="occ-legend"><div class="occ-row"><span class="ol"><i style="background:var(--accent)"></i> Booked</span><b class="tnum">${occ ? `${occ.bookedDays} din` : "—"}</b></div><div class="occ-row"><span class="ol"><i style="background:var(--border-2)"></i> Khaali</span><b class="tnum">${occ ? `${occ.emptyDays} din` : "—"}</b></div></div></div></div>`
 
   // Profile completion (replaces the sample's marketing "plan" card).
   let profileCard = ""
   if (d.profile) {
     const p = d.profile
     const pOff = (263.9 * (1 - Math.max(0, Math.min(100, p.score)) / 100)).toFixed(1)
-    const feats = p.items.map((it) => `<div class="f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> ${esc(it.label)}${it.pts ? ` <span style="color:var(--ink-3);font-weight:500">+${it.pts}</span>` : ""}</div>`).join("")
-    profileCard = `<div class="card"><div class="card-h"><div><h2>Profile mukammal karein</h2><div class="sub">Jitna poora, utni zyada bookings</div></div><span class="st ${p.score >= 70 ? "ok" : "warn"}"><i></i> ${p.score}/100</span></div><div class="occ-in"><div class="ring" style="width:88px;height:88px"><svg width="88" height="88" viewBox="0 0 104 104"><circle cx="52" cy="52" r="42" fill="none" stroke="var(--surface-3)" stroke-width="10"/><circle cx="52" cy="52" r="42" fill="none" stroke="var(--accent)" stroke-width="10" stroke-linecap="round" stroke-dasharray="263.9" stroke-dashoffset="${pOff}" transform="rotate(-90 52 52)"/></svg><div class="r-mid"><div><div class="r-pct tnum" style="font-size:19px">${p.score}</div><div class="r-cap">of 100</div></div></div></div><div class="occ-legend"><div style="font-weight:600;font-size:13px;margin-bottom:2px">${esc(p.title)}</div><div style="font-size:12px;color:var(--ink-3);line-height:1.5">${esc(p.body)}</div></div></div><div class="plan-in" style="padding-top:0"><div class="plan-feats">${feats}</div><button class="btn btn-primary" style="width:100%" data-nav-btn="/dashboard/settings">${p.remaining > 0 ? `${p.remaining} aur cheezein poori karein` : "Settings kholein"}</button></div></div>`
+    const feats = p.items.map((it) => `<div class="f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> ${escHtml(it.label)}${it.pts ? ` <span style="color:var(--ink-3);font-weight:500">+${it.pts}</span>` : ""}</div>`).join("")
+    profileCard = `<div class="card"><div class="card-h"><div><h2>Profile mukammal karein</h2><div class="sub">Jitna poora, utni zyada bookings</div></div><span class="st ${p.score >= 70 ? "ok" : "warn"}"><i></i> ${p.score}/100</span></div><div class="occ-in"><div class="ring" style="width:88px;height:88px"><svg width="88" height="88" viewBox="0 0 104 104"><circle cx="52" cy="52" r="42" fill="none" stroke="var(--surface-3)" stroke-width="10"/><circle cx="52" cy="52" r="42" fill="none" stroke="var(--accent)" stroke-width="10" stroke-linecap="round" stroke-dasharray="263.9" stroke-dashoffset="${pOff}" transform="rotate(-90 52 52)"/></svg><div class="r-mid"><div><div class="r-pct tnum" style="font-size:19px">${p.score}</div><div class="r-cap">of 100</div></div></div></div><div class="occ-legend"><div style="font-weight:600;font-size:13px;margin-bottom:2px">${escHtml(p.title)}</div><div style="font-size:12px;color:var(--ink-3);line-height:1.5">${escHtml(p.body)}</div></div></div><div class="plan-in" style="padding-top:0"><div class="plan-feats">${feats}</div><button class="btn btn-primary" style="width:100%" data-nav-btn="/dashboard/settings">${p.remaining > 0 ? `${p.remaining} aur cheezein poori karein` : "Settings kholein"}</button></div></div>`
   }
 
-  const eventsList = d.events.length
-    ? d.events.map((e, i) => eventRowHtml(e, i)).join("")
-    : `<div class="row"><div class="r-main"><div class="r-meta">Abhi koi aane wali booking nahi.</div></div></div>`
-  const leadsList = d.leads.length
-    ? d.leads.map(leadRowHtml).join("")
-    : `<div class="row"><div class="r-main"><div class="r-meta">Abhi koi nayi puchh-gichh nahi.</div></div></div>`
+  const today = o.today
+  const events = o.upcoming.items.slice(0, SHOW_EVENTS)
+  const eventsList = events.length
+    ? events.map((r) => bookingRowHtml(bookingRowVm(r, today))).join("") + moreLine(moreCount(o.upcoming.count, events.length), "bookings", "/dashboard/bookings")
+    : emptyRow("Abhi koi aane wali booking nahi. Nayi booking aate hi yahan sab se qareeb tareekh pehle dikhegi.", `<button class="btn btn-ghost sm" data-nav-btn="/dashboard/bookings">Nayi booking</button>`)
+  const eventsSub = o.upcoming.count
+    ? `Bookings, qareeb tareekh pehle · ${o.upcoming.count} aane wali, agle 7 din mein ${o.upcoming.next7Days}`
+    : "Bookings, qareeb tareekh pehle"
+
+  const leads = o.enquiries.items.slice(0, SHOW_LEADS)
+  const leadsList = leads.length
+    ? leads.map((l) => leadRowHtml(leadRowVm(l, today))).join("") + moreLine(moreCount(o.enquiries.unanswered, leads.length), "puchh-gichh", "/dashboard/leads")
+    : emptyRow("Abhi koi nayi puchh-gichh nahi. Jab koi poochhega to yahan aayegi.")
 
   return `
-  <div class="head"><div><h1>${esc(greeting)}</h1><div class="sub">${esc(todayStr)} — aaj ki suraat-e-haal</div></div><div class="head-actions"><button class="btn btn-ghost" data-nav-btn="/dashboard/calendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg> Calendar</button><button class="btn btn-primary" data-nav-btn="/dashboard/bookings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> Nayi booking</button></div></div>
-  ${d.moneyErr ? `<div style="margin-bottom:12px;padding:11px 13px;border-radius:9px;border:1px solid var(--bad);background:var(--bad-wash);color:var(--bad);font-size:12.5px;font-weight:600">Figures load nahi ho sake — neeche ke number missing hain, zero nahi. Account mein kuch nahi badla.</div>` : ""}
+  ${head}
+  ${o.truncated ? `<div class="o-warn">Aap ke bahut zyada records hain — figures sirf sab se naye 5,000 bookings se bane hain.</div>` : ""}
+  ${d.baqaya ? "" : `<div class="o-warn">Baqaya raqam load nahi ho saki — wo dash hai, zero nahi.</div>`}
   ${kpiRow}
   <section class="grid-main">
     <div class="card">
-      <div class="card-h"><div><h2>Revenue</h2><div class="sub">Khata mein aya paisa · Rs lakh</div></div><div class="seg" role="group" aria-label="Time range"><button data-range="3">3M</button><button data-range="6">6M</button><button data-range="12">1Y</button></div></div>
+      <div class="card-h"><div><h2>Revenue</h2><div class="sub">Khata mein aya paisa · Rs lakh · jis mahine mila</div></div><div class="seg" role="group" aria-label="Time range"><button data-range="3" aria-label="${RANGE_NOTE[3]}">3M</button><button data-range="6" aria-label="${RANGE_NOTE[6]}">6M</button><button data-range="12" aria-label="${RANGE_NOTE[12]}">1Y</button></div></div>
       <div class="chart-wrap" id="areaWrap"></div>
-      ${chartFoot}
+      <div class="chart-foot" id="chartFoot"></div>
     </div>
     <div class="rail-col">
       ${occCard}
@@ -280,10 +234,10 @@ function buildContent(d: ArtData, greeting: string, todayStr: string): string {
   </section>
   <section class="grid-half">
     <div class="card">
-      <div class="card-h"><div><h2>Aane wale events</h2><div class="sub">Aapki bookings</div></div><a class="link" data-nav href="/dashboard/bookings">Sab dekhein ${chevSvg}</a></div>
+      <div class="card-h"><div><h2>Aane wale events</h2><div class="sub">${escHtml(eventsSub)}</div></div><a class="link" data-nav href="/dashboard/bookings">Sab dekhein ${chevSvg}</a></div>
       <div class="list">${eventsList}</div>
     </div>
-    ${workCard(d.work)}
+    ${attentionCard(o)}
     ${wapsiCard(d.wapsi)}
   </section>
   <section class="grid-half">
@@ -297,57 +251,74 @@ function buildContent(d: ArtData, greeting: string, todayStr: string): string {
   <div class="tip" id="tip"></div>`
 }
 
+function headHtml(greeting: string, todayStr: string): string {
+  return `<div class="head"><div><h1>${escHtml(greeting)}</h1><div class="sub">${escHtml(todayStr)} — aaj ki suraat-e-haal</div></div><div class="head-actions"><button class="btn btn-ghost" data-nav-btn="/dashboard/calendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg> Calendar</button><button class="btn btn-primary" data-nav-btn="/dashboard/bookings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> Nayi booking</button></div></div>`
+}
+
 /* ── charts (real series) ────────────────────────────────────── */
-function renderCharts(root: ShadowRoot, series: { m: string; v: number }[], bookingSeries: number[]) {
-  const data = series.length >= 2 ? series : [{ m: "—", v: 0 }, { m: "—", v: 0 }]
-  const W = 680, H = 210, padL = 34, padR = 14, padT = 14, padB = 26
-  const iw = W - padL - padR, ih = H - padT - padB
-  const vals = data.map((d) => d.v)
-  const rawMax = Math.max(...vals, 1), rawMin = Math.min(...vals, 0)
-  const max = rawMax * 1.1, min = Math.max(0, rawMin - (rawMax - rawMin) * 0.15)
-  const x = (i: number) => padL + (i / (data.length - 1)) * iw
-  const y = (v: number) => padT + (1 - (v - min) / ((max - min) || 1)) * ih
-  let area = `M ${x(0)} ${y(data[0].v)}`, line = area
-  data.forEach((d, i) => { if (i) { const cx = (x(i - 1) + x(i)) / 2; const seg = ` C ${cx} ${y(data[i - 1].v)}, ${cx} ${y(d.v)}, ${x(i)} ${y(d.v)}`; line += seg; area += seg } })
-  area += ` L ${x(data.length - 1)} ${padT + ih} L ${x(0)} ${padT + ih} Z`
-  const ticks = [0, 0.33, 0.66, 1].map((t) => Math.round((min + t * (max - min)) * 10) / 10)
-  let grid = ""; ticks.forEach((g) => { const yy = y(g); grid += `<line class="grid-line" x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}"/><text class="axis-lbl" x="${padL - 8}" y="${yy + 3}" text-anchor="end">${g}</text>` })
-  let xl = ""; data.forEach((d, i) => { xl += `<text class="axis-lbl" x="${x(i)}" y="${H - 8}" text-anchor="middle">${d.m}</text>` })
-  const li = data.length - 1
-  const end = `<circle cx="${x(li)}" cy="${y(data[li].v)}" r="4.5" fill="var(--chart)"/><circle cx="${x(li)}" cy="${y(data[li].v)}" r="4.5" fill="none" stroke="var(--surface)" stroke-width="2"/>`
-  const svg = `<svg width="100%" viewBox="0 0 ${W} ${H}" role="img" aria-label="Revenue trend" style="overflow:visible"><defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--chart)" stop-opacity=".22"/><stop offset="1" stop-color="var(--chart)" stop-opacity="0"/></linearGradient></defs>${grid}${xl}<path d="${area}" fill="url(#ag)"/><path d="${line}" fill="none" stroke="var(--chart)" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/><line id="cross" x1="0" y1="${padT}" x2="0" y2="${padT + ih}" stroke="var(--chart)" stroke-width="1" stroke-dasharray="3 3" opacity="0"/>${end}<rect id="hit" x="0" y="0" width="${W}" height="${H}" fill="transparent"/></svg>`
-  const wrap = root.getElementById("areaWrap"); if (wrap) {
-    wrap.innerHTML = svg
-    const tip = root.getElementById("tip") as HTMLElement | null
-    const cross = wrap.querySelector("#cross") as SVGLineElement | null
-    const hit = wrap.querySelector("#hit") as SVGRectElement | null
-    const svgEl = wrap.querySelector("svg") as SVGSVGElement | null
-    if (hit && svgEl && cross && tip) {
-      hit.addEventListener("mousemove", (e: MouseEvent) => {
-        const r = svgEl.getBoundingClientRect(), px = ((e.clientX - r.left) / r.width) * W
-        let i = 0, best = 1e9; data.forEach((d, kk) => { const dd = Math.abs(x(kk) - px); if (dd < best) { best = dd; i = kk } })
-        const sx = r.left + (x(i) / W) * r.width, sy = r.top + (y(data[i].v) / H) * r.height
-        cross.setAttribute("x1", String(x(i))); cross.setAttribute("x2", String(x(i))); cross.setAttribute("opacity", "1")
-        tip.style.left = sx + "px"; tip.style.top = sy - 10 + "px"; tip.style.opacity = "1"
-        tip.innerHTML = `Rs ${data[i].v.toFixed(2)} lakh<br><span class="t-sub">${esc(data[i].m)}</span>`
-      })
-      hit.addEventListener("mouseleave", () => { cross.setAttribute("opacity", "0"); tip.style.opacity = "0" })
-    }
+
+/**
+ * Draw the revenue chart for the last `rangeN` months of `months`, and its
+ * footer. All arithmetic is lib/utils/overview-chart; this only turns the
+ * layout into SVG and wires the hover.
+ */
+function renderChart(root: ShadowRoot, months: OverviewMonth[], rangeN: number) {
+  const wrap = root.getElementById("areaWrap")
+  if (!wrap) return
+  const shown = lastMonths(months, rangeN)
+  const pts: MonthPoint[] = shown.map((m) => ({ key: m.key, value: m.received }))
+  const sum = summariseRange(pts)
+  const foot = root.getElementById("chartFoot")
+  if (foot) foot.innerHTML = chartFootHtml(sum)
+
+  if (!sum.hasData) {
+    wrap.innerHTML = `<div class="chart-empty"><b>Abhi koi payment record nahi hui</b>${escHtml(periodLabel(sum))} mein Khata mein koi paisa darj nahi. Jab kisi booking par payment record hogi to wo yahan us mahine ke saamne dikhegi.<div style="margin-top:12px"><a class="link" data-nav href="/dashboard/receipts" style="display:inline-flex">Payment record karein ${chevSvg}</a></div></div>`
+    return
   }
-  // KPI mini-bars — booking/revenue series + a flat for the others.
-  const bs = bookingSeries.length >= 2 ? bookingSeries : [1, 1]
-  const rs = series.length >= 2 ? series.map((s) => s.v) : [1, 1]
-  const cfg = [
-    { d: bs, c: "var(--accent)" },
-    { d: rs, c: "var(--accent)" },
-    { d: rs, c: "var(--accent)" },
-    { d: bs, c: "var(--accent)" },
-  ]
+
+  const L = layoutChart(pts, (wrap.clientWidth || 708) - 28)
+  const W = L.width, H = L.height
+  const last = pts.length - 1
+  let grid = ""
+  L.ticks.forEach((t) => { grid += `<line class="grid-line" x1="${L.padL}" y1="${t.y}" x2="${W - L.padR}" y2="${t.y}"/><text class="axis-lbl" x="${L.padL - 8}" y="${t.y + 3}" text-anchor="end">${t.label}</text>` })
+  let xl = ""
+  L.labelAt.forEach((i) => { xl += `<text class="axis-lbl" x="${L.xs[i]}" y="${H - 8}" text-anchor="middle">${escHtml(monthShort(pts[i].key))}</text>` })
+  const dots = L.xs.map((x, i) => (i === last ? "" : `<circle cx="${x}" cy="${L.ys[i]}" r="2.6" fill="var(--surface)" stroke="var(--chart)" stroke-width="1.6"/>`)).join("")
+  // The current month is still in progress, so its segment is dashed and its dot is the emphasised one.
+  const tail = last > 0 ? `<path d="M ${L.xs[last - 1]} ${L.ys[last - 1]} L ${L.xs[last]} ${L.ys[last]}" fill="none" stroke="var(--chart)" stroke-width="2.25" stroke-dasharray="4 4" stroke-linecap="round"/>` : ""
+  const solid = L.linePath.split(" L").slice(0, last).join(" L")
+  const todayMark = `<line x1="${L.xs[last]}" y1="${L.padT}" x2="${L.xs[last]}" y2="${L.baseY}" stroke="var(--border-2)" stroke-width="1" stroke-dasharray="3 3"/><text class="axis-lbl today-lbl" x="${L.xs[last] - 6}" y="${L.padT - 6}" text-anchor="end">Aaj</text>`
+  const end = `<circle cx="${L.xs[last]}" cy="${L.ys[last]}" r="4.5" fill="var(--chart)"/><circle cx="${L.xs[last]}" cy="${L.ys[last]}" r="4.5" fill="none" stroke="var(--surface)" stroke-width="2"/>`
+  const label = `Revenue, ${periodLabel(sum)}: kul Rs ${pkNum(sum.total)}`
+  wrap.innerHTML = `<svg width="100%" viewBox="0 0 ${W} ${H}" role="img" aria-label="${escHtml(label)}" style="overflow:visible"><defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--chart)" stop-opacity=".22"/><stop offset="1" stop-color="var(--chart)" stop-opacity="0"/></linearGradient></defs>${grid}${xl}<path d="${L.areaPath}" fill="url(#ag)"/>${todayMark}<path d="${last > 0 ? solid : L.linePath}" fill="none" stroke="var(--chart)" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>${tail}${dots}<line id="cross" x1="0" y1="${L.padT}" x2="0" y2="${L.baseY}" stroke="var(--chart)" stroke-width="1" stroke-dasharray="3 3" opacity="0"/>${end}<rect id="hit" x="0" y="0" width="${W}" height="${H}" fill="transparent"/></svg>`
+
+  const tip = root.getElementById("tip") as HTMLElement | null
+  const cross = wrap.querySelector("#cross") as SVGLineElement | null
+  const hit = wrap.querySelector("#hit") as SVGRectElement | null
+  const svgEl = wrap.querySelector("svg") as SVGSVGElement | null
+  if (!hit || !svgEl || !cross || !tip) return
+  hit.addEventListener("mousemove", (e: MouseEvent) => {
+    const r = svgEl.getBoundingClientRect(), px = ((e.clientX - r.left) / r.width) * W
+    let i = 0, best = 1e9
+    L.xs.forEach((x, k) => { const dd = Math.abs(x - px); if (dd < best) { best = dd; i = k } })
+    const m = shown[i]
+    const sx = r.left + (L.xs[i] / W) * r.width, sy = r.top + (L.ys[i] / H) * r.height
+    cross.setAttribute("x1", String(L.xs[i])); cross.setAttribute("x2", String(L.xs[i])); cross.setAttribute("opacity", "1")
+    tip.style.left = sx + "px"; tip.style.top = sy - 10 + "px"; tip.style.opacity = "1"
+    tip.innerHTML = `Rs ${(m.received / 100000).toFixed(2)} lakh<br><span class="t-sub">Rs ${pkNum(m.received)} · ${escHtml(monthLong(m.key))}${i === last ? " (aaj tak)" : ""}${m.refunded > 0 ? ` · wapsi Rs ${pkNum(m.refunded)}` : ""}</span>`
+  })
+  hit.addEventListener("mouseleave", () => { cross.setAttribute("opacity", "0"); tip.style.opacity = "0" })
+}
+
+/** KPI mini-bars. A tile with no honest series draws none (the gap keeps the cards level). */
+function renderSparks(root: ShadowRoot, series: (number[] | null)[]) {
   root.querySelectorAll(".k-spark").forEach((el) => {
-    const o = cfg[Number((el as HTMLElement).dataset.k)] || cfg[0], dd = o.d, c = o.c, sw = 240, sh = 34, nn = dd.length, gap = 5
+    const dd = series[Number((el as HTMLElement).dataset.k)]
+    if (!dd || !dd.length) return
+    const sw = 240, sh = 34, nn = dd.length, gap = 5
     const bw = (sw - (nn - 1) * gap) / nn, mn = Math.min(...dd), mx = Math.max(...dd)
     let bars = ""
-    dd.forEach((v, i) => { const t = (v - mn) / ((mx - mn) || 1), h = 9 + t * 23, xx = i * (bw + gap), yy = sh - h, last = i === nn - 1; bars += `<rect x="${xx.toFixed(1)}" y="${yy.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2.5" fill="${c}" fill-opacity="${last ? 1 : 0.28}"/>` })
+    dd.forEach((v, i) => { const t = (v - mn) / ((mx - mn) || 1), h = 9 + t * 23, xx = i * (bw + gap), yy = sh - h, lastBar = i === nn - 1; bars += `<rect x="${xx.toFixed(1)}" y="${yy.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2.5" fill="var(--accent)" fill-opacity="${lastBar ? 1 : 0.28}"/>` })
     el.setAttribute("viewBox", `0 0 ${sw} ${sh}`); el.setAttribute("preserveAspectRatio", "none"); el.innerHTML = bars
   })
 }
@@ -374,6 +345,7 @@ const EXTRA_CSS = String.raw`
 .kpi .k-val .rs{ font-size:14px; color:var(--ink-3); font-weight:600; margin-right:2px; }
 .kpi .k-note{ font-size:11.5px; color:var(--ink-3); margin-top:7px; }
 .kpi .k-spark{ display:block; width:100%; height:34px; margin-top:11px; }
+.kpi .k-spark-gap{ height:34px; margin-top:11px; }
 .grid-main{ display:grid; grid-template-columns:1.7fr 1fr; gap:12px; margin-bottom:12px; }
 .grid-half{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
 .rail-col{ display:flex; flex-direction:column; gap:12px; min-width:0; }
@@ -381,12 +353,15 @@ const EXTRA_CSS = String.raw`
 .seg button{ font-size:11.5px; font-weight:600; color:var(--ink-3); padding:4px 10px; border-radius:6px; border:0; background:transparent; height:26px; }
 .seg button.on{ background:var(--surface); color:var(--ink); box-shadow:var(--shadow-xs); }
 .chart-wrap{ padding:6px 14px 2px; position:relative; flex:1; display:flex; flex-direction:column; justify-content:center; min-height:206px; }
-.chart-foot{ display:flex; padding:12px 18px 15px; border-top:1px solid var(--border); margin-top:4px; gap:22px; }
+.chart-empty{ text-align:center; color:var(--ink-3); font-size:12.5px; line-height:1.6; padding:30px 24px; max-width:430px; margin:0 auto; }
+.chart-empty b{ display:block; color:var(--ink-2); font-size:13.5px; font-weight:600; margin-bottom:4px; }
+.chart-foot{ display:flex; flex-wrap:wrap; padding:12px 18px 15px; border-top:1px solid var(--border); margin-top:4px; gap:10px 22px; }
 .cf-cap{ display:block; font-size:11.5px; color:var(--ink-3); }
 .cf-val{ display:block; font-size:15px; font-weight:660; margin-top:3px; letter-spacing:-.02em; }
 .cf-val .rs{ font-size:11px; color:var(--ink-3); font-weight:600; }
 svg .grid-line{ stroke:var(--border); stroke-width:1; }
 svg .axis-lbl{ fill:var(--ink-3); font-size:10.5px; }
+svg .today-lbl{ fill:var(--accent-ink); font-size:10px; font-weight:600; }
 .tip{ position:fixed; pointer-events:none; opacity:0; transform:translate(-50%,-100%); background:var(--ink); color:var(--bg); padding:6px 10px; border-radius:8px; font-size:12px; box-shadow:var(--shadow-md); white-space:nowrap; transition:opacity .12s; z-index:60; font-weight:600; }
 .tip .t-sub{ color:var(--ink-3); font-weight:500; font-size:10.5px; }
 .rev-body{ padding:2px 16px 16px; display:flex; flex-direction:column; gap:13px; height:100%; }
@@ -403,11 +378,15 @@ svg .axis-lbl{ fill:var(--ink-3); font-size:10.5px; }
 .owe{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 16px 6px; padding:11px 13px; border-radius:var(--r-sm); background:var(--surface-3); border:1px solid var(--border); }
 .owe .o-cap{ font-size:12px; color:var(--ink-2); font-weight:500; }
 .owe .o-val{ font-size:18px; font-weight:680; color:var(--ink); letter-spacing:-.02em; }
-/* WW-HEALTH — unanswered enquiries are the one row here that is still losing
-   business, so it reads as a warning rather than a statement of fact. */
+/* Unanswered enquiries are the one strip here that is still losing business,
+   so it reads as a warning rather than a statement of fact. */
 .owe.urgent{ background:var(--bad-wash); border-color:var(--bad); }
 .owe.urgent .o-cap{ color:var(--bad); font-weight:600; }
 .owe.urgent .link{ color:var(--bad); white-space:nowrap; }
+.o-note{ margin:0 16px 8px; padding:0 2px; font-size:11.5px; color:var(--ink-3); line-height:1.5; }
+.o-warn{ margin-bottom:12px; padding:10px 13px; border-radius:9px; border:1px solid var(--warn); background:var(--warn-wash); color:var(--ink-2); font-size:12.5px; }
+.list-more{ padding:0 18px 12px; font-size:12px; color:var(--ink-3); }
+.list-more a{ color:var(--ink-2); font-weight:600; text-decoration:underline; text-underline-offset:2px; }
 .occ-in{ display:flex; align-items:center; gap:18px; padding:4px 16px 16px; }
 .ring{ position:relative; width:104px; height:104px; flex:none; }
 .ring .r-mid{ position:absolute; inset:0; display:grid; place-items:center; text-align:center; }
@@ -426,11 +405,13 @@ svg .axis-lbl{ fill:var(--ink-3); font-size:10.5px; }
 .row .r-title{ font-weight:600; font-size:13px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .row .r-meta{ font-size:11.5px; color:var(--ink-3); margin-top:3px; display:flex; gap:9px; flex-wrap:wrap; }
 .row .r-meta .mi{ display:inline-flex; align-items:center; gap:4px; }
+.row .r-meta .mi.kindref{ font-weight:600; color:var(--ink-2); }
 .row .r-meta svg{ width:12px; height:12px; }
 .row .r-amt{ text-align:right; flex:none; }
 .row .r-amt .a-val{ font-weight:660; font-size:13.5px; letter-spacing:-.01em; }
 .row .r-amt .a-cap{ font-size:11px; color:var(--ink-3); margin-top:1px; }
 .row .r-amt .a-cap.due{ color:var(--warn); font-weight:500; }
+.row .r-amt .a-cap.ok{ color:var(--ok); font-weight:500; }
 .paybar{ height:4px; border-radius:3px; background:var(--surface-3); margin-top:9px; overflow:hidden; max-width:250px; }
 .paybar span{ display:block; height:100%; border-radius:3px; background:var(--accent); }
 .paybar span.zero{ background:repeating-linear-gradient(90deg,var(--border-2) 0 4px,transparent 4px 8px); width:100% !important; opacity:.7; }
@@ -455,35 +436,25 @@ export function OverviewArtifact() {
   const { user } = useUser()
   const { business, loading: businessLoading } = useBusiness()
   const activeBusinessId = useActiveBusinessId()
+  const qc = useQueryClient()
   const { shadowRef, ready } = useArtifactShell(hostRef, {
     activeHref: "/dashboard", crumbBold: "Overview", crumbSub: "Aaj ka din", extraCss: EXTRA_CSS,
   })
   const rangeRef = React.useRef(6) // revenue chart window (months): 3M / 6M / 1Y
-  const seriesRef = React.useRef<{ m: string; v: number }[]>([])
-  const bookingSeriesRef = React.useRef<number[]>([])
-  const sliceRange = (ser: { m: string; v: number }[], m: number) => (m >= ser.length ? ser : ser.slice(-m))
+  const monthsRef = React.useRef<OverviewMonth[]>([])
 
   /**
-   * WW-PERF — these were five separate analytics queries (kpis, revenue trends,
-   * booking trends, recent bookings, breakdowns) at ~650ms each on production:
-   * five round-trips before this screen means anything. One composite request
-   * resolves them concurrently server-side. Measured locally: 16,826ms serial
-   * -> 2,815ms.
-   *
-   * Each panel still reads its own slice, so the rendering code below is
-   * unchanged, and a section the server could not build arrives as null exactly
-   * as a failed individual request did.
+   * ONE request: the Overview's own figures (`overview`), the Khata Baqaya total
+   * (`receivables`) and occupancy (`revenueBreakdowns`), resolved concurrently
+   * server-side (WW-PERF). It THROWS when it fails, so a broken request shows
+   * the console's error banner instead of a screen of zeros that reads as "no
+   * money". A response that has no `overview` section (an older server) is
+   * treated the same way.
    */
   const dashQ = useQuery({
-    queryKey: ["art-dashboard", activeBusinessId],
-    queryFn: ({ signal }) => AnalyticsAPI.getDashboardComposite("this_year", activeBusinessId, signal),
+    queryKey: ["art-overview", activeBusinessId],
+    queryFn: ({ signal }) => AnalyticsAPI.getOverviewBundle(activeBusinessId, signal),
   })
-  const kpisQ = { data: dashQ.data?.kpis ?? null, isLoading: dashQ.isLoading, isError: dashQ.isError }
-  const revQ = { data: dashQ.data?.revenueTrends ?? null, isLoading: dashQ.isLoading, isError: dashQ.isError }
-  const bkTrQ = { data: dashQ.data?.bookingTrends ?? null, isLoading: dashQ.isLoading, isError: dashQ.isError }
-  const recentQ = { data: dashQ.data?.recentBookings ?? null, isLoading: dashQ.isLoading, isError: dashQ.isError }
-  const leadsQ = useQuery({ queryKey: ["art-leads"], queryFn: () => LeadAPI.list({}) })
-  const bkdQ = { data: dashQ.data?.revenueBreakdowns ?? null, isLoading: dashQ.isLoading, isError: dashQ.isError }
   const compQ = useQuery({ queryKey: ["art-completeness"], queryFn: () => CompletenessAPI.listMine() })
   const bizId = activeBusinessId ?? (business as { id?: number } | null)?.id ?? null
   const reviewsQ = useQuery({ queryKey: ["art-reviews", bizId], enabled: !!bizId, queryFn: () => ReviewsAPI.getBusinessReviews(Number(bizId)).catch(() => null) })
@@ -493,35 +464,22 @@ export function OverviewArtifact() {
   // `enabled: !!bizId`, but null is a legitimate value here (it means "all
   // venues"), so the gate is on the list having settled instead.
   const refundQ = useQuery({ queryKey: ["art-refunds", bizId], enabled: !businessLoading, queryFn: () => listRefundObligations(bizId ?? undefined).catch(() => null) })
-  // WW-WORKLIST — past-date bookings nobody closed + delivered-and-unpaid.
-  const workQ = useQuery({ queryKey: ["art-work", activeBusinessId], queryFn: () => getActionSummary(activeBusinessId ?? undefined).catch(() => null) })
-  const healthQ = useQuery({ queryKey: ["art-health", activeBusinessId], queryFn: () => BusinessHealthAPI.getSignals(activeBusinessId ?? undefined).catch(() => null) })
 
   const data: ArtData = React.useMemo(() => {
-    const k = kpisQ.data
-    const revSeries = (revQ.data?.data ?? []).map((r) => ({ m: r.month, v: n(r.revenue) / 100000 }))
-    const bookingSeries = (bkTrQ.data?.data ?? []).map((r) => n(r.bookings))
-    const totalRev = (revQ.data?.data ?? []).reduce((s, r) => s + n(r.revenue), 0)
-    const nonZero = (revQ.data?.data ?? []).filter((r) => n(r.revenue) > 0)
-    const avgRev = nonZero.length ? Math.round(totalRev / nonZero.length) : 0
-    let best = "—"
-    const maxRow = (revQ.data?.data ?? []).reduce<{ month: string; revenue: number } | null>((m, r) => (!m || n(r.revenue) > n(m.revenue) ? r : m), null)
-    if (maxRow) best = `${maxRow.month} · ${(n(maxRow.revenue) / 100000).toFixed(1)} L`
+    const bundle = dashQ.data
+    const o = bundle?.overview ?? null
 
-    const byBiz = bkdQ.data?.byBusiness ?? []
-    const bookedDays = byBiz.reduce((s, b) => s + n((b as { bookedDays?: number }).bookedDays), 0)
-    const periodDays = byBiz.reduce((s, b) => s + n((b as { periodDays?: number }).periodDays), 0) || 365
-    const occPct = periodDays ? Math.round((bookedDays / periodDays) * 100) : 0
+    const rec = bundle?.receivables?.totals
+    const baqaya = rec ? { total: n(rec.grandOutstanding), customers: n(rec.customerCount) } : null
 
-    const events: EventRow[] = (recentQ.data?.bookings ?? []).slice(0, 4).map((b) => {
-      const pm = payMeta(b)
-      return { id: b.id, ini: initials(b.customerName), title: b.customerName || "—", tone: bookingTone(b.status), toneLabel: b.status || "—", date: `${cap(b.eventType)} · ${shortDate(b.bookingDate)}`, amount: n(b.totalAmount), payShow: pm.show, payPct: pm.pct, payZero: pm.zero, payCap: pm.cap }
-    })
-
-    const leadRows: LeadRow[] = ((leadsQ.data?.leads ?? []) as Lead[])
-      .filter((l) => (l.status || "").toLowerCase() !== "lost" && (l.status || "").toLowerCase() !== "booked")
-      .slice(0, 3)
-      .map((l) => ({ id: n(l.id), ini: initials(l.contactName), name: l.contactName || "Lead", ageLabel: relDays(l.createdAt) || "Naya", ageTone: (l.status || "").toLowerCase() === "new" ? "info" : "mut", meta: [cap(l.eventType), l.status ? cap(l.status) : null].filter(Boolean).join(" · ") }))
+    // Occupancy comes from a different section; if it failed it is unknown, not 0%.
+    const byBiz = bundle?.revenueBreakdowns?.byBusiness
+    let occ: ArtData["occ"] = null
+    if (byBiz) {
+      const bookedDays = byBiz.reduce((s, b) => s + n((b as { bookedDays?: number }).bookedDays), 0)
+      const periodDays = byBiz.reduce((s, b) => s + n((b as { periodDays?: number }).periodDays), 0) || 365
+      occ = { pct: Math.round((bookedDays / periodDays) * 100), bookedDays, emptyDays: Math.max(0, periodDays - bookedDays) }
+    }
 
     let profile: ArtData["profile"] = null
     const comps = (compQ.data ?? []) as BusinessCompleteness[]
@@ -543,7 +501,7 @@ export function OverviewArtifact() {
       const by = (withText?.reviewerName || withText?.user?.fullName || "").trim()
       const now = new Date(); const monthAgo = now.getMonth(); const yr = now.getFullYear()
       const newThisMonth = list.filter((x) => { const d = x.createdAt ? new Date(x.createdAt) : null; return d && !isNaN(d.getTime()) && d.getMonth() === monthAgo && d.getFullYear() === yr }).length
-      const avatars = list.map((x) => initials(x.reviewerName || x.user?.fullName)).filter((a) => a && a !== "?").slice(0, 3)
+      const avatars = list.map((x) => initialsOf(x.reviewerName || x.user?.fullName)).filter((a) => a && a !== "?").slice(0, 3)
       if (n(rv.totalReviews) > avatars.length) avatars.push(`+${n(rv.totalReviews) - avatars.length}`)
       rating = { avg: n(rv.averageRating), count: n(rv.totalReviews), newThisMonth, quote: q, by: by ? `${by}` : "", avatars }
     }
@@ -551,11 +509,11 @@ export function OverviewArtifact() {
     let wapsi: ArtData["wapsi"] = null
     const ob = refundQ.data
     if (ob && Array.isArray(ob.obligations)) {
-      const rows = ob.obligations.map((o) => {
-        const amount = n((o as { outstanding?: number }).outstanding) || n((o as { settlementDue?: number }).settlementDue) || n(o.computed?.refund)
-        const since = (o as { appliedAt?: string | null }).appliedAt || o.decidedAt || o.createdAt || null
+      const rows = ob.obligations.map((x) => {
+        const amount = n((x as { outstanding?: number }).outstanding) || n((x as { settlementDue?: number }).settlementDue) || n(x.computed?.refund)
+        const since = (x as { appliedAt?: string | null }).appliedAt || x.decidedAt || x.createdAt || null
         const days = since ? Math.max(0, Math.floor((Date.now() - new Date(since).getTime()) / 86400000)) : 0
-        return { id: n(o.id), booking: n(o.bookingId), amount, disputed: !!(o as { disputedAt?: string | null }).disputedAt, days }
+        return { id: n(x.id), booking: n(x.bookingId), amount, disputed: !!(x as { disputedAt?: string | null }).disputedAt, days }
       }).filter((r) => r.amount > 0)
       if (rows.length) {
         const oldest = rows.reduce((m, r) => (r.days > m.days ? r : m), rows[0])
@@ -564,34 +522,24 @@ export function OverviewArtifact() {
     }
 
     return {
-      loading: kpisQ.isLoading,
-      moneyErr: kpisQ.isError,
-      kpis: { bookings: n(k?.totalBookings?.value), bookingsDelta: n(k?.totalBookings?.delta), revenue: n(k?.totalRevenue?.value), revenueDelta: n(k?.totalRevenue?.delta), due: n(k?.revenueDue?.value), upcoming: n(k?.upcomingBookings?.value) },
-      series: revSeries, bookingSeries,
-      foot: { total: totalRev, avg: avgRev, best },
-      occ: { pct: occPct, bookedDays, emptyDays: Math.max(0, periodDays - bookedDays) },
-      events, leads: leadRows, profile, rating, wapsi,
-      work: (workQ.data || healthQ.data)
-        ? {
-            pastOpen: workQ.data?.pastEventsOpen?.items ?? [],
-            unpaid: workQ.data?.deliveredUnpaid?.items ?? [],
-            unpaidTotal: workQ.data?.deliveredUnpaid?.total ?? 0,
-            unanswered: healthQ.data?.unansweredEnquiries ?? 0,
-            oldestUnansweredHours: healthQ.data?.oldestUnansweredHours ?? 0,
-          }
-        : null,
+      loading: dashQ.isLoading,
+      failed: dashQ.isError || (!dashQ.isLoading && !o),
+      o, baqaya, occ, profile, rating, wapsi,
     }
-    // workQ.data belongs here: without it the card renders once as empty and
-    // never updates when the data lands. That exact omission hid a whole card
-    // on the booking-detail screen earlier.
-  }, [kpisQ.data, kpisQ.isLoading, kpisQ.isError, revQ.data, bkTrQ.data, recentQ.data, leadsQ.data, bkdQ.data, compQ.data, reviewsQ.data, refundQ.data, workQ.data, healthQ.data])
+  }, [dashQ.data, dashQ.isLoading, dashQ.isError, compQ.data, reviewsQ.data, refundQ.data])
 
   const greeting = React.useMemo(() => {
     const full = (user as { fullName?: string } | null)?.fullName
     const first = full ? full.split(/\s+/)[0] : ""
     return first ? `Assalam-o-Alaikum, ${first}` : "Assalam-o-Alaikum"
   }, [user])
-  const todayStr = new Date().toLocaleDateString("en-PK", { weekday: "long", day: "numeric", month: "long" })
+  // The date in the header is the SERVER's Karachi today when we have it, so the
+  // header and the lists below it can never be on different days.
+  const todayStr = React.useMemo(() => {
+    const t = data.o?.today
+    const d = t ? new Date(`${t}T12:00:00`) : new Date()
+    return d.toLocaleDateString("en-PK", { weekday: "long", day: "numeric", month: "long" })
+  }, [data.o?.today])
 
   // Rebuild content + charts on data change.
   React.useEffect(() => {
@@ -599,29 +547,57 @@ export function OverviewArtifact() {
     if (!s || !ready) return
     const wwc = s.getElementById("wwc")
     if (!wwc) return
+    if (data.failed) {
+      wwc.innerHTML = `${headHtml(greeting, todayStr)}${errorBannerHtml()}`
+      return
+    }
+    if (data.loading || !data.o) {
+      wwc.innerHTML = `${headHtml(greeting, todayStr)}<div class="loadwrap">Overview load ho raha hai…</div>`
+      return
+    }
     wwc.innerHTML = buildContent(data, greeting, todayStr)
-    seriesRef.current = data.series; bookingSeriesRef.current = data.bookingSeries
-    renderCharts(s, sliceRange(data.series, rangeRef.current), data.bookingSeries)
+    monthsRef.current = data.o.revenue.months
+    renderChart(s, monthsRef.current, rangeRef.current)
+    renderSparks(s, kpiCards(data.o, data.baqaya).map((k) => k.spark))
     const segWrap = wwc.querySelector(".seg")
-    if (segWrap) segWrap.querySelectorAll("button").forEach((x) => { const b = x as HTMLElement; b.classList.toggle("on", Number(b.dataset.range) === rangeRef.current) })
+    if (segWrap) segWrap.querySelectorAll("button").forEach((x) => { const b = x as HTMLElement; const on = Number(b.dataset.range) === rangeRef.current; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)) })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, data, greeting, todayStr])
 
-  // Revenue range 3M/6M/1Y — slice client-side and re-draw. (Nav is handled by the shell.)
+  // Revenue range 3M/6M/1Y and the retry button. (Nav is handled by the shell.)
   const bound = React.useRef(false)
   React.useEffect(() => {
     const s = shadowRef.current
     if (!s || !ready || bound.current) return
     bound.current = true
     s.addEventListener("click", (e) => {
-      const seg = (e.target as HTMLElement).closest(".seg button") as HTMLElement | null
+      const t = e.target as HTMLElement
+      if (t.closest("[data-retry]")) { qc.invalidateQueries({ queryKey: ["art-overview"] }); return }
+      const seg = t.closest(".seg button") as HTMLElement | null
       if (seg && seg.dataset.range) {
         e.preventDefault()
         rangeRef.current = Number(seg.dataset.range)
-        seg.parentElement?.querySelectorAll("button").forEach((x) => x.classList.remove("on")); seg.classList.add("on")
-        renderCharts(s, sliceRange(seriesRef.current, rangeRef.current), bookingSeriesRef.current)
+        seg.parentElement?.querySelectorAll("button").forEach((x) => { x.classList.remove("on"); x.setAttribute("aria-pressed", "false") }); seg.classList.add("on"); seg.setAttribute("aria-pressed", "true")
+        renderChart(s, monthsRef.current, rangeRef.current)
       }
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready])
+
+  // Month labels are thinned in real pixels, so a resize must redraw the chart.
+  React.useEffect(() => {
+    const s = shadowRef.current
+    const host = hostRef.current
+    if (!s || !ready || !host || typeof ResizeObserver === "undefined") return
+    let raf = 0, lastW = host.clientWidth
+    const ro = new ResizeObserver(() => {
+      if (Math.abs(host.clientWidth - lastW) < 8) return
+      lastW = host.clientWidth
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => { if (monthsRef.current.length) renderChart(s, monthsRef.current, rangeRef.current) })
+    })
+    ro.observe(host)
+    return () => { cancelAnimationFrame(raf); ro.disconnect() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready])
 

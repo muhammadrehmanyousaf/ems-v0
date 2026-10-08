@@ -213,6 +213,80 @@ export interface DashboardComposite {
   failedSections: string[]
 }
 
+/**
+ * One booking as the Overview lists it. `daysFromToday` is > 0 in the future,
+ * 0 today and < 0 in the past, counted on the SERVER's Karachi calendar, so the
+ * browser's clock and timezone never decide which card a record belongs to.
+ */
+export interface OverviewBookingRow {
+  id: number
+  customerName: string | null
+  eventType: string | null
+  bookingDate: string
+  bookingTime: string | null
+  status: string
+  vendorApprovedAt: string | null
+  venueName: string | null
+  total: number
+  received: number
+  outstanding: number
+  daysFromToday: number
+}
+
+export interface OverviewEnquiry {
+  id: number
+  contactName: string | null
+  eventType: string | null
+  eventDate: string | null
+  status: string
+  createdAt: string
+  daysWaiting: number
+}
+
+export interface OverviewMonth {
+  key: string // "2026-10"
+  received: number // money in, by the month it was received
+  refunded: number // money handed back that month
+}
+
+/**
+ * GET /analytics/overview — every figure, list and series the vendor Overview
+ * draws, from one set of rules (backend: services/vendorOverviewService.js).
+ */
+export interface DashboardOverview {
+  today: string // YYYY-MM-DD in Karachi
+  hasBusiness: boolean
+  truncated: boolean
+  scope: { businessId: number | null; allVenues: boolean } | null
+  rules: { openStatuses: string[]; timezone: string }
+  counts: { total: number; upcoming: number; needsClosing: number; closed: number; cancelled: number }
+  kpis: {
+    bookingsThisMonth: { value: number; previous: number; delta: number | null; month: string }
+    receivedYtd: { value: number; refunded: number; previous: number; delta: number | null; since: string }
+    upcomingNext7Days: { value: number; until: string }
+  }
+  revenue: { basis: "receipt_date"; months: OverviewMonth[] }
+  bookingsByMonth: { key: string; count: number }[]
+  upcomingByMonth: { key: string; count: number }[]
+  upcoming: { count: number; next7Days: number; items: OverviewBookingRow[] }
+  needsClosing: { count: number; items: OverviewBookingRow[] }
+  deliveredUnpaid: { count: number; total: number; items: OverviewBookingRow[] }
+  enquiries: { unanswered: number; stale: number; oldestHours: number; items: OverviewEnquiry[] }
+}
+
+/** The Khata "Baqaya" figures, trimmed to what a KPI needs. */
+export interface ReceivablesTotalsSection {
+  totals: { grandOutstanding: number; customerCount: number; installmentsOpen: number; oldestDaysOverdue: number }
+}
+
+/** What the Overview asks the composite for (see getOverviewBundle). */
+export interface OverviewBundle {
+  overview: DashboardOverview | null
+  receivables: ReceivablesTotalsSection | null
+  revenueBreakdowns: RevenueBreakdownsData | null
+  failedSections: string[]
+}
+
 export class AnalyticsAPI {
   /**
    * WW-PERF — the whole dashboard in one request.
@@ -239,6 +313,31 @@ export class AnalyticsAPI {
       return res.data.data ?? null
     } catch {
       return null
+    }
+  }
+
+  /**
+   * The Overview's data: its own figures (`overview`), the Khata Baqaya total
+   * (`receivables`) and occupancy (`revenueBreakdowns`), in one request.
+   *
+   * Unlike getDashboardComposite this THROWS on failure. That one swallows every
+   * error into `null`, which a screen cannot tell from "nothing here" — an
+   * Overview that cannot load would show zeros and read as "no money".
+   */
+  static async getOverviewBundle(
+    businessId?: number | null,
+    signal?: AbortSignal
+  ): Promise<OverviewBundle> {
+    const res = await axiosInstance.get(
+      `${BACKEND_URL}api/v1/analytics/dashboard?${buildQuery("this_year", undefined, undefined, businessId)}&sections=overview,receivables,revenueBreakdowns`,
+      { signal }
+    )
+    const d = res.data?.data ?? {}
+    return {
+      overview: d.overview ?? null,
+      receivables: d.receivables ?? null,
+      revenueBreakdowns: d.revenueBreakdowns ?? null,
+      failedSections: Array.isArray(d.failedSections) ? d.failedSections : [],
     }
   }
 
