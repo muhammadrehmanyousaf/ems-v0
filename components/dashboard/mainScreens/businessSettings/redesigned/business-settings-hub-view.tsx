@@ -52,6 +52,8 @@ import { cn } from "@/lib/utils"
 import { FieldError, fieldAria, ERROR_INPUT_CLS } from "@/components/dashboard/primitives/field-error"
 import { focusField } from "@/components/dashboard/primitives/focus-field"
 import { invalidateBusinessData } from "@/lib/query/business-keys"
+import { businessStatusInfo, businessSubtitle } from "@/lib/business-status"
+import { describeLimit, useBusinessLimit } from "@/lib/business-limits"
 
 const numOrNull = (v: string) => (v.trim() === "" ? null : Number(v) || 0)
 
@@ -216,6 +218,8 @@ function amenitiesFor(vendorType: string | null | undefined, form: Record<string
 export function BusinessSettingsHubView() {
   const qc = useQueryClient()
   const { data: businesses, isLoading, isError, refetch } = useMyBusinesses()
+  // "3 of 4 businesses" beside the Add a business button, once the API publishes the plan's limit.
+  const { limit: businessLimit, atLimit: businessLimitReached } = useBusinessLimit()
   // Deep-link: sidebar sub-items navigate to /dashboard/settings?tab=<id>.
   // Resolve that id → the matching hub tab so each link opens its own section
   // (previously the param was ignored and everything opened on Profile).
@@ -769,6 +773,25 @@ export function BusinessSettingsHubView() {
 
   const tab = TABS.find((t) => t.key === active)!
 
+  /* "Add a business" — the door a vendor with one or several businesses was
+     missing. It opens a short form that reuses this login (no second sign-up).
+     The count appears once the API publishes the plan's business limit; the
+     server enforces the limit and the form explains a refusal. */
+  const multiBiz = (businesses?.length ?? 0) > 1
+  const addBusinessAction = (
+    <Button asChild size="sm" variant="outline">
+      <Link href="/dashboard/business/new" data-testid="add-business-settings">
+        <Icon name="Plus" size={14} /> Add a business
+      </Link>
+    </Button>
+  )
+  const statusInfo = businessStatusInfo(biz.status)
+  /** A live business adds nothing to its tab; anything else names its stage. */
+  const stageLabel = (status?: string) => {
+    const s = businessStatusInfo(status)
+    return s && s.tone !== "ok" ? s.label : ""
+  }
+
   return (
     /**
      * The save bar is `fixed`, so it takes no space in the flow and the page
@@ -793,8 +816,35 @@ export function BusinessSettingsHubView() {
         eyebrow="Settings · Business"
         title={biz.name || "Business settings"}
         description="Your public profile, pricing and services."
-        actions={biz.vendor?.vendorType ? <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{biz.vendor.vendorType}</span> : undefined}
+        actions={
+          <>
+            {biz.vendor?.vendorType ? <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{biz.vendor.vendorType}</span> : null}
+            {/* With 2+ businesses the button sits beside the business tabs below. */}
+            {!multiBiz && addBusinessAction}
+          </>
+        }
       />
+
+      {/* What this business's status means, in plain words, while it is still with
+          our team (or needs attention). A live business shows nothing here. */}
+      {statusInfo && statusInfo.tone !== "ok" && (
+        <div
+          role="status"
+          data-testid="business-status-note"
+          className={cn(
+            "flex items-start gap-2.5 rounded-xl border px-3.5 py-3 text-sm",
+            statusInfo.tone === "bad"
+              ? "border-destructive/30 bg-destructive/5 text-foreground"
+              : "border-amber-300/60 bg-amber-50 text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100",
+          )}
+        >
+          <Icon name={statusInfo.tone === "bad" ? "AlertTriangle" : "Clock"} size={16} className="mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <p className="font-medium">{statusInfo.headline}</p>
+            <p className="mt-0.5 text-[13px] opacity-90">{statusInfo.detail}</p>
+          </div>
+        </div>
+      )}
 
       {/* Business switcher — only rendered when there is something to switch
           between, so nothing changes for single-venue vendors. Without this,
@@ -802,13 +852,21 @@ export function BusinessSettingsHubView() {
           resolution above). Guarded on `dirty` so a vendor cannot lose an
           in-progress edit by switching away from it — the old behaviour would
           have silently carried venue A's unsaved fields onto venue B. */}
-      {(businesses?.length ?? 0) > 1 && (
+      {multiBiz && (
         <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
-          <div className="mb-2 flex items-center gap-2">
+          <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2">
             <Icon name="Building2" size={14} className="text-muted-foreground" />
             <span className="text-xs font-medium text-muted-foreground">
               Editing {businesses!.length} businesses — choose one
+              {businessLimit && (
+                <span className="ml-2 font-normal tabular-nums" data-testid="business-count">
+                  · {businessLimit.used > businessLimit.max
+                    ? `your plan allows ${businessLimit.max}`
+                    : describeLimit(businessLimit) + (businessLimitReached ? ", limit reached" : "")}
+                </span>
+              )}
             </span>
+            <span className="ml-auto">{addBusinessAction}</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {businesses!.map((b) => {
@@ -838,9 +896,12 @@ export function BusinessSettingsHubView() {
                       : "border-border hover:border-primary/40 hover:bg-muted",
                   )}
                 >
-                  <span className="block max-w-[220px] truncate">{b.name || `Business #${b.id}`}</span>
-                  <span className="block text-[10px] text-muted-foreground">
-                    {[b.city, b.status].filter(Boolean).join(" · ")}
+                  {/* Two lines, not one truncated one: "Zzz QA Coverage Marque..." twice
+                      was unreadable. The line under it says what and where, then
+                      what stage the business is at (a live business adds nothing). */}
+                  <span className="line-clamp-2 block max-w-[260px] break-words" title={b.name}>{b.name || `Business #${b.id}`}</span>
+                  <span className="block max-w-[260px] truncate text-[10px] text-muted-foreground">
+                    {[businessSubtitle(b), stageLabel(b.status)].filter(Boolean).join(" · ")}
                   </span>
                 </button>
               )

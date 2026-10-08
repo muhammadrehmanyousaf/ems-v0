@@ -46,6 +46,8 @@ const EXTRA_CSS = String.raw`
 .t-val{ font-size:21px; font-weight:680; margin-top:8px; } .t-sub{ font-size:11px; color:var(--ink-3); margin-top:4px; }
 .warnbox{ display:flex; gap:10px; align-items:flex-start; padding:12px 15px; margin-bottom:14px; background:var(--warn-wash); border:1px solid transparent; border-radius:var(--r); } .warnbox svg{ width:17px; height:17px; color:var(--warn); flex:none; margin-top:1px; } .warnbox .wb-t{ font-size:12.5px; font-weight:600; color:var(--warn); } .warnbox .wb-l{ font-size:12px; color:var(--ink-2); margin-top:3px; line-height:1.5; }
 .nmlnk{ color:var(--accent-ink); font-weight:600; cursor:pointer; } .nmlnk:hover{ text-decoration:underline; }
+.scope-note{ display:flex; gap:8px; align-items:flex-start; margin-top:8px; max-width:640px; font-size:12px; line-height:1.5; color:var(--ink-2); } .scope-note svg{ width:14px; height:14px; color:var(--accent-ink); flex:none; margin-top:3px; } .scope-note b{ color:var(--ink); font-weight:600; }
+.linkbtn{ background:none; border:0; padding:0; font:inherit; font-weight:600; color:var(--accent-ink); text-decoration:underline; cursor:pointer; } .linkbtn:hover{ filter:brightness(.9); }
 .hallcard{ margin-bottom:12px; overflow:hidden; transition:box-shadow .12s,border-color .12s; } .hallcard:hover{ box-shadow:var(--shadow-md); border-color:var(--accent-line); }
 .sprow{ display:flex; align-items:center; gap:13px; padding:14px 16px; border-bottom:1px solid var(--border); transition:background .1s; } .sprow:last-child{ border-bottom:0; } .sprow:hover{ background:var(--surface-2); } .sprow.inactive{ opacity:.6; }
 .sprow.header{ background:linear-gradient(90deg,var(--accent-wash),transparent 60%); } .sprow.header .sp-nm{ font-size:14.5px; }
@@ -114,7 +116,7 @@ function mgFormBody(flat: SubVenueNode[], group?: MergeGroup | null): string {
   <div class="ww-dfoot"><button class="btn btn-ghost" type="button" data-drawer-close>Cancel</button><button class="btn btn-primary" type="button" id="mg-save">${group ? "Update karein" : "Combine karein"}</button></div>`
 }
 
-function buildContent(nodes: SubVenueNode[], warnings: { subVenueId: number; name: string; overBy: number }[], groups: MergeGroup[]): string {
+function buildContent(nodes: SubVenueNode[], warnings: { subVenueId: number; name: string; overBy: number }[], groups: MergeGroup[], bizName: string, scopeHint: string): string {
   const flat = flatten(nodes)
   const active = flat.filter((s) => s.active)
   const noLimit = flat.filter((s) => s.fireRatedCapacity == null).length
@@ -150,7 +152,7 @@ function buildContent(nodes: SubVenueNode[], warnings: { subVenueId: number; nam
     </div>`
   }
   const hallCard = (node: SubVenueNode) => { const rows = flatten([node]); return `<div class="card hallcard">${rows.map((s, i) => rowHtml(s, i === 0)).join("")}</div>` }
-  const list = nodes.length ? nodes.map(hallCard).join("") : `<div class="card"><div class="empty">Abhi koi hall/space nahi. "Naya space" se pehla hall add karein.</div></div>`
+  const list = nodes.length ? nodes.map(hallCard).join("") : `<div class="card"><div class="empty">Abhi koi hall/space nahi. "Add a space" se ${escHtml(bizName)} ka pehla hall add karein.</div></div>`
 
   // merge groups
   const nameById = new Map(flat.map((s) => [s.id, s.name] as const))
@@ -161,7 +163,9 @@ function buildContent(nodes: SubVenueNode[], warnings: { subVenueId: number; nam
   }).join("")}</div>` : ""
 
   return `
-  <div class="head"><div><h1>Halls & Spaces</h1><div class="sub">Apni jagahein — har hall ki capacity, rent, aur booking tareeqa set karein.</div></div><div class="head-actions"><button class="btn btn-primary" id="addbtn">${svg(IC.plus, 2.2)} Naya space</button></div></div>
+  <div class="head"><div><h1>Halls & Spaces</h1><div class="sub">Rooms inside <b>${escHtml(bizName)}</b> — har hall ki capacity, rent, aur booking tareeqa set karein.</div>
+    <div class="scope-note" data-testid="spaces-scope-note">${svg(IC.building, 1.8)}<span>A hall, lawn or section added here goes <b>inside ${escHtml(bizName)}</b>. It does not create a new business.${scopeHint ? ` ${escHtml(scopeHint)}` : ""} To list a different business, <button type="button" class="linkbtn" data-nav-btn="/dashboard/business/new">add a business</button>.</span></div></div>
+    <div class="head-actions"><button class="btn btn-primary" id="addbtn">${svg(IC.plus, 2.2)} Add a space</button></div></div>
   ${tiles}${warnBox}${list}
   <div class="sec-h">${svg(IC.merge, 1.8)} Combined spaces</div>
   <div style="margin-bottom:12px"><button class="btn btn-ghost" id="mgaddbtn">${svg(IC.plus, 2)} Spaces combine karein</button></div>
@@ -173,9 +177,17 @@ export function SpacesArtifact() {
   const hostRef = React.useRef<HTMLDivElement | null>(null)
   const { shadowRef, ready } = useArtifactShell(hostRef, { activeHref: "/dashboard/spaces", crumbBold: "Venue", crumbSub: "Halls & Spaces", extraCss: EXTRA_CSS })
   const qc = useQueryClient()
-  const { business } = useBusiness()
+  const { business, businesses } = useBusiness()
   const activeBusinessId = useActiveBusinessId()
   const bizId = activeBusinessId ?? (business as { id?: number } | null)?.id ?? null
+  // Name the business this page edits. Halls & Spaces adds rooms INSIDE one business;
+  // a vendor with several used to have nothing here saying which one, or that it is not
+  // the way to add a new business. With "all businesses" selected the page still works
+  // on the first one, so say that too rather than let it look like a roll-up.
+  const bizName = (businesses ?? []).find((b) => b.id === bizId)?.name || (business as { name?: string } | null)?.name || "this business"
+  const scopeHint = activeBusinessId == null && (businesses?.length ?? 0) > 1
+    ? "You are viewing all businesses, so this page shows your first one. Pick another in the switcher at the top left."
+    : ""
   const bizRef = React.useRef(bizId); bizRef.current = bizId
   const treeQ = useQuery({ queryKey: ["spaces-tree", bizId], enabled: !!bizId, queryFn: () => venueSpacesApi.getTree(Number(bizId)) })
   const warnQ = useQuery({ queryKey: ["spaces-warn", bizId], enabled: !!bizId, queryFn: () => venueSpacesApi.capacityWarnings(Number(bizId)).catch(() => ({ businessId: Number(bizId), warnings: [] })) })
@@ -193,9 +205,9 @@ export function SpacesArtifact() {
     const nodes = treeQ.data.tree ?? []
     flatRef.current = flatten(nodes)
     groupsRef.current = mgQ.data?.groups ?? []
-    wwc.innerHTML = buildContent(nodes, warnQ.data?.warnings ?? [], mgQ.data?.groups ?? [])
+    wwc.innerHTML = buildContent(nodes, warnQ.data?.warnings ?? [], mgQ.data?.groups ?? [], bizName, scopeHint)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, treeQ.data, warnQ.data, mgQ.data, bizId, isError])
+  }, [ready, treeQ.data, warnQ.data, mgQ.data, bizId, isError, bizName, scopeHint])
 
   const bound = React.useRef(false)
   React.useEffect(() => {

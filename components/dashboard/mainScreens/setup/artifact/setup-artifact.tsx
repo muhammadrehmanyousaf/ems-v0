@@ -27,6 +27,7 @@ const IC = {
   promote: '<path d="M3 11v2a1 1 0 0 0 1 1h2l4 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M14 7a5 5 0 0 1 0 10"/>',
   collab: '<path d="M8 11.5l2.4 2.4a1.5 1.5 0 0 0 2.1 0L18 8.5"/><path d="M2 12l4-4 4 3M22 12l-4-4-3 2"/>',
   arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  addbiz: '<path d="M3 21h12M6 21V7l6-4 6 4v5"/><path d="M9 9h.01M9 13h.01M15 9h.01M19 16v6M16 19h6"/>',
 }
 
 type Card = { href: string; label: string; desc: string; ico: string }
@@ -39,12 +40,13 @@ const GROUPS: { grp: string; blurb: string; cards: Card[] }[] = [
       { href: "/dashboard/automation", label: "Automation", desc: "Reminder toggles aur no-code rules.", ico: IC.auto },
       { href: "/dashboard/cancellation-policy", label: "Cancellation policy", desc: "Cancel/refund ke terms — kaun paisa rakhta hai.", ico: IC.policy },
       { href: "/dashboard/availability", label: "Availability", desc: "Kab bookable hain — blocked/free dates.", ico: IC.holds },
+      { href: "/dashboard/business/new", label: "Add a business", desc: "List another venue or service on this same account — no new sign-up.", ico: IC.addbiz },
     ],
   },
   {
     grp: "Venue", blurb: "Halls, packages aur venue-OS configuration.",
     cards: [
-      { href: "/dashboard/spaces", label: "Halls & spaces", desc: "Halls, lawns, sections — capacity, rent, mode.", ico: IC.venueos },
+      { href: "/dashboard/spaces", label: "Halls & spaces", desc: "Rooms inside this business: halls, lawns, sections — capacity, rent, mode.", ico: IC.venueos },
       { href: "/dashboard/slots", label: "Bookable slots", desc: "Waqt-slots — capacity, mehmaan cap, kaunse din.", ico: IC.holds },
       { href: "/dashboard/packages", label: "Packages & menus", desc: "Deal packages aur khana menus (one-dish).", ico: IC.packages },
       { href: "/dashboard/venue-os", label: "Venue-OS hub", desc: "Multi-venue money, profit aur operations.", ico: IC.venueos },
