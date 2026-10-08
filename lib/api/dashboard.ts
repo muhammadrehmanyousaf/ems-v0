@@ -196,6 +196,8 @@ export interface NewBusinessInput {
   minimumPrice?: number;
   maxCapacity?: number;
   minCapacity?: number;
+  /** Venue type / style etc. A Postgres ARRAY column: always send an array, never a bare string. */
+  subBusinessType?: string[];
 }
 
 export interface ApiBusiness {
