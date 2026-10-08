@@ -10,7 +10,7 @@
  *   - reading the plan's business limit, and the server's LIMIT_REACHED refusal
  */
 import { businessStatusInfo, businessSubtitle, firstLabel } from "../lib/business-status.ts";
-import { parseBusinessLimit, limitReachedFrom } from "../lib/business-limit-parse.ts";
+import { parseBusinessLimit, limitReachedFrom, describeLimit } from "../lib/business-limit-parse.ts";
 
 let failed = 0;
 const check = (name, fn) => {
@@ -89,12 +89,47 @@ check("negative, NaN and text are not limits", () => {
 check("the plan name is carried for the upgrade message", () => {
   eq(parseBusinessLimit({ planName: "Pro", limits: { businesses: 4 } }, 1).planName, "Pro");
 });
+// The real body of GET /subscriptions/status (ems-v0-backend src/utils/planEntitlements.js, entitlementsFor).
+const serverStatus = (enforced, max, used) => ({
+  access: "active", tier: "pro", enforced: false,
+  entitlements: { tier: "pro", planName: "Basic", enforced, features: {}, limits: { businesses: { max, used, label: "businesses" }, staff: { max: 2, used: 0, label: "staff accounts" } } },
+});
+check("the server's real shape: Basic, enforced, 1 of 1", () => {
+  eq(parseBusinessLimit(serverStatus(true, 1, 1), 1), { max: 1, used: 1, planName: "Basic" });
+});
+check("NOT enforced for this account -> unknown, so no 'limit reached' wall for a vendor the server would let through", () => {
+  // PLAN_LIMITS_ENFORCE is off by default; the table is still published (free = 1 business).
+  eq(parseBusinessLimit(serverStatus(false, 1, 5), 5), null);
+});
+check("enforced with room left: 3 of 4", () => {
+  eq(parseBusinessLimit(serverStatus(true, 4, 3), 3), { max: 4, used: 3, planName: "Basic" });
+});
+check("unlimited (max null) is not a limit", () => {
+  eq(parseBusinessLimit(serverStatus(true, null, 3), 3), null);
+});
+check("the count reads naturally, including an account already over its limit", () => {
+  eq(describeLimit({ max: 4, used: 3, planName: null }), "3 of 4 businesses");
+  eq(describeLimit({ max: 1, used: 1, planName: null }), "1 of 1 business");
+  eq(describeLimit({ max: 1, used: 6, planName: null }), "6 businesses (your plan allows 1)");
+});
 
 console.log("\nthe server's LIMIT_REACHED refusal");
 const refusal = (status, data) => ({ response: { status, data } });
 check("403 with the code at the top level", () => {
   const r = limitReachedFrom(refusal(403, { status: false, code: "LIMIT_REACHED", message: "Your plan allows 1 business.", data: null }));
-  eq(r, { message: "Your plan allows 1 business.", max: null, used: null, upgradeTo: null });
+  eq(r, { message: "Your plan allows 1 business.", max: null, used: null, upgradeTo: null, currentPlan: null });
+});
+check("the server's real refusal (apiResponse 403, details inside data)", () => {
+  const r = limitReachedFrom(refusal(403, {
+    status: false,
+    message: "Your Basic plan includes 1 businesses. Upgrade to Pro to add more.",
+    data: { code: "LIMIT_REACHED", limit: "businesses", max: 1, used: 1, currentPlan: "Basic", requiredPlan: "Pro" },
+  }));
+  eq([r.max, r.used, r.currentPlan, r.upgradeTo], [1, 1, "Basic", "Pro"]);
+});
+check("the top plan has no plan above it (requiredPlan null): still a limit refusal", () => {
+  const r = limitReachedFrom(refusal(403, { message: "Your Premium plan includes 4 businesses. Contact us for a custom plan.", data: { code: "LIMIT_REACHED", max: 4, used: 4, currentPlan: "Premium", requiredPlan: null } }));
+  eq([r.max, r.used, r.currentPlan, r.upgradeTo], [4, 4, "Premium", null]);
 });
 check("403 with the code and numbers inside data", () => {
   const r = limitReachedFrom(refusal(403, { message: "No more.", data: { code: "LIMIT_REACHED", limit: 4, current: 4, planNeeded: "Premium" } }));

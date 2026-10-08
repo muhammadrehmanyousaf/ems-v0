@@ -32,7 +32,7 @@ import { useBusiness } from "@/context/BusinessContext"
 import { useUser } from "@/context/UserContext"
 import { useActiveBusinessStore } from "@/lib/store/active-business-store"
 import { businessStatusInfo, businessSubtitle } from "@/lib/business-status"
-import { useBusinessLimit } from "@/lib/business-limits"
+import { describeLimit, useBusinessLimit } from "@/lib/business-limits"
 
 type Biz = {
   id: number; name?: string; city?: string | null; subArea?: string | null; status?: string
@@ -136,12 +136,15 @@ function BusinessSwitcher() {
   const allMode = activeBusinessId == null && list.length > 1
   const shown = active || (list.length === 1 ? list[0] : (business as Biz | null))
   const name = allMode ? "Sabhi venue" : (shown?.name || "Your venue")
-  // Under the name: type · city, plus the stage while the business is not live yet.
+  // Under the name: type · city · area. While the business is not live yet the stage
+  // comes first instead ("Under review · Karachi"), short enough not to be cut off.
   const stage = (() => { const s = businessStatusInfo(shown?.status); return s && s.tone !== "ok" ? s.label : "" })()
-  const sub = allMode ? `${list.length} venues` : ([shown ? businessSubtitle(shown) : "", stage].filter(Boolean).join(" · ") || " ")
+  const sub = allMode
+    ? `${list.length} venues`
+    : (stage ? [stage, shown?.city].filter(Boolean).join(" · ") : shown ? businessSubtitle(shown) : "") || " "
   const canAdd = !!(user as { isVendor?: boolean } | null)?.isVendor
   // "3 of 4 businesses" once the API publishes the plan's limit; the plain count until then.
-  const countText = limit ? `${limit.used} of ${limit.max} businesses` : list.length ? `${list.length} ${list.length === 1 ? "business" : "businesses"}` : ""
+  const countText = limit ? describeLimit(limit) : list.length ? `${list.length} ${list.length === 1 ? "business" : "businesses"}` : ""
   return (
     <SidebarMenu>
       <SidebarMenuItem>

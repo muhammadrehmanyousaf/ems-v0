@@ -64,6 +64,11 @@ const USED_KEYS = ["used", "current", "count", "usage", "inUse"]
 export function parseBusinessLimit(status: unknown, owned: number): BusinessLimit | null {
   if (!isRec(status)) return null
   const ent = isRec(status.entitlements) ? status.entitlements : null
+  // The server publishes the plan table for every vendor but applies it only where
+  // `enforced` is true (PLAN_LIMITS_ENFORCE: off by default, then new accounts only,
+  // then everyone). Where it is not applied, "5 of 1 businesses" would be a lie and an
+  // at-limit panel would block a vendor the server would happily let through.
+  if (ent && ent.enforced === false) return null
   const candidates: unknown[] = [
     ent && isRec(ent.limits) ? ent.limits.businesses : undefined,
     ent?.businesses,
@@ -87,6 +92,18 @@ export function parseBusinessLimit(status: unknown, owned: number): BusinessLimi
   return null
 }
 
+/**
+ * "3 of 4 businesses". A vendor can hold MORE than the plan allows (a downgrade, or
+ * an account that predates the limit: nothing is ever deleted), and "6 of 1" reads
+ * like a bug, so that case says what is true instead.
+ */
+export function describeLimit(limit: BusinessLimit): string {
+  const noun = (n: number) => (n === 1 ? "business" : "businesses")
+  return limit.used > limit.max
+    ? `${limit.used} ${noun(limit.used)} (your plan allows ${limit.max})`
+    : `${limit.used} of ${limit.max} ${noun(limit.max)}`
+}
+
 // ── The server's refusal ───────────────────────────────────────────────────
 
 export interface LimitReached {
@@ -95,6 +112,8 @@ export interface LimitReached {
   used: number | null
   /** The plan the server says is needed, when it names one. */
   upgradeTo: string | null
+  /** The vendor's current plan, when the server names it. */
+  currentPlan: string | null
 }
 
 /**
@@ -117,5 +136,6 @@ export function limitReachedFrom(error: unknown): LimitReached | null {
     max: pick(src, MAX_KEYS) ?? pick(body, MAX_KEYS),
     used: pick(src, USED_KEYS) ?? pick(body, USED_KEYS),
     upgradeTo: text(src, ["planNeeded", "requiredPlan", "upgradeTo", "plan"]) ?? text(body, ["planNeeded", "requiredPlan", "upgradeTo"]),
+    currentPlan: text(src, ["currentPlan"]) ?? text(body, ["currentPlan"]),
   }
 }

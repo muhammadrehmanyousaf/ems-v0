@@ -12,7 +12,7 @@ import { useMyBusinesses } from "@/hooks/use-my-businesses"
 import { useUser } from "@/context/UserContext"
 import { parseBusinessLimit, type BusinessLimit } from "@/lib/business-limit-parse"
 
-export { parseBusinessLimit, limitReachedFrom } from "@/lib/business-limit-parse"
+export { parseBusinessLimit, limitReachedFrom, describeLimit } from "@/lib/business-limit-parse"
 export type { BusinessLimit, LimitReached } from "@/lib/business-limit-parse"
 
 /**

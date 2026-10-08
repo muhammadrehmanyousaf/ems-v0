@@ -51,7 +51,7 @@ import { FieldError, fieldAria, ERROR_INPUT_CLS } from "@/components/dashboard/p
 import { focusField } from "@/components/dashboard/primitives/focus-field"
 import { invalidateBusinessData } from "@/lib/query/business-keys"
 import { businessStatusInfo, businessSubtitle } from "@/lib/business-status"
-import { useBusinessLimit } from "@/lib/business-limits"
+import { describeLimit, useBusinessLimit } from "@/lib/business-limits"
 
 const numOrNull = (v: string) => (v.trim() === "" ? null : Number(v) || 0)
 
@@ -858,7 +858,9 @@ export function BusinessSettingsHubView() {
               Editing {businesses!.length} businesses — choose one
               {businessLimit && (
                 <span className="ml-2 font-normal tabular-nums" data-testid="business-count">
-                  ({businessLimit.used} of {businessLimit.max} on your plan{businessLimitReached ? ", limit reached" : ""})
+                  · {businessLimit.used > businessLimit.max
+                    ? `your plan allows ${businessLimit.max}`
+                    : describeLimit(businessLimit) + (businessLimitReached ? ", limit reached" : "")}
                 </span>
               )}
             </span>

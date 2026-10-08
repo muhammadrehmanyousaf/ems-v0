@@ -41,7 +41,7 @@ import { useUser } from "@/context/UserContext"
 import { CITIES } from "@/lib/seo/constants"
 import { getVendorTypeConfig } from "@/lib/vendor-type-config"
 import { errorMessage } from "@/lib/utils/api-error"
-import { limitReachedFrom, useBusinessLimit, type LimitReached } from "@/lib/business-limits"
+import { describeLimit, limitReachedFrom, useBusinessLimit, type LimitReached } from "@/lib/business-limits"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { Button } from "@/components/ui/button"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
@@ -103,9 +103,11 @@ export function toPayload(f: Form, subTypes: string[] = []): NewBusinessInput {
 }
 
 /** The plan-limit message: what the plan allows, what the vendor has, what to do. */
-function LimitPanel({ max, used, upgradeTo, message }: { max: number | null; used: number | null; upgradeTo: string | null; message?: string }) {
+function LimitPanel({ max, used, upgradeTo, currentPlan, message }: { max: number | null; used: number | null; upgradeTo: string | null; currentPlan: string | null; message?: string }) {
+  // The server names the unpaid state "No plan": "Your No plan plan" reads as a typo.
+  const plan = currentPlan && !/^no plan$/i.test(currentPlan) ? `Your ${currentPlan} plan` : "Your plan"
   const title = max != null
-    ? `Your plan allows ${max} ${max === 1 ? "business" : "businesses"}`
+    ? `${plan} allows ${max} ${max === 1 ? "business" : "businesses"}`
     : "You have reached your plan's business limit"
   return (
     <section
@@ -119,10 +121,12 @@ function LimitPanel({ max, used, upgradeTo, message }: { max: number | null; use
           <h2 className="text-sm font-semibold">{title}</h2>
           <p className="mt-1 text-[13px] opacity-90">
             {used != null ? `You already have ${used}. ` : ""}
-            To add another business, upgrade your plan{upgradeTo ? ` to ${upgradeTo}` : ""}. Your existing businesses stay exactly as they are.
+            To add another business, upgrade your plan{upgradeTo ? ` to ${upgradeTo}` : " or ask us about a custom plan"}. Your existing businesses stay exactly as they are.
           </p>
-          {/* The server's own words, unless they only repeat the title. */}
-          {message && message.trim().replace(/\.$/, "").toLowerCase() !== title.toLowerCase() && (
+          {/* The server's own words. When it names the plan to upgrade to we already say so
+              above; when it does not (the top plan: "Contact us for a custom plan") its line
+              is the only place that tells the vendor what to do, so it must show. */}
+          {message && !upgradeTo && message.trim().replace(/\.$/, "").toLowerCase() !== title.toLowerCase() && (
             <p className="mt-1 text-[12px] opacity-75">{message}</p>
           )}
         </div>
@@ -237,7 +241,7 @@ export function AddBusinessView() {
 
   // Known up front (the API published the limit and the vendor is at it), or learned
   // from the server's refusal. Either way the form would only fail, so don't show it.
-  const blocked = limitHit ?? (atLimit && limit ? { message: "", max: limit.max, used: limit.used, upgradeTo: null } : null)
+  const blocked: LimitReached | null = limitHit ?? (atLimit && limit ? { message: "", max: limit.max, used: limit.used, upgradeTo: null, currentPlan: limit.planName } : null)
 
   return (
     <div className="mx-auto max-w-2xl space-y-5 p-4 md:p-6">
@@ -249,12 +253,12 @@ export function AddBusinessView() {
 
       {limit && !blocked && (
         <p className="text-xs text-muted-foreground tabular-nums" data-testid="business-count">
-          You have {limit.used} of {limit.max} businesses on your plan.
+          You have {describeLimit(limit)}.
         </p>
       )}
 
       {blocked ? (
-        <LimitPanel max={blocked.max} used={blocked.used} upgradeTo={blocked.upgradeTo} message={blocked.message} />
+        <LimitPanel max={blocked.max} used={blocked.used} upgradeTo={blocked.upgradeTo} currentPlan={blocked.currentPlan} message={blocked.message} />
       ) : (
         <form onSubmit={onSubmit} noValidate className="space-y-5">
           {/* Same account: the vendor can see nothing new is asked about them. */}
