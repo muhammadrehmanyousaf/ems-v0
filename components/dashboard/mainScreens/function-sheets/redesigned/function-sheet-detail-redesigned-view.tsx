@@ -40,6 +40,8 @@ import {
 import { ShareLinkDialog } from "../share-link-dialog"
 import { SendWhatsappDialog } from "../send-whatsapp-dialog"
 import { cn } from "@/lib/utils"
+import { useFeature } from "@/context/plan-context"
+import { PlanLockChip } from "@/components/dashboard/plans/plan-locked"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const fmtDate = (s?: string | null) => {
@@ -99,6 +101,10 @@ export function FunctionSheetDetailRedesignedView({ id }: { id?: number } = {}) 
   // function-sheet-detail-view): a per-variant PDF dropdown
   // (preview/download/WhatsApp) + the customer share-link dialog. The two
   // dialogs are reused verbatim from the original screen.
+  // Plan: the QUOTE and CONTRACT documents and the customer share/e-sign link are "Quotes, contracts and e-sign"
+  // (contracts_esign). BEO, invoice and receipt are not part of it. Locked items stay visible, marked, never missing.
+  const esignLocked = useFeature("contracts_esign").locked
+  const isContractDoc = (v: PdfVariant) => v === "quote" || v === "contract"
   const [pdfBusy, setPdfBusy] = React.useState(false)
   const [shareOpen, setShareOpen] = React.useState(false)
   const [whatsappVariant, setWhatsappVariant] = React.useState<PdfVariant | null>(null)
@@ -190,32 +196,44 @@ export function FunctionSheetDetailRedesignedView({ id }: { id?: number } = {}) 
                   {variants.length === 0 ? "No variants unlocked yet" : "Available variants"}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {variants.map((v) => (
+                {variants.map((v) => {
+                  const locked = esignLocked && isContractDoc(v)
+                  return (
                   <React.Fragment key={v}>
-                    <DropdownMenuItem onClick={() => handlePdf(v, "preview")}>
+                    {locked && (
+                      <div className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground" data-testid="pdf-variant-locked">
+                        <span className="font-medium text-foreground">{PDF_VARIANT_LABELS[v]}</span>
+                        <PlanLockChip feature="contracts_esign" />
+                      </div>
+                    )}
+                    <DropdownMenuItem disabled={locked} onClick={() => handlePdf(v, "preview")}>
                       <Icon name="ExternalLink" size={14} className="mr-2" />
                       Preview {PDF_VARIANT_LABELS[v]}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handlePdf(v, "download")}>
+                    <DropdownMenuItem disabled={locked} onClick={() => handlePdf(v, "download")}>
                       <Icon name="Download" size={14} className="mr-2" />
                       Download {PDF_VARIANT_LABELS[v]}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setWhatsappVariant(v)}>
+                    <DropdownMenuItem disabled={locked} onClick={() => setWhatsappVariant(v)}>
                       <Icon name="MessageSquare" size={14} className="mr-2" />
                       Send {PDF_VARIANT_LABELS[v]} via WhatsApp
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </React.Fragment>
-                ))}
+                  )
+                })}
               </DropdownMenuContent>
             </DropdownMenu>
             <Button
               variant="outline"
               onClick={() => setShareOpen(true)}
+              // Managing an existing link (to revoke it) always works; issuing a new one is the e-sign feature.
+              disabled={esignLocked && !shareTokenLive}
               className={shareTokenLive ? "border-sky-300 text-sky-700 dark:text-sky-400" : undefined}
             >
               <Icon name="Send" size={15} className="mr-1.5" />
               {shareTokenLive ? "Manage share link" : "Share link"}
+              {esignLocked && !shareTokenLive ? <PlanLockChip feature="contracts_esign" className="ml-2" /> : null}
             </Button>
           </div>
         }

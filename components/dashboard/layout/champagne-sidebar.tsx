@@ -33,6 +33,8 @@ import { useUser } from "@/context/UserContext"
 import { useActiveBusinessStore } from "@/lib/store/active-business-store"
 import { businessStatusInfo, businessSubtitle } from "@/lib/business-status"
 import { describeLimit, useBusinessLimit } from "@/lib/business-limits"
+import { PlanLockChip } from "@/components/dashboard/plans/plan-locked"
+import { SCREEN_FEATURE } from "@/lib/plan-gate"
 
 type Biz = {
   id: number; name?: string; city?: string | null; subArea?: string | null; status?: string
@@ -255,6 +257,9 @@ export function ChampagneSidebar() {
     <SidebarMenuItem>
       <SidebarMenuButton tooltip={it.name} isActive={isActiveForNav(pathname, it.url)} onClick={() => go(it.url)}>
         <it.icon /><span>{it.name}</span>
+        {/* A screen whose feature the plan lacks is shown LOCKED (lock + the plan that includes it), not hidden.
+            The chip renders nothing unless the server says this vendor is locked out of it. */}
+        {SCREEN_FEATURE[it.url] ? <PlanLockChip feature={SCREEN_FEATURE[it.url]} className="ml-auto" /> : null}
       </SidebarMenuButton>
     </SidebarMenuItem>
   )

@@ -33,6 +33,7 @@ import { bookedOn, receivedOn, outstandingOn } from "@/lib/utils/booking-money"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
 import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { paymentsCardHtml, handleQistClick, QIST_CSS } from "./qist-payments"
+import { slotPickerField, bindSlotPicker, loadSlotPicker, refreshPicker, recheckPicker, pickerChoice } from "@/components/dashboard/mainScreens/artifact/slot-picker"
 
 /* ── formatting ──────────────────────────────────────────────── */
 const rs = (n: number) => `<span class="rs">Rs</span> ${pkNum(n)}`
@@ -561,7 +562,7 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
   const isOffline = String(booking.bookingSource || "").toLowerCase() === "offline"
   const reschedBtn =
     isOffline && !isClosed
-      ? `<button class="btn btn-ghost" data-bk-resched="${booking.id}" data-bk-date="${escHtml(booking.bookingDate || "")}" data-bk-time="${escHtml(booking.bookingTime || "")}" data-bk-biz="${booking.bookingDetails?.[0]?.businessId ?? ""}">${svg(I.clock)} Taareekh badlein</button>`
+      ? `<button class="btn btn-ghost" data-bk-resched="${booking.id}" data-bk-date="${escHtml(booking.bookingDate || "")}" data-bk-time="${escHtml(booking.bookingTime || "")}" data-bk-biz="${booking.bookingDetails?.[0]?.businessId ?? ""}" data-bk-slot="${booking.bookingDetails?.[0]?.slotTemplateId ?? booking.slotTemplateId ?? ""}" data-bk-hall="${booking.bookingDetails?.[0]?.subVenueId ?? ""}">${svg(I.clock)} Taareekh badlein</button>`
       : ""
   /**
    * WW-PRICEADJ — the agreed number moves after signing all the time (the
@@ -843,13 +844,13 @@ function declineChangeHtml(reqId: number, bookingId: number, isCancel: boolean):
  * so do not rely on a conflict being caught. What the vendor gets instead is the
  * day preview below.
  */
-function reschedHtml(id: number, date: string, time: string, today: string): string {
-  const hhmm = /^\d{2}:\d{2}/.test(time) ? time.slice(0, 5) : "18:00"
+function reschedHtml(id: number, date: string, today: string): string {
+  // SLOT-PICKER — the free clock is gone: the new time is one of the venue's own
+  // open slots for the new date (the same list "Nayi booking" and the public
+  // booking page read), refreshed whenever the date changes.
   return `<div style="font-size:12px;color:var(--ink-3);margin-bottom:12px;line-height:1.5">Ye booking aap ne khud daali thi, is liye seedha move ho sakti hai. Customer ko khud bata dein.</div>
-    <div class="dfield row2">
-      <div><label class="dlabel">Nayi taareekh</label><input type="date" id="rs-date" value="${escHtml(date)}" min="${escHtml(today)}"/></div>
-      <div><label class="dlabel">Waqt</label><input type="time" id="rs-time" value="${hhmm}"/></div>
-    </div>
+    <div class="dfield"><label class="dlabel">Nayi taareekh</label><input type="date" id="rs-date" value="${escHtml(date)}" min="${escHtml(today)}"/></div>
+    ${slotPickerField("rs-slots")}
     <div id="rs-day" style="font-size:12px;line-height:1.55;margin:-4px 0 14px"></div>
     <div class="ww-dfoot"><button class="btn btn-ghost" data-drawer-close type="button">Waapas</button><button class="btn btn-primary" data-bk-resched-save="${id}" type="button">Move karein</button></div>`
 }
@@ -1157,22 +1158,52 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
       if (rs?.dataset.bkResched) {
         const bkId = Number(rs.dataset.bkResched)
         const biz = Number(rs.dataset.bkBiz) || 0
-        openDrawer(s, "Taareekh badlein", reschedHtml(bkId, rs.dataset.bkDate || "", rs.dataset.bkTime || "", todayInKarachi()))
+        const hall = Number(rs.dataset.bkHall) || null
+        const curSlot = Number(rs.dataset.bkSlot) || null
+        const origDate = String(rs.dataset.bkDate || "").slice(0, 10)
+        openDrawer(s, "Taareekh badlein", reschedHtml(bkId, rs.dataset.bkDate || "", todayInKarachi()))
+        bindSlotPicker(s)
+        const loadRsSlots = (preferTime?: string | null) => {
+          const dv = (s.getElementById("rs-date") as HTMLInputElement | null)?.value || ""
+          // The booking's own slot is offered (and preselected) only while the date has not moved.
+          return loadSlotPicker(s, "rs-slots", {
+            businessId: biz, date: dv, subVenueId: hall,
+            currentSlotId: curSlot, originalDate: origDate, preferTime: preferTime ?? null,
+          })
+        }
         const di = s.getElementById("rs-date") as HTMLInputElement | null
         if (di) {
-          di.addEventListener("change", () => { void rsDayPreview(s, biz, di.value, bkId) })
+          di.addEventListener("change", () => { void rsDayPreview(s, biz, di.value, bkId); void loadRsSlots() })
           void rsDayPreview(s, biz, di.value, bkId)
         }
+        void loadRsSlots(rs.dataset.bkTime || null)
         return
       }
       const rss = t.closest("[data-bk-resched-save]") as HTMLButtonElement | null
       if (rss?.dataset.bkReschedSave) {
         const d = (s.getElementById("rs-date") as HTMLInputElement | null)?.value || ""
-        const tm = (s.getElementById("rs-time") as HTMLInputElement | null)?.value || ""
         if (!d) { toast.error("Nayi taareekh chunein"); return }
-        rss.disabled = true; rss.textContent = "Move ho raha…"
+        // SLOT-PICKER — the destination is one of the venue's open slots, checked
+        // once more against a fresh read; a choice that has vanished is not sent.
+        const quick = pickerChoice(s, "rs-slots")
+        if (!quick.ok) { toast.error(quick.message); return }
+        rss.disabled = true; rss.textContent = "Slot dekh rahe hain…"
+        const fresh = await recheckPicker(s, "rs-slots")
+        if (!fresh.choice.ok || fresh.changed) {
+          rss.disabled = false; rss.textContent = "Move karein"
+          toast.error(fresh.changed ? "Ye slot ab khula nahi raha — list naye sire se dekh kar doosra slot chunein." : (fresh.choice.ok ? "Waqt (slot) chunein." : fresh.choice.message))
+          return
+        }
+        rss.textContent = "Move ho raha…"
         try {
-          await BookingsAPI.vendorReschedule(Number(rss.dataset.bkReschedSave), { newBookingDate: d, newBookingTime: tm || null })
+          // A venue that sells slots gets the slot (the server starts the booking
+          // when the slot does); a whole-day venue moves by date and keeps its time.
+          await BookingsAPI.vendorReschedule(
+            Number(rss.dataset.bkReschedSave),
+            fresh.choice.slotTemplateId != null
+              ? { newBookingDate: d, newSlotTemplateId: fresh.choice.slotTemplateId }
+              : { newBookingDate: d },
+          )
           toast.success("Booking move ho gayi"); closeDrawer(s); invalidateAll()
         } catch (err: unknown) {
           // The endpoint's refusals are written in English ("… is not taking
@@ -1185,9 +1216,20 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
             SLOT_CONFLICT: "Us waqt wo hall pehle se booked hai — doosra waqt chunein.",
             event_date_in_past: "Guzri hui taareekh par move nahi ho sakti.",
             online_booking: "Ye customer ki online booking hai — is ki taareekh change request se badalti hai.",
+            capacity_full: "Ye slot bhar gaya hai — doosra slot chunein.",
+            blocked: "Ye slot band hai — pehle calendar se kholein, ya doosra slot chunein.",
+            capacity_zero: "Is din ye slot nahi chal raha — doosra slot chunein.",
+            closed_weekday: "Is din ye slot nahi chal raha — doosra slot chunein.",
+            SLOT_CLOSED_THIS_DAY: "Is din ye slot nahi chal raha — doosra slot chunein.",
+            TIME_OUTSIDE_SLOT: "Ye waqt slot ke andar nahi hai — list se slot chunein.",
+            TIME_OUTSIDE_SLOTS: "Ye waqt venue ke slots mein nahi hai — list se slot chunein.",
+            SLOT_NOT_FOUND: "Ye slot is venue ka nahi hai — list se slot chunein.",
+            SLOT_NOT_IN_SPACE: "Ye slot doosre hall ka hai — list se slot chunein.",
           }
           toast.error(byCode[String(res?.data?.code || "")] || res?.message || "Move nahi hui")
           rss.disabled = false; rss.textContent = "Move karein"
+          // Whatever the refusal, the list on screen is out of date.
+          void refreshPicker(s, "rs-slots")
         }
         return
       }

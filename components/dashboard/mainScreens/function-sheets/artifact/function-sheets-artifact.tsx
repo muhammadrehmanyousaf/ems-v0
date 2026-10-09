@@ -15,6 +15,8 @@ import { FunctionSheetAPI, variantsAvailable, type FunctionSheet, type FunctionS
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useArtifactShell, pkNum, escHtml, initialsOf, initTablePager, loadPref, savePref, openDrawer, closeDrawer, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
+import { BookingAPI } from "@/lib/api/bookings"
+import { bookingWindowOf, timingNotes, type BookingWindow } from "@/lib/booking/function-sheet-window"
 
 const STATE_LABEL_UR: Partial<Record<FunctionSheetState, string>> = {
   draft: "Draft", quote_sent: "Quote bheja", contract_pending: "Contract pending", signed: "Signed", beo_ready: "BEO ready", invoiced: "Invoiced", paid: "Paid", archived: "Archive", cancelled: "Cancel",
@@ -54,6 +56,7 @@ const EXTRA_CSS = String.raw`
 .beo-trow{ display:grid; grid-template-columns:96px 1fr 32px; gap:8px; margin-bottom:8px; align-items:center; }
 .beo-trow .bt-del{ width:32px; height:36px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--ink-3); display:grid; place-items:center; } .beo-trow .bt-del:hover{ color:var(--bad); border-color:var(--bad); } .beo-trow .bt-del svg{ width:15px; height:15px; }
 .beo-empty{ font-size:12px; color:var(--ink-3); padding:8px 0 12px; }
+.beo-twarn{ font-size:11.5px; line-height:1.5; color:var(--warn); background:var(--warn-wash); border-radius:8px; padding:8px 10px; margin:2px 0 10px; } .beo-twarn[hidden]{ display:none; } .beo-twarn b{ font-weight:600; }
 @media (max-width:980px){ .fs-tiles{ grid-template-columns:repeat(2,1fr); } }
 `
 
@@ -94,12 +97,29 @@ function beoDrawerBody(fs: FunctionSheet): string {
   <div class="dfield"><label class="dlabel">Teardown time</label><input id="beo-teardown" type="time" value="${b.teardownTime ? escHtml(String(b.teardownTime).slice(0, 5)) : ""}"/></div>
   <div class="beo-tl-h"><span class="dlabel">Run-sheet — waqt ba waqt</span><button class="beobtn" type="button" data-beo-addrow>${svg('<path d="M12 5v14M5 12h14"/>')} Row</button></div>
   <div id="beo-timeline">${rows || `<div class="beo-empty" id="beo-tl-empty">Abhi koi timeline row nahi — "Row" daba kar shuru karein.</div>`}</div>
+  <div class="beo-twarn" id="beo-tnotes" role="status" hidden></div>
   <div class="dfield" style="margin-top:6px"><label class="dlabel">Crew ke liye hidayaat</label><textarea id="beo-crew" placeholder="Staff ke liye khaas notes — parking, VIP entry, generator, etc.">${escHtml(b.crewNotes || "")}</textarea></div>
   <div class="ww-dfoot">
     ${canPdf ? `<button class="btn btn-ghost" type="button" data-beo-pdf="${fs.id}">BEO PDF</button>` : ""}
     ${canMarkReady ? `<button class="btn btn-ghost" type="button" data-beo-ready="${fs.id}">Save + BEO ready</button>` : ""}
     <button class="btn btn-primary" type="button" data-beo-save="${fs.id}">Save karein</button>
   </div>`
+}
+
+/**
+ * SLOT-PICKER — the run-sheet's timings, read against the booking's slot. Advisory
+ * only (see lib/booking/function-sheet-window.ts): it says so under the timeline,
+ * live, and never stops a save.
+ */
+const BEO_WINDOW = new WeakMap<ShadowRoot, BookingWindow | null>()
+const BEO_BOUND = new WeakSet<ShadowRoot>()
+function refreshTimingNotes(s: ShadowRoot): void {
+  const box = s.getElementById("beo-tnotes")
+  if (!box) return
+  const beo = readBeo(s)
+  const notes = timingNotes({ window: BEO_WINDOW.get(s) ?? null, timeline: beo.timeline || [], setup: beo.setupTime, teardown: beo.teardownTime })
+  box.hidden = notes.length === 0
+  box.innerHTML = notes.length ? notes.map((n) => escHtml(n)).join("<br/>") : ""
 }
 
 function readBeo(s: ShadowRoot): BeoData {
@@ -267,6 +287,15 @@ export function FunctionSheetsArtifact() {
       }
     }
 
+    if (!BEO_BOUND.has(s)) {
+      BEO_BOUND.add(s)
+      const onTiming = (e: Event) => {
+        const el = e.target as HTMLElement
+        if (el.classList?.contains("bt-time") || el.id === "beo-setup" || el.id === "beo-teardown") refreshTimingNotes(s)
+      }
+      s.addEventListener("input", onTiming)
+      s.addEventListener("change", onTiming)
+    }
     s.addEventListener("click", (e) => {
       const t = e.target as HTMLElement
       if (t.closest("[data-retry]")) { qc.invalidateQueries({ queryKey: ["fsheets-art"] }); return }
@@ -285,9 +314,17 @@ export function FunctionSheetsArtifact() {
       if (beoBtn?.dataset.beo) {
         const id = Number(beoBtn.dataset.beo)
         openDrawer(s, "Din ka plan — BEO", `<div class="beo-empty">Load ho raha hai…</div>`)
+        BEO_WINDOW.set(s, null)
         FunctionSheetAPI.get(id).then((fs) => {
           const body = s.getElementById("ww-drawer-body")
           if (body) body.innerHTML = fs ? beoDrawerBody(fs) : `<div class="beo-empty">Sheet nahi mili.</div>`
+          // The booking's slot, if the sheet is attached to a booking. Best-effort:
+          // without it the sheet simply has nothing to be checked against.
+          if (fs?.bookingId) {
+            BookingAPI.getWithAvailability(Number(fs.bookingId))
+              .then((r) => { BEO_WINDOW.set(s, bookingWindowOf(r?.booking)); refreshTimingNotes(s) })
+              .catch(() => { /* no window, no notes */ })
+          }
         }).catch(() => { const body = s.getElementById("ww-drawer-body"); if (body) body.innerHTML = `<div class="beo-empty">Load nahi hui.</div>` })
         return
       }
@@ -297,7 +334,7 @@ export function FunctionSheetsArtifact() {
         return
       }
       const del = t.closest("[data-beo-delrow]") as HTMLElement | null
-      if (del) { del.closest(".beo-trow")?.remove(); return }
+      if (del) { del.closest(".beo-trow")?.remove(); refreshTimingNotes(s); return }
       const save = t.closest("[data-beo-save]") as HTMLElement | null
       if (save?.dataset.beoSave) { void saveBeo(Number(save.dataset.beoSave), false); return }
       const rdy = t.closest("[data-beo-ready]") as HTMLElement | null

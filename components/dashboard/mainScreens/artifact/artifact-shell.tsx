@@ -457,6 +457,52 @@ export function errorBannerHtml(msg = "Figures load nahi ho sake — ye missing 
 }
 
 /**
+ * "Available on Pro": how an artifact screen shows a feature the vendor's plan does not include. The same wording and
+ * the same single action as the React version (components/dashboard/plans/plan-locked.tsx); the data comes from the
+ * server's entitlements via usePlan(), never from a copy of the rules. `compact` is a one-line strip for a section.
+ */
+export function planLockedHtml(o: { requiredPlan: string; planName: string; what: string; compact?: boolean; feature?: string }): string {
+  const noPlan = o.planName === "No plan"
+  const body = noPlan
+    ? `${escHtml(o.what)} needs a plan: ${escHtml(o.requiredPlan)} or higher. Choose one to unlock it.`
+    : `${escHtml(o.what)} is part of the ${escHtml(o.requiredPlan)} plan. You are on ${escHtml(o.planName)}.`
+  const lock = `<span class="pl-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>`
+  const feat = o.feature ? ` data-feature="${escHtml(o.feature)}"` : ""
+  if (o.compact) {
+    return `<div class="plan-locked compact" role="status" data-testid="plan-locked"${feat}>${lock}<div class="pl-txt"><b>Available on ${escHtml(o.requiredPlan)}</b><span>${body}</span></div><button class="btn btn-ghost sm" type="button" data-nav-btn="/dashboard/billing">Upgrade</button></div>`
+  }
+  return `<div class="plan-locked" role="status" data-testid="plan-locked"${feat}>${lock}<div class="pl-txt"><b>Available on ${escHtml(o.requiredPlan)}</b><span>${body} Everything you already have stays exactly as it is.</span><div class="pl-act"><button class="btn btn-primary" type="button" data-nav-btn="/dashboard/billing">See plans and upgrade</button></div></div></div>`
+}
+
+/**
+ * "Your Basic plan includes 2 staff accounts. Upgrade to Pro to add more." The one-line strip an artifact screen shows
+ * when a numbered limit is reached: it explains the disabled "add" button. Adding is what is blocked; nothing the vendor
+ * already has is touched.
+ */
+export function planLimitNoteHtml(o: { planName: string; max: number; nouns: [string, string]; nextPlan: string | null; scopeNote?: string }): string {
+  const noPlan = o.planName === "No plan"
+  const head = noPlan ? "Without a plan" : `Your ${o.planName} plan`
+  const what = `${o.max} ${o.max === 1 ? o.nouns[0] : o.nouns[1]}${o.scopeNote || ""}`
+  const next = o.nextPlan ? `Upgrade to ${o.nextPlan} to add more.` : "Ask us about a custom plan to add more."
+  const lock = `<span class="pl-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>`
+  return `<div class="plan-locked compact" role="status" data-testid="plan-limit-note">${lock}<div class="pl-txt"><b>${escHtml(head)} includes ${escHtml(what)}</b><span>${escHtml(next)} What you already have stays exactly as it is.</span></div><button class="btn btn-ghost sm" type="button" data-nav-btn="/dashboard/billing">${o.nextPlan ? "Upgrade" : "See plans"}</button></div>`
+}
+
+/**
+ * "2 of 3 halls and spaces". `l` is a limit from usePlan().limit(...). While enforcement is off (or the limit is
+ * unlimited) it is only a plain count; a limit the server is not applying is never drawn as if it were.
+ */
+export function planMeterHtml(l: { max: number | null; used: number | null; enforced: boolean; reached: boolean; nextPlan: string | null } | null, nouns: [string, string], scopeNote = ""): string {
+  if (!l || l.used === null) return ""
+  const n = (x: number) => (x === 1 ? nouns[0] : nouns[1])
+  if (!l.enforced || l.max === null) return `<div class="plan-meter plain" data-testid="usage-meter" data-enforced="false">${l.used} ${n(l.used)}${escHtml(scopeNote)}</div>`
+  const pct = l.max === 0 ? 100 : Math.min(100, Math.round((l.used / l.max) * 100))
+  const text = l.used > l.max ? `${l.used} ${n(l.used)} (your plan allows ${l.max})` : `${l.used} of ${l.max} ${n(l.max)}`
+  const up = l.reached ? `<button class="pm-up" type="button" data-nav-btn="/dashboard/billing">${l.nextPlan ? `Upgrade to ${escHtml(l.nextPlan)}` : "Ask about a custom plan"}</button>` : ""
+  return `<div class="plan-meter${l.reached ? " reached" : ""}" data-testid="usage-meter" data-enforced="true" data-reached="${l.reached}"><div class="pm-row"><span>${escHtml(text)}${escHtml(scopeNote)}</span>${up}</div><div class="pm-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${l.max}" aria-valuenow="${Math.min(l.used, l.max)}"><i style="width:${pct}%"></i></div></div>`
+}
+
+/**
  * Inline venue picker for the "aggregate scope, but this screen needs ONE venue"
  * empty state. Renders `data-biz-pick` buttons — the shell's global click handler
  * already turns those into setActiveBusinessId(), so no extra wiring is needed.
@@ -619,6 +665,16 @@ table.tbl{ width:100%; border-collapse:collapse; }
 .errbanner .eb-ic{ width:34px; height:34px; border-radius:9px; background:var(--surface); display:grid; place-items:center; color:var(--bad); flex:none; } .errbanner .eb-ic svg{ width:18px; height:18px; }
 .errbanner .eb-txt{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; } .errbanner .eb-txt b{ font-size:13px; color:var(--ink); } .errbanner .eb-txt span{ font-size:12px; color:var(--ink-2); }
 .errbanner .btn{ flex:none; }
+.plan-locked{ display:flex; gap:14px; align-items:flex-start; padding:18px 20px; margin-bottom:14px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow-xs); }
+.plan-locked .pl-ic{ width:38px; height:38px; border-radius:50%; background:var(--accent-wash); color:var(--accent-ink); display:grid; place-items:center; flex:none; } .plan-locked .pl-ic svg{ width:18px; height:18px; }
+.plan-locked .pl-txt{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; } .plan-locked .pl-txt b{ font-size:14px; color:var(--ink); } .plan-locked .pl-txt span{ font-size:12.5px; color:var(--ink-2); }
+.plan-locked .pl-act{ margin-top:10px; }
+.btn.plan-off[disabled]{ opacity:.5; cursor:not-allowed; }
+.plan-locked.compact{ align-items:center; padding:10px 14px; } .plan-locked.compact .pl-ic{ width:30px; height:30px; } .plan-locked.compact .pl-ic svg{ width:15px; height:15px; } .plan-locked.compact .pl-txt b{ font-size:13px; } .plan-locked.compact .pl-txt span{ font-size:12px; }
+.plan-meter{ display:flex; flex-direction:column; gap:6px; min-width:180px; max-width:320px; font-size:12px; color:var(--ink-2); } .plan-meter.plain{ color:var(--ink-3); }
+.plan-meter .pm-row{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; } .plan-meter.reached .pm-row span{ color:var(--ink); font-weight:600; }
+.plan-meter .pm-up{ border:0; background:transparent; color:var(--accent-ink); font-weight:600; font-size:12px; padding:0; } .plan-meter .pm-up:hover{ text-decoration:underline; }
+.plan-meter .pm-bar{ height:6px; border-radius:99px; background:var(--surface-3); overflow:hidden; } .plan-meter .pm-bar i{ display:block; height:100%; border-radius:99px; background:var(--accent); } .plan-meter.reached .pm-bar i{ background:var(--bad); }
 .foot{ display:none; }
 /* shared micro — canonical versions of classes screens were each copy-pasting.
    Injected before extraCss, so a screen's own copy still wins; these only supply
@@ -646,8 +702,10 @@ table.tbl{ width:100%; border-collapse:collapse; }
 /* right-side drawer (create/edit booking · customer · lead) */
 .ww-scrim{ position:fixed; inset:0; background:rgba(20,18,15,.34); backdrop-filter:blur(2px); z-index:80; animation:wwfade .2s ease; } .ww-scrim[hidden]{ display:none; }
 @keyframes wwfade{ from{ opacity:0 } to{ opacity:1 } }
-.ww-drawer{ position:fixed; top:0; right:0; bottom:0; width:460px; max-width:94vw; background:var(--surface); border-left:1px solid var(--border); box-shadow:-14px 0 44px -20px rgba(20,18,15,.45); z-index:81; transform:translateX(100%); transition:transform .26s cubic-bezier(.4,0,.2,1); display:flex; flex-direction:column; }
-.ww-drawer.open{ transform:translateX(0); }
+/* Parked off-screen the drawer must paint nothing: its shadow bled ~16px back over the right edge of every console screen (and a
+   100vw drawer on a phone made it a grey smudge), and its inputs stayed in the tab order. visibility flips AFTER the slide-out. */
+.ww-drawer{ position:fixed; top:0; right:0; bottom:0; width:460px; max-width:94vw; background:var(--surface); border-left:1px solid var(--border); box-shadow:none; visibility:hidden; z-index:81; transform:translateX(100%); transition:transform .26s cubic-bezier(.4,0,.2,1), box-shadow .26s, visibility 0s linear .26s; display:flex; flex-direction:column; }
+.ww-drawer.open{ transform:translateX(0); visibility:visible; box-shadow:-14px 0 44px -20px rgba(20,18,15,.45); transition:transform .26s cubic-bezier(.4,0,.2,1), box-shadow .26s, visibility 0s; }
 .ww-dhead{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); flex:none; background:linear-gradient(180deg,var(--accent-wash),transparent); }
 .ww-dtitle{ font-size:16px; font-weight:600; letter-spacing:-.01em; }
 .ww-dx{ width:34px; height:34px; border-radius:9px; border:1px solid var(--border-2); background:var(--surface); color:var(--ink-3); display:grid; place-items:center; flex:none; } .ww-dx:hover{ background:var(--surface-3); color:var(--ink); } .ww-dx svg{ width:17px; height:17px; }
@@ -658,6 +716,27 @@ table.tbl{ width:100%; border-collapse:collapse; }
 .ww-dbody textarea{ min-height:76px; resize:vertical; }
 .ww-dbody .bf-sec{ font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--accent-ink); margin:18px 0 11px; padding-bottom:5px; border-bottom:1px solid var(--border); } .ww-dbody .bf-sec:first-child{ margin-top:0; }
 .ww-dbody .bf-hint{ font-size:11.5px; color:var(--ink-3); background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:14px; line-height:1.5; }
+/* Waqt slot picker (artifact/slot-picker.ts) — the venue's own slots for a date, venue and hall */
+.ww-dbody .sk-box{ display:flex; flex-direction:column; gap:8px; }
+.ww-dbody .sk-list{ display:flex; flex-direction:column; gap:8px; }
+.ww-dbody .sk-card{ display:flex; align-items:center; flex-wrap:wrap; gap:6px 12px; width:100%; text-align:left; padding:10px 12px; border:1px solid var(--border-2); border-radius:10px; background:var(--surface-2); color:var(--ink); font:inherit; cursor:pointer; transition:border-color .12s,background .12s,box-shadow .12s; }
+.ww-dbody .sk-card:hover:not(:disabled){ border-color:var(--accent-line); background:var(--surface); }
+.ww-dbody .sk-card[aria-checked="true"]{ border-color:var(--accent); background:var(--accent-wash); box-shadow:0 0 0 3px var(--accent-wash); }
+.ww-dbody .sk-card:disabled{ cursor:not-allowed; background:var(--surface-3); color:var(--ink-3); }
+.ww-dbody .sk-card:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+.ww-dbody .sk-dot{ width:16px; height:16px; border-radius:50%; border:1.5px solid var(--border-2); background:var(--surface); flex:none; display:grid; place-items:center; }
+.ww-dbody .sk-card[aria-checked="true"] .sk-dot{ border-color:var(--accent); } .ww-dbody .sk-card[aria-checked="true"] .sk-dot::after{ content:""; width:8px; height:8px; border-radius:50%; background:var(--accent); }
+.ww-dbody .sk-card:disabled .sk-dot{ background:transparent; border-style:dashed; }
+.ww-dbody .sk-main{ display:flex; flex-direction:column; gap:2px; min-width:0; flex:1 1 140px; }
+.ww-dbody .sk-name{ font-size:13px; font-weight:600; } .ww-dbody .sk-time{ font-size:12px; color:var(--ink-3); } .ww-dbody .sk-why{ font-size:11.5px; color:var(--warn); }
+.ww-dbody .sk-pill{ font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:99px; white-space:nowrap; margin-left:auto; }
+.ww-dbody .sk-pill.ok{ background:var(--ok-wash); color:var(--ok); } .ww-dbody .sk-pill.bad{ background:var(--bad-wash); color:var(--bad); } .ww-dbody .sk-pill.warn{ background:var(--warn-wash); color:var(--warn); } .ww-dbody .sk-pill.mut{ background:var(--surface); color:var(--ink-3); border:1px solid var(--border); }
+.ww-dbody .sk-msg{ font-size:12px; line-height:1.5; color:var(--ink-3); background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:9px 11px; }
+.ww-dbody .sk-msg.info{ color:var(--ink-2); background:var(--info-wash); border-color:transparent; } .ww-dbody .sk-msg.warn{ color:var(--warn); background:var(--warn-wash); border-color:transparent; } .ww-dbody .sk-msg.err{ color:var(--bad); background:var(--bad-wash); border-color:transparent; }
+.ww-dbody .sk-retry{ margin-left:6px; border:0; background:none; color:inherit; font:inherit; font-weight:600; text-decoration:underline; cursor:pointer; padding:0; }
+.ww-dbody .sk-skel{ height:50px; border-radius:10px; background:linear-gradient(90deg,var(--surface-3),var(--surface-2),var(--surface-3)); background-size:200% 100%; animation:wwsk 1.2s linear infinite; }
+@keyframes wwsk{ from{ background-position:200% 0 } to{ background-position:-200% 0 } }
+@media (prefers-reduced-motion:reduce){ .ww-dbody .sk-skel{ animation:none; } }
 .ww-dfoot{ display:flex; gap:9px; justify-content:flex-end; padding-top:6px; position:sticky; bottom:-28px; background:var(--surface); }
 @media (max-width:820px){ .ww-drawer{ width:100vw; max-width:100vw; } }
 /* ── Module entries (Khata, Set up) + their secondary sidebar column ──────── */

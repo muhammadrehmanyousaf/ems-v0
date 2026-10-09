@@ -41,13 +41,15 @@ export interface InsightsAdvanced {
     medianLtv: number;
     p90Ltv: number;
   };
+  /** The 90-day revenue forecast is the "forecasting" feature (Premium): null, with `forecastLocked` saying why, on a plan without it. */
   forecast: {
     rolling30: number;
     yoy90Revenue: number;
     projection90Trend: number;
     projection90Blend: number;
     methodology: string;
-  };
+  } | null;
+  forecastLocked?: { feature: "forecasting"; requiredPlan: string; currentPlan: string } | null;
 }
 
 export class InsightsAPI {

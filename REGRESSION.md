@@ -98,6 +98,7 @@ still agree. Run the matching guard after touching:
 | `guard:amenities` | amenity keys/labels on either side |
 | `plan-events-shape` (via `npm run guards`) | the Shaadi Plan checkout envelope |
 | `guard:overview` | the vendor Overview — chart arithmetic (`lib/utils/overview-chart.ts`), row wording (`overview-model.ts`), and that the screen reads the one `overview` request. The server-side rules are `tests/unit/vendorOverviewService.test.js` + `tests/http/vendorOverview.http.test.js` in the backend |
+| `guard:slot-picker` | the vendor's "Waqt" picker — what is offered (full / blocked / closed shown disabled with the reason), what stays selected when date, venue or hall change, what the form sends, the function-sheet timing notes, and that Nayi booking, the reschedule dialog and the public booking page decide "open" with the one rule (`lib/booking/slot-picker-model.ts`). The server's half is `tests/unit/slotRules.test.js`, `tests/unit/bookingCreateServiceCore.test.js`, `tests/integration/slotPicker.integration.test.js` and (real Postgres, `SLOT_PICKER_E2E=1`) `tests/http/bookingSlotPicker.http.test.js` in the backend |
 
 ### E2E runs against live production — read `cypress/README.md` first
 

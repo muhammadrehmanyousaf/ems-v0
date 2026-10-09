@@ -36,6 +36,8 @@ const EXTRA_CSS = String.raw`
 .iconbtn{ width:32px; height:32px; flex:none; border-radius:8px; border:1px solid var(--border-2); background:var(--surface); color:var(--ink-2); display:grid; place-items:center; } .iconbtn:hover{ background:var(--surface-3); color:var(--ink); } .iconbtn.wa:hover{ color:var(--ok); border-color:var(--ok); } .iconbtn svg{ width:15px; height:15px; } .iconbtn:disabled{ opacity:.4; }
 .loadwrap{ display:grid; place-items:center; padding:80px 16px; color:var(--ink-3); font-size:13px; }
 @media (max-width:820px){ .cust-tiles{ grid-template-columns:1fr; } }
+/* the search is capped at 340px inline for desktop; on a phone it should run the full width like every other list screen */
+@media (max-width:520px){ .toolbar .f-search{ max-width:none !important; } }
 `
 
 function rowHtml(c: ApiCustomer): string {

@@ -13,6 +13,7 @@ import { PdcAPI, type PostDatedCheque, type PdcStatus, type CreatePdcInput } fro
 import { PaymentsAPI } from "@/lib/api/dashboard"
 
 type BkOpt = { bookingId: number; customerName?: string; due?: number }
+import { useScreenLock } from "@/components/dashboard/mainScreens/artifact/plan-lock"
 import { useArtifactShell, pkNum, escHtml, initTablePager, errorBannerHtml, loadPref, savePref, openDrawer, closeDrawer, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const STATUS_UI: Record<PdcStatus, { label: string; tone: string }> = {
@@ -129,8 +130,10 @@ export function PdcsArtifact() {
     activeHref: "/dashboard/pdcs", crumbBold: "Paisa", crumbSub: "Cheque ledger", extraCss: EXTRA_CSS,
   })
   const qc = useQueryClient()
-  const { data, isError } = useQuery({ queryKey: ["pdcs-art"], queryFn: () => PdcAPI.list({}) })
-  const bkQ = useQuery({ queryKey: ["pdcs-bookings"], queryFn: () => PaymentsAPI.getVendorRevenue().catch(() => null) })
+  // Plan: the cheque ledger is part of every paid plan. A vendor without one sees why, and the refused endpoint is never called.
+  const lock = useScreenLock("cheque_ledger", "Cheque ledger", "The cheque ledger")
+  const { data, isError } = useQuery({ queryKey: ["pdcs-art"], queryFn: () => PdcAPI.list({}), enabled: !lock.locked })
+  const bkQ = useQuery({ queryKey: ["pdcs-bookings"], queryFn: () => PaymentsAPI.getVendorRevenue().catch(() => null), enabled: !lock.locked })
   const bookings = React.useMemo(() => ((bkQ.data as { payments?: BkOpt[] } | null)?.payments ?? []) as BkOpt[], [bkQ.data])
   const bookingsRef = React.useRef(bookings); bookingsRef.current = bookings
   const list = React.useMemo(() => (data?.pdcs ?? []) as PostDatedCheque[], [data])
@@ -141,12 +144,13 @@ export function PdcsArtifact() {
     const s = shadowRef.current
     if (!s || !ready) return
     const wwc = s.getElementById("wwc"); if (!wwc) return
+    if (lock.locked) { wwc.innerHTML = lock.html; return }
     if (isError) { wwc.innerHTML = `<div class="head"><div><h1>Cheque ledger</h1></div></div>${errorBannerHtml()}`; return }
     if (!data) { wwc.innerHTML = `<div class="loadwrap">Cheque ledger load ho raha hai…</div>`; return }
     wwc.innerHTML = buildContent(list, summary, filter)
     initTablePager(s, { pageSize: 25 })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, data, filter, bkQ.data, isError])
+  }, [ready, data, filter, bkQ.data, isError, lock.locked, lock.html])
 
   const bound = React.useRef(false)
   React.useEffect(() => {

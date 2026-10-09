@@ -17,6 +17,10 @@ import { Button } from "@/components/ui/button"
 import { showSuccessToast, showUndoToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { pushLive } from "@/lib/seo/push-live"
+import { usePlan } from "@/context/plan-context"
+import { UsageMeter } from "@/components/dashboard/plans/usage-meter"
+import { refreshPlanUsage } from "@/hooks/use-billing-status"
+import { gateFromError } from "@/lib/plan-gate"
 
 // Mirrors the server's multer config exactly (businessRouter.js "/upload-images":
 // fileSize 10 MB, .array("images", 20), fileFilter mimetype image/*). Keep these
@@ -75,8 +79,12 @@ export function ImagesManager({ businessId, images }: { businessId: number; imag
   // instead of up to an hour later.
   const invalidate = () => {
     void pushLive(businessId)
+    refreshPlanUsage(qc) // the photo count changed: the meter and the limit follow
     return invalidateBusinessData(qc)
   }
+  // Plan: photos per business. Reaching the limit blocks ADDING only; removing and reordering always work.
+  const photoLimit = usePlan().limit("images", businessId)
+  const photosFull = !!photoLimit && photoLimit.enforced && photoLimit.reached
 
   // NOTE: both mutations rewrite the WHOLE images array, derived from the
   // `images` prop captured at render. That is last-write-wins — if the prop is
@@ -93,7 +101,8 @@ export function ImagesManager({ businessId, images }: { businessId: number; imag
       showSuccessToast(files.length === 1 ? "Photo uploaded" : `${files.length} photos uploaded`)
       invalidate()
     },
-    onError: (e: any) => toast.error(humanUploadError(e)),
+    // A plan refusal is explained once, by the portal's upgrade dialog; every other failure keeps its own plain message.
+    onError: (e: any) => { if (!gateFromError(e)) toast.error(humanUploadError(e)) },
   })
 
   // Removal only drops the URL from this business's array — the file itself
@@ -157,12 +166,13 @@ export function ImagesManager({ businessId, images }: { businessId: number; imag
         <span className="grid h-8 w-8 place-items-center rounded-lg bg-muted text-muted-foreground"><Icon name="Image" size={16} /></span>
         <div className="mr-auto"><h2 className="text-sm font-semibold">Images</h2><p className="text-xs text-muted-foreground">Your public gallery — couples see these first.</p></div>
         <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={onPick} />
-        <Button size="sm" variant="outline" disabled={uploadMut.isPending} onClick={() => inputRef.current?.click()}>
+        <Button size="sm" variant="outline" disabled={uploadMut.isPending || photosFull} title={photosFull ? "Your plan's photo limit for this business is reached" : undefined} onClick={() => inputRef.current?.click()}>
           {uploadMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Uploading…</> : <><Icon name="Upload" size={14} className="mr-1.5" /> Upload</>}
         </Button>
       </div>
 
       <div className="p-4">
+        <UsageMeter limit="images" businessId={businessId} className="mb-3 max-w-sm" />
         {!images.length ? (
           <EmptyState icon="Image" title="No images yet" description="Upload photos of your work so couples can see what you offer." />
         ) : (

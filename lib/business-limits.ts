@@ -6,8 +6,7 @@
  * is only the React hook that feeds it.
  */
 
-import { useQuery } from "@tanstack/react-query"
-import { SubscriptionAPI } from "@/lib/api/subscription"
+import { useBillingStatus } from "@/hooks/use-billing-status"
 import { useMyBusinesses } from "@/hooks/use-my-businesses"
 import { useUser } from "@/context/UserContext"
 import { parseBusinessLimit, type BusinessLimit } from "@/lib/business-limit-parse"
@@ -25,12 +24,7 @@ export function useBusinessLimit(): { limit: BusinessLimit | null; owned: number
   const isVendor = !!(user as { isVendor?: boolean } | null)?.isVendor
   const { data: businesses } = useMyBusinesses()
   const owned = businesses?.length ?? 0
-  const { data } = useQuery({
-    queryKey: ["billing-status"],
-    queryFn: () => SubscriptionAPI.getBillingStatus(),
-    enabled: isVendor,
-    staleTime: 30_000,
-  })
+  const { data } = useBillingStatus(isVendor)
   const limit = parseBusinessLimit(data, owned)
   return { limit, owned, atLimit: !!limit && limit.used >= limit.max }
 }

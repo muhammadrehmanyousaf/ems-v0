@@ -29,7 +29,8 @@ export class WhatsappAPI {
   /** Fire-and-forget — never throws. Returns void. */
   static async logSend(input: LogWaSendInput): Promise<void> {
     try {
-      await axiosInstance.post("/api/v1/whatsapp/send-log", input);
+      // silentPlanGate: a plan refusal of this background log must never interrupt the vendor with a dialog.
+      await axiosInstance.post("/api/v1/whatsapp/send-log", input, { silentPlanGate: true });
     } catch {
       // Intentionally swallowed — never block the wa.me open on a
       // logging failure.

@@ -9,6 +9,7 @@
  */
 
 import axiosInstance from "@/lib/axiosConfig";
+import type { Entitlements } from "@/lib/plan-gate";
 
 export type SubscriptionTier = "free" | "pro" | "premium";
 
@@ -31,6 +32,16 @@ export interface PlanComparisonRow {
   premium: boolean;
   /** The public "Premium" plan; absent on an older API response. */
   elite?: boolean;
+}
+
+export interface PlanLimitRow {
+  key: string;
+  label: string;
+  scope: "account" | "business";
+  free: number | null;
+  pro: number | null;
+  premium: number | null;
+  elite: number | null;
 }
 
 export interface PricingNote {
@@ -57,11 +68,15 @@ export interface MyPlanData {
   lastDecline?: DeclineTrace | null;
   plans: PlanCatalogEntry[];
   comparison?: PlanComparisonRow[];
+  /** How much each plan allows (businesses, staff, halls and photos per business), from the same table the server enforces. null = unlimited. */
+  limitComparison?: PlanLimitRow[];
   pricing?: PricingNote;
   tierNames?: Record<string, string>;
   /** Our free trial (no card). 0 = off. */
   trialDays?: number;
   trialEligible?: boolean;
+  /** What the plan in force includes and how much is used (the same object as on /status). Validate with parseEntitlements. */
+  entitlements?: unknown;
 }
 
 export interface UpgradeRequestRow {
@@ -103,7 +118,14 @@ export interface BillingStatus {
   subscription: BillingSubscriptionRow | null;
   /** A checkout started in the last two hours that Safepay has not confirmed yet. */
   pending: { reference: string; tier: string; createdAt: string } | null;
+  /**
+   * The rules for the plan in force, resolved on the server, with current usage. Raw here (it comes over the wire);
+   * read it through parseEntitlements / the PlanProvider, never by hand.
+   */
+  entitlements?: unknown;
 }
+
+export type { Entitlements };
 
 export interface CheckoutStart {
   checkoutUrl: string;
@@ -259,6 +281,12 @@ export class SubscriptionAPI {
   static async getReceipt(receiptNo: string): Promise<SubscriptionReceipt> {
     const res = await axiosInstance.get(`/api/v1/subscriptions/payments/${encodeURIComponent(receiptNo)}`);
     return res.data?.data as SubscriptionReceipt;
+  }
+
+  /** Just the entitlements (plan in force, what it includes, usage). Same object as on /status and /me. */
+  static async getEntitlements(): Promise<unknown> {
+    const res = await axiosInstance.get("/api/v1/subscriptions/entitlements");
+    return res.data?.data?.entitlements ?? null;
   }
 
   /** Where the vendor stands with Safepay right now. */
