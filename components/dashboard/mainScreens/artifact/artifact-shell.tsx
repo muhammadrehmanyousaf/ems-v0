@@ -646,8 +646,10 @@ table.tbl{ width:100%; border-collapse:collapse; }
 /* right-side drawer (create/edit booking · customer · lead) */
 .ww-scrim{ position:fixed; inset:0; background:rgba(20,18,15,.34); backdrop-filter:blur(2px); z-index:80; animation:wwfade .2s ease; } .ww-scrim[hidden]{ display:none; }
 @keyframes wwfade{ from{ opacity:0 } to{ opacity:1 } }
-.ww-drawer{ position:fixed; top:0; right:0; bottom:0; width:460px; max-width:94vw; background:var(--surface); border-left:1px solid var(--border); box-shadow:-14px 0 44px -20px rgba(20,18,15,.45); z-index:81; transform:translateX(100%); transition:transform .26s cubic-bezier(.4,0,.2,1); display:flex; flex-direction:column; }
-.ww-drawer.open{ transform:translateX(0); }
+/* Parked off-screen the drawer must paint nothing: its shadow bled ~16px back over the right edge of every console screen (and a
+   100vw drawer on a phone made it a grey smudge), and its inputs stayed in the tab order. visibility flips AFTER the slide-out. */
+.ww-drawer{ position:fixed; top:0; right:0; bottom:0; width:460px; max-width:94vw; background:var(--surface); border-left:1px solid var(--border); box-shadow:none; visibility:hidden; z-index:81; transform:translateX(100%); transition:transform .26s cubic-bezier(.4,0,.2,1), box-shadow .26s, visibility 0s linear .26s; display:flex; flex-direction:column; }
+.ww-drawer.open{ transform:translateX(0); visibility:visible; box-shadow:-14px 0 44px -20px rgba(20,18,15,.45); transition:transform .26s cubic-bezier(.4,0,.2,1), box-shadow .26s, visibility 0s; }
 .ww-dhead{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); flex:none; background:linear-gradient(180deg,var(--accent-wash),transparent); }
 .ww-dtitle{ font-size:16px; font-weight:600; letter-spacing:-.01em; }
 .ww-dx{ width:34px; height:34px; border-radius:9px; border:1px solid var(--border-2); background:var(--surface); color:var(--ink-3); display:grid; place-items:center; flex:none; } .ww-dx:hover{ background:var(--surface-3); color:var(--ink); } .ww-dx svg{ width:17px; height:17px; }
