@@ -213,6 +213,9 @@ export interface BookingDetail {
   // capacity screen, which is why the Space column was blank on every booking.
   subVenueId?: number | null;
   subVenue?: { id: number; name: string; kind: string; depth: number; parentSubVenueId: number | null } | null;
+  /** SLOT-PICKER — the slot this line was sold against, and its own time. The detail endpoint sends them; list endpoints may not. */
+  slotTemplateId?: number | string | null;
+  bookingTime?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -259,6 +262,13 @@ export interface BookingData {
    * status "Awaiting Payment". See lib/booking-status-label.ts.
    */
   vendorApprovedAt?: string | null;
+  /**
+   * SLOT-PICKER — the slot the booking was sold against, and its hours as they
+   * were at the sale (`slotTemplateSnapshotJson`, frozen). Sent by the detail
+   * endpoint; absent on a legacy booking made against no slot.
+   */
+  slotTemplateId?: number | string | null;
+  slotTemplateSnapshotJson?: { id?: number | string; label?: string; startTime?: string; endTime?: string } | null;
 }
 
 export interface BookingListResponse {

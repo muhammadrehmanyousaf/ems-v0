@@ -22,6 +22,10 @@ import {
 } from "@/lib/api/dashboard"
 import { venueSpacesApi, type SubVenueNode } from "@/lib/api/venueSpaces"
 import { openDrawer, closeDrawer, escHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { slotPickerField, bindSlotPicker, loadSlotPicker, recheckPicker, pickerChoice } from "@/components/dashboard/mainScreens/artifact/slot-picker"
+
+/** The picker's element id; the date, venue and hall controls below drive it. */
+const SLOTS_ID = "bf-slots"
 
 /**
  * WW-LEADLINK — dig the new booking's id out of whatever `onSaved` was handed.
@@ -75,13 +79,14 @@ function bookingFormBody(prefill?: BookingPrefill, businesses?: BizLite[], activ
     <div class="dfield row2"><div><label class="dlabel">Phone <span class="req">*</span></label><input id="bf-phone" value="${v(p.customerPhone)}" placeholder="0300…"/></div><div><label class="dlabel">Email</label><input id="bf-email" value="${v(p.customerEmail)}" placeholder="optional"/></div></div>
 
     <div class="bf-sec">Event</div>
-    <div class="dfield row2"><div><label class="dlabel">Tareekh <span class="req">*</span></label><input type="date" id="bf-date" value="${today}"/></div><div><label class="dlabel">Waqt <span class="req">*</span></label><input type="time" id="bf-time" value="${v(p.bookingTime) || "18:00"}"/></div></div>
+    <div class="dfield"><label class="dlabel">Tareekh <span class="req">*</span></label><input type="date" id="bf-date" value="${today}"/></div>
     <div id="bf-datewarn" style="font-size:12px;line-height:1.5;margin:-6px 0 12px"></div>
     <div class="dfield row2"><div><label class="dlabel">Mehmaan</label><input type="number" id="bf-guests" value="${p.guestCount != null ? p.guestCount : ""}" placeholder="e.g. 400"/></div><div><label class="dlabel">Gender mode</label><select id="bf-gender">${genderOpts}</select></div></div>
     <div class="dfield"><label class="dlabel">Event city <span style="color:var(--ink-4);font-weight:400">(agar doosre shehar mein)</span></label><input id="bf-city" placeholder="optional — travel surcharge"/></div>
 
-    <div class="bf-sec">Venue &amp; space</div>
+    <div class="bf-sec">Venue, hall &amp; waqt</div>
     <div class="dfield row2"><div><label class="dlabel">Venue <span class="req">*</span></label><select id="bf-biz">${bizOpts || `<option value="">—</option>`}</select></div><div><label class="dlabel">Hall / space</label><select id="bf-subvenue"><option value="">— poora venue —</option></select></div></div>
+    ${slotPickerField(SLOTS_ID)}
 
     <div class="bf-sec">Package &amp; menu</div>
     <div class="dfield row2"><div><label class="dlabel">Package</label><select id="bf-package"><option value="">— koi nahi —</option></select></div><div><label class="dlabel">Menu</label><select id="bf-menu"><option value="">— koi nahi —</option></select></div></div>
@@ -207,13 +212,40 @@ async function refreshDateWarn(shadow: ShadowRoot): Promise<void> {
   box.innerHTML = `<div style="color:var(--bad);background:var(--bad-wash);border-radius:8px;padding:9px 11px">🚫 Is din aap ne ye venue band kiya hua hai${why ? ` — ${escHtml(String(why))}` : ""}. Calendar se unblock karein, warna booking nahi banegi.</div>`
 }
 
+/**
+ * (Re)load the Waqt list for the date, venue and hall currently chosen.
+ *
+ * Called on open and on EVERY change of any of the three: the list is a function
+ * of all of them, so a date change alone is enough to turn a free slot into a
+ * full one. `preferTime` (a time a lead or hold arrived with) is only used for
+ * the first load.
+ */
+function reloadSlots(shadow: ShadowRoot, preferTime?: string | null): Promise<void> {
+  const sub = Number(val(shadow, "bf-subvenue")) || null
+  return loadSlotPicker(shadow, SLOTS_ID, {
+    businessId: Number(val(shadow, "bf-biz")) || 0,
+    date: val(shadow, "bf-date"),
+    subVenueId: sub,
+    preferTime: preferTime ?? null,
+  })
+}
+
 function ensureBound(shadow: ShadowRoot) {
   if (BF_BOUND.has(shadow)) return
   BF_BOUND.add(shadow)
+  bindSlotPicker(shadow)
   shadow.addEventListener("change", (e) => {
     const t = e.target as HTMLElement
-    if (t.id === "bf-biz") { populateBookingDeps(shadow, Number((t as HTMLSelectElement).value)); void refreshDateWarn(shadow) }
-    else if (t.id === "bf-date") void refreshDateWarn(shadow)
+    if (t.id === "bf-biz") {
+      // The hall list belongs to the venue: reload it first, THEN the slots, so
+      // the slots are asked for the hall that is actually selected.
+      const deps = populateBookingDeps(shadow, Number((t as HTMLSelectElement).value))
+      void reloadSlots(shadow) // the hall has just been reset to "poora venue": show that venue's list at once
+      void deps.then(() => reloadSlots(shadow))
+      void refreshDateWarn(shadow)
+    }
+    else if (t.id === "bf-date") { void reloadSlots(shadow); void refreshDateWarn(shadow) }
+    else if (t.id === "bf-subvenue") void reloadSlots(shadow)
     else if (t.id === "bf-package" || t.id === "bf-menu") refreshPriceHint(shadow)
   })
   shadow.addEventListener("input", (e) => {
@@ -237,7 +269,27 @@ async function submitBookingForm(shadow: ShadowRoot) {
   if (!bizId) return toast.error("Venue select karein")
   if (!val(shadow, "bf-date")) return toast.error("Tareekh chunein")
 
+  /**
+   * SLOT-PICKER — the time is one of the venue's own open slots, or nothing.
+   *
+   * First the cheap answer (nothing picked, list still loading, list failed);
+   * then a fresh read of the list, because a slot that was open when the form
+   * was drawn can be gone by now. A choice that vanished is NOT sent: the list is
+   * redrawn and the vendor chooses again. The server enforces the same rule
+   * whatever this form does.
+   */
+  const quick = pickerChoice(shadow, SLOTS_ID)
+  if (!quick.ok) return toast.error(quick.message)
+  const saveBtn = shadow.querySelector("[data-bf-save]") as HTMLButtonElement | null
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Slot dekh rahe hain…" }
+  const { choice, changed } = await recheckPicker(shadow, SLOTS_ID)
+  if (!choice.ok || changed) {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Booking banayein" }
+    return toast.error(choice.ok ? "Ye slot ab khula nahi raha — list naye sire se dekh kar doosra slot chunein." : choice.message)
+  }
+
   const vendor: CreateBookingVendor = { businessId: bizId }
+  if (choice.slotTemplateId != null) vendor.slotTemplateId = choice.slotTemplateId
   const sub = Number(val(shadow, "bf-subvenue")); if (sub) vendor.subVenueId = sub
   const pkg = Number(val(shadow, "bf-package")); if (pkg) vendor.packageId = pkg
   const menu = Number(val(shadow, "bf-menu")); if (menu) vendor.menuId = menu
@@ -255,7 +307,7 @@ async function submitBookingForm(shadow: ShadowRoot) {
 
   const payload: CreateBookingPayload = {
     customerName: name, customerPhone: phone, customerEmail: val(shadow, "bf-email") || undefined,
-    bookingDate: val(shadow, "bf-date"), bookingTime: val(shadow, "bf-time") || "18:00",
+    bookingDate: val(shadow, "bf-date"), bookingTime: choice.bookingTime,
     guestCount: val(shadow, "bf-guests") ? Number(val(shadow, "bf-guests")) : undefined,
     vendors: [vendor], isOfflineBooking: true,
   }
@@ -276,7 +328,13 @@ async function submitBookingForm(shadow: ShadowRoot) {
     const msg = code === "SPACE_CONFLICT" || code === "PARTITION_CONFLICT" ? "Ye hall us din pehle se booked hai — doosra space/date chunein."
       : code === "DATE_BLOCKED" ? "Ye date block hai — pehle unblock karein."
       : code === "CLOSURE_CUTOFF" ? "Event raat 10 baje ke baad ja raha hai — duration kam karein ya legal ack chahiye."
+      : code === "capacity_full" ? "Ye slot abhi bhar gaya — list dobara dekh kar doosra slot chunein."
+      : code === "blocked" ? "Ye slot band hai — pehle calendar se kholein, ya doosra slot chunein."
+      : code === "capacity_zero" || code === "closed_weekday" || code === "SLOT_CLOSED_THIS_DAY" ? "Is din ye slot nahi chal raha — doosra slot chunein."
+      : /^(TIME_OUTSIDE_SLOTS?|SLOT_NOT_(FOUND|IN_SPACE|OFFERED)|slot_not_found)$/.test(String(code || "")) ? "Ye waqt venue ke slots mein nahi hai — list se slot chunein."
       : (e.response?.data?.message || "Booking nahi bani")
+    // Whatever the slot-shaped refusal was, the list the vendor is looking at is stale.
+    if (/^(capacity_full|blocked|capacity_zero|closed_weekday|SLOT_|TIME_OUTSIDE_|slot_not_found)/.test(String(code || ""))) void reloadSlots(shadow)
     toast.error(msg)
     if (btn) { btn.disabled = false; btn.textContent = "Booking banayein" }
   }
@@ -288,7 +346,9 @@ export function openBookingForm(shadow: ShadowRoot, opts: Opts = {}) {
   ensureBound(shadow)
   openDrawer(shadow, opts.prefill?.leadId ? "Lead → Booking" : "Nayi booking", bookingFormBody(opts.prefill, opts.businesses, opts.activeBiz))
   const biz = Number((shadow.getElementById("bf-biz") as HTMLSelectElement | null)?.value) || Number(opts.prefill?.businessId) || Number(opts.activeBiz) || 0
-  void populateBookingDeps(shadow, biz, opts.prefill)
+  // The slot list is asked for AFTER the hall list is filled in, so a hall the
+  // caller pre-selected (a lead's, a customer's) is the hall it is asked about.
+  void populateBookingDeps(shadow, biz, opts.prefill).then(() => reloadSlots(shadow, opts.prefill?.bookingTime))
   // the calendar can open this on a date it already knows is blocked
   void refreshDateWarn(shadow)
 }
