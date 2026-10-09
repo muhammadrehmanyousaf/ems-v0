@@ -37,6 +37,40 @@ function relTime(s?: string | null) {
 
 // The stage vocabulary is shared with the Overview (lib/lead-stage.ts), so a
 // lead reads "Naya" on both screens, not "Naya" here and "New" there.
+/**
+ * A save the server refuses is shown ON the field that is wrong, in plain words. The server's own sentence lists
+ * internal names (form_inquiry, manual_walkin) and, as a toast, covered the drawer's title and first field.
+ */
+const LEAD_FIELD_ID: Record<string, string> = {
+  source: "ld-source", status: "ld-status", eventType: "ld-event", contactName: "ld-name", contactPhone: "ld-phone",
+  contactWhatsapp: "ld-wa", contactEmail: "ld-email", eventDate: "ld-date", estimatedBudget: "ld-budget",
+  estimatedGuests: "ld-guests", nextFollowUpAt: "ld-followup", subVenueId: "ld-subvenue", assignedToUserId: "ld-rep",
+}
+const LEAD_FIELD_TEXT: Record<string, string> = {
+  source: "Ye zariya abhi qabool nahi ho raha — koi aur zariya chunein (ya \"Other\")",
+  status: "Ye stage sahi nahi — dobara chunein",
+  eventType: "Event ki qism dobara chunein",
+  contactName: "Naam likhein",
+  contactPhone: "Phone number sahi likhein (e.g. 0300 1234567)",
+  contactWhatsapp: "WhatsApp number sahi likhein",
+  contactEmail: "Email sahi likhein",
+  eventDate: "Taareekh sahi chunein",
+}
+function showLeadFieldError(root: ShadowRoot, err: unknown): boolean {
+  const d = (err as { response?: { data?: { message?: string; data?: { field?: string } } } })?.response?.data
+  const field = d?.data?.field || ""
+  const el = (LEAD_FIELD_ID[field] && root.getElementById(LEAD_FIELD_ID[field])) as HTMLElement | null
+  root.querySelectorAll(".ferr").forEach((n) => n.remove())
+  root.querySelectorAll("[aria-invalid=true]").forEach((n) => n.removeAttribute("aria-invalid"))
+  if (!el) return false
+  el.setAttribute("aria-invalid", "true")
+  const note = document.createElement("div")
+  note.className = "ferr"; note.setAttribute("role", "alert")
+  note.textContent = LEAD_FIELD_TEXT[field] || d?.message || "Ye field sahi nahi"
+  el.insertAdjacentElement("afterend", note)
+  el.scrollIntoView({ block: "center", behavior: "smooth" }); (el as HTMLInputElement).focus?.()
+  return true
+}
 const STAGE: Record<LeadStatus, { label: string; tone: string; tab: string }> = LEAD_STAGE
 const SOURCE: Record<LeadSource, { label: string; color: string }> = {
   whatsapp: { label: "WhatsApp", color: "var(--ok)" },
@@ -59,6 +93,7 @@ function nextStageOf(s?: LeadStatus): LeadStatus | null {
 }
 
 const EXTRA_CSS = String.raw`
+.ferr{ color:var(--bad); font-size:11.5px; line-height:1.4; margin-top:4px; } [aria-invalid=true]{ border-color:var(--bad) !important; }
 .srcdot{ width:8px; height:8px; border-radius:50%; display:inline-block; flex:none; }
 .lead-acts{ display:flex; gap:6px; justify-content:flex-end; }
 .iconbtn{ width:32px; height:32px; flex:none; border-radius:8px; border:1px solid var(--border-2); background:var(--surface); color:var(--ink-2); display:grid; place-items:center; transition:background .12s,color .12s,border-color .12s; }
@@ -352,7 +387,7 @@ export function LeadsArtifact() {
             if (editId) await LeadAPI.update(editId, { ...common, businessId: bizPick || undefined } as UpdateLeadInput)
             else { if (!bizPick) { toast.error("Venue select karein"); btn.disabled = false; return } await LeadAPI.create({ businessId: bizPick, ...common } as CreateLeadInput) }
             toast.success(editId ? "Lead update ho gaya" : "Naya lead ban gaya"); closeDrawer(s); qc.invalidateQueries({ queryKey: ["leads-artifact"] })
-          } catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua"); btn.disabled = false; btn.textContent = editId ? "Update karein" : "Lead add karein" }
+          } catch (err: unknown) { if (!showLeadFieldError(s, err)) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua"); btn.disabled = false; btn.textContent = editId ? "Update karein" : "Lead add karein" }
           return
         }
         const btn = t.closest(".tab") as HTMLElement | null
