@@ -8,8 +8,9 @@
  *
  * Wired to the REAL backend through the shared artifact shell:
  *   BookingAPI.getWithAvailability  → booking + bookingDetails + business
- *   PaymentAPI.getBookingPaymentStatus → total / paid / remaining
- *   ReceiptsAPI.list({ bookingId }) → the payment history timeline
+ *   PaymentAPI.getBookingPaymentStatus → refunds owed (cash refund obligations only)
+ *   BookingAPI.getSchedule          → the booking's money + qists + payments, in ONE call
+ *                                      (the Payments card; see ./qist-payments.ts)
  *   BookingAPI.getHistory           → the activity timeline
  *   FunctionSheetAPI.list({ bookingId }) → linked documents
  */
@@ -19,11 +20,10 @@ import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { listRefundRequests, decideRefundRequest, applyRefundRequest, markRefundPaid } from "@/lib/api/bookingOrder"
 import { toast } from "sonner"
-import { BookingAPI, type InstallmentsResponse, type SettlementPreview, type DepositPosition, type BookingChangeRequest } from "@/lib/api/bookings"
+import { BookingAPI, type BookingSchedule, type SettlementPreview, type DepositPosition, type BookingChangeRequest } from "@/lib/api/bookings"
 import { BookingsAPI, BlockedDatesAPI } from "@/lib/api/dashboard"
 import { openRecordPaymentDrawer } from "@/components/dashboard/mainScreens/artifact/record-payment"
 import { PaymentAPI } from "@/lib/api/payments"
-import { ReceiptsAPI, type PaymentReceipt } from "@/lib/api/paymentReceipts"
 import { FunctionSheetAPI, type FunctionSheet } from "@/lib/api/functionSheets"
 import type { BookingData } from "@/lib/dashboard-types"
 import { bookingStatusLabel } from "@/lib/booking-status-label"
@@ -32,6 +32,7 @@ import { todayInKarachi } from "@/lib/utils/pk-date"
 import { bookedOn, receivedOn, outstandingOn } from "@/lib/utils/booking-money"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
 import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { paymentsCardHtml, handleQistClick, QIST_CSS } from "./qist-payments"
 import { slotPickerField, bindSlotPicker, loadSlotPicker, refreshPicker, recheckPicker, pickerChoice } from "@/components/dashboard/mainScreens/artifact/slot-picker"
 
 /* ── formatting ──────────────────────────────────────────────── */
@@ -60,7 +61,6 @@ function eventWhen(iso?: string | null) {
   const big = days === 0 ? "Aaj" : days === 1 ? "Kal" : days < 0 ? "Ho chuka" : days < 7 ? `${days} din baaki` : fmtDateShort(iso)
   return { big, sub: fmtDate(iso) }
 }
-const prettyMethod = (m?: string | null) => (m ? String(m).replace(/_/g, " ") : "—")
 
 function toneOf(label: string): "ok" | "warn" | "bad" | "mut" {
   const s = label.toLowerCase()
@@ -188,29 +188,6 @@ const EXTRA_CSS = String.raw`
 @media (max-width:1080px){ .stats{ grid-template-columns:repeat(2,1fr); } .two{ grid-template-columns:1fr; } }
 `
 
-const INST_ST: Record<string, [string, string]> = { paid: ["ok", "Mil gaya"], pending: ["warn", "Baqaya"], partial: ["info", "Kuch mila"], overdue: ["bad", "Overdue"], waived: ["mut", "—"] }
-function installmentsCard(inst: InstallmentsResponse | null, dueOutstanding: number): string {
-  const rows = inst?.installments || []
-  if (!rows.length) return ""
-  const body = rows.map((q) => {
-    const lbl = q.label === "down_payment" ? "Advance" : q.label === "remaining" ? "Baqaya" : escHtml(q.label)
-    const [tone, txt] = INST_ST[q.status] || ["mut", q.status]
-    const partial = q.amountPaid > 0 && q.amountPaid < q.amount
-    return `<div class="inst-row"><div class="ir-l"><div class="ir-nm">${lbl}</div><div class="ir-d">${q.dueAt ? fmtDateShort(q.dueAt) : ""}</div></div><div class="ir-amt tnum">${rs(q.amount)}${partial ? `<span class="sub">${rs(q.amountPaid)} mila</span>` : ""}</div><span class="st ${tone}"><i></i> ${txt}</span></div>`
-  }).join("")
-  // Money-QA C17: the installment ledger's own outstanding can lag the page's
-  // reconciled Baqaya (a Record-drawer receipt updates the money-truth column but
-  // does not always pay down these installment rows). Show ONE number — the same
-  // reconciled outstanding the page header uses — so "Baaqi lena" can never
-  // contradict the "Baqaya" stat above it.
-  const instOut = Number(inst?.totals?.outstanding || 0)
-  const stale = Math.abs(instOut - dueOutstanding) > 1
-  return `<div class="card">
-      <div class="card-h"><div><h2>Qist schedule</h2><div class="sub">Advance → baqaya</div></div></div>
-      <div style="padding:2px 16px 8px">${body}</div>
-      <div class="pkg-total"><span class="t-cap">Baaqi lena</span><span class="t-val tnum">${rs(dueOutstanding)}${stale ? `<span class="sub" style="display:block;font-weight:400;color:var(--ink-3)">receipts se</span>` : ""}</span></div>
-    </div>`
-}
 /**
  * WW-SETTLEMENT — the final-bill card (read-only preview).
  *
@@ -246,7 +223,7 @@ function settlementCard(s: SettlementPreview | null): string {
   const balBlock = bal && bal.source !== "unavailable"
     ? `<div class="pkg-total" style="border-bottom:1px solid var(--border)"><span class="t-cap">Settled total</span><span class="t-val tnum">${rs(settledTotal)}</span></div>
        <div class="dl" style="padding-top:8px"><div class="dl-row"><span class="k">Mil chuka</span><span class="v tnum" style="color:var(--ok)">${rs(paidBal)}</span></div>
-       <div class="dl-row" style="border-bottom:0"><span class="k">Baaqi lena</span><span class="v tnum" style="color:${outBal > 0 ? "var(--warn)" : "var(--ok)"}">${rs(outBal)}</span></div></div>`
+       <div class="dl-row" style="border-bottom:0"><span class="k">Baqaya</span><span class="v tnum" style="color:${outBal > 0 ? "var(--warn)" : "var(--ok)"}">${rs(outBal)}</span></div></div>`
     : `<div class="pkg-total"><span class="t-cap">Settled total</span><span class="t-val tnum">${rs(settledTotal || Number(s.foodTotal || 0))}</span></div>`
   const canCash = isSettled && outBal > 0 && bal && bal.source !== "unavailable"
   const canLock = s.settleable && !s.locked && !isSettled
@@ -290,7 +267,7 @@ function settlePreviewHtml(s: SettlementPreview): string {
   return `<div class="sp-line"><span>Aaye</span><b>${s.bill?.actual ?? s.statedTotal ?? 0} mehmaan</b></div>
     <div class="sp-line"><span>Khaana total</span><b class="tnum">${rs(Number(s.foodTotal || 0))}</b></div>
     <div class="sp-line big"><span>Settled total</span><b class="tnum">${rs(Number(bal?.settledTotal ?? 0))}</b></div>
-    <div class="sp-line"><span>Baaqi lena</span><b class="tnum" style="color:${out > 0 ? "var(--warn)" : "var(--ok)"}">${rs(out)}</b></div>`
+    <div class="sp-line"><span>Baqaya</span><b class="tnum" style="color:${out > 0 ? "var(--warn)" : "var(--ok)"}">${rs(out)}</b></div>`
 }
 
 function lockDrawerBody(id: number, guaranteed: number): string {
@@ -506,7 +483,7 @@ function refundOwedCard(refunds: CashRefundOwed[], payout: RefundPayout = null):
     </div>`
 }
 
-function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmount?: number; remainingAmount?: number; cashRefundOwedTotal?: number; cashRefundsOwed?: CashRefundOwed[]; refundPayout?: RefundPayout } | null, receipts: PaymentReceipt[], history: any[], sheets: FunctionSheet[], installments: InstallmentsResponse | null, settlement: SettlementPreview | null, deposit: DepositPosition | null, refundReqs: RefundReq[] = [], changeReqs: BookingChangeRequest[] = []): string {
+function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmount?: number; remainingAmount?: number; cashRefundOwedTotal?: number; cashRefundsOwed?: CashRefundOwed[]; refundPayout?: RefundPayout } | null, history: any[], sheets: FunctionSheet[], schedule: BookingSchedule | null, scheduleFailed: boolean, settlement: SettlementPreview | null, deposit: DepositPosition | null, refundReqs: RefundReq[] = [], changeReqs: BookingChangeRequest[] = []): string {
   const statusLabel = bookingStatusLabel(booking) || "Booking"
   const tone = toneOf(statusLabel)
   const st = (booking.status || "").toLowerCase()
@@ -524,25 +501,19 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
   // remaining=full on Completed + Cancelled bookings (verified live on
   // #155/#158/#196) — the exact flag-vs-amount defect bookingMoney.js exists to
   // remove. `downPayment` carries receipts and reconciles to the rupee.
-  const total = bookedOn(booking) || Number(booking.totalAmount ?? 0)
-  const paid = receivedOn(booking)
-  const due = outstandingOn(booking) // already 0 for cancelled
+  //
+  // WW-QIST-SCHEDULE: once the schedule has loaded, the figures come from IT - the
+  // same object the Payments card renders - so the stat strip, the card and the
+  // customer's page can never show three different numbers. The shared util stays
+  // as the fallback while it loads (or if it failed), exactly as before.
+  const m = schedule?.money
+  const total = m ? m.total : bookedOn(booking) || Number(booking.totalAmount ?? 0)
+  const paid = m ? m.received : receivedOn(booking)
+  const due = m ? m.outstanding : outstandingOn(booking) // already 0 for cancelled
   const refundOwed = Number(pay?.cashRefundOwedTotal ?? 0)
-  const pct = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0
+  const pct = m ? m.percentPaid : total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0
   const ev = eventWhen(booking.bookingDate)
 
-  /* payment timeline from real receipts */
-  const rc = [...receipts].filter((r) => Number(r.amount) !== 0)
-    .sort((a, b) => new Date(a.receivedDate).getTime() - new Date(b.receivedDate).getTime())
-  const rcItems = rc.map((r, i) => {
-    const amt = Math.abs(Number(r.amount))
-    const title = i === 0 ? "Advance" : `Qist ${i + 1}`
-    const meta = `${fmtDateShort(r.receivedDate)} · ${escHtml(prettyMethod(r.method))}${r.transactionRef ? ` · ${escHtml(r.transactionRef)}` : ""}`
-    return `<div class="tl-item done"><span class="tl-dot">${svg(I.check, 2.6)}</span>
-      <div class="tl-body"><div class="tl-title">${title}<span class="tl-amt tnum">${rs(amt)}</span></div><div class="tl-meta">${meta}</div></div></div>`
-  }).join("")
-  const confirmItem = `<div class="tl-item done"><span class="tl-dot">${svg(I.check, 2.6)}</span>
-    <div class="tl-body"><div class="tl-title">Booking confirm<span class="tl-amt">—</span></div><div class="tl-meta">${fmtDateShort(booking.createdAt)} · booking bani</div></div></div>`
   const recAttrs = `data-rec="${booking.id}" data-rec-name="${escHtml(booking.customerName || "")}" data-rec-due="${Math.round(due)}"`
   /**
    * WW-CLOSE — "the event happened", the one transition nothing could make.
@@ -606,14 +577,6 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
   const statusActions = isPending
     ? `${closeBtn}<button class="btn ${closeBtn ? "btn-ghost" : "btn-primary"}" data-bk-approve="${booking.id}">${svg(I.check, 2.4)} Confirm karein</button><button class="btn btn-ghost" data-bk-cancel="${booking.id}">Reject</button>`
     : (!isClosed ? `${closeBtn}${reschedBtn}<button class="btn btn-ghost" data-bk-cancel="${booking.id}">${svg(I.clock)} Cancel booking</button>` : "")
-  const remindAttrs = `data-remind="${booking.id}" data-remind-phone="${escHtml(booking.customerPhone || "")}" data-remind-name="${escHtml(booking.customerName || "")}" data-remind-due="${Math.round(due)}" data-remind-date="${escHtml(booking.bookingDate || "")}"`
-  const dueItem = (due > 0 && !isCancelled) ? `<div class="tl-item due"><span class="tl-dot">${svg(I.clock)}</span>
-    <div class="tl-body"><div class="tl-title">Baqaya<span class="tl-amt due tnum">${rs(due)}</span></div><div class="tl-meta">Event se pehle lena hai</div>
-      <div class="tl-cta"><button class="btn btn-primary" ${recAttrs} style="height:32px;padding:0 12px;font-size:12.5px">Baqaya record karein</button>${waDigits(booking.customerPhone || "") ? `<button class="btn btn-ghost" ${remindAttrs} style="height:32px;padding:0 12px;font-size:12.5px">${svg(I.wa)} WhatsApp par yaad dilayein</button>` : ""}</div></div></div>` : ""
-  const cancelledItem = isCancelled ? `<div class="tl-item"><span class="tl-dot" style="background:var(--bad-wash);border-color:transparent;color:var(--bad)">${svg(I.minus, 2.4)}</span>
-    <div class="tl-body"><div class="tl-title">Booking cancel<span class="tl-amt" style="color:var(--ink-4)">—</span></div><div class="tl-meta">Is par ab koi payment collect nahi hoti${paid > 0 ? " · pehle mila paisa refund/policy ke mutabiq" : ""}</div></div></div>` : ""
-  const settleItem = `<div class="tl-item"><span class="tl-dot">${svg(I.minus)}</span>
-    <div class="tl-body"><div class="tl-title" style="color:var(--ink-3)">Settle<span class="tl-amt" style="color:var(--ink-4)">${due > 0 ? "baad mein" : "done"}</span></div><div class="tl-meta">Event ke baad khata band</div></div></div>`
 
   /* package lines from real bookingDetails */
   const pkgRows = (booking.bookingDetails || []).map((d) => {
@@ -681,23 +644,12 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
 
   <div class="two">
     <div class="col-stack">
-      <div class="card">
-        <div class="card-h"><div><h2>Payment</h2><div class="sub">Advance → baqaya → settle</div></div><button class="link" data-nav-btn="/dashboard/money">Khata mein ${svg(I.chevr, 2.2)}</button></div>
-        <div class="pay-sum">
-          <div><div class="ps-cap">Kul</div><div class="ps-val tnum">${rs(total)}</div></div>
-          <div><div class="ps-cap">Mil chuka</div><div class="ps-val ok tnum">${rs(paid)}</div></div>
-          <div><div class="ps-cap">Baqaya</div><div class="ps-val due tnum">${rs(due)}</div></div>
-        </div>
-        <div class="pay-bar-wrap"><div class="pay-bar-lbl"><b>${pct}% mila</b><span>Rs ${pkNum(paid)} / ${pkNum(total)}</span></div><div class="paybar"><span style="width:${pct}%"></span></div></div>
-        <div class="pay-tl"><div class="tl-h">Payment history</div>${confirmItem}${rcItems}${dueItem}${isCancelled ? cancelledItem : settleItem}</div>
-      </div>
+      ${paymentsCardHtml(schedule, { failed: scheduleFailed })}
 
       ${changeRequestsCard(booking.id, changeReqs)}
 
       ${refundRequestsCard(refundReqs)}
       ${refundOwedCard(pay?.cashRefundsOwed ?? [], pay?.refundPayout ?? null)}
-
-      ${installmentsCard(installments, due)}
 
       ${settlementCard(settlement)}
 
@@ -973,7 +925,7 @@ function cancelBookingHtml(id: number): string {
 export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
   const hostRef = React.useRef<HTMLDivElement | null>(null)
   const { shadowRef, ready } = useArtifactShell(hostRef, {
-    activeHref: "/dashboard/bookings", crumbBold: "Bookings", crumbSub: "Booking detail", extraCss: EXTRA_CSS,
+    activeHref: "/dashboard/bookings", crumbBold: "Bookings", crumbSub: "Booking detail", extraCss: EXTRA_CSS + QIST_CSS,
   })
 
   const qc = useQueryClient()
@@ -981,10 +933,14 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
   const valid = Number.isFinite(bookingId)
   const bookingQ = useQuery({ queryKey: ["bk-detail", bookingId], queryFn: () => BookingAPI.getWithAvailability(bookingId), enabled: valid })
   const payQ = useQuery({ queryKey: ["bk-detail-pay", bookingId], queryFn: () => PaymentAPI.getBookingPaymentStatus(bookingId).catch(() => null), enabled: valid })
-  const rcQ = useQuery({ queryKey: ["bk-detail-rc", bookingId], queryFn: () => ReceiptsAPI.list({ bookingId }).catch(() => ({ receipts: [] as PaymentReceipt[], summary: { total: 0, byMethod: {} } })), enabled: valid })
   const histQ = useQuery({ queryKey: ["bk-detail-hist", bookingId], queryFn: () => BookingAPI.getHistory(bookingId).catch(() => []), enabled: valid })
   const sheetsQ = useQuery({ queryKey: ["bk-detail-sheets", bookingId], queryFn: () => FunctionSheetAPI.list({ bookingId }).then((r) => r.functionSheets).catch(() => [] as FunctionSheet[]), enabled: valid })
-  const instQ = useQuery({ queryKey: ["bk-detail-inst", bookingId], queryFn: () => BookingAPI.getInstallments(bookingId).catch(() => null), enabled: valid })
+  // ONE request: the booking's money, its qists, the payments that explain them,
+  // and the presets the plan editor offers. Deliberately NOT .catch(() => null):
+  // a failure must show as a failure on the card, never as an empty schedule.
+  const scheduleQ = useQuery({ queryKey: ["bk-detail-schedule", bookingId], queryFn: () => BookingAPI.getSchedule(bookingId), enabled: valid })
+  const scheduleRef = React.useRef<BookingSchedule | null>(null)
+  const custRef = React.useRef<string>("")
   const settleQ = useQuery({ queryKey: ["bk-detail-settle", bookingId], queryFn: () => BookingAPI.getSettlement(bookingId).catch(() => null), enabled: valid })
   const depQ = useQuery({ queryKey: ["bk-detail-deposit", bookingId], queryFn: () => BookingAPI.getDeposit(bookingId).catch(() => null), enabled: valid })
   // WW-REFUNDUI — 404s when the refund engine is dark for this vendor, which is
@@ -1022,13 +978,15 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
       return
     }
     if (!booking) { wwc.innerHTML = `<button class="back" data-nav-btn="/dashboard/bookings">${svg(I.back, 2.2)} Sab bookings</button><div class="loadwrap">Ye booking nahi mili.</div>`; return }
+    scheduleRef.current = scheduleQ.data ?? null
+    custRef.current = booking.customerName || ""
     wwc.innerHTML = buildDetail(
       booking,
       payQ.data ?? null,
-      rcQ.data?.receipts ?? [],
       Array.isArray(histQ.data) ? histQ.data : [],
       sheetsQ.data ?? [],
-      instQ.data ?? null,
+      scheduleQ.data ?? null,
+      scheduleQ.isError,
       settleQ.data ?? null,
       depQ.data ?? null,
       (refundQ.data?.requests ?? []) as unknown as RefundReq[],
@@ -1040,21 +998,31 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
     // update the crumb with the real customer name
     const crumb = s.querySelector(".crumb b"); if (crumb) crumb.textContent = booking.customerName || "Booking"
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, bookingQ.data, bookingQ.isLoading, bookingQ.isError, payQ.data, rcQ.data, histQ.data, sheetsQ.data, instQ.data, settleQ.data, depQ.data, refundQ.data, crQ.data])
+  }, [ready, bookingQ.data, bookingQ.isLoading, bookingQ.isError, payQ.data, histQ.data, sheetsQ.data, scheduleQ.data, scheduleQ.isError, settleQ.data, depQ.data, refundQ.data, crQ.data])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
     const s = shadowRef.current
     if (!s || !ready || bound.current) return
     bound.current = true
-    const invalidateAll = () => ["bk-detail", "bk-detail-pay", "bk-detail-rc", "bk-detail-hist", "bk-detail-inst", "bk-detail-settle", "bk-detail-deposit", "bk-detail-refunds", "bk-detail-cr"].forEach((k) => qc.invalidateQueries({ queryKey: [k, bookingId] }))
+    const invalidateAll = () => ["bk-detail", "bk-detail-pay", "bk-detail-schedule", "bk-detail-hist", "bk-detail-settle", "bk-detail-deposit", "bk-detail-refunds", "bk-detail-cr"].forEach((k) => qc.invalidateQueries({ queryKey: [k, bookingId] }))
     s.addEventListener("click", async (e) => {
       const t = e.target as HTMLElement
-      // inline record payment (header button + timeline "Baqaya record karein")
+      // The Payments card and its drawers (plan editor, edit / split / waive / remind,
+      // record against a chosen qist). Everything below is the rest of the booking screen.
+      if (await handleQistClick(t, s, {
+        bookingId,
+        customerName: custRef.current,
+        getSchedule: () => scheduleRef.current,
+        apply: (v) => { scheduleRef.current = v; qc.setQueryData(["bk-detail-schedule", bookingId], v) },
+        refresh: invalidateAll,
+      })) return
+      // inline record payment (header button): the drawer asks the server what is due
       const rec = t.closest("[data-rec]") as HTMLElement | null
       if (rec?.dataset.rec) {
         openRecordPaymentDrawer(s, {
           bookingId: Number(rec.dataset.rec), customerName: rec.dataset.recName || undefined, due: Number(rec.dataset.recDue) || 0,
+          schedule: scheduleRef.current,
           onSaved: invalidateAll,
         })
         return
@@ -1292,23 +1260,6 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
         cxs.disabled = true; cxs.textContent = "Cancel ho raha…"
         try { await BookingsAPI.cancel(Number(cxs.dataset.bkCancelSave), reason); toast.success("Booking cancel ho gayi"); closeDrawer(s); invalidateAll() }
         catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Cancel nahi hui"); cxs.disabled = false; cxs.textContent = "Haan, cancel karein" }
-        return
-      }
-      // WhatsApp baqaya reminder — open a prefilled wa.me nudge + best-effort log.
-      // The log endpoint is flag-gated (WHATSAPP_TIER1_ENABLED); a 404 there is
-      // the engine being off, not a failure — the reminder still went out.
-      const rem = t.closest("[data-remind]") as HTMLElement | null
-      if (rem?.dataset.remind) {
-        const p = waDigits(rem.dataset.remindPhone)
-        if (!p) { toast.error("Customer ka WhatsApp number nahi hai"); return }
-        const nm = rem.dataset.remindName || "ji"
-        const amt = pkNum(Number(rem.dataset.remindDue) || 0)
-        const dt = rem.dataset.remindDate ? fmtDateShort(rem.dataset.remindDate) : ""
-        const msg = `Assalam o Alaikum ${nm},\nAap ki booking${dt ? ` (${dt})` : ""} ki baqaya raqam Rs ${amt} hai. Bara-e-meherbani event se pehle ada kar dein. Shukriya.`
-        window.open(`https://wa.me/${p}?text=${encodeURIComponent(msg)}`, "_blank", "noopener")
-        BookingAPI.logReminder(Number(rem.dataset.remind), { trigger: "balance_due", channel: "whatsapp", body: msg })
-          .then(() => toast.success("WhatsApp khul gaya · reminder log ho gaya"))
-          .catch(() => toast.success("WhatsApp khul gaya"))
         return
       }
       // ── Settlement: lock the guarantee before the night ──────────────

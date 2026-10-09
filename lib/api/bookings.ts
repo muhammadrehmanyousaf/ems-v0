@@ -20,22 +20,139 @@ export interface BookingWithAvailabilityResponse {
   availabilityContext: BookingAvailabilityContextRow[];
 }
 
-// BK-042 — installments schedule. Backend returns `{ installments, totals }`.
+// BK-042 / WW-QIST-SCHEDULE — the booking's payment schedule.
+//
+// ONE request returns the booking's money, its qists, the payments that explain
+// them and what is due now. Every figure is parsed to a number on the server
+// (the API's money columns elsewhere are strings, and a string is truthy - that
+// is how a "Pay Rs. 0" button happened), so nothing here is recomputed in the
+// browser. Vocabulary: Qist = a scheduled instalment, Mil chuka = received,
+// Baqaya = the OUTSTANDING TOTAL only.
+
+/** The honest status of one qist, derived on the server from amounts + the PKT date. */
+export type QistState =
+  | "upcoming"
+  | "due_today"
+  | "overdue"
+  | "part_paid"
+  | "paid"
+  | "waived"
+  | "cancelled";
+
+export interface QistActions {
+  record: boolean;
+  edit: boolean;
+  split: boolean;
+  waive: boolean;
+  remove: boolean;
+  remind: boolean;
+}
+
 export interface BookingInstallment {
-  id: number;
+  /** null only for a qist the server has computed but not yet stored (a customer read of a legacy booking). */
+  id: number | null;
   sequence: number;
-  label: string; // 'down_payment' | 'remaining' | custom
+  /** 1-based position among the live qists; null for a waived one. */
+  order?: number | null;
+  label: string; // 'down_payment' | 'remaining' | 'full_payment' | 'extra' | custom
+  /** The label as it should be read (audience-specific vocabulary). */
+  title?: string;
   amount: number;
   amountPaid: number;
+  /** amount - amountPaid, never negative; 0 when paid or waived. */
+  remaining?: number;
   dueAt: string; // ISO
+  /** The due DAY in Pakistan time, YYYY-MM-DD - the one date every screen shows. */
+  dueDate?: string;
+  state?: QistState;
+  daysOverdue?: number;
+  daysUntilDue?: number | null;
+  /** The legacy DB status, kept for older readers. */
   status: "pending" | "paid" | "partial" | "waived" | "overdue";
   paidAt: string | null;
-  paymentTransactionId: number | null;
+  paymentTransactionId?: number | null;
+  source?: "auto" | "vendor" | "customer_plan" | "import";
+  allocations?: { receiptId: number; amount: number }[];
+  warnings?: ("due_after_event" | "due_before_booking")[];
+  waived?: boolean;
+  // vendor view only
+  waivedReason?: string | null;
+  waivedAt?: string | null;
+  lastRemindedAt?: string | null;
+  reminderCount?: number;
+  actions?: QistActions;
+}
+
+export interface SchedulePayment {
+  id: number;
+  kind: "payment" | "refund";
+  amount: number; // negative for a refund
+  method: string;
+  receivedDate: string;
+  transactionRef: string | null;
+  notes?: string | null;
+  installmentId?: number | null;
+  allocations: { installmentId: number | null; title: string | null; amount: number; overpayment: boolean }[];
+}
+
+export interface PlanPreset {
+  key: "full" | "advance_balance" | "three_qists" | "custom";
+  available: boolean;
+  reason: string | null;
+  rows: { label: string; title: string; amount: number; dueDate: string }[];
 }
 
 export interface InstallmentsResponse {
+  bookingId?: number;
+  asOf?: string;
+  /** Today in Pakistan, YYYY-MM-DD. */
+  today?: string;
   installments: BookingInstallment[];
+  /** Σ live qists, Σ paid on them, what is left on them. */
   totals: { scheduled: number; paid: number; outstanding: number };
+  money?: {
+    total: number;
+    received: number;
+    /** total - received; 0 for a cancelled booking. THE Baqaya. */
+    outstanding: number;
+    overpaid: number;
+    /** Money on the booking with no receipt behind it (a legacy advance). */
+    unledgered: number;
+    percentPaid: number;
+    paymentStatus: string;
+    bookingStatus: string;
+    cancelled: boolean;
+    payable: boolean;
+    advanceDue: number;
+    waived: number;
+    refunded: number;
+    eventDate: string | null;
+    createdDate: string | null;
+  };
+  nextDue?: { installmentId: number | null; title: string; remaining: number; dueDate: string; state: QistState; daysOverdue: number } | null;
+  /** What to collect now: everything due or overdue, else the next qist. */
+  amountDue?: { amount: number; basis: "due_now" | "next_qist" | "nothing_due"; installmentIds: (number | null)[]; nextInstallmentId: number | null; nextDueDate: string | null; overdueAmount: number };
+  payments?: SchedulePayment[];
+  /** Vendor view only. */
+  plan?: { editable: boolean; maxQists: number; remainingToSchedule: number; balanceDaysBefore: number; presets: PlanPreset[] };
+  invariants?: { scheduleSumsToTotal: boolean; paidMatchesReceipts: boolean; nothingOverfilled: boolean; noZeroLiveRows: boolean };
+  drift?: boolean;
+  warnings?: { code: string; index: number; dueDay: string }[];
+}
+
+/** The schedule, as the vendor and the customer both read it. */
+export type BookingSchedule = InstallmentsResponse;
+
+/** A plan row as the API accepts it. `id` keeps an existing qist (and its history). */
+export interface PlanRowInput {
+  id?: number | null;
+  label?: string;
+  amount: number;
+  dueDate: string;
+}
+export interface ScheduleConfirm {
+  pastDue?: boolean;
+  afterEvent?: boolean;
 }
 
 // WW-SETTLEMENT — the final bill (GET /:id/settlement, read-only preview).
@@ -252,6 +369,58 @@ export class BookingAPI {
     bookingId: number,
   ): Promise<InstallmentsResponse> {
     const res = await axiosInstance.get(`${v1}/${bookingId}/installments`);
+    return res.data?.data;
+  }
+
+  // WW-QIST-SCHEDULE — the same call, named for what it now returns: money + qists
+  // + payments + presets in ONE round trip.
+  static async getSchedule(bookingId: number): Promise<BookingSchedule> {
+    const res = await axiosInstance.get(`${v1}/${bookingId}/installments`);
+    return res.data?.data;
+  }
+
+  // Vendor replaces the owing part of the plan. `confirm` answers the server's
+  // 422 "needs confirmation" for a past / after-event due date.
+  static async putPlan(bookingId: number, rows: PlanRowInput[], confirm?: ScheduleConfirm): Promise<BookingSchedule> {
+    const res = await axiosInstance.put(`${v1}/${bookingId}/installments/plan`, { rows, confirm });
+    return res.data?.data;
+  }
+
+  static async editQist(
+    bookingId: number,
+    installmentId: number,
+    body: { label?: string; dueDate?: string; amount?: number; balanceInto?: number; confirm?: ScheduleConfirm },
+  ): Promise<BookingSchedule> {
+    const res = await axiosInstance.patch(`${v1}/${bookingId}/installments/${installmentId}`, body);
+    return res.data?.data;
+  }
+
+  static async splitQist(
+    bookingId: number,
+    installmentId: number,
+    body: { amount: number; dueDate: string; label?: string; confirm?: ScheduleConfirm },
+  ): Promise<BookingSchedule> {
+    const res = await axiosInstance.post(`${v1}/${bookingId}/installments/${installmentId}/split`, body);
+    return res.data?.data;
+  }
+
+  static async removeQist(bookingId: number, installmentId: number, balanceInto?: number): Promise<BookingSchedule> {
+    const res = await axiosInstance.delete(`${v1}/${bookingId}/installments/${installmentId}`, { data: { balanceInto } });
+    return res.data?.data;
+  }
+
+  static async waiveQist(bookingId: number, installmentId: number, reason: string): Promise<BookingSchedule> {
+    const res = await axiosInstance.post(`${v1}/${bookingId}/installments/${installmentId}/waive`, { reason });
+    return res.data?.data;
+  }
+
+  // WhatsApp returns the text + wa.me link for the vendor to send; in_app notifies the customer.
+  static async remindQist(
+    bookingId: number,
+    installmentId: number,
+    channel: "whatsapp" | "in_app",
+  ): Promise<{ channel: string; text: string; lastRemindedAt: string; whatsapp: { phone: string; url: string } | null }> {
+    const res = await axiosInstance.post(`${v1}/${bookingId}/installments/${installmentId}/remind`, { channel });
     return res.data?.data;
   }
 

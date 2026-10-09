@@ -17,81 +17,53 @@ import {
   type BookingInstallment,
   type InstallmentsResponse,
 } from "@/lib/api/bookings";
+import { dayTextCustomer, moneyOf, qistStateCustomer, rsTextCustomer } from "@/lib/utils/qist";
 
-const STATUS_LABEL: Record<BookingInstallment["status"], string> = {
-  pending: "Due",
-  paid: "Paid",
-  partial: "Partial",
-  waived: "Waived",
-  overdue: "Overdue",
+/**
+ * WW-QIST-SCHEDULE — the customer's view of the SAME schedule the vendor edits.
+ *
+ * Every figure comes from the server's single schedule object (no arithmetic
+ * here): the qists, their true state ("Overdue by 4 days", "Part paid", "Due
+ * today"), what has been paid, what is left, and the next one to pay. A waived
+ * qist is shown as waived and is not part of what is owed (the booking total was
+ * lowered by the same amount).
+ *
+ * The pay button and the single "amount due" figure live on the booking page and
+ * read the server's payment-instructions `amountDue`; this card only explains the
+ * plan behind that number.
+ */
+
+const TONE_BADGE: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  ok: "default",
+  bad: "destructive",
+  warn: "secondary",
+  info: "secondary",
+  acc: "outline",
+  mut: "outline",
 };
 
-const LABEL_PRETTY: Record<string, string> = {
-  down_payment: "Down payment",
-  remaining: "Balance due",
-};
-
-function formatPKR(amount: number): string {
-  if (typeof amount !== "number" || !Number.isFinite(amount)) return "—";
-  try {
-    return new Intl.NumberFormat("en-PK", {
-      style: "currency",
-      currency: "PKR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } catch {
-    return `Rs. ${Math.round(amount).toLocaleString("en-PK")}`;
-  }
-}
-
-function formatDueAt(dueAt: string): string {
-  try {
-    const d = new Date(dueAt);
-    // QA #15 — force Pakistan time. The due instant is stored anchored to the
-    // event day; formatting in the viewer's local zone rendered the previous
-    // calendar day for anyone west of UTC (diaspora customers). Pin to PKT.
-    return d.toLocaleDateString("en-PK", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      timeZone: "Asia/Karachi",
-    });
-  } catch {
-    return dueAt;
-  }
-}
-
-interface InstallmentRowProps {
-  inst: BookingInstallment;
-}
-
-function InstallmentRow({ inst }: InstallmentRowProps) {
-  const isPaid = inst.status === "paid";
-  const isOverdue = inst.status === "overdue";
-  const isWaived = inst.status === "waived";
-
-  const Icon = isPaid
-    ? CheckCircle2
-    : isOverdue
-    ? AlertTriangle
-    : isWaived
-    ? CircleSlash
-    : Clock;
-
-  const variant: "default" | "secondary" | "destructive" | "outline" = isPaid
-    ? "default"
-    : isOverdue
-    ? "destructive"
-    : "secondary";
-
-  const label = LABEL_PRETTY[inst.label] ?? inst.label;
+function Row({ q }: { q: BookingInstallment }) {
+  const view = qistStateCustomer(q);
+  const isPaid = q.state === "paid";
+  const isOverdue = q.state === "overdue";
+  const isWaived = q.state === "waived";
+  const Icon = isPaid ? CheckCircle2 : isOverdue ? AlertTriangle : isWaived ? CircleSlash : Clock;
+  const paid = moneyOf(q.amountPaid);
+  const left = moneyOf(q.remaining);
+  const name = q.title || q.label;
+  // A plain "Qist 2" is just the position; a purposeful name ("Advance") is kept after it.
+  const heading =
+    q.order == null
+      ? `${name} (waived)`
+      : /^qist\s*\d+$/i.test(String(name).trim())
+        ? `Instalment ${q.order}`
+        : `Instalment ${q.order}: ${name}`;
 
   return (
     <div
       className={cn(
         "flex items-start justify-between gap-4 py-3 border-b border-border/60 last:border-b-0",
-        isWaived && "opacity-60",
+        (isWaived || q.state === "cancelled") && "opacity-60",
       )}
     >
       <div className="flex items-start gap-3 min-w-0">
@@ -108,28 +80,26 @@ function InstallmentRow({ inst }: InstallmentRowProps) {
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-medium text-sm text-foreground">{label}</p>
-            <Badge variant={variant} className="text-[10.5px] tracking-wide">
-              {STATUS_LABEL[inst.status]}
+            <p className="font-medium text-sm text-foreground">{heading}</p>
+            <Badge variant={TONE_BADGE[view.tone] ?? "secondary"} className="text-[10.5px] tracking-wide">
+              {view.label}
             </Badge>
           </div>
-          <p className="text-[12px] text-muted-foreground mt-0.5">
-            {isPaid && inst.paidAt
-              ? `Paid on ${formatDueAt(inst.paidAt)}`
-              : isWaived
-              ? "Not required for this booking"
-              : `Due by ${formatDueAt(inst.dueAt)}`}
+          <p className={cn("text-[12px] mt-0.5", isOverdue ? "text-red-600 font-medium" : "text-muted-foreground")}>
+            {isPaid
+              ? q.paidAt
+                ? `Paid on ${dayTextCustomer(String(q.paidAt).slice(0, 10))}`
+                : "Paid"
+              : view.detail || `Due ${dayTextCustomer(q.dueDate)}`}
           </p>
         </div>
       </div>
       <div className="text-right shrink-0">
-        <p className="font-medium tabular-nums text-sm text-foreground">
-          {formatPKR(inst.amount)}
+        <p className={cn("font-medium tabular-nums text-sm text-foreground", isWaived && "line-through")}>
+          {rsTextCustomer(q.amount)}
         </p>
-        {inst.amountPaid > 0 && inst.amountPaid < inst.amount ? (
-          <p className="text-[11px] text-muted-foreground tabular-nums">
-            {formatPKR(inst.amountPaid)} paid
-          </p>
+        {!isWaived && paid > 0 && left > 0 ? (
+          <p className="text-[11px] text-muted-foreground tabular-nums">{rsTextCustomer(paid)} paid</p>
         ) : null}
       </div>
     </div>
@@ -141,11 +111,11 @@ interface InstallmentsCardProps {
 }
 
 /**
- * BK-042 — render the down_payment + remaining schedule for a booking.
+ * BK-042 — render the payment schedule for a booking.
  *
- * Auth-gates inside the backend handler (super-admin / customer-by-email /
- * vendor-in-cart); this component just renders what comes back. Empty
- * `installments` array (e.g. legacy booking pre-BK-042) hides the card.
+ * Auth-gates inside the backend handler (super-admin / customer / vendor on the
+ * booking); this component just renders what comes back. An empty `installments`
+ * array (a booking with nothing to collect) hides the card.
  */
 export function InstallmentsCard({ bookingId }: InstallmentsCardProps) {
   const [data, setData] = useState<InstallmentsResponse | null>(null);
@@ -163,7 +133,7 @@ export function InstallmentsCard({ bookingId }: InstallmentsCardProps) {
       })
       .catch((e) => {
         if (!alive) return;
-        // Hide the card silently on auth/legacy errors — this is informational.
+        // Hide the card silently on auth errors — this is informational.
         if (e?.response?.status === 403 || e?.response?.status === 404) {
           setData(null);
         } else {
@@ -199,55 +169,61 @@ export function InstallmentsCard({ bookingId }: InstallmentsCardProps) {
     );
   }
 
-  // Legacy booking pre-BK-042: no schedule → hide card.
   if (!data || !Array.isArray(data.installments) || data.installments.length === 0) {
     return null;
   }
 
-  const { installments, totals } = data;
-  const totalsKnown =
-    totals && typeof totals.scheduled === "number";
+  const { installments, money, nextDue } = data;
+  const settled = !!money && money.outstanding <= 0 && !money.cancelled;
 
   return (
     <SectionCard
       title="Payment schedule"
-      description="Down payment and balance breakdown for this booking."
+      description={
+        money?.cancelled
+          ? "This booking is cancelled — nothing further is payable."
+          : settled
+            ? "Every instalment has been paid."
+            : "Your instalments for this booking, with what is due and when."
+      }
     >
+      {nextDue && !money?.cancelled && !settled ? (
+        <div
+          className={cn(
+            "mb-3 rounded-lg border px-3 py-2 text-sm",
+            nextDue.state === "overdue" ? "border-red-200 bg-red-50 text-red-800" : "border-amber-200 bg-amber-50 text-amber-900",
+          )}
+        >
+          {nextDue.state === "overdue"
+            ? `Overdue by ${nextDue.daysOverdue} day${nextDue.daysOverdue === 1 ? "" : "s"}: `
+            : nextDue.state === "due_today"
+              ? "Due today: "
+              : "Next payment: "}
+          <span className="font-semibold tabular-nums">{rsTextCustomer(nextDue.remaining)}</span>
+          {nextDue.state === "overdue" || nextDue.state === "due_today" ? "" : ` on ${dayTextCustomer(nextDue.dueDate)}`}
+        </div>
+      ) : null}
+
       <div className="divide-y divide-border/60">
-        {installments.map((inst) => (
-          <InstallmentRow key={inst.id} inst={inst} />
+        {installments.map((q, i) => (
+          <Row key={q.id ?? `row-${i}`} q={q} />
         ))}
       </div>
 
-      {totalsKnown ? (
+      {money ? (
         <div className="mt-4 pt-3 border-t border-border/60 grid grid-cols-3 gap-3 text-center">
           <div>
-            <p className="text-[10.5px] uppercase tracking-wide text-muted-foreground">
-              Scheduled
-            </p>
-            <p className="font-medium tabular-nums text-sm">
-              {formatPKR(totals.scheduled)}
-            </p>
+            <p className="text-[10.5px] uppercase tracking-wide text-muted-foreground">Total</p>
+            <p className="font-medium tabular-nums text-sm">{rsTextCustomer(money.total)}</p>
           </div>
           <div>
-            <p className="text-[10.5px] uppercase tracking-wide text-muted-foreground">
-              Paid
-            </p>
-            <p className="font-medium tabular-nums text-sm text-emerald-700">
-              {formatPKR(totals.paid)}
-            </p>
+            <p className="text-[10.5px] uppercase tracking-wide text-muted-foreground">Paid</p>
+            <p className="font-medium tabular-nums text-sm text-emerald-700">{rsTextCustomer(money.received)}</p>
           </div>
           <div>
-            <p className="text-[10.5px] uppercase tracking-wide text-muted-foreground">
-              Outstanding
-            </p>
-            <p
-              className={cn(
-                "font-medium tabular-nums text-sm",
-                totals.outstanding > 0 ? "text-amber-700" : "text-emerald-700",
-              )}
-            >
-              {formatPKR(totals.outstanding)}
+            <p className="text-[10.5px] uppercase tracking-wide text-muted-foreground">Remaining</p>
+            <p className={cn("font-medium tabular-nums text-sm", money.outstanding > 0 ? "text-amber-700" : "text-emerald-700")}>
+              {money.cancelled ? "—" : rsTextCustomer(money.outstanding)}
             </p>
           </div>
         </div>
