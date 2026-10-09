@@ -193,15 +193,18 @@ try {
   const wiring: Array<[string, boolean]> = [
     ["the step imports the mirror", /from\s*["']@\/lib\/booking\/space-fit["']/.test(step)],
     ["the customer is asked at all", /ARRANGEMENT_CHOICES\.map/.test(step)],
-    ["the answer is stored on the form", /requestedGenderMode:\s*\(e\.target\.value/.test(step)],
+    // The Marquee Stage step records the pick from a choice sheet (onPick), not a native <select>.
+    ["the answer is stored on the form", /requestedGenderMode:\s*\(v\s*\|\|\s*null\)/.test(step)],
     ["the field is typed, not smuggled through `any`", /requestedGenderMode\?:/.test(types)],
     ["the step runs the fit check", /checkGenderFit\(formData\.requestedGenderMode/.test(step)],
     // Matches the RENDER, not the variable. The first version of the deposit
     // guard tested for "{depositTerms" and passed happily while the sentences
     // were replaced by {null} — it was matching the surrounding conditional.
-    ["a mismatch is actually rendered", /\{\s*genderFit\.reason\s*\}/.test(step)],
+    // The verdicts are lines in `hallNotices`; they are only "rendered" if that list reaches a NoticeRail
+    // on BOTH layouts (the ≥1280 combined rail and the stacked one), so assert the text AND both rails.
+    ["a mismatch is actually rendered", /hallNotices\.push\(\{[^}]*text:\s*genderFit\.reason/.test(step) && /\.\.\.hallNotices/.test(step) && /<NoticeRail\s+lines=\{railLines\}/.test(step) && /<NoticeRail\s+lines=\{hallNotices\}/.test(step)],
     ["the step runs the weather check", /describeBackupPlan\(selectedSubVenue/.test(step)],
-    ["the wet-weather line is actually rendered", /\{\s*backupPlan\.message\s*\}/.test(step)],
+    ["the wet-weather line is actually rendered", /hallNotices\.push\(\{[^}]*text:\s*backupPlan\.message/.test(step) && /\.\.\.hallNotices/.test(step) && /<NoticeRail\s+lines=\{hallNotices\}/.test(step)],
     // Both were on the wire and both were dropped by the flatten, so neither
     // check had anything to read.
     ["the space tree keeps genderMode", /genderMode:\s*\(n as any\)\.genderMode/.test(step)],

@@ -127,6 +127,9 @@ export class BusinessAvailabilityAPI {
     from: string;
     to: string;
     days: Record<string, SlotAvailabilityRow[]>;
+    /** What kind of venue answered, and the hall it resolved. Additive: old
+     *  servers do not send it, so readers must treat it as optional. */
+    meta?: SlotDayMeta;
   }> {
     const scope =
       subVenueId === undefined ? {} : subVenueId === null ? { subVenueId: "none" } : { subVenueId };
@@ -146,6 +149,32 @@ export class BusinessAvailabilityAPI {
   ): Promise<SlotAvailabilityRow[]> {
     const r = await BusinessAvailabilityAPI.getBulkAvailability(businessId, date, date, subVenueId);
     return r?.days?.[date] ?? [];
+  }
+
+  /**
+   * SLOT-PICKER — one day's slots PLUS what kind of venue answered, for a
+   * picker. Same endpoint the public booking page and the vendor calendar read
+   * (`/slots/availability/bulk`, from == to), so the three can never disagree
+   * about what is open; `meta` is the only extra, and tells the picker whether
+   * to show a list, a whole-day note, or "choose a hall first".
+   *
+   * Pass the hall the vendor chose (a number) or `null` for "whole venue".
+   */
+  static async getDayPlan(
+    businessId: number,
+    date: string,
+    subVenueId: number | null,
+  ): Promise<{ slots: SlotAvailabilityRow[]; meta: SlotDayMeta }> {
+    const r = await BusinessAvailabilityAPI.getBulkAvailability(businessId, date, date, subVenueId);
+    const slots = r?.days?.[date] ?? [];
+    const meta: SlotDayMeta = r?.meta ?? {
+      // An older server sends no meta: infer the mode from the rows.
+      mode: slots.length > 0 ? "slots" : "whole_day",
+      needsSpace: false,
+      subVenueId: subVenueId ?? null,
+      closingTime: null,
+    };
+    return { slots, meta };
   }
 }
 
@@ -198,6 +227,19 @@ export class SlotBlocksAPI {
   }
 }
 
+/** What kind of venue answered a day's slot question (see slotService.computeAvailability). */
+export interface SlotDayMeta {
+  /** `slots`: the venue sells named time slots. `whole_day`: no active slot applies, so there is no time to choose. */
+  mode: "slots" | "whole_day";
+  /** Slots exist, but only per hall, and no hall was named. */
+  needsSpace: boolean;
+  /** The hall the answer is scoped to, when it is a hall of this venue. */
+  subVenueId: number | null;
+  /** The venue's event closing time ("HH:MM") when it has one; whole-day venues only. */
+  closingTime: string | null;
+  businessId?: number;
+}
+
 // Per (date, slotTemplate) shape — mirrors `slotService.availability()`.
 export interface SlotAvailabilityRow {
   slotTemplateId: number;
@@ -216,6 +258,16 @@ export interface SlotAvailabilityRow {
   blocked: boolean;
   blockReason: string | null;
   runsThisWeekday: boolean;
+  /**
+   * The server's single openness verdict (utils/slotRules.js). `open` is the
+   * only value a picker may offer; the other three are shown disabled WITH their
+   * reason. Optional so a client built against an older server still works:
+   * use `isSlotOpen(row)` (lib/booking/slot-open.ts), which falls back to the
+   * same rule computed from the other fields.
+   */
+  status?: "open" | "full" | "blocked" | "closed";
+  /** Why it is not open: capacity_full | blocked | closed_weekday | capacity_zero. */
+  reason?: string | null;
   utilizationPct: number;
   lastSpot: boolean;
   thresholdPct: number;

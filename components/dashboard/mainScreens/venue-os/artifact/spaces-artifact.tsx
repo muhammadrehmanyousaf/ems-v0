@@ -70,6 +70,8 @@ const EXTRA_CSS = String.raw`
 .chk-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:8px; } .chk{ display:flex; align-items:center; gap:8px; font-size:12.5px; padding:7px 10px; border:1px solid var(--border-2); border-radius:8px; cursor:pointer; } .chk input{ width:auto; }
 .loadwrap{ display:grid; place-items:center; padding:80px 16px; color:var(--ink-3); font-size:13px; text-align:center; }
 @media (max-width:900px){ .sp-tiles{ grid-template-columns:1fr 1fr; } }
+/* phone: icon + text on one line, the toggle and buttons on their own right-aligned row (the unshrinkable ~150px action block left the text ~118px wide) */
+@media (max-width:560px){ .sprow{ flex-wrap:wrap; align-items:flex-start; row-gap:8px; } .sp-main{ flex:1 1 0; } .sp-acts{ flex:1 0 100%; justify-content:flex-end; } }
 `
 
 function spaceFormBody(flat: SubVenueNode[], node?: SubVenueNode | null, parentId?: number | null): string {
