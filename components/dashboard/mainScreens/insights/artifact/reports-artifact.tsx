@@ -16,7 +16,9 @@ import { LeadAPI, type Lead, type LeadSource, type ConversionAnalytics } from "@
 import { useFetchData } from "@/hooks/use-fetch-data"
 import { useActiveBusinessId, useActiveBusinessStore } from "@/lib/store/active-business-store"
 import type { BookingData } from "@/lib/dashboard-types"
-import { useArtifactShell, pkNum, escHtml, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { usePlan } from "@/context/plan-context"
+import { useScreenLock } from "@/components/dashboard/mainScreens/artifact/plan-lock"
+import { useArtifactShell, pkNum, escHtml, errorBannerHtml, planLockedHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const num = (v: unknown) => (v == null ? 0 : Number(v) || 0)
 const lakh = (v: number) => (v / 100000)
@@ -242,7 +244,7 @@ function responseCard(rt: ResponseTimesData | null): string {
     ${bars ? `<div class="rt-list">${bars}</div>` : ""}
     ${srcs ? `<div class="rt-list rt-src"><div class="rt-cap">Zariye ke hisaab se median</div>${srcs}</div>` : ""}</div>`
 }
-function buildContent(d: RData): string {
+function buildContent(d: RData, cashLockedHtml = ""): string {
   const bkSeries = d.monthly.map((x) => x.n)
   const revSeries = d.series.map((x) => x.v)
   const kpis = `<div class="kpis">
@@ -271,7 +273,7 @@ function buildContent(d: RData): string {
 
   const resp = responseCard(d.response)
   const tail = resp ? `<div class="grid2">${resp}${occ}</div>${halls}` : `<div class="grid2">${occ}${halls}</div>`
-  return `${kpis}${chart}${cashflowCard(d.cashflow)}<div class="grid2">${bars}${donut}</div><div class="grid2">${seasonalityCard(d.seasonality)}${conversionCard(d.conversion)}</div>${tail}`
+  return `${kpis}${chart}${cashLockedHtml || cashflowCard(d.cashflow)}<div class="grid2">${bars}${donut}</div><div class="grid2">${seasonalityCard(d.seasonality)}${conversionCard(d.conversion)}</div>${tail}`
 }
 
 function drawChart(root: ShadowRoot, series: { m: string; v: number }[]) {
@@ -309,22 +311,32 @@ export function ReportsArtifact() {
   const { shadowRef, ready } = useArtifactShell(hostRef, { activeHref: "/dashboard/insights", crumbBold: "Reports", crumbSub: "Kaarobaar ka jaiza", extraCss: EXTRA_CSS })
   const qc = useQueryClient()
   const activeBusinessId = useActiveBusinessId()
-  const kpiQ = useQuery({ queryKey: ["rep-kpi", activeBusinessId], queryFn: () => AnalyticsAPI.getDashboardKpis("this_year", undefined, undefined, activeBusinessId) })
-  const revQ = useQuery({ queryKey: ["rep-rev"], queryFn: () => AnalyticsAPI.getRevenueTrends("this_year") })
-  const bkTrQ = useQuery({ queryKey: ["rep-bk"], queryFn: () => AnalyticsAPI.getBookingTrends("this_year") })
-  const bkdQ = useQuery({ queryKey: ["rep-bkd"], queryFn: () => AnalyticsAPI.getRevenueBreakdowns("this_year") })
-  const leadsQ = useQuery({ queryKey: ["rep-leads"], queryFn: () => LeadAPI.list({}) })
+  // Plan: Reports are "analytics" (every paid plan) and the cash-flow forecast is "forecasting" (Premium). Both are the
+  // server's call (usePlan); a locked part says so with the way forward and its refused endpoint is never called.
+  const lock = useScreenLock("analytics", "Reports", "Reports and analytics")
+  const plan = usePlan()
+  const fc = plan.feature("forecasting")
+  const forecastLocked = !!fc?.locked
+  const cashLockedHtml = React.useMemo(() => (forecastLocked && fc
+    ? planLockedHtml({ requiredPlan: fc.requiredPlan, planName: plan.planName, what: "The cash-flow forecast", compact: true, feature: "forecasting" })
+    : ""), [forecastLocked, fc, plan.planName])
+  const on = !lock.locked
+  const kpiQ = useQuery({ queryKey: ["rep-kpi", activeBusinessId], queryFn: () => AnalyticsAPI.getDashboardKpis("this_year", undefined, undefined, activeBusinessId), enabled: on })
+  const revQ = useQuery({ queryKey: ["rep-rev"], queryFn: () => AnalyticsAPI.getRevenueTrends("this_year"), enabled: on })
+  const bkTrQ = useQuery({ queryKey: ["rep-bk"], queryFn: () => AnalyticsAPI.getBookingTrends("this_year"), enabled: on })
+  const bkdQ = useQuery({ queryKey: ["rep-bkd"], queryFn: () => AnalyticsAPI.getRevenueBreakdowns("this_year"), enabled: on })
+  const leadsQ = useQuery({ queryKey: ["rep-leads"], queryFn: () => LeadAPI.list({}), enabled: on })
   // All three were already typed and wrapped in lib/api with no caller
   // anywhere. `.catch(() => null)` so one slow analytic never blanks the page —
   // each card renders nothing when its data is missing.
-  const cashQ = useQuery({ queryKey: ["rep-cash", activeBusinessId], queryFn: () => AnalyticsAPI.getCashFlowForecast(6).catch(() => null) })
-  const seasonQ = useQuery({ queryKey: ["rep-season", activeBusinessId], queryFn: () => AnalyticsAPI.getSeasonality(24).catch(() => null) })
-  const convQ = useQuery({ queryKey: ["rep-conv", activeBusinessId], queryFn: () => LeadAPI.conversionAnalytics(activeBusinessId ? { businessId: activeBusinessId } : {}).catch(() => null) })
+  const cashQ = useQuery({ queryKey: ["rep-cash", activeBusinessId], queryFn: () => AnalyticsAPI.getCashFlowForecast(6).catch(() => null), enabled: on && !forecastLocked })
+  const seasonQ = useQuery({ queryKey: ["rep-season", activeBusinessId], queryFn: () => AnalyticsAPI.getSeasonality(24).catch(() => null), enabled: on })
+  const convQ = useQuery({ queryKey: ["rep-conv", activeBusinessId], queryFn: () => LeadAPI.conversionAnalytics(activeBusinessId ? { businessId: activeBusinessId } : {}).catch(() => null), enabled: on })
   // GET /analytics/response-times computed median/buckets/per-source from
   // Lead.respondedAt and had no screen. On this vendor it answers 4 leads
   // answered against 21 never answered — the single most actionable number the
   // analytics layer holds, and nothing was showing it.
-  const respQ = useQuery({ queryKey: ["rep-resp"], queryFn: () => AnalyticsAPI.getResponseTimes("this_year").catch(() => null) })
+  const respQ = useQuery({ queryKey: ["rep-resp"], queryFn: () => AnalyticsAPI.getResponseTimes("this_year").catch(() => null), enabled: on })
   const isError = kpiQ.isError || revQ.isError || bkTrQ.isError || bkdQ.isError
   const { data: bkData } = useFetchData({ endpoint: "/api/v1/bookings", queryKey: ["rep-bookings"], Params: { page: 1, limit: 100 } })
 
@@ -359,9 +371,10 @@ export function ReportsArtifact() {
     const dl = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>`
     const head = `<div class="head"><div><h1>Reports</h1><div class="sub">Pichle 12 mahine ka jaiza — kamaai, bookings, aur kahan se log aaye.</div></div><div class="head-actions"><button class="btn btn-ghost" data-act="reports-export" title="Halls ki kaarkardagi CSV mein utaarein">${dl} Export</button></div></div>`
     const wwc = s.getElementById("wwc")
+    if (wwc && lock.locked) { wwc.innerHTML = lock.html; return }
     if (wwc) {
       if (isError) { wwc.innerHTML = `<div class="head"><div><h1>Reports</h1></div></div>${errorBannerHtml()}` }
-      else { wwc.innerHTML = head + buildContent(d); drawChart(s, d.series) }
+      else { wwc.innerHTML = head + buildContent(d, cashLockedHtml); drawChart(s, d.series) }
     }
     // Screen-local actions, bound once (delegated on the shadow root). Export
     // pulls the halls table to CSV; a hall name sets that venue active + jumps
@@ -382,7 +395,7 @@ export function ReportsArtifact() {
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, kpiQ.data, revQ.data, bkTrQ.data, bkdQ.data, leadsQ.data, bkData, isError, cashQ.data, seasonQ.data, convQ.data, respQ.data])
+  }, [ready, kpiQ.data, revQ.data, bkTrQ.data, bkdQ.data, leadsQ.data, bkData, isError, cashQ.data, seasonQ.data, convQ.data, respQ.data, lock.locked, lock.html, cashLockedHtml])
 
   return <div ref={hostRef} />
 }

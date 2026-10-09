@@ -13,7 +13,9 @@ import { toast } from "sonner"
 import { venueSpacesApi, type SubVenueNode, type MergeGroup, type BookingMode } from "@/lib/api/venueSpaces"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useBusiness } from "@/context/BusinessContext"
-import { useArtifactShell, pkNum, escHtml, errorBannerHtml, openDrawer, closeDrawer, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { usePlan } from "@/context/plan-context"
+import { refreshPlanUsage } from "@/hooks/use-billing-status"
+import { useArtifactShell, pkNum, escHtml, errorBannerHtml, openDrawer, closeDrawer, openConfirm, planMeterHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const KINDS = ["HALL", "LAWN", "MARQUEE", "ROOFTOP", "BASEMENT", "FLOOR", "SECTION", "OTHER"]
 const KIND_LABEL: Record<string, string> = { HALL: "Hall", LAWN: "Lawn", MARQUEE: "Marquee", ROOFTOP: "Rooftop", BASEMENT: "Basement", FLOOR: "Floor", SECTION: "Section", OTHER: "Aur" }
@@ -116,7 +118,11 @@ function mgFormBody(flat: SubVenueNode[], group?: MergeGroup | null): string {
   <div class="ww-dfoot"><button class="btn btn-ghost" type="button" data-drawer-close>Cancel</button><button class="btn btn-primary" type="button" id="mg-save">${group ? "Update karein" : "Combine karein"}</button></div>`
 }
 
-function buildContent(nodes: SubVenueNode[], warnings: { subVenueId: number; name: string; overBy: number }[], groups: MergeGroup[], bizName: string, scopeHint: string): string {
+/** The plan's halls-and-spaces limit for THIS business, from the server's entitlements (empty while it is not enforced). */
+type PlanUi = { meterHtml: string; addBlocked: boolean }
+const NO_PLAN_UI: PlanUi = { meterHtml: "", addBlocked: false }
+
+function buildContent(nodes: SubVenueNode[], warnings: { subVenueId: number; name: string; overBy: number }[], groups: MergeGroup[], bizName: string, scopeHint: string, planUi: PlanUi = NO_PLAN_UI): string {
   const flat = flatten(nodes)
   const active = flat.filter((s) => s.active)
   const noLimit = flat.filter((s) => s.fireRatedCapacity == null).length
@@ -165,7 +171,7 @@ function buildContent(nodes: SubVenueNode[], warnings: { subVenueId: number; nam
   return `
   <div class="head"><div><h1>Halls & Spaces</h1><div class="sub">Rooms inside <b>${escHtml(bizName)}</b> — har hall ki capacity, rent, aur booking tareeqa set karein.</div>
     <div class="scope-note" data-testid="spaces-scope-note">${svg(IC.building, 1.8)}<span>A hall, lawn or section added here goes <b>inside ${escHtml(bizName)}</b>. It does not create a new business.${scopeHint ? ` ${escHtml(scopeHint)}` : ""} To list a different business, <button type="button" class="linkbtn" data-nav-btn="/dashboard/business/new">add a business</button>.</span></div></div>
-    <div class="head-actions"><button class="btn btn-primary" id="addbtn">${svg(IC.plus, 2.2)} Add a space</button></div></div>
+    <div class="head-actions">${planUi.meterHtml}${planUi.addBlocked ? `<button class="btn btn-ghost" id="addbtn-locked" type="button" disabled title="Your plan's limit for halls and spaces is reached">${svg(IC.plus, 2.2)} Add a space</button>` : `<button class="btn btn-primary" id="addbtn">${svg(IC.plus, 2.2)} Add a space</button>`}</div></div>
   ${tiles}${warnBox}${list}
   <div class="sec-h">${svg(IC.merge, 1.8)} Combined spaces</div>
   <div style="margin-bottom:12px"><button class="btn btn-ghost" id="mgaddbtn">${svg(IC.plus, 2)} Spaces combine karein</button></div>
@@ -193,6 +199,15 @@ export function SpacesArtifact() {
   const warnQ = useQuery({ queryKey: ["spaces-warn", bizId], enabled: !!bizId, queryFn: () => venueSpacesApi.capacityWarnings(Number(bizId)).catch(() => ({ businessId: Number(bizId), warnings: [] })) })
   const mgQ = useQuery({ queryKey: ["spaces-mg", bizId], enabled: !!bizId, queryFn: () => venueSpacesApi.listMergeGroups(Number(bizId)).catch(() => ({ businessId: Number(bizId), groups: [] })) })
   const isError = treeQ.isError
+  // Plan: halls and spaces are limited PER BUSINESS (Basic 3 / Pro 12 / Premium 40). Only the count the server reports for
+  // this business is shown, and only while the limit is enforced; reaching it blocks ADDING, never editing or deleting.
+  const plan = usePlan()
+  const spaceLimit = plan.limit("spaces", bizId)
+  const planUi = React.useMemo<PlanUi>(() => {
+    if (!spaceLimit || !spaceLimit.enforced || spaceLimit.max === null) return NO_PLAN_UI
+    return { addBlocked: spaceLimit.reached, meterHtml: planMeterHtml(spaceLimit, ["hall or space", "halls and spaces"], " in this business") }
+  }, [spaceLimit])
+  const planUiRef = React.useRef(planUi); planUiRef.current = planUi
   const flatRef = React.useRef<SubVenueNode[]>([])
   const groupsRef = React.useRef<MergeGroup[]>([])
 
@@ -205,9 +220,9 @@ export function SpacesArtifact() {
     const nodes = treeQ.data.tree ?? []
     flatRef.current = flatten(nodes)
     groupsRef.current = mgQ.data?.groups ?? []
-    wwc.innerHTML = buildContent(nodes, warnQ.data?.warnings ?? [], mgQ.data?.groups ?? [], bizName, scopeHint)
+    wwc.innerHTML = buildContent(nodes, warnQ.data?.warnings ?? [], mgQ.data?.groups ?? [], bizName, scopeHint, planUi)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, treeQ.data, warnQ.data, mgQ.data, bizId, isError, bizName, scopeHint])
+  }, [ready, treeQ.data, warnQ.data, mgQ.data, bizId, isError, bizName, scopeHint, planUi])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
@@ -218,9 +233,9 @@ export function SpacesArtifact() {
     s.addEventListener("click", async (e) => {
       const t = e.target as HTMLElement
       if (t.closest("[data-retry]")) { refetch(); return }
-      if (t.closest("#addbtn")) { openDrawer(s, "Naya space", spaceFormBody(flatRef.current, null, null)); return }
+      if (t.closest("#addbtn")) { if (planUiRef.current.addBlocked) return; openDrawer(s, "Naya space", spaceFormBody(flatRef.current, null, null)); return }
       const addchild = t.closest("[data-addchild]") as HTMLElement | null
-      if (addchild?.dataset.addchild) { openDrawer(s, "Naya space", spaceFormBody(flatRef.current, null, Number(addchild.dataset.addchild))); return }
+      if (addchild?.dataset.addchild) { if (planUiRef.current.addBlocked) return; openDrawer(s, "Naya space", spaceFormBody(flatRef.current, null, Number(addchild.dataset.addchild))); return }
       const edit = t.closest("[data-edit]") as HTMLElement | null
       if (edit?.dataset.edit) { const n = flatRef.current.find((x) => x.id === Number(edit.dataset.edit)); if (n) openDrawer(s, "Space edit karein", spaceFormBody(flatRef.current, n)); return }
       const act = t.closest("[data-active]") as HTMLElement | null
@@ -233,7 +248,7 @@ export function SpacesArtifact() {
           title: kids > 0 ? `"${node?.name}" aur uske andar ke ${kids} spaces delete karein?` : `"${node?.name}" delete karein?`,
           message: "Ye record hat jayega — wapas nahi aayega.", danger: true,
           onConfirm: async () => {
-            try { await venueSpacesApi.deleteSubVenue(id); toast.success("Delete ho gaya"); refetch() } catch { toast.error("Delete nahi hua") }
+            try { await venueSpacesApi.deleteSubVenue(id); toast.success("Delete ho gaya"); refetch(); refreshPlanUsage(qc) } catch { toast.error("Delete nahi hua") }
           },
         })
         return
@@ -289,7 +304,7 @@ export function SpacesArtifact() {
             const created = await venueSpacesApi.createSubVenue(bId, cbody)
             if (backup != null && created?.id) await venueSpacesApi.updateSubVenue(created.id, { backupSubVenueId: backup })
           }
-          toast.success(editId ? "Space update ho gaya" : "Space ban gaya"); closeDrawer(s); refetch()
+          toast.success(editId ? "Space update ho gaya" : "Space ban gaya"); closeDrawer(s); refetch(); refreshPlanUsage(qc)
         } catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua"); if (btn) { btn.disabled = false; btn.textContent = btnOrig || "Space save karein" } }
         return
       }

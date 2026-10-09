@@ -34,6 +34,16 @@ export interface PlanComparisonRow {
   elite?: boolean;
 }
 
+export interface PlanLimitRow {
+  key: string;
+  label: string;
+  scope: "account" | "business";
+  free: number | null;
+  pro: number | null;
+  premium: number | null;
+  elite: number | null;
+}
+
 export interface PricingNote {
   indicative: boolean;
   taxNote: string;
@@ -58,6 +68,8 @@ export interface MyPlanData {
   lastDecline?: DeclineTrace | null;
   plans: PlanCatalogEntry[];
   comparison?: PlanComparisonRow[];
+  /** How much each plan allows (businesses, staff, halls and photos per business), from the same table the server enforces. null = unlimited. */
+  limitComparison?: PlanLimitRow[];
   pricing?: PricingNote;
   tierNames?: Record<string, string>;
   /** Our free trial (no card). 0 = off. */

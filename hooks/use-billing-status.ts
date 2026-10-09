@@ -11,6 +11,11 @@ import { SubscriptionAPI } from "@/lib/api/subscription"
 
 export const BILLING_STATUS_KEY = ["billing-status"] as const
 
+/** Ask the server for the plan and usage again (after something that changes a count: a business, staff, hall, photo). */
+export function refreshPlanUsage(qc: { invalidateQueries: (o: { queryKey: readonly unknown[] }) => unknown }): void {
+  qc.invalidateQueries({ queryKey: BILLING_STATUS_KEY })
+}
+
 export function useBillingStatus(enabled: boolean) {
   return useQuery({
     queryKey: BILLING_STATUS_KEY,

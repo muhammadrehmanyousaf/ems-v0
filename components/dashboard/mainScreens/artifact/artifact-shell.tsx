@@ -457,6 +457,38 @@ export function errorBannerHtml(msg = "Figures load nahi ho sake — ye missing 
 }
 
 /**
+ * "Available on Pro": how an artifact screen shows a feature the vendor's plan does not include. The same wording and
+ * the same single action as the React version (components/dashboard/plans/plan-locked.tsx); the data comes from the
+ * server's entitlements via usePlan(), never from a copy of the rules. `compact` is a one-line strip for a section.
+ */
+export function planLockedHtml(o: { requiredPlan: string; planName: string; what: string; compact?: boolean; feature?: string }): string {
+  const noPlan = o.planName === "No plan"
+  const body = noPlan
+    ? `${escHtml(o.what)} needs a plan: ${escHtml(o.requiredPlan)} or higher. Choose one to unlock it.`
+    : `${escHtml(o.what)} is part of the ${escHtml(o.requiredPlan)} plan. You are on ${escHtml(o.planName)}.`
+  const lock = `<span class="pl-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>`
+  const feat = o.feature ? ` data-feature="${escHtml(o.feature)}"` : ""
+  if (o.compact) {
+    return `<div class="plan-locked compact" role="status" data-testid="plan-locked"${feat}>${lock}<div class="pl-txt"><b>Available on ${escHtml(o.requiredPlan)}</b><span>${body}</span></div><button class="btn btn-ghost sm" type="button" data-nav-btn="/dashboard/billing">Upgrade</button></div>`
+  }
+  return `<div class="plan-locked" role="status" data-testid="plan-locked"${feat}>${lock}<div class="pl-txt"><b>Available on ${escHtml(o.requiredPlan)}</b><span>${body} Everything you already have stays exactly as it is.</span><div class="pl-act"><button class="btn btn-primary" type="button" data-nav-btn="/dashboard/billing">See plans and upgrade</button></div></div></div>`
+}
+
+/**
+ * "2 of 3 halls and spaces". `l` is a limit from usePlan().limit(...). While enforcement is off (or the limit is
+ * unlimited) it is only a plain count; a limit the server is not applying is never drawn as if it were.
+ */
+export function planMeterHtml(l: { max: number | null; used: number | null; enforced: boolean; reached: boolean; nextPlan: string | null } | null, nouns: [string, string], scopeNote = ""): string {
+  if (!l || l.used === null) return ""
+  const n = (x: number) => (x === 1 ? nouns[0] : nouns[1])
+  if (!l.enforced || l.max === null) return `<div class="plan-meter plain" data-testid="usage-meter" data-enforced="false">${l.used} ${n(l.used)}${escHtml(scopeNote)}</div>`
+  const pct = l.max === 0 ? 100 : Math.min(100, Math.round((l.used / l.max) * 100))
+  const text = l.used > l.max ? `${l.used} ${n(l.used)} (your plan allows ${l.max})` : `${l.used} of ${l.max} ${n(l.max)}`
+  const up = l.reached ? `<button class="pm-up" type="button" data-nav-btn="/dashboard/billing">${l.nextPlan ? `Upgrade to ${escHtml(l.nextPlan)}` : "Ask about a custom plan"}</button>` : ""
+  return `<div class="plan-meter${l.reached ? " reached" : ""}" data-testid="usage-meter" data-enforced="true" data-reached="${l.reached}"><div class="pm-row"><span>${escHtml(text)}${escHtml(scopeNote)}</span>${up}</div><div class="pm-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${l.max}" aria-valuenow="${Math.min(l.used, l.max)}"><i style="width:${pct}%"></i></div></div>`
+}
+
+/**
  * Inline venue picker for the "aggregate scope, but this screen needs ONE venue"
  * empty state. Renders `data-biz-pick` buttons — the shell's global click handler
  * already turns those into setActiveBusinessId(), so no extra wiring is needed.
@@ -619,6 +651,15 @@ table.tbl{ width:100%; border-collapse:collapse; }
 .errbanner .eb-ic{ width:34px; height:34px; border-radius:9px; background:var(--surface); display:grid; place-items:center; color:var(--bad); flex:none; } .errbanner .eb-ic svg{ width:18px; height:18px; }
 .errbanner .eb-txt{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; } .errbanner .eb-txt b{ font-size:13px; color:var(--ink); } .errbanner .eb-txt span{ font-size:12px; color:var(--ink-2); }
 .errbanner .btn{ flex:none; }
+.plan-locked{ display:flex; gap:14px; align-items:flex-start; padding:18px 20px; margin-bottom:14px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow-xs); }
+.plan-locked .pl-ic{ width:38px; height:38px; border-radius:50%; background:var(--accent-wash); color:var(--accent-ink); display:grid; place-items:center; flex:none; } .plan-locked .pl-ic svg{ width:18px; height:18px; }
+.plan-locked .pl-txt{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; } .plan-locked .pl-txt b{ font-size:14px; color:var(--ink); } .plan-locked .pl-txt span{ font-size:12.5px; color:var(--ink-2); }
+.plan-locked .pl-act{ margin-top:10px; }
+.plan-locked.compact{ align-items:center; padding:10px 14px; } .plan-locked.compact .pl-ic{ width:30px; height:30px; } .plan-locked.compact .pl-ic svg{ width:15px; height:15px; } .plan-locked.compact .pl-txt b{ font-size:13px; } .plan-locked.compact .pl-txt span{ font-size:12px; }
+.plan-meter{ display:flex; flex-direction:column; gap:6px; min-width:180px; max-width:320px; font-size:12px; color:var(--ink-2); } .plan-meter.plain{ color:var(--ink-3); }
+.plan-meter .pm-row{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; } .plan-meter.reached .pm-row span{ color:var(--ink); font-weight:600; }
+.plan-meter .pm-up{ border:0; background:transparent; color:var(--accent-ink); font-weight:600; font-size:12px; padding:0; } .plan-meter .pm-up:hover{ text-decoration:underline; }
+.plan-meter .pm-bar{ height:6px; border-radius:99px; background:var(--surface-3); overflow:hidden; } .plan-meter .pm-bar i{ display:block; height:100%; border-radius:99px; background:var(--accent); } .plan-meter.reached .pm-bar i{ background:var(--bad); }
 .foot{ display:none; }
 /* shared micro — canonical versions of classes screens were each copy-pasting.
    Injected before extraCss, so a screen's own copy still wins; these only supply

@@ -13,7 +13,8 @@ import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { AutomationRulesAPI, type AutomationRule, type TriggerType, type CreateRuleInput, type AutomationStatus, type BuiltInReminder } from "@/lib/api/automationRules"
-import { useArtifactShell, escHtml, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { usePlan } from "@/context/plan-context"
+import { useArtifactShell, escHtml, openConfirm, errorBannerHtml, planLockedHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 function triggerLabel(t: TriggerType, days: number) {
   return t === "days_after_event" ? `${days} din baad event ke` : `${days} din pehle event se`
@@ -69,7 +70,11 @@ function builtInCard(r: BuiltInReminder): string {
   </div>`
 }
 
-function buildContent(status: AutomationStatus | null, rules: AutomationRule[]): string {
+/** The custom rule builder is a Premium feature; the built-in reminder toggles below stay open to every plan. */
+type PlanUi = { lockedHtml: string }
+
+function buildContent(status: AutomationStatus | null, rules: AutomationRule[], planUi: PlanUi = { lockedHtml: "" }): string {
+  const locked = !!planUi.lockedHtml
   const engineOn = !!status?.engine?.enabled
   const mins = Math.max(1, Math.round((status?.engine?.intervalMs || 0) / 60000))
   const engine = `<div class="card engine"><span class="eng-ic">${svg(IC.engine, 1.8)}</span><div><div class="eng-t">Reminder engine ${engineOn ? "chal raha hai" : "band hai"}</div><div class="eng-s">${engineOn ? `Har ~${mins} min mein reminders check hote hain.` : "Abhi reminders nahi bhej raha."}</div></div><span class="st ${engineOn ? "ok" : "mut"}" style="margin-left:auto"><i></i> ${engineOn ? "Running" : "Off"}</span></div>`
@@ -87,16 +92,16 @@ function buildContent(status: AutomationStatus | null, rules: AutomationRule[]):
   const custom = rules.length ? `<div class="card">${rules.map((r) => `<div class="rule${r.enabled ? "" : " off"}">
     <span class="r-ic">${svg(IC.bell, 1.8)}</span>
     <div class="r-main"><div class="r-nm">${escHtml(r.name)}</div><div class="r-when">${svg(IC.clock)} ${escHtml(triggerLabel(r.triggerType, r.offsetDays))} · mujhe notify karo</div>${r.message ? `<div class="r-msg">"${escHtml(r.message)}"</div>` : ""}<div class="r-meta">Aakhri baar chala: ${fmtDate(r.lastRunAt)}</div></div>
-    <div class="r-acts"><button class="tgl" data-toggle="${r.id}" data-on="${r.enabled}" aria-pressed="${r.enabled}"><span class="dot"></span></button><button class="iconbtn" data-edit="${r.id}" title="Edit">${svg(IC.edit)}</button><button class="iconbtn bad" data-del="${r.id}" title="Delete">${svg(IC.trash)}</button></div>
+    ${locked ? "" : `<div class="r-acts"><button class="tgl" data-toggle="${r.id}" data-on="${r.enabled}" aria-pressed="${r.enabled}"><span class="dot"></span></button><button class="iconbtn" data-edit="${r.id}" title="Edit">${svg(IC.edit)}</button><button class="iconbtn bad" data-del="${r.id}" title="Delete">${svg(IC.trash)}</button></div>`}
   </div>`).join("")}</div>` : `<div class="card"><div class="empty">Abhi koi custom rule nahi. "Naya reminder" se banayein.</div></div>`
 
   return `
-  <div class="head"><div><h1>Automation</h1><div class="sub">Khud-kar reminders — WeddingWala aapko kaam yaad dila deta hai.</div></div><div class="head-actions"><button class="btn btn-primary" id="addbtn">${svg(IC.plus, 2.2)} Naya rule</button></div></div>
+  <div class="head"><div><h1>Automation</h1><div class="sub">Khud-kar reminders — WeddingWala aapko kaam yaad dila deta hai.</div></div><div class="head-actions">${locked ? `<button class="btn btn-ghost" id="addbtn-locked" type="button" disabled title="Custom rules need a higher plan">${svg(IC.plus, 2.2)} Naya rule</button>` : `<button class="btn btn-primary" id="addbtn">${svg(IC.plus, 2.2)} Naya rule</button>`}</div></div>
   ${engine}
   <div class="sec-h">${svg(IC.bolt, 1.8)} Built-in reminders — on/off karein</div>
   ${builtIn}
   <div class="sec-h">${svg(IC.edit, 1.8)} Aap ke apne custom rules</div>
-  ${addForm}${custom}
+  ${locked ? planUi.lockedHtml : addForm}${custom}
   <div class="foot">WeddingWala vendor console · Automation</div>`
 }
 
@@ -110,6 +115,12 @@ export function AutomationArtifact() {
   const rulesQ = useQuery({ queryKey: ["automation-art"], queryFn: () => AutomationRulesAPI.list() })
   const rules = React.useMemo(() => (rulesQ.data?.rules ?? []) as AutomationRule[], [rulesQ.data])
   const rulesRef = React.useRef(rules); rulesRef.current = rules
+  // Plan: custom rules are Premium ("automations"). Server-resolved; open while enforcement is off or unknown.
+  const plan = usePlan()
+  const autoFeature = plan.feature("automations")
+  const planUi = React.useMemo<PlanUi>(() => autoFeature?.locked
+    ? { lockedHtml: planLockedHtml({ requiredPlan: autoFeature.requiredPlan, planName: plan.planName, what: "Custom automation rules", compact: true, feature: "automations" }) }
+    : { lockedHtml: "" }, [autoFeature, plan.planName])
 
   React.useEffect(() => {
     const s = shadowRef.current
@@ -121,9 +132,9 @@ export function AutomationArtifact() {
     // branch is unreachable code.
     if (rulesQ.isError) { wwc.innerHTML = errorBannerHtml("Automation load nahi hui — internet check karke dobara koshish karein."); return }
     if (!rulesQ.data && !statusQ.data) { wwc.innerHTML = `<div class="loadwrap">Automation load ho rahi hai…</div>`; return }
-    wwc.innerHTML = buildContent(statusQ.data ?? null, rules)
+    wwc.innerHTML = buildContent(statusQ.data ?? null, rules, planUi)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, rulesQ.data, statusQ.data, rulesQ.isError])
+  }, [ready, rulesQ.data, statusQ.data, rulesQ.isError, planUi])
 
   const bound = React.useRef(false)
   React.useEffect(() => {

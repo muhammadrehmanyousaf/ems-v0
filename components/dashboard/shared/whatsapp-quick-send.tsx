@@ -20,6 +20,8 @@ import { MessageCircle, ExternalLink } from "lucide-react";
 import { WA_TEMPLATES, fillTemplate, waLink } from "@/lib/whatsapp";
 import { useBusiness } from "@/context/BusinessContext";
 import { WhatsappAPI, type WaTargetType } from "@/lib/api/whatsapp";
+import { usePlan } from "@/context/plan-context";
+import { PlanLockedCard } from "@/components/dashboard/plans/plan-locked";
 
 export default function WhatsAppQuickSend({
   phone,
@@ -49,6 +51,9 @@ export default function WhatsAppQuickSend({
   functionSheetId?: number | null;
 }) {
   const { business } = useBusiness();
+  // Plan: message TEMPLATES are part of every paid plan. Without them the vendor can still write and send a message of
+  // their own (nothing about wa.me changes); only the template list is shown as locked.
+  const templatesLocked = !!usePlan().feature("wa_templates")?.locked;
   const [open, setOpen] = useState(false);
   const [tplKey, setTplKey] = useState(WA_TEMPLATES[0].key);
   const [text, setText] = useState("");
@@ -66,6 +71,7 @@ export default function WhatsAppQuickSend({
   };
 
   const onOpen = () => {
+    if (templatesLocked) { setText(""); setOpen(true); return; }
     applyTemplate(WA_TEMPLATES[0].key);
     setOpen(true);
   };
@@ -82,6 +88,9 @@ export default function WhatsAppQuickSend({
             <DialogDescription>Pick a template, tweak it, then open WhatsApp pre-filled.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-1">
+            {templatesLocked ? (
+              <PlanLockedCard feature="wa_templates" what="Message templates" compact />
+            ) : (
             <div className="space-y-1.5">
               <Label className="text-xs">Template</Label>
               <Select value={tplKey} onValueChange={applyTemplate}>
@@ -93,6 +102,7 @@ export default function WhatsAppQuickSend({
                 </SelectContent>
               </Select>
             </div>
+            )}
             <div className="space-y-1.5">
               <Label className="text-xs">Message</Label>
               <Textarea
@@ -118,9 +128,9 @@ export default function WhatsAppQuickSend({
                   // navigation must never wait on the analytics call. The
                   // API client also swallows errors, so a slow / failed
                   // log never disrupts the vendor's workflow.
-                  const tpl = WA_TEMPLATES.find((t) => t.key === tplKey);
+                  const tpl = templatesLocked ? undefined : WA_TEMPLATES.find((t) => t.key === tplKey);
                   void WhatsappAPI.logSend({
-                    templateKey: tplKey || null,
+                    templateKey: templatesLocked ? null : tplKey || null,
                     templateLabel: tpl?.label || null,
                     targetType,
                     targetId: targetId ?? null,
