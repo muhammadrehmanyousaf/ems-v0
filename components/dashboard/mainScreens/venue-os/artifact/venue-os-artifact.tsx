@@ -28,11 +28,11 @@ const EXTRA_CSS = String.raw`
 .verdict{ display:flex; gap:16px; align-items:center; padding:20px 22px; margin-bottom:16px; border-radius:var(--r); border:1px solid; }
 .verdict.ok{ background:linear-gradient(150deg,var(--ok-wash),color-mix(in srgb,var(--surface) 80%,var(--ok-wash))); border-color:color-mix(in srgb,var(--ok) 30%,transparent); }
 .verdict.warn{ background:linear-gradient(150deg,var(--warn-wash),color-mix(in srgb,var(--surface) 80%,var(--warn-wash))); border-color:var(--accent-line); }
-.verdict.bad{ background:linear-gradient(150deg,var(--bad-wash),color-mix(in srgb,var(--surface) 80%,var(--bad-wash))); border-color:color-mix(in srgb,var(--bad) 30%,transparent); }
+.verdict.bad{ background:linear-gradient(150deg,var(--bad-wash),color-mix(in srgb,var(--surface) 80%,var(--bad-wash))); border-color:color-mix(in srgb,var(--bad) 30%,transparent); } .verdict.idle{ background:var(--surface-2); border-color:var(--border); }
 .vd-emoji{ width:52px; height:52px; border-radius:14px; flex:none; display:grid; place-items:center; background:var(--surface); border:1px solid var(--border); } .vd-emoji svg{ width:27px; height:27px; }
-.verdict.ok .vd-emoji{ color:var(--ok); } .verdict.warn .vd-emoji{ color:var(--warn); } .verdict.bad .vd-emoji{ color:var(--bad); }
+.verdict.ok .vd-emoji{ color:var(--ok); } .verdict.warn .vd-emoji{ color:var(--warn); } .verdict.bad .vd-emoji{ color:var(--bad); } .verdict.idle .vd-emoji{ color:var(--ink-3); }
 .vd-body{ flex:1; min-width:0; }
-.vd-t{ font-size:17px; font-weight:700; letter-spacing:-.02em; } .verdict.ok .vd-t{ color:var(--ok); } .verdict.warn .vd-t{ color:var(--warn); } .verdict.bad .vd-t{ color:var(--bad); }
+.vd-t{ font-size:17px; font-weight:700; letter-spacing:-.02em; } .verdict.ok .vd-t{ color:var(--ok); } .verdict.warn .vd-t{ color:var(--warn); } .verdict.bad .vd-t{ color:var(--bad); } .verdict.idle .vd-t{ color:var(--ink); }
 .vd-s{ font-size:13px; color:var(--ink-2); margin-top:5px; line-height:1.55; max-width:640px; } .vd-s b{ color:var(--ink); font-weight:660; }
 .top-insight{ font-size:11.5px; color:var(--ink-3); font-weight:500; } .top-insight b{ color:var(--accent-ink); }
 .vo-hero{ display:flex; gap:13px; align-items:center; padding:15px 18px; margin-bottom:16px; }
@@ -93,17 +93,22 @@ function buildContent(booked: number, received: number | null, expenses: number,
   const cash = received ?? 0
   const profit = cash - expenses
   const margin = cash > 0 ? Math.round((profit / cash) * 100) : 0
+  // Nothing in, nothing out: there is no margin to judge. Without this the ladder below fell through to
+  // "Munafa patla hai" (0% margin) and a brand-new vendor was told to cut costs they have not yet incurred.
+  const idle = cashKnown && cash === 0 && expenses === 0
   const awaited = Math.max(0, booked - cash)
   const maxV = Math.max(1, ...byVenue.map((v) => v.revenue))
   const top = byVenue[0]
   const topLine = top ? `<div class="top-insight">Sab se zyada kamai <b>${escHtml(top.name)}</b> se — Rs ${pkNum(top.revenue)} (${booked > 0 ? Math.round((top.revenue / booked) * 100) : 0}% total)${byVenue.length > 1 ? `. ${byVenue.length} venues chal rahi hain.` : "."}</div>` : ""
   // Money still to collect is the headline risk, so it leads rather than hides
   // inside a percentage.
-  const awaitedLine = cashKnown && awaited > 0
+  const awaitedLine = cashKnown && awaited > 0 && !idle
     ? `<div class="top-insight">Is saal ka <b>Rs ${pkNum(awaited)}</b> abhi aana baaki hai — munafa upar ke hisaab se sirf aye hue paise par hai.</div>`
     : ""
   const vd = !cashKnown
     ? { cls: "warn", ic: IC.pulse, t: "Cash ka hisaab abhi load nahi hua", s: `Is saal <b>Rs ${pkNum(booked)}</b> ki booking hui. Kitna paisa aaya, wo abhi nahi aa saka — isliye munafa neeche nahi dikhaya. Page refresh karein.` }
+    : idle
+    ? { cls: "idle", ic: IC.scale, t: "Abhi koi hisaab nahi", s: booked > 0 ? `Is saal <b>Rs ${pkNum(booked)}</b> ki booking hui hai, magar abhi koi paisa aaya nahi aur koi kharcha darj nahi. Payment record hote hi yahan munafa dikhega.` : "Booking, payment aur kharcha record hote hi yahan aapka munafa dikhega." }
     : profit < 0
     ? { cls: "bad", ic: IC.alert, t: "Business ghata mein ja raha hai", s: `Kharcha (Rs ${pkNum(expenses)}) aye hue paise (Rs ${pkNum(received)}) se <b>zyada</b> hai. Foran <b>Kharcha</b> review karein aur rates/booking barhayein.` }
     : margin >= 45
@@ -117,9 +122,9 @@ function buildContent(booked: number, received: number | null, expenses: number,
     <div class="pnl-op">−</div>
     <div class="pnl-cell"><div class="pnl-cap out">${svg(IC.out)} Kharcha</div><div class="pnl-val neg tnum"><span class="rs">Rs</span> ${pkNum(expenses)}</div><div class="pnl-sub">saara expense</div></div>
     <div class="pnl-op">=</div>
-    <div class="pnl-cell profit"><div class="pnl-cap pr">${svg(IC.scale)} Munafa</div><div class="pnl-val tnum" style="color:${!cashKnown ? "var(--ink-3)" : profit >= 0 ? "var(--ok)" : "var(--bad)"}">${cashKnown ? `<span class="rs">Rs</span> ${pkNum(profit)}` : "—"}</div><div class="pnl-sub">${cashKnown ? `${margin}% margin` : "cash ke baghair nahi"}</div></div>
+    <div class="pnl-cell profit"><div class="pnl-cap pr">${svg(IC.scale)} Munafa</div><div class="pnl-val tnum" style="color:${!cashKnown ? "var(--ink-3)" : profit >= 0 ? "var(--ok)" : "var(--bad)"}">${cashKnown ? `<span class="rs">Rs</span> ${pkNum(profit)}` : "—"}</div><div class="pnl-sub">${!cashKnown ? "cash ke baghair nahi" : cash > 0 ? `${margin}% margin` : "abhi koi aamdani nahi"}</div></div>
   </div>`
-  const marginCard = !cashKnown ? "" : `<div class="card" style="margin-bottom:16px"><div class="card-h"><h2>Munafa ka margin</h2></div><div class="margin-bar"><span style="width:${Math.max(0, Math.min(100, margin))}%"></span></div><div class="margin-lbl"><span>Har Rs 100 <b>aye hue</b> par</span><b>Rs ${margin} bacha</b></div></div>`
+  const marginCard = !cashKnown || cash <= 0 ? "" : `<div class="card" style="margin-bottom:16px"><div class="card-h"><h2>Munafa ka margin</h2></div><div class="margin-bar"><span style="width:${Math.max(0, Math.min(100, margin))}%"></span></div><div class="margin-lbl"><span>Har Rs 100 <b>aye hue</b> par</span><b>Rs ${margin} bacha</b></div></div>`
   const venues = byVenue.length ? `<div class="card"><div class="card-h"><h2>Venue ke hisaab se booking value</h2></div>${byVenue.map((v) => `<div class="vrow"><span class="v-ic">${svg(IC.building, 1.8)}</span><div class="v-main"><div class="v-nm">${escHtml(v.name)}</div><div class="v-bar"><span style="width:${Math.round((v.revenue / maxV) * 100)}%"></span></div></div><div class="v-amt tnum"><span class="rs">Rs</span> ${pkNum(v.revenue)}<div class="v-sub">${booked > 0 ? Math.round((v.revenue / booked) * 100) : 0}% total ka</div></div></div>`).join("")}</div>` : ""
   const links = `<div class="sec-h">Tafseel ke liye</div><div class="links">
     <div class="linkcard" data-nav-btn="/dashboard/insights"><span class="lc-ic">${svg(IC.chart, 1.8)}</span><div><div class="lc-t">Reports</div><div class="lc-s">Revenue trends aur charts</div></div></div>
