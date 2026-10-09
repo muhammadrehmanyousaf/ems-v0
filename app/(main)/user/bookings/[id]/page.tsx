@@ -71,6 +71,8 @@ import { RefundSettlementCard } from "@/components/bookings/refund-settlement-ca
 // QA #4 — show the refund the customer would get back inside the cancel dialog.
 import { getRefundPreview, requestCancellation, type RefundPreview } from "@/lib/api/bookingOrder";
 import { slotText, slotFromBooking } from "@/lib/booking/slot-vocabulary";
+import { bookingMoney } from "@/lib/utils/booking-money";
+import { PaymentInstructionsAPI } from "@/lib/api/paymentInstructions";
 import { cancelRouteFor, cancelErrorMessage, isPaymentAlreadyReceived, isClosedBookingStatus } from "@/lib/bookings/cancel-route";
 
 interface BookingDetail {
@@ -261,6 +263,23 @@ export default function BookingDetailPage() {
   const [windowClosed, setWindowClosed] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [requestSent, setRequestSent] = useState(false);
+  // What is due NOW comes from the server (the one authority on what is owed and to whom), the same figure the
+  // Pay page asks for, so the summary, the button and the Pay page can never show different amounts.
+  const [dueNow, setDueNow] = useState<number | null>(null);
+  const [dueState, setDueState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+  useEffect(() => {
+    if (!booking) return;
+    if (isClosedBookingStatus((booking.status || "").toLowerCase()) || bookingMoney(booking as never).outstanding <= 0) {
+      setDueNow(null); setDueState("idle"); return;
+    }
+    let live = true;
+    setDueState("loading");
+    PaymentInstructionsAPI.get(booking.id)
+      .then((d) => { if (live) { setDueNow(Number(d?.amountDue ?? 0)); setDueState("ready"); } })
+      .catch(() => { if (live) setDueState("failed"); });
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [booking?.id, booking?.status, booking?.paymentStatus, booking?.downPayment, booking?.totalAmount]);
   useEffect(() => {
     if (!cancelDialogOpen || !booking) { setRefundPreview(null); return; }
     let cancelled = false;
@@ -500,12 +519,18 @@ export default function BookingDetailPage() {
   const statusKey = sk(booking.status);
   const cfg = STATUS_CONFIG[statusKey] || STATUS_CONFIG.pending;
   const StatusIcon = cfg.icon;
-  const payCfg = PAYMENT_CONFIG[sk(booking.paymentStatus)] || PAYMENT_CONFIG.pending;
+  // The chip describes the amounts printed beside it, so a stale flag can never contradict them (open bookings only:
+  // refunded / cancelled keep their own wording).
+  const flagKey = sk(booking.paymentStatus);
+  const derivedKey = ["pending", "partial", "paid"].includes(flagKey) ? bookingMoney(booking as never).status.toLowerCase() : flagKey;
+  const payCfg = PAYMENT_CONFIG[derivedKey] || PAYMENT_CONFIG[flagKey] || PAYMENT_CONFIG.pending;
   const isCancellable = !["cancelled", "completed"].includes(statusKey);
   const isAwaitingPayment = statusKey === "awaiting payment";
   const paymentKey = sk(booking?.paymentStatus || "");
-  const isPartiallyPaid = paymentKey === "partial";
-  const isFullyPaid = paymentKey === "paid";
+  // Received / owed come from the amounts (lib/utils/booking-money), never from the status flag.
+  const money = bookingMoney(booking as never);
+  const isPartiallyPaid = money.status === "Partial";
+  const isFullyPaid = money.status === "Paid";
   /**
    * A closed booking never asks for more money.
    *
@@ -540,20 +565,19 @@ export default function BookingDetailPage() {
    * still owed — with `Pending` deliberately excluded: until the vendor accepts,
    * there is nothing to pay into.
    */
-  const outstanding = Math.max(
-    Number(booking?.totalAmount || 0) - Number(booking?.downPayment || 0),
-    0,
-  );
+  const outstanding = money.outstanding;
   const PAYABLE_STATUSES = ["awaiting payment", "confirmed", "completed"];
   const showPayCta =
     !isClosedStatus &&
     !isFullyPaid &&
     outstanding > 0 &&
     (PAYABLE_STATUSES.includes(statusKey) || isPartiallyPaid);
-  const dueAmount = outstanding;
+  // Nothing is due right now when the server says so (for example the advance is waived), even though a balance
+  // remains for later. While the server answers, fall back to the balance; if it cannot, the balance is still true.
+  const dueAmount = dueState === "ready" && dueNow != null ? dueNow : outstanding;
+  const nothingDueNow = dueState === "ready" && (dueNow ?? 0) <= 0;
   const payLabel = isPartiallyPaid ? "Pay remaining" : "Pay now";
-  const remaining =
-    Number(booking.totalAmount || 0) - Number(booking.downPayment || 0);
+  const remaining = outstanding;
   const primaryVendorName =
     booking.bookingDetails?.[0]?.business?.name || "Booking details";
 
@@ -936,9 +960,9 @@ export default function BookingDetailPage() {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Down payment</span>
+                <span className="text-muted-foreground">Paid so far</span>
                 <span className="font-medium text-foreground tabular-nums">
-                  {fmt(booking.downPayment)}
+                  {fmt(money.received)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -968,7 +992,17 @@ export default function BookingDetailPage() {
               ) : null}
             </div>
 
-            {showPayCta ? (
+            {showPayCta && dueState === "loading" ? (
+              <div className="mt-4 pt-4 border-t border-border/60 text-[12px] text-muted-foreground">Checking what is due…</div>
+            ) : null}
+
+            {showPayCta && nothingDueNow ? (
+              <div className="mt-4 pt-4 border-t border-border/60 text-[12.5px] leading-snug text-muted-foreground">
+                Nothing is due right now. The remaining <span className="font-medium text-foreground tabular-nums">{fmt(outstanding)}</span> is due before your event. Your venue will tell you when.
+              </div>
+            ) : null}
+
+            {showPayCta && dueState !== "loading" && !nothingDueNow && dueAmount > 0 ? (
               <div className="mt-4 pt-4 border-t border-border/60 flex items-end justify-between">
                 <span className="text-[10.5px] uppercase tracking-[0.22em] font-medium text-muted-foreground">
                   Now due
@@ -979,16 +1013,14 @@ export default function BookingDetailPage() {
               </div>
             ) : null}
 
-            {showPayCta ? (
+            {showPayCta && dueState !== "loading" && !nothingDueNow && dueAmount > 0 ? (
               <Button
                 className="w-full mt-4 gap-1.5"
                 size="sm"
                 onClick={() => router.push(`/user/bookings/${booking.id}/pay`)}
               >
                 <Wallet className="size-3.5" />
-                {isPartiallyPaid
-                  ? `Pay remaining ${fmt(dueAmount)}`
-                  : `Pay ${fmt(booking.downPayment || booking.totalAmount)}`}
+                {isPartiallyPaid ? `Pay remaining ${fmt(dueAmount)}` : `Pay ${fmt(dueAmount)}`}
                 <ChevronRight className="size-3" />
               </Button>
             ) : null}

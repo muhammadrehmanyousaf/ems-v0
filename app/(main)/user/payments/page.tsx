@@ -31,6 +31,7 @@ import {
   KpiCard,
   EmptyState,
 } from "@/components/user-dashboard";
+import { bookingMoney } from "@/lib/utils/booking-money";
 
 const fmt = (n: number | string | null | undefined) =>
   `Rs. ${Number(n || 0).toLocaleString()}`;
@@ -52,31 +53,23 @@ function resolvePaymentAction(booking: any): {
   label: string;
 } {
   const status = sk(booking.status);
-  const payment = sk(booking.paymentStatus);
+  // Amounts decide what is owed, never the status flag; money columns arrive as strings ("0.00"), so no `||` on them.
+  const money = bookingMoney(booking);
+  const payment = sk(booking.paymentStatus) === "refunded" ? "refunded" : money.status.toLowerCase();
 
   if (status === "awaiting payment" && payment === "pending") {
-    return {
-      type: "awaiting_down",
-      amount: Number(booking.downPayment || 0),
-      label: "Pay down payment",
-    };
+    return { type: "awaiting_down", amount: money.outstanding, label: "Pay now" };
   }
   if (status === "pending" && payment === "pending") {
-    return {
-      type: "awaiting_down",
-      amount: Number(booking.downPayment || 0),
-      label: "Pay down payment",
-    };
+    return { type: "awaiting_down", amount: money.outstanding, label: "Pay now" };
   }
   if (status === "confirmed" && payment === "partial") {
-    const remaining =
-      Number(booking.totalAmount || 0) - Number(booking.downPayment || 0);
-    return { type: "remaining", amount: remaining, label: "Pay remaining" };
+    return { type: "remaining", amount: money.outstanding, label: "Pay remaining" };
   }
   if (payment === "paid" || status === "completed") {
     return {
       type: "done",
-      amount: Number(booking.totalAmount || 0),
+      amount: money.booked,
       label: "Paid",
     };
   }
@@ -403,10 +396,10 @@ function PaymentsPageContent() {
                       </div>
                       <div className="border-x border-border/60">
                         <p className="text-[10px] uppercase tracking-[0.18em] font-medium text-muted-foreground">
-                          Down payment
+                          Paid so far
                         </p>
                         <p className="font-display italic text-[16px] text-foreground tabular-nums mt-0.5">
-                          {fmt(booking.downPayment || booking.amount)}
+                          {fmt(bookingMoney(booking).received)}
                         </p>
                       </div>
                       <div>
@@ -414,10 +407,7 @@ function PaymentsPageContent() {
                           Remaining
                         </p>
                         <p className="font-display italic text-[16px] text-foreground tabular-nums mt-0.5">
-                          {fmt(
-                            Number(booking.totalAmount || 0) -
-                              Number(booking.downPayment || booking.amount || 0),
-                          )}
+                          {fmt(bookingMoney(booking).outstanding)}
                         </p>
                       </div>
                     </div>
