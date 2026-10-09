@@ -27,6 +27,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import axiosInstance from "@/lib/axiosConfig";
+import { bookingMoney } from "@/lib/utils/booking-money";
 import { BACKEND_URL } from "@/lib/backend-url";
 import {
   AlertDialog,
@@ -485,10 +486,7 @@ export default function BookingsPage() {
             // outstanding gets a way to pay. Previously only "awaiting payment"
             // did, so a confirmed-but-unpaid or delivered-but-part-paid booking
             // sat here with no prompt at all.
-            const outstanding = Math.max(
-              Number(booking.totalAmount || 0) - Number(booking.downPayment || 0),
-              0,
-            );
+            const outstanding = bookingMoney(booking).outstanding;
             const showPay =
               !["cancelled", "rejected", "declined", "refunded"].includes(sk) &&
               payKey !== "paid" &&
