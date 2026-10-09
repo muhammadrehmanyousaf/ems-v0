@@ -130,6 +130,9 @@ export function limitReachedFrom(error: unknown): LimitReached | null {
   const inner = isRec(body.data) ? body.data : isRec(body.details) ? body.details : null
   const code = text(body, ["code"]) ?? text(inner, ["code"]) ?? text(isRec(body.error) ? body.error : null, ["code"])
   if (code !== "LIMIT_REACHED") return null
+  // The caller shows this refusal itself (inline panel), so the portal-wide upgrade dialog stays quiet for it
+  // (see claimGate in lib/plan-gate.ts; the flag is set here because this file must stay import-free).
+  ;(error as { __planGateClaimed?: boolean }).__planGateClaimed = true
   const src = inner ?? body
   return {
     message: text(body, ["message"]) ?? "",

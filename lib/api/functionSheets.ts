@@ -747,6 +747,8 @@ export class FunctionSheetAPI {
     const res = await axiosInstance.get(`/api/v1/function-sheets/${id}/pdf`, {
       params: variant ? { variant } : {},
       responseType: "blob",
+      // The vendor clicked Preview/Download: if the plan does not include quotes and contracts, say so with the upgrade dialog.
+      planPrompt: true,
     });
     return res.data;
   }

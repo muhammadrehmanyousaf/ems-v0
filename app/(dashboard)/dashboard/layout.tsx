@@ -19,6 +19,9 @@ import { ProductTourProvider } from "@/components/dashboard/tour/product-tour"
 // The portal paywall: with BILLING_ENFORCE on, a vendor without a paid
 // Safepay plan sees the plan wall on every route except Billing.
 import { BillingGate } from "@/components/dashboard/billing/billing-gate"
+// What the vendor's plan includes and how much of it is used, from the server (one provider for the whole portal),
+// and the one dialog that explains any plan refusal. See context/plan-context.tsx.
+import { PlanProvider } from "@/context/plan-context"
 
 export const metadata: Metadata = {
   title: "Wedding Wala — Dashboard",
@@ -57,6 +60,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
       <NextTopLoader color="hsl(var(--primary))" showSpinner={false} />
       <ProtectedRoutes>
         <LocaleProvider>
+          <PlanProvider>
           {/* ReviewProfileGate sits OUTSIDE SidebarProvider on purpose —
               when active, the vendor sees ONLY the under-review screen,
               no sidebar / no header / no dashboard chrome that would
@@ -75,6 +79,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
             </DashboardChrome>
             </ProductTourProvider>
           </ReviewProfileGate>
+          </PlanProvider>
         </LocaleProvider>
       </ProtectedRoutes>
         </DashboardShell>

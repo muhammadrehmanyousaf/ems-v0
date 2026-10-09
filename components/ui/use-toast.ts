@@ -7,6 +7,7 @@ import type {
   ToastActionElement,
   ToastProps,
 } from "@/components/ui/toast"
+import { isPlanGateEcho } from "@/lib/plan-gate"
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
@@ -143,6 +144,11 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
+  // A plan refusal (403 FEATURE_NOT_IN_PLAN / LIMIT_REACHED) is shown once, by the portal's upgrade dialog
+  // (components/dashboard/plans/plan-gate-host.tsx). Do not also echo the same sentence here as a raw error toast.
+  if (isPlanGateEcho(props.description) || isPlanGateEcho(props.title)) {
+    return { id: "", dismiss: () => {}, update: (_p: ToasterToast) => {} }
+  }
   const id = genId()
 
   const update = (props: ToasterToast) =>

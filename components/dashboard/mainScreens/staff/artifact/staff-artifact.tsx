@@ -14,7 +14,9 @@ import { StaffAPI, type StaffMember, type StaffRole, type EmploymentType, type C
 import { useBusiness } from "@/context/BusinessContext"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
-import { useArtifactShell, pkNum, escHtml, initialsOf, initTablePager, errorBannerHtml, loadPref, savePref, openDrawer, closeDrawer, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { usePlan } from "@/context/plan-context"
+import { refreshPlanUsage } from "@/hooks/use-billing-status"
+import { useArtifactShell, pkNum, escHtml, initialsOf, initTablePager, errorBannerHtml, loadPref, savePref, openDrawer, closeDrawer, openConfirm, planLockedHtml, planMeterHtml, planLimitNoteHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const ROLE_LABEL: Record<string, string> = {
   waiter: "Waiter", cook_helper: "Cook helper", lead_cook: "Head cook", cleaner: "Safai", parking_valet: "Valet", dhol_player: "Dhol", qari: "Qari", imam: "Imam", decorator: "Decorator", florist: "Florist", lighting_tech: "Lighting", security: "Security", driver: "Driver", photographer: "Photographer", videographer: "Videographer", manager: "Manager", bagpiper: "Bagpiper", stage_host: "Stage host", dj: "DJ", sound_tech: "Sound", other: "Deegar",
@@ -66,7 +68,11 @@ function formBody(m?: StaffMember | null): string {
   <div class="ww-dfoot"><button class="btn btn-ghost" type="button" data-drawer-close>Cancel</button><button class="btn btn-primary" type="button" data-save="${m?.id ?? "new"}">${m ? "Staff update karein" : "Staff save karein"}</button></div>`
 }
 
-function buildContent(list: StaffMember[], filter: string): string {
+/** What the plan says about adding staff: locked outright (feature), at the limit, or fine. Built from the server's entitlements. */
+type PlanUi = { lockedHtml: string; meterHtml: string; addBlocked: boolean; lockedLabel: string }
+const NO_PLAN_UI: PlanUi = { lockedHtml: "", meterHtml: "", addBlocked: false, lockedLabel: "" }
+
+function buildContent(list: StaffMember[], filter: string, planUi: PlanUi = NO_PLAN_UI): string {
   const active = list.filter((m) => m.isActive)
   const cntEmp = (t: EmploymentType) => list.filter((m) => m.employmentType === t).length
   const payroll = active.filter((m) => m.employmentType === "permanent_monthly").reduce((s, m) => s + money(m.monthlySalary), 0)
@@ -78,7 +84,7 @@ function buildContent(list: StaffMember[], filter: string): string {
   </div>`
 
   const tab = (f: string, label: string, cnt: number) => `<button class="tab${f === filter ? " on" : ""}" data-f="${f}">${label} <span class="cnt">${cnt}</span></button>`
-  const toolbar = `<div class="toolbar"><div class="tabs" id="tabs">${tab("all", "Sab", list.length)}${EMPS.map((t) => tab(t, EMP_LABEL[t], cntEmp(t))).join("")}</div><div class="filters"><button class="btn btn-primary" id="addbtn">${svg(IC.plus, 2.2)} Naya staff</button></div></div>`
+  const toolbar = `<div class="toolbar"><div class="tabs" id="tabs">${tab("all", "Sab", list.length)}${EMPS.map((t) => tab(t, EMP_LABEL[t], cntEmp(t))).join("")}</div><div class="filters">${planUi.addBlocked ? `<button class="btn btn-ghost plan-off" id="addbtn-locked" type="button" disabled title="${escHtml(planUi.lockedLabel)}">${svg(IC.plus, 2.2)} Naya staff</button>` : `<button class="btn btn-primary" id="addbtn">${svg(IC.plus, 2.2)} Naya staff</button>`}</div></div>`
 
   const rows = list.filter((m) => filter === "all" || m.employmentType === filter)
   const body = rows.map((m) => {
@@ -98,8 +104,8 @@ function buildContent(list: StaffMember[], filter: string): string {
   }).join("")
 
   return `
-  <div class="head"><div><h1>Staff</h1><div class="sub">Aapki team — <b>${list.length}</b> log, <b>${active.length}</b> active.</div></div></div>
-  ${tiles}${toolbar}
+  <div class="head"><div><h1>Staff</h1><div class="sub">Aapki team — <b>${list.length}</b> log, <b>${active.length}</b> active.</div></div>${planUi.meterHtml}</div>
+  ${planUi.lockedHtml}${tiles}${toolbar}
   <div class="card"><div class="tbl-wrap"><table class="tbl">
     <thead><tr><th>Staff</th><th>Kism</th><th>Phone</th><th>Tankhwah</th><th></th></tr></thead>
     <tbody>${body}</tbody></table></div>
@@ -120,6 +126,22 @@ export function StaffArtifact() {
   const { data, isError } = useQuery({ queryKey: ["staff-art", bizId], enabled: !!bizId, queryFn: () => StaffAPI.listMembers({ businessId: Number(bizId) }) })
   const list = React.useMemo(() => (Array.isArray(data) ? data : (data as { members?: StaffMember[] } | undefined)?.members ?? []) as StaffMember[], [data])
   const listRef = React.useRef(list); listRef.current = list
+  // Plan: staff accounts are a feature (Basic and up) AND a numbered limit. Both come from the server's entitlements.
+  const plan = usePlan()
+  const staffFeature = plan.feature("staff")
+  const staffLimit = plan.limit("staff")
+  const planUi = React.useMemo<PlanUi>(() => {
+    if (staffFeature?.locked) {
+      return { addBlocked: true, lockedLabel: `Available on ${staffFeature.requiredPlan}`, meterHtml: "",
+        lockedHtml: planLockedHtml({ requiredPlan: staffFeature.requiredPlan, planName: plan.planName, what: "Staff accounts", compact: true, feature: "staff" }) }
+    }
+    if (staffLimit && staffLimit.enforced && staffLimit.max !== null) {
+      return { addBlocked: staffLimit.reached, lockedLabel: "Your plan's staff limit is reached", meterHtml: planMeterHtml(staffLimit, ["staff account", "staff accounts"]),
+        lockedHtml: staffLimit.reached ? planLimitNoteHtml({ planName: plan.planName, max: staffLimit.max, nouns: ["staff account", "staff accounts"], nextPlan: staffLimit.nextPlan }) : "" }
+    }
+    return NO_PLAN_UI
+  }, [staffFeature, staffLimit, plan.planName])
+  const planUiRef = React.useRef(planUi); planUiRef.current = planUi
   const [filter, setFilter] = React.useState(() => loadPref("tab:staff", "all"))
 
   React.useEffect(() => {
@@ -129,10 +151,10 @@ export function StaffArtifact() {
     if (!bizId) { wwc.innerHTML = `<div class="loadwrap">Pehle ek business select karein.</div>`; return }
     if (isError) { wwc.innerHTML = `<div class="head"><div><h1>Staff</h1></div></div>${errorBannerHtml()}`; return }
     if (!data) { wwc.innerHTML = `<div class="loadwrap">Staff load ho raha hai…</div>`; return }
-    wwc.innerHTML = buildContent(list, filter)
+    wwc.innerHTML = buildContent(list, filter, planUi)
     initTablePager(s, { pageSize: 25 })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, data, filter, bizId, isError])
+  }, [ready, data, filter, bizId, isError, planUi])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
@@ -150,7 +172,7 @@ export function StaffArtifact() {
       if (tel?.dataset.tel) { window.location.href = `tel:${tel.dataset.tel.replace(/\s/g, "")}`; return }
       const tab = t.closest(".tab") as HTMLElement | null
       if (tab?.dataset.f) { savePref("tab:staff", tab.dataset.f); setFilter(tab.dataset.f); return }
-      if (t.closest("#addbtn")) { openDrawer(s, "Naya staff", formBody(null)); return }
+      if (t.closest("#addbtn")) { if (planUiRef.current.addBlocked) return; openDrawer(s, "Naya staff", formBody(null)); return }
       const edit = t.closest("[data-edit]") as HTMLElement | null
       if (edit?.dataset.edit) { const m = listRef.current.find((x) => x.id === Number(edit.dataset.edit)); if (m) openDrawer(s, "Staff edit karein", formBody(m)); return }
       const del = t.closest("[data-del]") as HTMLElement | null
@@ -158,7 +180,7 @@ export function StaffArtifact() {
         const id = Number(del.dataset.del)
         const m = listRef.current.find((x) => x.id === id)
         openConfirm(s, { title: `${m ? m.fullName : "Staff"} delete karein?`, message: "Ye record hat jayega — wapas nahi aayega.", danger: true, onConfirm: async () => {
-          try { await StaffAPI.removeMember(id); toast.success("Staff hata diya"); refetch() } catch { toast.error("Delete nahi hua") }
+          try { await StaffAPI.removeMember(id); toast.success("Staff hata diya"); refetch(); refreshPlanUsage(qc) } catch { toast.error("Delete nahi hua") }
         } })
         return
       }
@@ -177,7 +199,7 @@ export function StaffArtifact() {
         try {
           if (editId) await StaffAPI.updateMember(editId, body)
           else await StaffAPI.createMember(body)
-          toast.success(editId ? "Staff update ho gaya" : "Staff add ho gaya"); closeDrawer(s); refetch()
+          toast.success(editId ? "Staff update ho gaya" : "Staff add ho gaya"); closeDrawer(s); refetch(); refreshPlanUsage(qc)
         } catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua"); save.disabled = false; if (orig) save.textContent = orig }
         return
       }

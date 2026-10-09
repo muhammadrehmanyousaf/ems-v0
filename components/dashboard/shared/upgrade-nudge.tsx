@@ -3,10 +3,13 @@
 /**
  * Soft upgrade nudge (§17.1). Renders a small, non-blocking banner
  * inviting the vendor to upgrade when a feature belongs to a higher
- * tier than they're on. NEVER hides or blocks the underlying feature —
- * it's an informational prompt only (live-system safety).
+ * plan than they're on. It never hides or blocks anything itself: the
+ * server is what refuses, and screens that must show a feature as locked
+ * use <PlanGuard> / <PlanLockedCard> (components/dashboard/plans).
  *
- * Renders nothing when billing is OFF or the user already has access.
+ * Renders nothing unless the SERVER says this vendor is locked out of the
+ * feature (plan enforcement on AND the plan lacks it); while enforcement is
+ * off, while loading, or on a failed lookup it renders nothing at all.
  *
  * Usage:
  *   <UpgradeNudge feature="analytics" />
@@ -30,7 +33,7 @@ export default function UpgradeNudge({
   if (!showNudge) return null;
 
   const text = message
-    || `This is a ${requiredLabel}-plan feature — you're previewing it.`;
+    || `This is available on ${requiredLabel}.`;
 
   if (compact) {
     return (
@@ -51,7 +54,7 @@ export default function UpgradeNudge({
       <div className="flex items-center gap-2 min-w-0">
         <Sparkles className="h-4 w-4 text-bridal-gold-dark shrink-0" />
         <p className="text-xs text-foreground truncate">
-          {text} <span className="text-muted-foreground">Upgrade to keep it.</span>
+          {text} <span className="text-muted-foreground">See plans to unlock it.</span>
         </p>
       </div>
       <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-bridal-gold-dark shrink-0">

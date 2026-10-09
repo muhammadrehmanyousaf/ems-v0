@@ -15,10 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CreditCard, Check, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { planNameOf } from "@/lib/plan-gate";
 import { SubscriptionAPI, type UpgradeRequestRow, type AdminSafepayLedger, type AdminSafepayRow, type AdminSafepayPaymentRow } from "@/lib/api/subscription";
 
-// Same names the vendor sees on the plan cards (PLAN_CATALOG on the server).
-const TIER_LABEL: Record<string, string> = { free: "Free", pro: "Basic", premium: "Pro", elite: "Premium" };
 const fmtDate = (s: string | null) => {
   if (!s) return "—";
   try { return new Date(s).toLocaleString("en-PK", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
@@ -146,7 +145,7 @@ function SafepayLedger({ ledger, loading, busyId, onAction, onReconcileAll, reco
                         <div className="font-medium">{r.user?.fullName || r.user?.email || `User #${r.userId}`}</div>
                         <div className="text-[11px] text-muted-foreground">{r.user?.email}{r.user?.phoneNumber ? ` · ${r.user.phoneNumber}` : ""}</div>
                       </td>
-                      <td className="py-2.5 pr-3 whitespace-nowrap">{TIER_LABEL[r.tier] || r.tier}</td>
+                      <td className="py-2.5 pr-3 whitespace-nowrap">{planNameOf(r.tier)}</td>
                       <td className="py-2.5 pr-3"><Badge variant="outline" className={`text-[10px] ${st.cls}`}>{st.label}</Badge></td>
                       <td className="py-2.5 pr-3 whitespace-nowrap tabular-nums">{pkr(r.amountPaisas)}</td>
                       <td className="py-2.5 pr-3 whitespace-nowrap tabular-nums">{fmtDay(r.currentPeriodEndsAt)}</td>
@@ -271,7 +270,7 @@ function SafepayPayments({ payments, loading, busyId, onRefund }: {
                           <div className="text-[11px] text-muted-foreground">{p.user?.email}</div>
                         </td>
                         <td className="py-2.5 pr-3 font-mono text-[11px] whitespace-nowrap">{p.receiptNo}<div className="text-muted-foreground">{p.transactionId}</div></td>
-                        <td className="py-2.5 pr-3 whitespace-nowrap">{TIER_LABEL[p.tier] || p.tier}</td>
+                        <td className="py-2.5 pr-3 whitespace-nowrap">{planNameOf(p.tier)}</td>
                         <td className="py-2.5 pr-3 whitespace-nowrap tabular-nums">{pkr(p.amountPaisas)}</td>
                         <td className="py-2.5 pr-3 whitespace-nowrap tabular-nums">{fmtDay(p.periodStart)} – {fmtDay(p.periodEnd)}</td>
                         <td className="py-2.5 pr-3 whitespace-nowrap tabular-nums">
@@ -447,10 +446,10 @@ export default function AdminSubscriptionsView() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-sm">{r.fullName || r.email || `User #${r.id}`}</span>
-                      <Badge variant="outline" className="text-[10px]">{TIER_LABEL[r.subscriptionTier] || r.subscriptionTier}</Badge>
+                      <Badge variant="outline" className="text-[10px]">{planNameOf(r.subscriptionTier)}</Badge>
                       <span className="text-muted-foreground text-xs">→</span>
                       <Badge variant="outline" className="text-[10px] bg-bridal-gold-dark/5 border-bridal-gold-dark/30 text-bridal-gold-dark">
-                        {TIER_LABEL[r.pendingUpgradeTier] || r.pendingUpgradeTier}
+                        {planNameOf(r.pendingUpgradeTier)}
                       </Badge>
                     </div>
                     <p className="text-[11px] text-muted-foreground mt-0.5">

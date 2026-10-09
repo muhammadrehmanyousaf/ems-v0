@@ -27,7 +27,9 @@ import {
   type BillingStatus,
   type SubscriptionPaymentRow,
 } from "@/lib/api/subscription"
-import { useArtifactShell, pkNum, escHtml, errorBannerHtml, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { usePlan, type PlanApi } from "@/context/plan-context"
+import { LIMIT_NOUNS, planNameOf, type LimitKey } from "@/lib/plan-gate"
+import { useArtifactShell, pkNum, escHtml, errorBannerHtml, openConfirm, planMeterHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const RANK: Record<string, number> = { free: 0, pro: 1, premium: 2, elite: 3 }
 function fmtDate(s?: string | null) { if (!s) return "—"; const d = new Date(s); return isNaN(d.getTime()) ? String(s) : d.toLocaleDateString("en-PK", { day: "numeric", month: "long", year: "numeric" }) }
@@ -41,6 +43,8 @@ const IC = {
 const TIER_ICON: Record<string, string> = { free: IC.bolt, pro: IC.star, premium: IC.crown, elite: IC.crown }
 
 const EXTRA_CSS = String.raw`
+.us-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 28px; padding:8px 16px 16px; } .us-row{ display:flex; flex-direction:column; gap:6px; min-width:0; } .us-l{ font-size:12px; font-weight:600; color:var(--ink); } .us-l span{ font-weight:400; color:var(--ink-3); } .us-row .plan-meter{ max-width:none; }
+@media (max-width:700px){ .us-grid{ grid-template-columns:1fr; } }
 .cur-plan{ display:flex; align-items:center; gap:14px; padding:16px 18px; margin-bottom:16px; }
 .cur-ic{ width:44px; height:44px; border-radius:12px; background:var(--accent-wash); border:1px solid var(--accent-line); display:grid; place-items:center; color:var(--accent-ink); flex:none; } .cur-ic svg{ width:22px; height:22px; }
 .cur-main{ flex:1; min-width:0; } .cur-t{ font-size:15px; font-weight:600; } .cur-s{ font-size:12px; color:var(--ink-3); margin-top:2px; }
@@ -231,7 +235,24 @@ function historyCard(payments: SubscriptionPaymentRow[] | undefined, planName: (
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Taareekh</th><th>Raqam</th><th>Plan</th><th>Period</th><th>Receipt no.</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`
 }
 
-function buildContent(d: MyPlanData, status: BillingStatus | null, mode: ReturnMode, waited: number, payments?: SubscriptionPaymentRow[]): string {
+/**
+ * "What you have used": the four things a plan limits, as the server counts them (the same numbers the gates enforce).
+ * While limits are not being enforced for this vendor it is only a plain count, with no limit and no upgrade prompt.
+ */
+function usageCardHtml(plan: PlanApi): string {
+  const rows = (["businesses", "staff", "spaces", "images"] as LimitKey[]).map((k) => {
+    const l = plan.limit(k)
+    if (!l || l.used === null) return ""
+    const label = { businesses: "Businesses", staff: "Staff accounts", spaces: "Halls & spaces", images: "Photos" }[k]
+    const note = l.scope === "business" ? " (har business mein)" : ""
+    return `<div class="us-row"><div class="us-l">${escHtml(label)}<span>${escHtml(note)}</span></div>${planMeterHtml(l, LIMIT_NOUNS[k])}</div>`
+  }).join("")
+  if (!rows) return ""
+  const sub = plan.enforced ? "Aapke plan ki hadd ke muqable mein — bhar jaye to naya add nahi hota, jo hai woh kabhi delete nahi hota." : "Abhi aapke paas kitna hai."
+  return `<div class="card usage-card" data-testid="usage-card" style="margin-bottom:16px"><div class="card-h" style="padding:14px 16px 6px"><div><h2 style="font-size:13.5px;font-weight:600">Aapka istemal</h2><div class="sub">${escHtml(sub)}</div></div></div><div class="us-grid">${rows}</div></div>`
+}
+
+function buildContent(d: MyPlanData, status: BillingStatus | null, mode: ReturnMode, waited: number, payments?: SubscriptionPaymentRow[], usageHtml = ""): string {
   const paidActive = status?.access === "active" || status?.access === "past_due"
   // When Safepay says the plan is paid, the tier it reports is the truth.
   const effectiveTier = (paidActive && status?.tier ? status.tier : d.currentTier) as SubscriptionTier
@@ -261,13 +282,16 @@ function buildContent(d: MyPlanData, status: BillingStatus | null, mode: ReturnM
 
   const plans = `<div class="plans">${d.plans.map((p) => planCard(p, d, view)).join("")}</div>`
 
+  // The numbers each plan allows, from the server's limits table (the same one the gates enforce).
+  const limitCell = (n: number | null | undefined) => `<td class="tnum">${n === null ? "Unlimited" : n === undefined ? "—" : n}</td>`
+  const limitRows = (d.limitComparison || []).map((r) => `<tr><td>${escHtml(r.label.charAt(0).toUpperCase() + r.label.slice(1))}</td>${limitCell(r.free)}${limitCell(r.pro)}${limitCell(r.premium)}${limitCell(r.elite)}</tr>`).join("")
   const comparison = (d.comparison || []).length ? `<div class="card" style="margin-bottom:16px"><div class="card-h" style="padding:14px 16px 6px"><div><h2 style="font-size:13.5px;font-weight:600">Features ki tafseel</h2></div></div>
-    <div class="tbl-wrap"><table class="tbl cmp"><thead><tr><th>Feature</th><th>Free</th><th>${escHtml(tierName("pro"))}</th><th>${escHtml(tierName("premium"))}</th><th>${escHtml(tierName("elite" as SubscriptionTier))}</th></tr></thead>
+    <div class="tbl-wrap"><table class="tbl cmp"><thead><tr><th>Feature</th><th>${escHtml(planNameOf("free"))}</th><th>${escHtml(tierName("pro"))}</th><th>${escHtml(tierName("premium"))}</th><th>${escHtml(tierName("elite" as SubscriptionTier))}</th></tr></thead>
     <tbody>${d.comparison!.map((r) => `<tr><td>${escHtml(r.label)}</td>
       <td>${r.free ? `<span class="yes">${svg(IC.check, 2.4)}</span>` : `<span class="no">${svg(IC.dash, 2)}</span>`}</td>
       <td>${r.pro ? `<span class="yes">${svg(IC.check, 2.4)}</span>` : `<span class="no">${svg(IC.dash, 2)}</span>`}</td>
       <td>${r.premium ? `<span class="yes">${svg(IC.check, 2.4)}</span>` : `<span class="no">${svg(IC.dash, 2)}</span>`}</td>
-      <td>${r.elite ? `<span class="yes">${svg(IC.check, 2.4)}</span>` : `<span class="no">${svg(IC.dash, 2)}</span>`}</td></tr>`).join("")}</tbody></table></div></div>` : ""
+      <td>${r.elite ? `<span class="yes">${svg(IC.check, 2.4)}</span>` : `<span class="no">${svg(IC.dash, 2)}</span>`}</td></tr>`).join("")}${limitRows}</tbody></table></div></div>` : ""
 
   const note = `<div class="card"><div class="note"><b>Payment Safepay ke zariye hoti hai</b> — card ki tafseel hum kabhi nahi dekhte na rakhte hain. Subscription har mahina khud renew hoti hai; jab chahein cancel kar sakte hain. ${escHtml(d.pricing?.taxNote || "")} <a href="/vendor-subscription-policy" target="_blank" rel="noopener" style="color:var(--accent-ink);text-decoration:underline">Subscription policy</a></div></div>`
 
@@ -277,7 +301,7 @@ function buildContent(d: MyPlanData, status: BillingStatus | null, mode: ReturnM
 
   return `
   <div class="head"><div><h1>Plan & billing</h1><div class="sub">Apna plan chunein — payment Safepay par hoti hai aur har mahina khud renew hoti hai.</div></div></div>
-  ${returnBanner(mode, status, waited)}${statusCard(status)}${cur}${declineLine}${plans}${historyCard(payments, (t) => tierName(t as SubscriptionTier))}${comparison}${note}
+  ${returnBanner(mode, status, waited)}${statusCard(status)}${cur}${usageHtml}${declineLine}${plans}${historyCard(payments, (t) => tierName(t as SubscriptionTier))}${comparison}${note}
   <div class="foot">WeddingWala vendor console · Billing</div>`
 }
 
@@ -308,6 +332,8 @@ export function BillingArtifact() {
   const [waited, setWaited] = React.useState(0)
 
   const { data, isError } = useQuery({ queryKey: ["billing-art"], queryFn: () => SubscriptionAPI.getMyPlan() })
+  const plan = usePlan()
+  const usageHtml = React.useMemo(() => usageCardHtml(plan), [plan])
   const billing = useQuery({
     queryKey: ["billing-status"],
     queryFn: () => SubscriptionAPI.getBillingStatus(),
@@ -352,9 +378,9 @@ export function BillingArtifact() {
     const wwc = s.getElementById("wwc"); if (!wwc) return
     if (isError) { wwc.innerHTML = `<div class="head"><div><h1>Plan & billing</h1></div></div>${errorBannerHtml()}`; return }
     if (!data) { wwc.innerHTML = `<div class="loadwrap">Plan load ho raha hai…</div>`; return }
-    wwc.innerHTML = buildContent(data, billing.data ?? null, mode, waited, payments.data)
+    wwc.innerHTML = buildContent(data, billing.data ?? null, mode, waited, payments.data, usageHtml)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, data, isError, billing.data, mode, waited >= 120, payments.data])
+  }, [ready, data, isError, billing.data, mode, waited >= 120, payments.data, usageHtml])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
