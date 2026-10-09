@@ -79,6 +79,8 @@ export interface CreateReceiptInput {
   // must be present (BE enforces; FE schema enforces).
   customerUserId?: number;
   bookingId?: number | null;
+  // WW-QIST-SCHEDULE — pay a specific qist of the booking. Omit = oldest owing qist first.
+  installmentId?: number | null;
 }
 
 export type UpdateReceiptInput = Partial<
