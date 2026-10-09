@@ -1304,6 +1304,11 @@ export interface CreateBookingVendor {
   // space, and leaves a multi-space booking unassigned rather than guessing.
   // A hall already taken on that date is refused with SPACE_CONFLICT.
   subVenueId?: number;
+  // SLOT-PICKER — the venue's own slot this line is booked into. The server then
+  // runs the capacity and block checks for it and refuses a bookingTime outside
+  // the slot's hours; without it the server binds the slot the time sits in, or
+  // refuses the time if it sits in none (see the gate in createBookingCore).
+  slotTemplateId?: number | null;
   // DRIFT-09 — optional because the SERVER computes both from packages / menu /
   // minimumPrice / add-ons and overwrites whatever the client sends before it's
   // read (bookingController overwrites vendors[].totalAmount/downPayment from
@@ -1494,7 +1499,12 @@ export class BookingsAPI {
    */
   static async vendorReschedule(
     id: number,
-    body: { newBookingDate: string; newBookingTime?: string | null },
+    body: {
+      newBookingDate: string;
+      newBookingTime?: string | null;
+      /** SLOT-PICKER — the slot to move into; the booking then starts when the slot does. */
+      newSlotTemplateId?: number | null;
+    },
   ): Promise<unknown> {
     const res = await axiosInstance.post(
       `/api/v1/bookings/${id}/vendor-reschedule`,

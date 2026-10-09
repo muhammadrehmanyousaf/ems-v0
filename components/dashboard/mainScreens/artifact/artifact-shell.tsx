@@ -660,6 +660,27 @@ table.tbl{ width:100%; border-collapse:collapse; }
 .ww-dbody textarea{ min-height:76px; resize:vertical; }
 .ww-dbody .bf-sec{ font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--accent-ink); margin:18px 0 11px; padding-bottom:5px; border-bottom:1px solid var(--border); } .ww-dbody .bf-sec:first-child{ margin-top:0; }
 .ww-dbody .bf-hint{ font-size:11.5px; color:var(--ink-3); background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:14px; line-height:1.5; }
+/* Waqt slot picker (artifact/slot-picker.ts) — the venue's own slots for a date, venue and hall */
+.ww-dbody .sk-box{ display:flex; flex-direction:column; gap:8px; }
+.ww-dbody .sk-list{ display:flex; flex-direction:column; gap:8px; }
+.ww-dbody .sk-card{ display:flex; align-items:center; flex-wrap:wrap; gap:6px 12px; width:100%; text-align:left; padding:10px 12px; border:1px solid var(--border-2); border-radius:10px; background:var(--surface-2); color:var(--ink); font:inherit; cursor:pointer; transition:border-color .12s,background .12s,box-shadow .12s; }
+.ww-dbody .sk-card:hover:not(:disabled){ border-color:var(--accent-line); background:var(--surface); }
+.ww-dbody .sk-card[aria-checked="true"]{ border-color:var(--accent); background:var(--accent-wash); box-shadow:0 0 0 3px var(--accent-wash); }
+.ww-dbody .sk-card:disabled{ cursor:not-allowed; background:var(--surface-3); color:var(--ink-3); }
+.ww-dbody .sk-card:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+.ww-dbody .sk-dot{ width:16px; height:16px; border-radius:50%; border:1.5px solid var(--border-2); background:var(--surface); flex:none; display:grid; place-items:center; }
+.ww-dbody .sk-card[aria-checked="true"] .sk-dot{ border-color:var(--accent); } .ww-dbody .sk-card[aria-checked="true"] .sk-dot::after{ content:""; width:8px; height:8px; border-radius:50%; background:var(--accent); }
+.ww-dbody .sk-card:disabled .sk-dot{ background:transparent; border-style:dashed; }
+.ww-dbody .sk-main{ display:flex; flex-direction:column; gap:2px; min-width:0; flex:1 1 140px; }
+.ww-dbody .sk-name{ font-size:13px; font-weight:600; } .ww-dbody .sk-time{ font-size:12px; color:var(--ink-3); } .ww-dbody .sk-why{ font-size:11.5px; color:var(--warn); }
+.ww-dbody .sk-pill{ font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:99px; white-space:nowrap; margin-left:auto; }
+.ww-dbody .sk-pill.ok{ background:var(--ok-wash); color:var(--ok); } .ww-dbody .sk-pill.bad{ background:var(--bad-wash); color:var(--bad); } .ww-dbody .sk-pill.warn{ background:var(--warn-wash); color:var(--warn); } .ww-dbody .sk-pill.mut{ background:var(--surface); color:var(--ink-3); border:1px solid var(--border); }
+.ww-dbody .sk-msg{ font-size:12px; line-height:1.5; color:var(--ink-3); background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:9px 11px; }
+.ww-dbody .sk-msg.info{ color:var(--ink-2); background:var(--info-wash); border-color:transparent; } .ww-dbody .sk-msg.warn{ color:var(--warn); background:var(--warn-wash); border-color:transparent; } .ww-dbody .sk-msg.err{ color:var(--bad); background:var(--bad-wash); border-color:transparent; }
+.ww-dbody .sk-retry{ margin-left:6px; border:0; background:none; color:inherit; font:inherit; font-weight:600; text-decoration:underline; cursor:pointer; padding:0; }
+.ww-dbody .sk-skel{ height:50px; border-radius:10px; background:linear-gradient(90deg,var(--surface-3),var(--surface-2),var(--surface-3)); background-size:200% 100%; animation:wwsk 1.2s linear infinite; }
+@keyframes wwsk{ from{ background-position:200% 0 } to{ background-position:-200% 0 } }
+@media (prefers-reduced-motion:reduce){ .ww-dbody .sk-skel{ animation:none; } }
 .ww-dfoot{ display:flex; gap:9px; justify-content:flex-end; padding-top:6px; position:sticky; bottom:-28px; background:var(--surface); }
 @media (max-width:820px){ .ww-drawer{ width:100vw; max-width:100vw; } }
 /* ── Module entries (Khata, Set up) + their secondary sidebar column ──────── */

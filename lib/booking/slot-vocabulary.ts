@@ -164,6 +164,11 @@ function periodFor(value: string): { label: string; startTime: string; endTime: 
   return LEGACY_ALIASES[value] ?? null;
 }
 
+/** The fixed period a stored "HH:MM" booking time stands for, with its hours — or null. */
+export function legacyPeriodWindow(value: string): { label: string; startTime: string; endTime: string } | null {
+  return periodFor(String(value ?? "").slice(0, 5));
+}
+
 /**
  * Name a booking's slot, preferring what the vendor actually sold.
  *

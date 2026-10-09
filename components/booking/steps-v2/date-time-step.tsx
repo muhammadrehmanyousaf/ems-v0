@@ -29,6 +29,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { venueSpacesApi, type SubVenueNode } from "@/lib/api/venueSpaces"
 // SLOTS step 10 — the single slot vocabulary.
 import { LEGACY_PERIODS, formatSlotRange } from "@/lib/booking/slot-vocabulary"
+// SLOT-PICKER — the ONE rule for "may this slot be offered", shared with the
+// vendor's Nayi booking form and reschedule dialog (lib/booking/slot-picker-model.ts).
+import { isSlotOpen } from "@/lib/booking/slot-picker-model"
 // 10.13 / 10.16 — the arrangement a family needs, and rain on an open lawn.
 // A mirror of src/utils/spaceRequirements.js, held to it by
 // scripts/space-fit-parity.mts. The server re-runs the same check at booking
@@ -419,8 +422,8 @@ export default function DateTimeStep({
     if (!rows) return undefined
     const runnable = rows.filter((r) => r.runsThisWeekday)
     if (runnable.length === 0) return { bookedSlots: [], availableSlots: [], isBlocked: true, blockReason: "Closed this day" }
-    const bookedSlots = runnable.filter((r) => r.blocked || r.free <= 0).map((r) => r.startTime.slice(0, 5))
-    const availableSlots = runnable.filter((r) => !r.blocked && r.free > 0).map((r) => r.startTime.slice(0, 5))
+    const bookedSlots = runnable.filter((r) => !isSlotOpen(r)).map((r) => r.startTime.slice(0, 5))
+    const availableSlots = runnable.filter((r) => isSlotOpen(r)).map((r) => r.startTime.slice(0, 5))
     return { bookedSlots, availableSlots, isBlocked: availableSlots.length === 0 }
   }, [templateDays])
   const dayAvail = useCallback(
@@ -517,7 +520,7 @@ export default function DateTimeStep({
   // backend runs the capacity-aware booking; timeSlot mirrors the start time so
   // the existing hold + validation keep working unchanged.
   const handlePickTemplate = (row: SlotAvailabilityRow) => {
-    if (!selectedDate || row.blocked || row.free <= 0 || !row.runsThisWeekday) return
+    if (!selectedDate || !isSlotOpen(row)) return
     const t = row.startTime.slice(0, 5)
     updateFormData((prev) => ({
       ...prev,
@@ -1151,7 +1154,7 @@ export default function DateTimeStep({
                 dayRows.length > 0 &&
                 dayRows.map((row, i) => {
                   const isSelected = formData.slotTemplateId === row.slotTemplateId
-                  const soldOut = row.blocked || row.free <= 0
+                  const soldOut = !isSlotOpen(row)
                   const disabled = !selectedDate || soldOut
                   const hours =
                     formatSlotRange(row.startTime, row.endTime) ||
