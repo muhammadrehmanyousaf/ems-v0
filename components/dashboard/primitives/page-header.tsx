@@ -74,11 +74,11 @@ export function PageHeader({
        * already loaded (app/layout.tsx) and `.font-display` already exists, so
        * this costs no bytes and no density.
        */}
-      <h1 className="min-w-0 truncate text-[22px] font-semibold tracking-[-0.02em] text-foreground">
+      <h1 className="order-1 min-w-0 truncate text-[22px] font-semibold tracking-[-0.02em] text-foreground sm:order-none">
         {title}
       </h1>
       {description && (
-        <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{description}</p>
+        <p className="order-3 min-w-0 basis-full text-sm text-muted-foreground sm:order-none sm:flex-1 sm:truncate">{description}</p>
       )}
       {/* `ml-auto` on whichever of these comes first pushes the pair right; the
           second must not claim it again or the two separate. Tabs keep their
@@ -101,7 +101,7 @@ export function PageHeader({
         </div>
       )}
       {actions && (
-        <div className={cn("flex shrink-0 items-center gap-2 ml-auto", tabs && "sm:ml-2")}>
+        <div className={cn("order-2 flex shrink-0 items-center gap-2 ml-auto sm:order-none", tabs && "sm:ml-2")}>
           {actions}
         </div>
       )}
