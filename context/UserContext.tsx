@@ -19,8 +19,8 @@ interface User {
   phoneVerified?: boolean;
   twoFactorEnabled?: boolean;
   // Subscription tier (§17.1). Flows in via verifyWithServer; absent =
-  // treat as 'free'. Drives soft upgrade nudges (lib/entitlements.ts).
-  subscriptionTier?: "free" | "pro" | "premium";
+  // treat as 'free'. Display/analytics only: what the plan includes comes from the server's entitlements (context/plan-context.tsx).
+  subscriptionTier?: "free" | "pro" | "premium" | "elite";
   roles: Array<{ id: number; name: string }>;
 }
 

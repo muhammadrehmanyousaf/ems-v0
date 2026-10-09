@@ -15,8 +15,7 @@
 
 import * as React from "react"
 import { usePathname } from "next/navigation"
-import { useQuery } from "@tanstack/react-query"
-import { SubscriptionAPI } from "@/lib/api/subscription"
+import { useBillingStatus } from "@/hooks/use-billing-status"
 import { useUser } from "@/context/UserContext"
 import { PlanWall } from "./plan-wall"
 
@@ -27,13 +26,7 @@ export function BillingGate({ children }: { children: React.ReactNode }) {
   const isAdmin = !!u?.isSuperAdmin || !!u?.roles?.some((r) => /admin/i.test(r?.name || ""))
   const isVendor = !!u?.isVendor && !isAdmin
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["billing-status"],
-    queryFn: () => SubscriptionAPI.getBillingStatus(),
-    enabled: isVendor,
-    refetchInterval: (q) => (q.state.data?.access === "pending" ? 5000 : false),
-    staleTime: 30_000,
-  })
+  const { data, isLoading, isError } = useBillingStatus(isVendor)
 
   if (!isVendor) return <>{children}</>
   // The billing page itself must always be reachable — it is where the wall is lifted.
