@@ -44,6 +44,8 @@ import { errorMessage } from "@/lib/utils/api-error"
 import { describeLimit, limitReachedFrom, useBusinessLimit, type LimitReached } from "@/lib/business-limits"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { Button } from "@/components/ui/button"
+import { HelpRow } from "@/components/ui/field-help"
+import type { FieldHelpKey } from "@/lib/field-help"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { cn } from "@/lib/utils"
 import { FieldError, FormBlockedHint, ERROR_INPUT_CLS, fieldAria, validateName } from "@/components/dashboard/primitives/field-error"
@@ -52,18 +54,22 @@ const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 t
 const labelCls = "text-xs font-medium text-muted-foreground"
 
 function Field({
-  id, label, required, hint, error, children, className,
+  id, label, required, hint, error, children, className, help,
 }: {
   id: string; label: string; required?: boolean; hint?: string; error?: string
   children: React.ReactNode; className?: string
+  /** Key into lib/field-help.ts: puts the same "?" beside the label as the registration form has. */
+  help?: FieldHelpKey
 }) {
   return (
     <div className={cn("space-y-1.5", className)}>
-      <label htmlFor={id} className={labelCls}>
-        {label}
-        {required && <span aria-hidden className="ml-0.5 text-destructive">*</span>}
-        {required && <span className="sr-only"> (required)</span>}
-      </label>
+      <HelpRow help={help}>
+        <label htmlFor={id} className={labelCls}>
+          {label}
+          {required && <span aria-hidden className="ml-0.5 text-destructive">*</span>}
+          {required && <span className="sr-only"> (required)</span>}
+        </label>
+      </HelpRow>
       {children}
       {hint && !error && <p id={`${id}-hint`} className="text-[11px] text-muted-foreground">{hint}</p>}
       <FieldError id={id} message={error} />
@@ -163,6 +169,12 @@ export function AddBusinessView() {
     setSubmitError(undefined)
   }
   const touch = (k: keyof Form) => setTouched((t) => ({ ...t, [k]: true }))
+  // Tapping a field's "?" moves focus off the field, which used to show "Business name is required." before the person had typed
+  // anything. Moving to a help button is looking something up, not leaving the field unfinished; a later blur or submit still validates.
+  const touchUnlessHelp = (k: keyof Form) => (e: React.FocusEvent) => {
+    if ((e.relatedTarget as HTMLElement | null)?.closest?.("[data-fieldhelp-row]")) return
+    touch(k)
+  }
 
   const u = user as { fullName?: string; email?: string; phoneNumber?: string; phoneE164?: string; vendorType?: string } | null
   const config = getVendorTypeConfig(u?.vendorType)
@@ -296,7 +308,7 @@ export function AddBusinessView() {
           <section aria-labelledby="ab-details" className="space-y-4 rounded-xl border bg-card p-4">
             <h2 id="ab-details" className="text-sm font-semibold">About this business</h2>
 
-            <Field id="ab-name" label="Business name" required hint="Must be unique across Wedding Wala." error={touched.name ? nameError : serverNameError}>
+            <Field id="ab-name" label="Business name" help="businessName" required hint="Must be unique across Wedding Wala." error={touched.name ? nameError : serverNameError}>
               <input
                 id="ab-name"
                 className={cn(inputCls, (touched.name ? nameError : serverNameError) && ERROR_INPUT_CLS)}
@@ -304,7 +316,7 @@ export function AddBusinessView() {
                 aria-required
                 value={form.name}
                 onChange={(e) => set("name", e.target.value)}
-                onBlur={() => touch("name")}
+                onBlur={touchUnlessHelp("name")}
                 placeholder="e.g. Al-Noor Marquee"
                 autoComplete="off"
                 autoFocus
@@ -313,7 +325,7 @@ export function AddBusinessView() {
             </Field>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field id="ab-city" label="City" required error={touched.city ? cityError : undefined}>
+              <Field id="ab-city" label="City" help="city" required error={touched.city ? cityError : undefined}>
                 <input
                   id="ab-city"
                   list="ab-city-list"
@@ -322,7 +334,7 @@ export function AddBusinessView() {
                   aria-required
                   value={form.city}
                   onChange={(e) => set("city", e.target.value)}
-                  onBlur={() => touch("city")}
+                  onBlur={touchUnlessHelp("city")}
                   placeholder="Lahore"
                   autoComplete="off"
                 />
@@ -330,7 +342,7 @@ export function AddBusinessView() {
                   {CITIES.map((c) => <option key={c.slug} value={c.name} />)}
                 </datalist>
               </Field>
-              <Field id="ab-area" label="Area (optional)">
+              <Field id="ab-area" label="Area (optional)" help="subArea">
                 <input id="ab-area" className={inputCls} value={form.subArea} onChange={(e) => set("subArea", e.target.value)} placeholder="Gulberg" autoComplete="off" />
               </Field>
             </div>
@@ -370,6 +382,7 @@ export function AddBusinessView() {
             <Field
               id="ab-price"
               label="Starting price (Rs)"
+              help="startingPrice"
               required
               hint="Customers can't book a business with no price. Enter 0 if this service is free."
               error={touched.minimumPrice ? priceError : undefined}
@@ -384,17 +397,17 @@ export function AddBusinessView() {
                 min={0}
                 value={form.minimumPrice}
                 onChange={(e) => set("minimumPrice", e.target.value)}
-                onBlur={() => touch("minimumPrice")}
+                onBlur={touchUnlessHelp("minimumPrice")}
                 placeholder="220000"
               />
             </Field>
 
             {asksGuests && (
               <div className="grid grid-cols-2 gap-4">
-                <Field id="ab-min" label="Min guests (optional)">
+                <Field id="ab-min" label="Min guests (optional)" help="minCapacity">
                   <input id="ab-min" className={cn(inputCls, "tabular-nums")} type="number" inputMode="numeric" min={0} value={form.minCapacity} onChange={(e) => set("minCapacity", e.target.value)} placeholder="100" />
                 </Field>
-                <Field id="ab-max" label="Max guests (optional)" error={capacityError}>
+                <Field id="ab-max" label="Max guests (optional)" help="maxCapacity" error={capacityError}>
                   <input
                     id="ab-max"
                     className={cn(inputCls, "tabular-nums", capacityError && ERROR_INPUT_CLS)}
@@ -410,7 +423,7 @@ export function AddBusinessView() {
               </div>
             )}
 
-            <Field id="ab-desc" label="Description (optional)">
+            <Field id="ab-desc" label="Description (optional)" help="businessDescription">
               <textarea
                 id="ab-desc"
                 className={cn(inputCls, "h-24 resize-y py-2")}
