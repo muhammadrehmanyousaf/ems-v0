@@ -17,7 +17,7 @@ import {
   type BookingInstallment,
   type InstallmentsResponse,
 } from "@/lib/api/bookings";
-import { dayText, moneyOf, qistStateCustomer, rsText } from "@/lib/utils/qist";
+import { dayTextCustomer, moneyOf, qistStateCustomer, rsTextCustomer } from "@/lib/utils/qist";
 
 /**
  * WW-QIST-SCHEDULE — the customer's view of the SAME schedule the vendor edits.
@@ -50,7 +50,14 @@ function Row({ q }: { q: BookingInstallment }) {
   const Icon = isPaid ? CheckCircle2 : isOverdue ? AlertTriangle : isWaived ? CircleSlash : Clock;
   const paid = moneyOf(q.amountPaid);
   const left = moneyOf(q.remaining);
-  const heading = q.order != null ? `Instalment ${q.order}: ${q.title || q.label}` : `${q.title || q.label} (waived)`;
+  const name = q.title || q.label;
+  // A plain "Qist 2" is just the position; a purposeful name ("Advance") is kept after it.
+  const heading =
+    q.order == null
+      ? `${name} (waived)`
+      : /^qist\s*\d+$/i.test(String(name).trim())
+        ? `Instalment ${q.order}`
+        : `Instalment ${q.order}: ${name}`;
 
   return (
     <div
@@ -81,18 +88,18 @@ function Row({ q }: { q: BookingInstallment }) {
           <p className={cn("text-[12px] mt-0.5", isOverdue ? "text-red-600 font-medium" : "text-muted-foreground")}>
             {isPaid
               ? q.paidAt
-                ? `Paid on ${dayText(String(q.paidAt).slice(0, 10))}`
+                ? `Paid on ${dayTextCustomer(String(q.paidAt).slice(0, 10))}`
                 : "Paid"
-              : view.detail || `Due ${dayText(q.dueDate)}`}
+              : view.detail || `Due ${dayTextCustomer(q.dueDate)}`}
           </p>
         </div>
       </div>
       <div className="text-right shrink-0">
         <p className={cn("font-medium tabular-nums text-sm text-foreground", isWaived && "line-through")}>
-          {rsText(q.amount)}
+          {rsTextCustomer(q.amount)}
         </p>
         {!isWaived && paid > 0 && left > 0 ? (
-          <p className="text-[11px] text-muted-foreground tabular-nums">{rsText(paid)} paid</p>
+          <p className="text-[11px] text-muted-foreground tabular-nums">{rsTextCustomer(paid)} paid</p>
         ) : null}
       </div>
     </div>
@@ -192,8 +199,8 @@ export function InstallmentsCard({ bookingId }: InstallmentsCardProps) {
             : nextDue.state === "due_today"
               ? "Due today: "
               : "Next payment: "}
-          <span className="font-semibold tabular-nums">{rsText(nextDue.remaining)}</span>
-          {nextDue.state === "overdue" || nextDue.state === "due_today" ? "" : ` on ${dayText(nextDue.dueDate)}`}
+          <span className="font-semibold tabular-nums">{rsTextCustomer(nextDue.remaining)}</span>
+          {nextDue.state === "overdue" || nextDue.state === "due_today" ? "" : ` on ${dayTextCustomer(nextDue.dueDate)}`}
         </div>
       ) : null}
 
@@ -207,16 +214,16 @@ export function InstallmentsCard({ bookingId }: InstallmentsCardProps) {
         <div className="mt-4 pt-3 border-t border-border/60 grid grid-cols-3 gap-3 text-center">
           <div>
             <p className="text-[10.5px] uppercase tracking-wide text-muted-foreground">Total</p>
-            <p className="font-medium tabular-nums text-sm">{rsText(money.total)}</p>
+            <p className="font-medium tabular-nums text-sm">{rsTextCustomer(money.total)}</p>
           </div>
           <div>
             <p className="text-[10.5px] uppercase tracking-wide text-muted-foreground">Paid</p>
-            <p className="font-medium tabular-nums text-sm text-emerald-700">{rsText(money.received)}</p>
+            <p className="font-medium tabular-nums text-sm text-emerald-700">{rsTextCustomer(money.received)}</p>
           </div>
           <div>
             <p className="text-[10.5px] uppercase tracking-wide text-muted-foreground">Remaining</p>
             <p className={cn("font-medium tabular-nums text-sm", money.outstanding > 0 ? "text-amber-700" : "text-emerald-700")}>
-              {money.cancelled ? "—" : rsText(money.outstanding)}
+              {money.cancelled ? "—" : rsTextCustomer(money.outstanding)}
             </p>
           </div>
         </div>

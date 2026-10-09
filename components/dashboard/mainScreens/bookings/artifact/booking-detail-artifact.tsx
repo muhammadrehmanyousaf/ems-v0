@@ -222,7 +222,7 @@ function settlementCard(s: SettlementPreview | null): string {
   const balBlock = bal && bal.source !== "unavailable"
     ? `<div class="pkg-total" style="border-bottom:1px solid var(--border)"><span class="t-cap">Settled total</span><span class="t-val tnum">${rs(settledTotal)}</span></div>
        <div class="dl" style="padding-top:8px"><div class="dl-row"><span class="k">Mil chuka</span><span class="v tnum" style="color:var(--ok)">${rs(paidBal)}</span></div>
-       <div class="dl-row" style="border-bottom:0"><span class="k">Baaqi lena</span><span class="v tnum" style="color:${outBal > 0 ? "var(--warn)" : "var(--ok)"}">${rs(outBal)}</span></div></div>`
+       <div class="dl-row" style="border-bottom:0"><span class="k">Baqaya</span><span class="v tnum" style="color:${outBal > 0 ? "var(--warn)" : "var(--ok)"}">${rs(outBal)}</span></div></div>`
     : `<div class="pkg-total"><span class="t-cap">Settled total</span><span class="t-val tnum">${rs(settledTotal || Number(s.foodTotal || 0))}</span></div>`
   const canCash = isSettled && outBal > 0 && bal && bal.source !== "unavailable"
   const canLock = s.settleable && !s.locked && !isSettled
@@ -266,7 +266,7 @@ function settlePreviewHtml(s: SettlementPreview): string {
   return `<div class="sp-line"><span>Aaye</span><b>${s.bill?.actual ?? s.statedTotal ?? 0} mehmaan</b></div>
     <div class="sp-line"><span>Khaana total</span><b class="tnum">${rs(Number(s.foodTotal || 0))}</b></div>
     <div class="sp-line big"><span>Settled total</span><b class="tnum">${rs(Number(bal?.settledTotal ?? 0))}</b></div>
-    <div class="sp-line"><span>Baaqi lena</span><b class="tnum" style="color:${out > 0 ? "var(--warn)" : "var(--ok)"}">${rs(out)}</b></div>`
+    <div class="sp-line"><span>Baqaya</span><b class="tnum" style="color:${out > 0 ? "var(--warn)" : "var(--ok)"}">${rs(out)}</b></div>`
 }
 
 function lockDrawerBody(id: number, guaranteed: number): string {

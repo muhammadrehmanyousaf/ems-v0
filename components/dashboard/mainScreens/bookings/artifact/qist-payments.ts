@@ -43,6 +43,7 @@ const IC = {
   split: '<path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   chevr: '<path d="M9 6l6 6-6 6"/>',
+  chevd: '<path d="M6 9l6 6 6-6"/>',
   money: '<path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
 }
 
@@ -56,7 +57,7 @@ export const QIST_CSS = String.raw`
 .q-sec{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; padding:14px 16px 6px; margin-top:8px; border-top:1px solid var(--border); }
 .q-sec .t{ font-size:11px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; color:var(--ink-3); } .q-sec .s{ font-size:11.5px; color:var(--ink-3); }
 .q-list{ padding:0 8px 4px; }
-.q-row{ display:flex; gap:12px; padding:12px 8px; border-bottom:1px solid var(--border); align-items:flex-start; }
+.q-row{ display:grid; grid-template-columns:26px minmax(0,1fr) auto; gap:12px; padding:12px 8px; border-bottom:1px solid var(--border); align-items:start; }
 .q-row:last-child{ border-bottom:0; }
 .q-dot{ width:26px; height:26px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--surface-3); border:1px solid var(--border-2); color:var(--ink-4); margin-top:1px; } .q-dot svg{ width:14px; height:14px; }
 .q-row.paid .q-dot{ background:var(--ok-wash); border-color:transparent; color:var(--ok); }
@@ -70,14 +71,17 @@ export const QIST_CSS = String.raw`
 .q-nm{ font-weight:600; font-size:13px; }
 .q-meta{ font-size:11.5px; color:var(--ink-3); margin-top:3px; line-height:1.5; }
 .q-meta.bad{ color:var(--bad); font-weight:560; }
-.q-flag{ font-size:11px; color:var(--warn); margin-top:3px; }
+.q-flag{ font-size:11px; color:var(--warn); margin-top:3px; display:flex; align-items:center; gap:5px; } .q-flag svg,.pe-sum svg{ width:12px; height:12px; flex:none; }
 .q-reminded{ font-size:11px; color:var(--ink-4); margin-top:2px; }
 .q-amt{ font-weight:660; font-size:14px; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; } .q-amt .rs{ font-size:10.5px; color:var(--ink-3); font-weight:600; }
 .q-amt .sub{ display:block; font-size:10.5px; font-weight:500; color:var(--ok); margin-top:2px; }
 .q-amt.struck{ text-decoration:line-through; color:var(--ink-4); }
 .q-acts{ display:flex; gap:6px; flex-wrap:wrap; margin-top:9px; }
 .q-acts .btn{ height:28px; padding:0 10px; font-size:11.5px; gap:5px; } .q-acts .btn svg{ width:13px; height:13px; }
-.q-acts .btn.q-danger{ color:var(--bad); }
+.q-acts .btn.q-danger,.q-more-menu .btn.q-danger{ color:var(--bad); }
+.q-more{ display:inline-block; } .q-more[open]{ flex-basis:100%; display:block; }
+.q-more summary{ list-style:none; cursor:pointer; display:inline-flex; align-items:center; } .q-more summary::-webkit-details-marker{ display:none; } .q-more summary svg{ width:12px; height:12px; transition:transform .12s; } .q-more[open] summary svg{ transform:rotate(180deg); }
+.q-more-menu{ display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; } .q-more-menu .btn{ height:28px; padding:0 10px; font-size:11.5px; gap:5px; } .q-more-menu .btn svg{ width:13px; height:13px; }
 .q-empty{ padding:14px 16px 18px; color:var(--ink-3); font-size:12px; }
 .q-pay{ display:flex; gap:12px; align-items:flex-start; padding:9px 0; }
 .q-pay .q-dot{ width:22px; height:22px; } .q-pay .q-dot svg{ width:12px; height:12px; }
@@ -101,8 +105,12 @@ export const QIST_CSS = String.raw`
 .pe-sum.ok{ background:var(--ok-wash); border-color:transparent; color:var(--ok); } .pe-sum.bad{ background:var(--bad-wash); border-color:transparent; color:var(--bad); }
 .pe-warn{ font-size:11.5px; color:var(--warn); margin:-4px 0 12px; line-height:1.5; }
 @media (max-width:560px){
-  .pe-row{ grid-template-columns:1fr 30px; } .pe-row .pe-amount,.pe-row .pe-date{ grid-column:1 / 2; } .pe-cap{ display:none; }
-  .q-row{ flex-wrap:wrap; } .q-amt{ margin-left:38px; text-align:left; } .q-acts .btn{ flex:1 1 auto; }
+  .pe-row{ grid-template-columns:minmax(0,1fr) minmax(0,1fr) 30px; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid var(--border); }
+  .pe-row .pe-label{ grid-column:1 / 3; } .pe-row .pe-del{ grid-column:3; grid-row:1; } .pe-row .pe-amount{ grid-column:1; } .pe-row .pe-date{ grid-column:2 / 4; } .pe-cap{ display:none; }
+  .q-row{ grid-template-columns:26px minmax(0,1fr) auto; gap:10px; padding:12px 4px; } .q-amt{ font-size:13px; }
+  .q-acts .btn.btn-primary{ flex:1 1 auto; justify-content:center; }
+  .pay-card .card-h{ flex-wrap:wrap; } .pay-card .card-h .acts{ justify-content:flex-start; gap:12px; }
+  .pay-sum{ gap:16px; } .q-sec{ padding:12px 12px 6px; } .q-hist{ padding:4px 12px 8px; } .q-note{ margin:10px 12px 0; }
 }
 `
 
@@ -144,14 +152,24 @@ function qistRowHtml(q: BookingInstallment, pay: Map<number, SchedulePayment>, c
   if ((q.warnings || []).includes("due_before_booking")) flags.push("Ye taareekh booking banne se pehle ki hai.")
   const reminded = q.lastRemindedAt ? `Aakhri yaad-dehani ${dayText(String(q.lastRemindedAt).slice(0, 10))}${moneyOf(q.reminderCount) > 1 ? ` · ${moneyOf(q.reminderCount)} baar` : ""}` : ""
   const a = q.actions
-  const acts = a && q.id != null && !cancelledBooking
+  // Calm by default: the one thing a vendor does most (take the payment) and, when it is
+  // late or due, the nudge. Everything else is one tap away under "Aur".
+  const late = q.state === "overdue" || q.state === "due_today"
+  const remindBtn = a && a.remind ? `<button class="btn btn-ghost" data-q-remind="${q.id}">${svg(IC.wa)} Yaad dilayein</button>` : ""
+  const more = a && q.id != null
     ? [
-        a.record ? `<button class="btn btn-primary" data-q-pay="${q.id}">${svg(IC.money, 2.2)} Payment</button>` : "",
-        a.remind ? `<button class="btn btn-ghost" data-q-remind="${q.id}">${svg(IC.wa)} Yaad dilayein</button>` : "",
+        late ? "" : remindBtn,
         a.edit ? `<button class="btn btn-ghost" data-q-edit="${q.id}">${svg(IC.edit)} Badlein</button>` : "",
         a.split ? `<button class="btn btn-ghost" data-q-split="${q.id}">${svg(IC.split)} Baantein</button>` : "",
         a.waive ? `<button class="btn btn-ghost" data-q-waive="${q.id}">Maaf karein</button>` : "",
         a.remove ? `<button class="btn btn-ghost q-danger" data-q-remove="${q.id}">Hatayein</button>` : "",
+      ].join("")
+    : ""
+  const acts = a && q.id != null && !cancelledBooking
+    ? [
+        a.record ? `<button class="btn btn-primary" data-q-pay="${q.id}">${svg(IC.money, 2.2)} Payment</button>` : "",
+        late ? remindBtn : "",
+        more ? `<details class="q-more"><summary class="btn btn-ghost">Aur ${svg(IC.chevd, 2.2)}</summary><div class="q-more-menu">${more}</div></details>` : "",
       ].join("")
     : ""
   const amtSub = !waived && paidPart > 0 && remaining > 0 ? `<span class="sub">${rsText(paidPart)} mil chuka</span>` : ""
@@ -234,7 +252,7 @@ export function paymentsCardHtml(view: BookingSchedule | null, opts: PaymentsCar
     </div>
     ${bar}
     ${notes.join("")}
-    <div class="q-sec"><span class="t">Qistein</span><span class="s">${open.length ? `${open.length} baaqi` : live.length ? "sab mil gayin" : ""}</span></div>
+    <div class="q-sec"><span class="t">Qistein</span><span class="s">${cancelled ? "" : open.length ? `${open.length} baaqi` : live.length ? "sab mil gayin" : ""}</span></div>
     <div class="q-list">${rows}</div>
     <div class="q-sec"><span class="t">Payment history</span><span class="s">${(view.payments || []).length} entry</span></div>
     <div class="q-hist">${history}</div>

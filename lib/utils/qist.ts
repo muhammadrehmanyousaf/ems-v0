@@ -52,6 +52,22 @@ export function dayText(day: string | null | undefined): string {
   return `${Number(m[3])} ${MONTHS[Number(m[2]) - 1] || ""} ${m[1]}`
 }
 
+/**
+ * The CUSTOMER's page writes money as "Rs. 2,100" and dates as "Oct 9, 2026"
+ * (see app/(main)/user/bookings/[id]/page.tsx). The schedule card on that page
+ * follows the page it sits on, so the customer reads ONE format top to bottom;
+ * the vendor console has its own ("Rs 2,100", "9 Oct 2026") used throughout it.
+ */
+export function rsTextCustomer(value: unknown): string {
+  return `Rs. ${Math.round(moneyOf(value)).toLocaleString()}`
+}
+const MONTHS_US = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+export function dayTextCustomer(day: string | null | undefined): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(day || ""))
+  if (!m) return "—"
+  return `${MONTHS_US[Number(m[2]) - 1] || ""} ${Number(m[3])}, ${m[1]}`
+}
+
 type Tone = "ok" | "warn" | "info" | "bad" | "mut" | "acc"
 
 export interface QistStateView {
@@ -62,7 +78,7 @@ export interface QistStateView {
   detail: string
 }
 
-const plural = (n: number) => (n === 1 ? "din" : "din")
+const plural = (_n: number) => "din" // Urdu "din" has no plural form
 
 /** The vendor's wording (Roman Urdu), exact days, exact remainder. */
 export function qistStateVendor(q: Pick<BookingInstallment, "state" | "daysOverdue" | "daysUntilDue" | "dueDate" | "remaining" | "amountPaid">): QistStateView {
@@ -90,19 +106,19 @@ export function qistStateVendor(q: Pick<BookingInstallment, "state" | "daysOverd
   }
 }
 
-/** The customer's wording (English, as the rest of that page). */
+/** The customer's wording (English, in the customer page's own money and date format). */
 export function qistStateCustomer(q: Pick<BookingInstallment, "state" | "daysOverdue" | "dueDate" | "remaining">): QistStateView {
   const left = moneyOf(q.remaining)
-  const due = dayText(q.dueDate)
+  const due = dayTextCustomer(q.dueDate)
   switch (q.state as QistState) {
     case "overdue": {
       const d = Math.max(1, moneyOf(q.daysOverdue))
-      return { tone: "bad", label: `Overdue by ${d} day${d === 1 ? "" : "s"}`, detail: `${rsText(left)} was due ${due}` }
+      return { tone: "bad", label: `Overdue by ${d} day${d === 1 ? "" : "s"}`, detail: `${rsTextCustomer(left)} was due ${due}` }
     }
     case "due_today":
-      return { tone: "warn", label: "Due today", detail: `${rsText(left)} due today` }
+      return { tone: "warn", label: "Due today", detail: `${rsTextCustomer(left)} due today` }
     case "part_paid":
-      return { tone: "info", label: "Part paid", detail: `${rsText(left)} left · due ${due}` }
+      return { tone: "info", label: "Part paid", detail: `${rsTextCustomer(left)} left · due ${due}` }
     case "paid":
       return { tone: "ok", label: "Paid", detail: "" }
     case "waived":
@@ -110,7 +126,7 @@ export function qistStateCustomer(q: Pick<BookingInstallment, "state" | "daysOve
     case "cancelled":
       return { tone: "mut", label: "Cancelled", detail: "Booking cancelled" }
     default:
-      return { tone: "acc", label: "Upcoming", detail: `${rsText(left)} due ${due}` }
+      return { tone: "acc", label: "Upcoming", detail: `${rsTextCustomer(left)} due ${due}` }
   }
 }
 
