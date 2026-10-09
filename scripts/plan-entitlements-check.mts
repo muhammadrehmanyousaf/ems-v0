@@ -181,6 +181,7 @@ await check("every screen that locks a feature or shows a meter reads it from us
     "components/dashboard/mainScreens/billing/artifact/billing-artifact.tsx",
     "components/dashboard/mainScreens/businessSettings/redesigned/images-manager.tsx",
     "components/dashboard/shared/whatsapp-quick-send.tsx",
+    "components/dashboard/layout/champagne-user-menu.tsx",
     "components/dashboard/mainScreens/function-sheets/redesigned/function-sheet-detail-redesigned-view.tsx",
   ];
   const bad = screens.filter((s) => !/usePlan\(|useFeature\(|useScreenLock\(/.test(read(s)));

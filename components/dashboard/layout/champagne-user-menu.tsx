@@ -10,7 +10,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { BadgeCheck, Bell, ChevronsUpDown, LogOut, Moon, Sun } from "lucide-react"
+import { BadgeCheck, Bell, ChevronsUpDown, CreditCard, LogOut, Moon, Sun } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -21,6 +21,7 @@ import { getDashboardRole, type DashboardRole } from "@/lib/dashboard-role"
 import { useThemePrefs, useResolvedThemeMode } from "@/lib/store/theme-prefs"
 import { NotificationAPI } from "@/lib/api/notifications"
 import { useUnreadCount } from "@/hooks/use-unread-count"
+import { usePlan } from "@/context/plan-context"
 
 const ROLE_LABEL: Record<DashboardRole, string> = { superAdmin: "Super admin", admin: "Admin", vendor: "Vendor", none: "Workspace" }
 
@@ -32,6 +33,11 @@ export function ChampagneUserMenu() {
   const resolved = useResolvedThemeMode()
   // WW-PERF — shared query; see hooks/use-unread-count.ts
   const { unread } = useUnreadCount()
+  // The vendor's plan, by its public name (the server's, via the one provider): the same name on every screen.
+  const plan = usePlan()
+  // Shown when it is true and useful: the vendor has a plan in force, or plan limits apply to them. A vendor with no plan
+  // while limits are NOT being enforced sees nothing (they use everything today; "No plan" would only alarm them).
+  const showPlan = getDashboardRole(user) === "vendor" && plan.known && (plan.enforced || plan.tier !== "free")
 
   const displayName = user?.fullName || "User"
   const displayEmail = user?.email || ""
@@ -58,7 +64,7 @@ export function ChampagneUserMenu() {
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{displayName}</span>
                   <span className="truncate text-xs">{displayEmail}</span>
-                  <span className="truncate text-[11px] text-muted-foreground">{ROLE_LABEL[getDashboardRole(user)]}</span>
+                  <span className="truncate text-[11px] text-muted-foreground">{ROLE_LABEL[getDashboardRole(user)]}{showPlan ? ` · ${plan.planName}` : ""}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
@@ -80,6 +86,12 @@ export function ChampagneUserMenu() {
             </div>
             <DropdownMenuSeparator />
 
+            {showPlan && (
+              <DropdownMenuItem onClick={() => router.push("/dashboard/billing")} data-testid="menu-plan">
+                <CreditCard />Plan &amp; billing
+                <span className="ml-auto text-xs text-muted-foreground">{plan.planName}</span>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}><BadgeCheck />Profile</DropdownMenuItem>
             <DropdownMenuItem onClick={logout}><LogOut />Log out</DropdownMenuItem>
           </DropdownMenuContent>

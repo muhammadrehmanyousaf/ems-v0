@@ -40,6 +40,8 @@ export interface LimitView extends LimitEntitlement {
 export interface PlanApi {
   /** The first answer has arrived (or the lookup failed: then everything stays open). */
   ready: boolean
+  /** The server's entitlements are loaded, so planName is the real plan (not the open default). */
+  known: boolean
   enforced: boolean
   tier: Entitlements["tier"]
   /** Public plan name, from the server. "No plan" when there is none. */
@@ -54,7 +56,7 @@ export interface PlanApi {
 }
 
 const OPEN: PlanApi = {
-  ready: false, enforced: false, tier: "free", planName: planNameOf("free"), endsAt: null,
+  ready: false, known: false, enforced: false, tier: "free", planName: planNameOf("free"), endsAt: null,
   can: () => true, feature: () => null, limit: () => null, refresh: () => {},
 }
 const PlanContext = React.createContext<PlanApi>(OPEN)
@@ -87,6 +89,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
     if (!isVendor || !ent) return { ...OPEN, ready: !isVendor || q.isError || q.isSuccess, refresh }
     return {
       ready: true,
+      known: true,
       enforced: ent.enforced,
       tier: ent.tier,
       planName: ent.planName,
