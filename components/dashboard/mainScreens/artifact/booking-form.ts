@@ -285,7 +285,8 @@ async function submitBookingForm(shadow: ShadowRoot) {
   const { choice, changed } = await recheckPicker(shadow, SLOTS_ID)
   if (!choice.ok || changed) {
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Booking banayein" }
-    return toast.error(choice.ok ? "Ye slot ab khula nahi raha — list naye sire se dekh kar doosra slot chunein." : choice.message)
+    // `changed` first: a choice that vanished leaves nothing selected, and "pick a slot" would hide WHY.
+    return toast.error(changed ? "Ye slot ab khula nahi raha — list naye sire se dekh kar doosra slot chunein." : (choice.ok ? "Waqt (slot) chunein." : choice.message))
   }
 
   const vendor: CreateBookingVendor = { businessId: bizId }

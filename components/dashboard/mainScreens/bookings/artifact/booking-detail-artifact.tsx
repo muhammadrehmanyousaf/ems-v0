@@ -1223,7 +1223,7 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
         const fresh = await recheckPicker(s, "rs-slots")
         if (!fresh.choice.ok || fresh.changed) {
           rss.disabled = false; rss.textContent = "Move karein"
-          toast.error(fresh.choice.ok ? "Ye slot ab khula nahi raha — list naye sire se dekh kar doosra slot chunein." : fresh.choice.message)
+          toast.error(fresh.changed ? "Ye slot ab khula nahi raha — list naye sire se dekh kar doosra slot chunein." : (fresh.choice.ok ? "Waqt (slot) chunein." : fresh.choice.message))
           return
         }
         rss.textContent = "Move ho raha…"
