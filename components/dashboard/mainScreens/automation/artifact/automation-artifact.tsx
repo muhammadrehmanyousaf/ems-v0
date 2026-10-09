@@ -93,10 +93,10 @@ function buildContent(status: AutomationStatus | null, rules: AutomationRule[], 
     <span class="r-ic">${svg(IC.bell, 1.8)}</span>
     <div class="r-main"><div class="r-nm">${escHtml(r.name)}</div><div class="r-when">${svg(IC.clock)} ${escHtml(triggerLabel(r.triggerType, r.offsetDays))} · mujhe notify karo</div>${r.message ? `<div class="r-msg">"${escHtml(r.message)}"</div>` : ""}<div class="r-meta">Aakhri baar chala: ${fmtDate(r.lastRunAt)}</div></div>
     ${locked ? "" : `<div class="r-acts"><button class="tgl" data-toggle="${r.id}" data-on="${r.enabled}" aria-pressed="${r.enabled}"><span class="dot"></span></button><button class="iconbtn" data-edit="${r.id}" title="Edit">${svg(IC.edit)}</button><button class="iconbtn bad" data-del="${r.id}" title="Delete">${svg(IC.trash)}</button></div>`}
-  </div>`).join("")}</div>` : `<div class="card"><div class="empty">Abhi koi custom rule nahi. "Naya reminder" se banayein.</div></div>`
+  </div>`).join("")}</div>` : `<div class="card"><div class="empty">Abhi koi custom rule nahi.${locked ? "" : " \"Naya reminder\" se banayein."}</div></div>`
 
   return `
-  <div class="head"><div><h1>Automation</h1><div class="sub">Khud-kar reminders — WeddingWala aapko kaam yaad dila deta hai.</div></div><div class="head-actions">${locked ? `<button class="btn btn-ghost" id="addbtn-locked" type="button" disabled title="Custom rules need a higher plan">${svg(IC.plus, 2.2)} Naya rule</button>` : `<button class="btn btn-primary" id="addbtn">${svg(IC.plus, 2.2)} Naya rule</button>`}</div></div>
+  <div class="head"><div><h1>Automation</h1><div class="sub">Khud-kar reminders — WeddingWala aapko kaam yaad dila deta hai.</div></div><div class="head-actions">${locked ? `<button class="btn btn-ghost plan-off" id="addbtn-locked" type="button" disabled title="Custom rules need a higher plan">${svg(IC.plus, 2.2)} Naya rule</button>` : `<button class="btn btn-primary" id="addbtn">${svg(IC.plus, 2.2)} Naya rule</button>`}</div></div>
   ${engine}
   <div class="sec-h">${svg(IC.bolt, 1.8)} Built-in reminders — on/off karein</div>
   ${builtIn}

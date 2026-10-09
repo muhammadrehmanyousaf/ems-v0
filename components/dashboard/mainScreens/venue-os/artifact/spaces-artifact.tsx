@@ -15,7 +15,7 @@ import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useBusiness } from "@/context/BusinessContext"
 import { usePlan } from "@/context/plan-context"
 import { refreshPlanUsage } from "@/hooks/use-billing-status"
-import { useArtifactShell, pkNum, escHtml, errorBannerHtml, openDrawer, closeDrawer, openConfirm, planMeterHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, pkNum, escHtml, errorBannerHtml, openDrawer, closeDrawer, openConfirm, planMeterHtml, planLimitNoteHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const KINDS = ["HALL", "LAWN", "MARQUEE", "ROOFTOP", "BASEMENT", "FLOOR", "SECTION", "OTHER"]
 const KIND_LABEL: Record<string, string> = { HALL: "Hall", LAWN: "Lawn", MARQUEE: "Marquee", ROOFTOP: "Rooftop", BASEMENT: "Basement", FLOOR: "Floor", SECTION: "Section", OTHER: "Aur" }
@@ -119,8 +119,8 @@ function mgFormBody(flat: SubVenueNode[], group?: MergeGroup | null): string {
 }
 
 /** The plan's halls-and-spaces limit for THIS business, from the server's entitlements (empty while it is not enforced). */
-type PlanUi = { meterHtml: string; addBlocked: boolean }
-const NO_PLAN_UI: PlanUi = { meterHtml: "", addBlocked: false }
+type PlanUi = { meterHtml: string; addBlocked: boolean; noteHtml: string }
+const NO_PLAN_UI: PlanUi = { meterHtml: "", addBlocked: false, noteHtml: "" }
 
 function buildContent(nodes: SubVenueNode[], warnings: { subVenueId: number; name: string; overBy: number }[], groups: MergeGroup[], bizName: string, scopeHint: string, planUi: PlanUi = NO_PLAN_UI): string {
   const flat = flatten(nodes)
@@ -171,8 +171,8 @@ function buildContent(nodes: SubVenueNode[], warnings: { subVenueId: number; nam
   return `
   <div class="head"><div><h1>Halls & Spaces</h1><div class="sub">Rooms inside <b>${escHtml(bizName)}</b> — har hall ki capacity, rent, aur booking tareeqa set karein.</div>
     <div class="scope-note" data-testid="spaces-scope-note">${svg(IC.building, 1.8)}<span>A hall, lawn or section added here goes <b>inside ${escHtml(bizName)}</b>. It does not create a new business.${scopeHint ? ` ${escHtml(scopeHint)}` : ""} To list a different business, <button type="button" class="linkbtn" data-nav-btn="/dashboard/business/new">add a business</button>.</span></div></div>
-    <div class="head-actions">${planUi.meterHtml}${planUi.addBlocked ? `<button class="btn btn-ghost" id="addbtn-locked" type="button" disabled title="Your plan's limit for halls and spaces is reached">${svg(IC.plus, 2.2)} Add a space</button>` : `<button class="btn btn-primary" id="addbtn">${svg(IC.plus, 2.2)} Add a space</button>`}</div></div>
-  ${tiles}${warnBox}${list}
+    <div class="head-actions">${planUi.meterHtml}${planUi.addBlocked ? `<button class="btn btn-ghost plan-off" id="addbtn-locked" type="button" disabled title="Your plan's limit for halls and spaces is reached">${svg(IC.plus, 2.2)} Add a space</button>` : `<button class="btn btn-primary" id="addbtn">${svg(IC.plus, 2.2)} Add a space</button>`}</div></div>
+  ${planUi.noteHtml}${tiles}${warnBox}${list}
   <div class="sec-h">${svg(IC.merge, 1.8)} Combined spaces</div>
   <div style="margin-bottom:12px"><button class="btn btn-ghost" id="mgaddbtn">${svg(IC.plus, 2)} Spaces combine karein</button></div>
   ${mgList}
@@ -205,8 +205,11 @@ export function SpacesArtifact() {
   const spaceLimit = plan.limit("spaces", bizId)
   const planUi = React.useMemo<PlanUi>(() => {
     if (!spaceLimit || !spaceLimit.enforced || spaceLimit.max === null) return NO_PLAN_UI
-    return { addBlocked: spaceLimit.reached, meterHtml: planMeterHtml(spaceLimit, ["hall or space", "halls and spaces"], " in this business") }
-  }, [spaceLimit])
+    return {
+      addBlocked: spaceLimit.reached, meterHtml: planMeterHtml(spaceLimit, ["hall or space", "halls and spaces"], " in this business"),
+      noteHtml: spaceLimit.reached ? planLimitNoteHtml({ planName: plan.planName, max: spaceLimit.max, nouns: ["hall or space", "halls and spaces"], nextPlan: spaceLimit.nextPlan, scopeNote: " in each business" }) : "",
+    }
+  }, [spaceLimit, plan.planName])
   const planUiRef = React.useRef(planUi); planUiRef.current = planUi
   const flatRef = React.useRef<SubVenueNode[]>([])
   const groupsRef = React.useRef<MergeGroup[]>([])

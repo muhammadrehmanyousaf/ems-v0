@@ -16,7 +16,7 @@ import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
 import { usePlan } from "@/context/plan-context"
 import { refreshPlanUsage } from "@/hooks/use-billing-status"
-import { useArtifactShell, pkNum, escHtml, initialsOf, initTablePager, errorBannerHtml, loadPref, savePref, openDrawer, closeDrawer, openConfirm, planLockedHtml, planMeterHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, pkNum, escHtml, initialsOf, initTablePager, errorBannerHtml, loadPref, savePref, openDrawer, closeDrawer, openConfirm, planLockedHtml, planMeterHtml, planLimitNoteHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const ROLE_LABEL: Record<string, string> = {
   waiter: "Waiter", cook_helper: "Cook helper", lead_cook: "Head cook", cleaner: "Safai", parking_valet: "Valet", dhol_player: "Dhol", qari: "Qari", imam: "Imam", decorator: "Decorator", florist: "Florist", lighting_tech: "Lighting", security: "Security", driver: "Driver", photographer: "Photographer", videographer: "Videographer", manager: "Manager", bagpiper: "Bagpiper", stage_host: "Stage host", dj: "DJ", sound_tech: "Sound", other: "Deegar",
@@ -84,7 +84,7 @@ function buildContent(list: StaffMember[], filter: string, planUi: PlanUi = NO_P
   </div>`
 
   const tab = (f: string, label: string, cnt: number) => `<button class="tab${f === filter ? " on" : ""}" data-f="${f}">${label} <span class="cnt">${cnt}</span></button>`
-  const toolbar = `<div class="toolbar"><div class="tabs" id="tabs">${tab("all", "Sab", list.length)}${EMPS.map((t) => tab(t, EMP_LABEL[t], cntEmp(t))).join("")}</div><div class="filters">${planUi.addBlocked ? `<button class="btn btn-ghost" id="addbtn-locked" type="button" disabled title="${escHtml(planUi.lockedLabel)}">${svg(IC.plus, 2.2)} Naya staff</button>` : `<button class="btn btn-primary" id="addbtn">${svg(IC.plus, 2.2)} Naya staff</button>`}</div></div>`
+  const toolbar = `<div class="toolbar"><div class="tabs" id="tabs">${tab("all", "Sab", list.length)}${EMPS.map((t) => tab(t, EMP_LABEL[t], cntEmp(t))).join("")}</div><div class="filters">${planUi.addBlocked ? `<button class="btn btn-ghost plan-off" id="addbtn-locked" type="button" disabled title="${escHtml(planUi.lockedLabel)}">${svg(IC.plus, 2.2)} Naya staff</button>` : `<button class="btn btn-primary" id="addbtn">${svg(IC.plus, 2.2)} Naya staff</button>`}</div></div>`
 
   const rows = list.filter((m) => filter === "all" || m.employmentType === filter)
   const body = rows.map((m) => {
@@ -136,7 +136,8 @@ export function StaffArtifact() {
         lockedHtml: planLockedHtml({ requiredPlan: staffFeature.requiredPlan, planName: plan.planName, what: "Staff accounts", compact: true, feature: "staff" }) }
     }
     if (staffLimit && staffLimit.enforced && staffLimit.max !== null) {
-      return { addBlocked: staffLimit.reached, lockedLabel: "Your plan's staff limit is reached", meterHtml: planMeterHtml(staffLimit, ["staff account", "staff accounts"]), lockedHtml: "" }
+      return { addBlocked: staffLimit.reached, lockedLabel: "Your plan's staff limit is reached", meterHtml: planMeterHtml(staffLimit, ["staff account", "staff accounts"]),
+        lockedHtml: staffLimit.reached ? planLimitNoteHtml({ planName: plan.planName, max: staffLimit.max, nouns: ["staff account", "staff accounts"], nextPlan: staffLimit.nextPlan }) : "" }
     }
     return NO_PLAN_UI
   }, [staffFeature, staffLimit, plan.planName])

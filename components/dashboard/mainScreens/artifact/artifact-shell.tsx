@@ -475,6 +475,20 @@ export function planLockedHtml(o: { requiredPlan: string; planName: string; what
 }
 
 /**
+ * "Your Basic plan includes 2 staff accounts. Upgrade to Pro to add more." The one-line strip an artifact screen shows
+ * when a numbered limit is reached: it explains the disabled "add" button. Adding is what is blocked; nothing the vendor
+ * already has is touched.
+ */
+export function planLimitNoteHtml(o: { planName: string; max: number; nouns: [string, string]; nextPlan: string | null; scopeNote?: string }): string {
+  const noPlan = o.planName === "No plan"
+  const head = noPlan ? "Without a plan" : `Your ${o.planName} plan`
+  const what = `${o.max} ${o.max === 1 ? o.nouns[0] : o.nouns[1]}${o.scopeNote || ""}`
+  const next = o.nextPlan ? `Upgrade to ${o.nextPlan} to add more.` : "Ask us about a custom plan to add more."
+  const lock = `<span class="pl-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>`
+  return `<div class="plan-locked compact" role="status" data-testid="plan-limit-note">${lock}<div class="pl-txt"><b>${escHtml(head)} includes ${escHtml(what)}</b><span>${escHtml(next)} What you already have stays exactly as it is.</span></div><button class="btn btn-ghost sm" type="button" data-nav-btn="/dashboard/billing">${o.nextPlan ? "Upgrade" : "See plans"}</button></div>`
+}
+
+/**
  * "2 of 3 halls and spaces". `l` is a limit from usePlan().limit(...). While enforcement is off (or the limit is
  * unlimited) it is only a plain count; a limit the server is not applying is never drawn as if it were.
  */
@@ -655,6 +669,7 @@ table.tbl{ width:100%; border-collapse:collapse; }
 .plan-locked .pl-ic{ width:38px; height:38px; border-radius:50%; background:var(--accent-wash); color:var(--accent-ink); display:grid; place-items:center; flex:none; } .plan-locked .pl-ic svg{ width:18px; height:18px; }
 .plan-locked .pl-txt{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; } .plan-locked .pl-txt b{ font-size:14px; color:var(--ink); } .plan-locked .pl-txt span{ font-size:12.5px; color:var(--ink-2); }
 .plan-locked .pl-act{ margin-top:10px; }
+.btn.plan-off[disabled]{ opacity:.5; cursor:not-allowed; }
 .plan-locked.compact{ align-items:center; padding:10px 14px; } .plan-locked.compact .pl-ic{ width:30px; height:30px; } .plan-locked.compact .pl-ic svg{ width:15px; height:15px; } .plan-locked.compact .pl-txt b{ font-size:13px; } .plan-locked.compact .pl-txt span{ font-size:12px; }
 .plan-meter{ display:flex; flex-direction:column; gap:6px; min-width:180px; max-width:320px; font-size:12px; color:var(--ink-2); } .plan-meter.plain{ color:var(--ink-3); }
 .plan-meter .pm-row{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; } .plan-meter.reached .pm-row span{ color:var(--ink); font-weight:600; }

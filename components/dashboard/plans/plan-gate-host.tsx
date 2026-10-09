@@ -23,7 +23,7 @@ import { toast as sonner } from "sonner"
 import { Lock, ArrowUpRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { gateAdvice, gateHeadline, isPlanGateEcho, onPlanGate, type PlanGate } from "@/lib/plan-gate"
+import { LIMIT_NOUNS, gateAdvice, gateHeadline, isPlanGateEcho, onPlanGate, type LimitKey, type PlanGate } from "@/lib/plan-gate"
 import { BILLING_HREF } from "./plan-locked"
 
 // sonner's toast.error is called from ~160 files. Wrap it ONCE so the sentence the dialog already shows is not toasted again.
@@ -62,7 +62,7 @@ export function PlanGateHost() {
             </DialogHeader>
             {gate.code === "LIMIT_REACHED" && gate.max != null && gate.used != null && (
               <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground" data-testid="plan-gate-usage">
-                You have {gate.used} of {gate.max} {gate.limitLabel || "allowed"}{gate.scope === "business" ? " in this business" : ""}.
+                You have {gate.used} of {gate.max} {(gate.limit && LIMIT_NOUNS[gate.limit as LimitKey]?.[gate.max === 1 ? 0 : 1]) || gate.limitLabel || "allowed"}{gate.scope === "business" ? " in this business" : ""}.
               </p>
             )}
             <DialogFooter className="gap-2 sm:gap-2">
