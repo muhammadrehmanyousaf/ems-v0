@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "@/lib/axiosConfig";
+import { MONEY_STALE_MS } from "@/lib/query/money-keys";
 
 /** Minimal booking shape for pickers — id + who + when + how much. */
 export interface VendorBookingLite {
@@ -53,7 +54,9 @@ export function useVendorBookings(enabled = true) {
       return (res.data?.data?.data ?? []) as VendorBookingLite[];
     },
     enabled,
-    staleTime: 5 * 60_000,
+    // It carries paymentStatus + downPayment for the booking pickers: a money figure, so no
+    // older than the shared money staleTime (PAY-UI_VENDOR-001).
+    staleTime: MONEY_STALE_MS,
   });
 }
 

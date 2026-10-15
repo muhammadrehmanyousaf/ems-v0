@@ -4,11 +4,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { useState } from 'react'
 import { VenueScopeSync } from '@/lib/providers/venue-scope-sync'
+import { applyMoneyQueryDefaults, registerMoneyQueryClient } from '@/lib/query/money-keys'
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
-    () =>
-      new QueryClient({
+    () => {
+      const client = new QueryClient({
         defaultOptions: {
           queries: {
             // Reduce refetching on window focus
@@ -61,7 +62,19 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
           },
         },
       })
+      // PAY-UI_VENDOR-001 — the 10 minute staleTime above is right for catalogue
+      // data and wrong for money: every money key goes stale after 30 s and
+      // refetches when the tab regains focus.
+      applyMoneyQueryDefaults(client)
+      return client
+    }
   )
+  // The shared invalidateMoney() helper (called by every money mutation and by the
+  // notification socket) needs the client for code that has no React hook. It is
+  // registered HERE, from the client React actually kept: the useState initializer
+  // above runs twice under StrictMode and only one of its results is used, so
+  // registering inside it can point the helper at a client nobody observes.
+  if (typeof window !== "undefined") registerMoneyQueryClient(queryClient)
 
   return (
     <QueryClientProvider client={queryClient}>
