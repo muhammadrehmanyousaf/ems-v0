@@ -25,7 +25,11 @@ export type MoneyRow = {
   totalAmount?: number | string | null;
   downPayment?: number | string | null;
   status?: string | null;
+  /** Carried by some payloads; a workflow LABEL only and never read as money (see isCancelledBooking). */
   orderStage?: string | null;
+  /** WP04: the struck final bill and when it was struck. Once settled this IS what the booking is worth. */
+  finalBill?: number | string | null;
+  settledAt?: string | null;
   bookingDetails?: Array<{
     totalAmount?: number | string | null;
     downPayment?: number | string | null;
@@ -37,9 +41,15 @@ function amount(value: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/**
+ * Cancelled means the STATUS says so (WP06, decision Q7), exactly as the server's
+ * isCancelledBooking: `orderStage = "cancelled"` is an order-builder label with no
+ * money effect, and reading it here made a Confirmed booking that still holds the
+ * customer's money show as "cancelled, owes nothing" on every web screen.
+ */
 export function isCancelledBooking(row: MoneyRow | null | undefined): boolean {
   if (!row) return false;
-  return CANCELLED.has(String(row.status ?? '')) || CANCELLED.has(String(row.orderStage ?? ''));
+  return CANCELLED.has(String(row.status ?? ''));
 }
 
 /**
@@ -51,6 +61,12 @@ export function isCancelledBooking(row: MoneyRow | null | undefined): boolean {
  */
 export function bookedOn(row: MoneyRow | null | undefined): number {
   if (!row) return 0;
+  // WP04 decision 5, same rule as the server's bookedOn: a struck final bill is what the
+  // booking is worth, so the customer who paid the real bill is not shown as overpaid.
+  if (row.settledAt && row.finalBill !== null && row.finalBill !== undefined && row.finalBill !== '') {
+    const bill = Number(row.finalBill);
+    if (Number.isFinite(bill)) return Math.max(0, bill);
+  }
   const lines = row.bookingDetails || [];
   const fromLines = lines.reduce((sum, d) => sum + amount(d?.totalAmount), 0);
   return Math.max(0, fromLines > 0 ? fromLines : amount(row.totalAmount));

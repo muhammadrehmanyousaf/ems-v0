@@ -9,6 +9,7 @@
  */
 
 import axiosInstance from "@/lib/axiosConfig";
+import { idempotencyConfig, type IdempotencyOptions } from "@/lib/utils/idempotency";
 
 export type PdcStatus =
   | "held"
@@ -50,6 +51,8 @@ export interface PostDatedCheque {
   updatedAt: string;
   customer?: PdcCustomerInfo | null;
   booking?: PdcBookingInfo | null;
+  /** Hygiene notes the create/edit/clear answered with (duplicate number, stale date, above the baqaya). Never blocks. */
+  warnings?: { code: string; message: string }[];
 }
 
 export interface PdcSummary {
@@ -101,6 +104,13 @@ export interface PdcListFilters {
   dueTo?: string;
 }
 
+/** `data.pdc` with the server's `data.warnings` attached, so a caller can show them. */
+function withWarnings(data: { pdc?: PostDatedCheque; warnings?: PostDatedCheque["warnings"] } | undefined): PostDatedCheque {
+  const pdc = data?.pdc as PostDatedCheque;
+  if (pdc && Array.isArray(data?.warnings) && data!.warnings!.length) pdc.warnings = data!.warnings;
+  return pdc;
+}
+
 export class PdcAPI {
   /** GET /api/v1/pdcs */
   static async list(filters: PdcListFilters = {}): Promise<PdcListResponse> {
@@ -120,7 +130,7 @@ export class PdcAPI {
   /** POST /api/v1/pdcs */
   static async create(body: CreatePdcInput): Promise<PostDatedCheque> {
     const res = await axiosInstance.post(`/api/v1/pdcs`, body);
-    return res.data?.data?.pdc;
+    return withWarnings(res.data?.data);
   }
 
   /** PATCH /api/v1/pdcs/:id — content edits only (not status). */
@@ -129,10 +139,13 @@ export class PdcAPI {
     return res.data?.data?.pdc;
   }
 
-  /** POST /api/v1/pdcs/:id/transition — status writes go here. */
-  static async transition(id: number, body: TransitionPdcInput): Promise<PostDatedCheque> {
-    const res = await axiosInstance.post(`/api/v1/pdcs/${id}/transition`, body);
-    return res.data?.data?.pdc;
+  /**
+   * POST /api/v1/pdcs/:id/transition — status writes go here. A clear is a money
+   * event, so `opts.idempotencyKey` is sent as the Idempotency-Key header.
+   */
+  static async transition(id: number, body: TransitionPdcInput, opts?: IdempotencyOptions): Promise<PostDatedCheque> {
+    const res = await axiosInstance.post(`/api/v1/pdcs/${id}/transition`, body, idempotencyConfig(opts?.idempotencyKey));
+    return withWarnings(res.data?.data);
   }
 
   /** DELETE /api/v1/pdcs/:id — soft delete. */

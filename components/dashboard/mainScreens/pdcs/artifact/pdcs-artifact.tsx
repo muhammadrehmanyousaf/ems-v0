@@ -11,6 +11,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { PdcAPI, type PostDatedCheque, type PdcStatus, type CreatePdcInput } from "@/lib/api/postDatedCheques"
 import { PaymentsAPI } from "@/lib/api/dashboard"
+import { invalidateMoney } from "@/lib/query/money-keys"
+import { SubmitKey, isAmbiguousFailure } from "@/lib/utils/idempotency"
+import { useActiveBusinessStore } from "@/lib/store/active-business-store"
 
 type BkOpt = { bookingId: number; customerName?: string; due?: number }
 import { useScreenLock } from "@/components/dashboard/mainScreens/artifact/plan-lock"
@@ -137,6 +140,7 @@ export function PdcsArtifact() {
   const bookings = React.useMemo(() => ((bkQ.data as { payments?: BkOpt[] } | null)?.payments ?? []) as BkOpt[], [bkQ.data])
   const bookingsRef = React.useRef(bookings); bookingsRef.current = bookings
   const list = React.useMemo(() => (data?.pdcs ?? []) as PostDatedCheque[], [data])
+  const listRef = React.useRef(list); listRef.current = list
   const summary = data?.summary ?? { total: 0, byStatus: {} }
   const [filter, setFilter] = React.useState(() => loadPref("tab:pdcs", "all"))
 
@@ -157,12 +161,29 @@ export function PdcsArtifact() {
     const s = shadowRef.current
     if (!s || !ready || bound.current) return
     bound.current = true
-    const refetch = () => qc.invalidateQueries({ queryKey: ["pdcs-art"] })
+    // PAY-UI_VENDOR-001 — a cheque that clears or bounces moves the booking's money, so it
+    // is reported like every other money write instead of refreshing only this ledger.
+    const refetch = (bookingId?: number | null) => { void invalidateMoney({ bookingId: bookingId ?? null, businessId: useActiveBusinessStore.getState().activeBusinessId }, qc) }
+    // PAY-UI_VENDOR-002 — one Idempotency-Key per cheque transition attempt, reused for a re-send of the same one.
+    const keys = new Map<string, SubmitKey>()
     const transition = async (id: number, to: PdcStatus, btn: HTMLButtonElement | null, extra?: { depositDate?: string; bounceReason?: string }) => {
       const orig = btn ? btn.innerHTML : ""
       if (btn) { btn.disabled = true; btn.innerHTML = "…" }
-      try { await PdcAPI.transition(id, { to, ...extra }); toast.success("Cheque update ho gaya"); refetch() }
-      catch { toast.error("Update nahi hua"); if (btn) { btn.disabled = false; btn.innerHTML = orig } }
+      const bookingId = listRef.current.find((y) => y.id === id)?.bookingId ?? null
+      const name = `pdc:${id}`
+      let k = keys.get(name); if (!k) { k = new SubmitKey(); keys.set(name, k) }
+      try {
+        const body = { to, ...extra }
+        const done = await PdcAPI.transition(id, body, { idempotencyKey: k.forBody(JSON.stringify(body)) })
+        k.rotate()
+        toast.success("Cheque update ho gaya"); refetch(bookingId)
+        done?.warnings?.forEach((w) => toast.warning(w.message, { duration: 9000 }))
+      }
+      catch (err: unknown) {
+        if (isAmbiguousFailure(err)) { toast.error("Jawab nahi aaya — cheque ka status shayad badal chuka hai. List dekh kar check karein.", { duration: 9000 }); refetch(bookingId) }
+        else { k.rotate(); toast.error("Update nahi hua") }
+        if (btn) { btn.disabled = false; btn.innerHTML = orig }
+      }
     }
     s.addEventListener("click", async (e) => {
       const t = e.target as HTMLElement
@@ -180,7 +201,11 @@ export function PdcsArtifact() {
         const body: CreatePdcInput = { chequeNumber: val("c-num"), bankName: val("c-bank"), amount, chequeDate: val("c-date"), bookingId: bk }
         if (val("c-notes")) body.notes = val("c-notes")
         save.disabled = true; const orig = save.textContent; save.textContent = "Add ho raha…"
-        try { await PdcAPI.create(body); toast.success("Cheque add ho gaya"); closeDrawer(s); refetch() }
+        try {
+          const made = await PdcAPI.create(body); toast.success("Cheque add ho gaya"); closeDrawer(s); refetch(bk)
+          // duplicate number / stale date / above the baqaya: saved, but say so
+          made?.warnings?.forEach((w) => toast.warning(w.message, { duration: 9000 }))
+        }
         catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Add nahi hua — booking # sahi hai?"); save.disabled = false; if (orig) save.textContent = orig }
         return
       }
@@ -200,7 +225,8 @@ export function PdcsArtifact() {
         const btn = del as HTMLButtonElement
         openConfirm(s, { title: "Cheque delete karein?", message: "Ye record hat jayega — wapas nahi aayega.", danger: true, onConfirm: async () => {
           btn.disabled = true; btn.innerHTML = "…"
-          try { await PdcAPI.remove(id); toast.success("Cheque hata diya"); refetch() }
+          const gone = listRef.current.find((y) => y.id === id)
+          try { await PdcAPI.remove(id); toast.success("Cheque hata diya"); refetch(gone?.bookingId ?? null) }
           catch { toast.error("Delete nahi hua"); btn.disabled = false; btn.innerHTML = svg(IC.trash) }
         } })
         return

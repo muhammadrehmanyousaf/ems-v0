@@ -13,6 +13,7 @@ import { io, Socket } from "socket.io-client";
 import { useUser } from "./UserContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { unreadCountKey } from "@/hooks/use-unread-count";
+import { invalidateMoney, invalidateMoneySoon, isMoneyNotification, notificationBookingId } from "@/lib/query/money-keys";
 import {
   NotificationAPI,
   type Notification,
@@ -121,11 +122,27 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       setTotalCount((c) => c + 1);
       // Play notification sound
       playNotificationSound();
+      // PAY-UI_VENDOR-001 — a payment / booking / refund event means a figure moved on
+      // ANOTHER device or by the customer. This used to touch only the bell, so every
+      // money screen kept the old number for its whole staleTime. The same helper every
+      // local money mutation calls refreshes the same keys.
+      if (isMoneyNotification(notification)) {
+        invalidateMoneySoon({ bookingId: notificationBookingId(notification) }, queryClient);
+      }
     });
 
     // Handle unread count updates from server
     socket.on("notification:unread-count", ({ count }: { count: number }) => {
       setUnreadCount(count);
+      // The badge in the shell reads the shared query, not this context's state.
+      queryClient.setQueryData(unreadCountKey, count);
+    });
+
+    // Events pushed while the socket was down are gone for good: after a reconnect,
+    // assume any money figure may have moved.
+    socket.io.on("reconnect", () => {
+      void invalidateMoney({}, queryClient);
+      queryClient.invalidateQueries({ queryKey: unreadCountKey });
     });
 
     // Load initial notifications

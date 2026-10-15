@@ -23,6 +23,8 @@ import {
 import { venueSpacesApi, type SubVenueNode } from "@/lib/api/venueSpaces"
 import { openDrawer, closeDrawer, escHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { slotPickerField, bindSlotPicker, loadSlotPicker, recheckPicker, pickerChoice } from "@/components/dashboard/mainScreens/artifact/slot-picker"
+import { invalidateMoney } from "@/lib/query/money-keys"
+import { isAmbiguousFailure } from "@/lib/utils/idempotency"
 
 /** The picker's element id; the date, venue and hall controls below drive it. */
 const SLOTS_ID = "bf-slots"
@@ -314,7 +316,7 @@ async function submitBookingForm(shadow: ShadowRoot) {
   }
   const gender = val(shadow, "bf-gender"); if (gender) (payload as CreateBookingPayload & { requestedGenderMode?: string }).requestedGenderMode = gender
   const city = val(shadow, "bf-city"); if (city) (payload as CreateBookingPayload & { eventCity?: string }).eventCity = city
-  const method = val(shadow, "bf-method"); if (method && adv) (payload as CreateBookingPayload & { paymentMethod?: string }).paymentMethod = method
+  const method = val(shadow, "bf-method"); if (method && adv) payload.paymentMethod = method
 
   const btn = shadow.querySelector("[data-bf-save]") as HTMLButtonElement | null
   if (btn) { btn.disabled = true; btn.textContent = "Ban rahi…" }
@@ -322,8 +324,15 @@ async function submitBookingForm(shadow: ShadowRoot) {
     const res = await BookingsAPI.create(payload)
     toast.success("Booking ban gayi")
     closeDrawer(shadow)
+    // PAY-UI_VENDOR-001 — a new booking arrives with its advance receipt: it must show up
+    // in the Bookings list, Khata, Payments, Receipts, Receivables and the Overview totals
+    // without a reload (it used to appear on the screen that opened the form only).
+    void invalidateMoney({ bookingId: bookingIdFromSaved(res) })
     opts.onSaved?.(res)
   } catch (err: unknown) {
+    // The answer may have been lost after the booking was written: refresh the lists so
+    // the vendor can see it before pressing save a second time.
+    if (isAmbiguousFailure(err)) void invalidateMoney({})
     const e = err as { response?: { data?: { message?: string; code?: string; data?: { code?: string } } } }
     const code = e.response?.data?.code || e.response?.data?.data?.code
     const msg = code === "SPACE_CONFLICT" || code === "PARTITION_CONFLICT" ? "Ye hall us din pehle se booked hai — doosra space/date chunein."

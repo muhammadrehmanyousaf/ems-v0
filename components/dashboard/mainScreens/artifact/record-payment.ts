@@ -20,6 +20,19 @@
  *
  * Uses the shell's right-side drawer (openDrawer/closeDrawer). The save button is
  * wired directly on the freshly-rendered node, so there's no listener leak.
+ *
+ * PAY-UI_VENDOR-001/-002/-003 — this drawer is the one door every screen records a
+ * payment through (booking page, Payments, Khata, Receivables, Today, Bookings
+ * kebab, chat), so the three money rules live HERE and not at each entry point:
+ *
+ *   - after a save it reports the change to `invalidateMoney`, so every other
+ *     screen's number moves with it (not only the caller's own key);
+ *   - it sends an Idempotency-Key minted when the drawer opened, so a retry of the
+ *     same submit cannot book the money twice on a server that honours it, and
+ *     `expectedOutstanding` (what the vendor was shown), so a second device with
+ *     a stale drawer is refused instead of overpaying the booking;
+ *   - when the answer is lost (no response / 5xx) it reads the booking back
+ *     before it says anything: "Record nahi hui" is only said when it is true.
  */
 
 import { toast } from "sonner"
@@ -27,6 +40,8 @@ import { ReceiptsAPI, type ReceiptMethod } from "@/lib/api/paymentReceipts"
 import { BookingAPI, type BookingSchedule } from "@/lib/api/bookings"
 import { openDrawer, closeDrawer, escHtml, pkNum } from "./artifact-shell"
 import { dayText, qistHeading, rsText } from "@/lib/utils/qist"
+import { invalidateMoney } from "@/lib/query/money-keys"
+import { SubmitKey, isAmbiguousFailure, checkPaymentLanded } from "@/lib/utils/idempotency"
 
 const METHODS: { v: ReceiptMethod; l: string }[] = [
   { v: "cash", l: "Cash" }, { v: "bank_transfer", l: "Bank transfer" }, { v: "jazzcash", l: "JazzCash" },
@@ -75,6 +90,11 @@ export function openRecordPaymentDrawer(shadow: ShadowRoot, opts: RecordPaymentO
   const qistEl = shadow.getElementById("rp-qist") as HTMLSelectElement | null
   const overEl = shadow.getElementById("rp-over")
   let schedule: BookingSchedule | null = opts.schedule ?? null
+  // One key per drawer open; `forBody` hands out the same key only for an identical re-send.
+  const submitKey = new SubmitKey()
+  // The Baqaya the vendor was shown (the server's own figure, never the caller's rounded one).
+  let shownOutstanding: number | null = null
+  let onQistChange: (() => void) | null = null
 
   const checkOver = () => {
     if (!overEl) return
@@ -89,6 +109,7 @@ export function openRecordPaymentDrawer(shadow: ShadowRoot, opts: RecordPaymentO
   /** Fill the qist chooser from the server's schedule and prefill the amount from IT. */
   const applySchedule = (sch: BookingSchedule) => {
     schedule = sch
+    shownOutstanding = typeof sch.money?.outstanding === "number" && Number.isFinite(sch.money.outstanding) ? sch.money.outstanding : null
     const wrap = shadow.getElementById("rp-qist-wrap") as HTMLElement | null
     const owing = (sch.installments || []).filter((q) => q.id != null && (q.actions ? q.actions.record : (q.remaining ?? 0) > 0))
     if (!wrap || !qistEl || !owing.length) return
@@ -113,7 +134,10 @@ export function openRecordPaymentDrawer(shadow: ShadowRoot, opts: RecordPaymentO
       }
       checkOver()
     }
-    qistEl.addEventListener("change", () => pick(qistEl.value))
+    // applySchedule can run again (a 409 re-reads the schedule): one listener, the newest.
+    if (onQistChange) qistEl.removeEventListener("change", onQistChange)
+    onQistChange = () => pick(qistEl.value)
+    qistEl.addEventListener("change", onQistChange)
     if (opts.installmentId && owing.some((q) => q.id === opts.installmentId)) {
       qistEl.value = String(opts.installmentId)
     }
@@ -128,20 +152,61 @@ export function openRecordPaymentDrawer(shadow: ShadowRoot, opts: RecordPaymentO
       if (!amount || amount <= 0) { toast.error("Sahi raqam likhein"); return }
       btn.disabled = true
       const orig = btn.innerHTML; btn.textContent = "Record ho raha…"
+      // What the vendor was looking at when they pressed save: the baseline for "did it land?".
+      const seen = schedule
+      const pin = Number(getv("rp-qist"))
+      const body = {
+        bookingId, amount,
+        method: (getv("rp-method") as ReceiptMethod) || "cash",
+        receivedDate: getv("rp-date") || todayStr(),
+        transactionRef: getv("rp-ref") || undefined,
+        ...(pin > 0 ? { installmentId: pin } : {}),
+        ...(shownOutstanding !== null ? { expectedOutstanding: shownOutstanding } : {}),
+      }
       try {
-        const pin = Number(getv("rp-qist"))
-        await ReceiptsAPI.create({
-          bookingId, amount,
-          method: (getv("rp-method") as ReceiptMethod) || "cash",
-          receivedDate: getv("rp-date") || todayStr(),
-          transactionRef: getv("rp-ref") || undefined,
-          ...(pin > 0 ? { installmentId: pin } : {}),
-        })
+        await ReceiptsAPI.create(body, { idempotencyKey: submitKey.forBody(JSON.stringify(body)) })
+        submitKey.rotate()
         toast.success("Payment record ho gayi")
         closeDrawer(shadow)
+        void invalidateMoney({ bookingId })
         opts.onSaved?.()
       } catch (err: unknown) {
-        toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Record nahi hui")
+        const status = (err as { response?: { status?: number } })?.response?.status
+        if (isAmbiguousFailure(err)) {
+          // The server may have committed although we never saw the answer. Read the
+          // booking back before saying anything (PAY-UI_VENDOR-002).
+          btn.textContent = "Check ho raha…"
+          let fresh: BookingSchedule | null = null
+          try { fresh = await BookingAPI.getSchedule(bookingId) } catch { /* still offline: unknown */ }
+          const check = checkPaymentLanded(seen, fresh, { amount, method: body.method, transactionRef: body.transactionRef })
+          if (fresh) { schedule = fresh }
+          void invalidateMoney({ bookingId })
+          if (check.verdict === "landed") {
+            toast.warning("Payment record ho chuki hai — jawab raaste mein kho gaya tha. Dobara na dabayein, booking par dekh lein.", { duration: 9000 })
+            closeDrawer(shadow)
+            opts.onSaved?.()
+            return
+          }
+          if (check.verdict === "absent") {
+            toast.error("Network ka masla — payment record nahi hui. Dobara koshish karein.")
+          } else {
+            const msg = "Payment shayad record ho chuki hai — jawab nahi aaya. Dobara dabane se pehle booking ki payment history check karein."
+            toast.error(msg, { duration: 9000 })
+            if (overEl) overEl.textContent = msg
+          }
+        } else {
+          // A refusal the server answered: nothing was written. A 409 usually means the
+          // booking moved under this drawer (another device) - show its fresh numbers.
+          submitKey.rotate()
+          const resp = (err as { response?: { data?: { message?: string; data?: { code?: string; outstanding?: number } } } })?.response?.data
+          if (status === 409) { BookingAPI.getSchedule(bookingId).then(applySchedule).catch(() => {}); void invalidateMoney({ bookingId }) }
+          if (status === 409 && resp?.data?.code === "OUTSTANDING_CHANGED") {
+            // another device / screen moved this booking's baqaya since the drawer opened (WP02)
+            toast.error(`Is booking ka baqaya badal chuka hai${typeof resp.data.outstanding === "number" ? ` (ab ${rsText(resp.data.outstanding)})` : ""}. Naye hisaab ke saath amount dobara check karke save karein.`, { duration: 9000 })
+          } else {
+            toast.error(resp?.message || (err as { message?: string })?.message || "Record nahi hui")
+          }
+        }
         btn.disabled = false; btn.innerHTML = orig
       }
     }

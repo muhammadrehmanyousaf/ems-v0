@@ -1,4 +1,5 @@
 import axiosInstance from "../axiosConfig";
+import { idempotencyConfig, type IdempotencyOptions } from "../utils/idempotency";
 
 // ─── Users ────────────────────────────────────────────────────
 export interface ApiUser {
@@ -1355,6 +1356,14 @@ export interface CreateBookingPayload {
   // the duration the check needs.
   estimatedDurationHours?: number;
   closureOverride?: { ack: boolean; reason: string };
+  /**
+   * PAY-UI_VENDOR-006 — how the advance typed in `vendors[].downPayment` was
+   * received (cash / bank_transfer / jazzcash ...). Only meaningful with an
+   * advance on an offline booking. Declared so a typed caller can send it; the
+   * server mirrors the advance receipt with this method once WP01 honours it
+   * (until then it is ignored and the receipt is recorded as cash).
+   */
+  paymentMethod?: string;
 }
 
 export type PaymentType = "down_payment" | "remaining" | "full_payment";
@@ -1453,6 +1462,8 @@ export class BookingsAPI {
      * the claim after the money commits.
      */
     claimId?: number,
+    /** PAY-UI_VENDOR-002 — sent as the Idempotency-Key header; reuse it when the same submit is retried. */
+    opts?: IdempotencyOptions,
   ) {
     const res = await axiosInstance.patch(
       `/api/v1/bookings/${id}/record-payment`,
@@ -1461,6 +1472,7 @@ export class BookingsAPI {
         paymentMethod,
         ...(claimId ? { claimId } : {}),
       },
+      idempotencyConfig(opts?.idempotencyKey),
     );
     return res.data;
   }
@@ -1552,7 +1564,15 @@ export class BookingsAPI {
    */
   static async adjustPrice(
     id: number,
-    body: { newTotalAmount: number; businessId?: number | null; reason?: string | null },
+    body: {
+      newTotalAmount: number;
+      businessId?: number | null;
+      reason?: string | null;
+      /** "booking": newTotalAmount is the BOOKING total (the server applies the delta to the caller's own line). Default "line". */
+      basis?: "line" | "booking";
+    },
+    /** PAY-UI_VENDOR-002 — sent as the Idempotency-Key header; reuse it when the same submit is retried. */
+    opts?: IdempotencyOptions,
   ): Promise<{
     from: number;
     to: number;
@@ -1562,7 +1582,7 @@ export class BookingsAPI {
     cashRefundOwed: number;
     belowFloor: boolean;
   }> {
-    const res = await axiosInstance.patch(`/api/v1/bookings/${id}/price`, body);
+    const res = await axiosInstance.patch(`/api/v1/bookings/${id}/price`, body, idempotencyConfig(opts?.idempotencyKey));
     return res.data?.data;
   }
 

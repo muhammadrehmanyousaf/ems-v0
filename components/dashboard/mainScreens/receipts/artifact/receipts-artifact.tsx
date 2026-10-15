@@ -12,6 +12,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { ReceiptsAPI, type PaymentReceipt, type ReceiptMethod, type CreateReceiptInput } from "@/lib/api/paymentReceipts"
 import { PaymentsAPI } from "@/lib/api/dashboard"
+import { invalidateMoney } from "@/lib/query/money-keys"
+import { SubmitKey, isAmbiguousFailure } from "@/lib/utils/idempotency"
 import { useArtifactShell, pkNum, escHtml, errorBannerHtml, initTablePager, loadPref, savePref, openDrawer, closeDrawer, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 type BkOpt = { bookingId: number; customerName?: string; due?: number }
@@ -149,15 +151,19 @@ export function ReceiptsArtifact() {
     const s = shadowRef.current
     if (!s || !ready || bound.current) return
     bound.current = true
-    const refetch = () => { qc.invalidateQueries({ queryKey: ["receipts-art"] }); qc.invalidateQueries({ queryKey: ["khata-art"] }) }
+    // PAY-UI_VENDOR-001 — this used to invalidate "khata-art", a key no screen reads, so
+    // Khata, Payments, Receivables, Overview and the booking page kept the old number.
+    const refetch = (bookingId?: number | null) => { void invalidateMoney({ bookingId: bookingId ?? null }, qc) }
+    // PAY-UI_VENDOR-002 — one Idempotency-Key per drawer open, reused for an identical re-send.
+    let submitKey = new SubmitKey()
     s.addEventListener("click", async (e) => {
       const t = e.target as HTMLElement
       if ((e.target as HTMLElement).closest("[data-retry]")) { qc.invalidateQueries({ queryKey: ["receipts-art"] }); return }
       const tab = t.closest(".tab") as HTMLElement | null
       if (tab?.dataset.f) { savePref("tab:receipts", tab.dataset.f); setFilter(tab.dataset.f); return }
-      if (t.closest("[data-r-new]")) { openDrawer(s, "Naya receipt", receiptForm(bookingsRef.current, null)); return }
+      if (t.closest("[data-r-new]")) { submitKey = new SubmitKey(); openDrawer(s, "Naya receipt", receiptForm(bookingsRef.current, null)); return }
       const edit = t.closest("[data-edit]") as HTMLElement | null
-      if (edit?.dataset.edit) { const r = listRef.current.find((y) => y.id === Number(edit.dataset.edit)); if (r) openDrawer(s, "Receipt edit", receiptForm(bookingsRef.current, r)); return }
+      if (edit?.dataset.edit) { const r = listRef.current.find((y) => y.id === Number(edit.dataset.edit)); if (r) { submitKey = new SubmitKey(); openDrawer(s, "Receipt edit", receiptForm(bookingsRef.current, r)) } return }
       const save = t.closest("[data-r-save]") as HTMLButtonElement | null
       if (save) {
         const val = (id: string) => (s.getElementById(id) as HTMLInputElement | HTMLSelectElement | null)?.value?.trim() ?? ""
@@ -171,11 +177,26 @@ export function ReceiptsArtifact() {
         if (val("r-notes")) body.notes = val("r-notes")
         save.disabled = true; const orig = save.textContent; save.textContent = "Save ho raha…"
         try {
-          if (editId) await ReceiptsAPI.update(editId, body)
-          else await ReceiptsAPI.create(body)
-          toast.success(editId ? "Receipt update ho gaya" : "Receipt darj ho gaya"); closeDrawer(s); refetch()
+          const idempotencyKey = submitKey.forBody(JSON.stringify([editId, body]))
+          if (editId) await ReceiptsAPI.update(editId, body, { idempotencyKey })
+          else await ReceiptsAPI.create(body, { idempotencyKey })
+          submitKey.rotate()
+          toast.success(editId ? "Receipt update ho gaya" : "Receipt darj ho gaya"); closeDrawer(s); refetch(bk)
+          // an edit that moved the receipt to another booking changes BOTH bookings
+          if (editId) { const prev = listRef.current.find((y) => y.id === editId)?.bookingId; if (prev && prev !== bk) refetch(prev) }
         }
-        catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua — booking # sahi hai?"); save.disabled = false; if (orig) save.textContent = orig }
+        catch (err: unknown) {
+          if (isAmbiguousFailure(err)) {
+            // The answer never arrived: the receipt may be on the ledger already. Refresh the list
+            // (which is what the vendor checks) instead of claiming it was not saved.
+            toast.error("Jawab nahi aaya — receipt shayad darj ho chuki hai. List dekh kar check karein, phir dobara koshish karein.", { duration: 9000 })
+            refetch(bk)
+          } else {
+            submitKey.rotate()
+            toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua — booking # sahi hai?")
+          }
+          save.disabled = false; if (orig) save.textContent = orig
+        }
         return
       }
       const del = t.closest("[data-del]") as HTMLElement | null
@@ -184,7 +205,8 @@ export function ReceiptsArtifact() {
         const btn = del as HTMLButtonElement
         openConfirm(s, { title: "Receipt delete karein?", message: "Ye record hat jayega — wapas nahi aayega.", danger: true, onConfirm: async () => {
           btn.disabled = true; btn.innerHTML = "…"
-          try { await ReceiptsAPI.remove(id); toast.success("Receipt hata diya"); refetch() }
+          const gone = listRef.current.find((y) => y.id === id)
+          try { await ReceiptsAPI.remove(id); toast.success("Receipt hata diya"); refetch(gone?.bookingId ?? null) }
           catch { toast.error("Delete nahi hua"); btn.disabled = false; btn.innerHTML = svg(IC.trash) }
         } })
         return

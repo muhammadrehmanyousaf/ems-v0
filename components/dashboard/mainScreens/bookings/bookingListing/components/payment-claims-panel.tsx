@@ -29,6 +29,8 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Check, X, Receipt, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage } from '@/lib/utils/api-error';
+import { invalidateMoney } from '@/lib/query/money-keys';
+import { SubmitKey } from '@/lib/utils/idempotency';
 
 const METHOD_LABELS: Record<string, string> = {
   bank_transfer: 'Bank transfer',
@@ -62,19 +64,32 @@ export function PaymentClaimsPanel({ bookingId }: { bookingId: number }) {
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['payment-claims', bookingId] });
-    // The booking itself moved — status, paymentStatus, and the money columns.
-    qc.invalidateQueries({ queryKey: ['bookings'] });
+    // The booking itself moved — status, paymentStatus, and the money columns — and so did
+    // every list and total that reads them (PAY-UI_VENDOR-001).
+    void invalidateMoney({ bookingId }, qc);
   };
 
+  // PAY-UI_VENDOR-002 — one Idempotency-Key per claim confirmation, reused if the same
+  // confirmation is re-sent after a lost answer; a new one once it succeeded.
+  const [confirmKeys] = useState(() => new Map<number, SubmitKey>());
+
   const confirmMut = useMutation({
-    mutationFn: (claim: PaymentClaim) =>
-      BookingsAPI.recordPayment(
+    mutationFn: (claim: PaymentClaim) => {
+      let k = confirmKeys.get(claim.id);
+      if (!k) { k = new SubmitKey(); confirmKeys.set(claim.id, k); }
+      return BookingsAPI.recordPayment(
         bookingId,
         claim.paymentType as PaymentType,
         claim.method,
         claim.id,
-      ),
-    onSuccess: () => { toast.success('Payment recorded. The booking is updated.'); invalidate(); },
+        { idempotencyKey: k.forBody(String(claim.id)) },
+      );
+    },
+    // 200 { noop: true } = the advance was already on the ledger (a replay / second tap): not an error, nothing was added.
+    onSuccess: (res: { data?: { noop?: boolean } } | undefined) => {
+      toast.success(res?.data?.noop ? 'That payment was already recorded - nothing was added.' : 'Payment recorded. The booking is updated.');
+      invalidate();
+    },
     onError: (e: any) => toast.error(errorMessage(e, "Couldn't record that payment")),
   });
 

@@ -34,6 +34,7 @@ import { SpacePicker, useVenueSpaces } from '@/components/dashboard/shared/space
 import { isUnpricedVendor, isMoneyUnset } from '@/lib/pricing/unpriced';
 import { WeddingUmbrellasAPI, type WeddingUmbrella } from '@/lib/api/weddingUmbrellas';
 import { useBusiness } from '@/context/BusinessContext';
+import { invalidateMoney } from '@/lib/query/money-keys';
 import { PartyPopper, CheckCircle2 } from 'lucide-react';
 
 interface OfflineBookingDialogProps {
@@ -760,6 +761,10 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                     specialRequests: combinedRequests,
                 }],
                 isOfflineBooking: true,
+                // PAY-UI_VENDOR-006 — the method the vendor picked for the advance travels WITH the
+                // create (the console's Nayi booking form already does the same). The create door
+                // records the advance itself; a second record-payment call after it is not needed.
+                paymentMethod: advanceCollected ? advanceMethod : undefined,
                 // Group this function under the wedding (mehndi/baraat/walima).
                 umbrellaId: weddingMode ? umbrellaId : undefined,
             });
@@ -772,17 +777,13 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
             );
             if (Number.isFinite(newBookingId) && newBookingId > 0) {
                 try { onCreated?.(newBookingId); } catch { /* ignore */ }
-                // Record the advance the customer just paid at booking. Best-effort:
-                // if it fails the booking still exists and the vendor can record the
-                // payment later from the booking, so we never block the primary flow.
-                if (advanceCollected) {
-                    try {
-                        await BookingsAPI.recordPayment(newBookingId, 'down_payment', advanceMethod);
-                        toast.success('Advance recorded');
-                    } catch {
-                        toast.warning('Booking saved, but recording the advance failed — record it from the booking.');
-                    }
-                }
+                // PAY-UI_VENDOR-006 / WP02 decision Q5 — this used to call
+                // recordPayment(newBookingId, 'down_payment', advanceMethod) HERE. The create above
+                // has already recorded the advance (a cash receipt for the required amount), and on
+                // the server as it stands that second call recorded the ENTIRE remaining balance as
+                // a bank-transfer receipt and marked the booking Paid. Never call it twice.
+                if (advanceCollected) toast.success('Advance recorded');
+                void invalidateMoney({ bookingId: newBookingId });
             }
             if (weddingMode) {
                 // Lock the group and keep the dialog open so the manager adds the

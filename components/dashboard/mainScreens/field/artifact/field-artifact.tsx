@@ -144,7 +144,10 @@ export function FieldArtifact() {
 
   const leadsQ = useQuery({ queryKey: ["field-leads"], queryFn: () => LeadAPI.list({}) })
   const holdsQ = useQuery({ queryKey: ["field-holds", bizId], queryFn: () => VendorHoldsAPI.list(bizId ?? undefined) })
-  const receiptsQ = useQuery({ queryKey: ["field-receipts", bizId, today], queryFn: () => ReceiptsAPI.list({ from: today, to: today, ...(bizId ? { businessId: bizId } : {}) }).catch(() => ({ receipts: [], summary: { total: 0, byMethod: {} } })) })
+  // PAY-UI_VENDOR-004 (same class) — "today's receipts" is a money total: with "Sabhi venue"
+  // (activeBusinessId null) it is every venue's, not the first venue's. `bizId` (first-venue
+  // fallback) stays for the things that genuinely need ONE venue (holds, new lead).
+  const receiptsQ = useQuery({ queryKey: ["field-receipts", activeBusinessId, today], queryFn: () => ReceiptsAPI.list({ from: today, to: today, ...(activeBusinessId ? { businessId: activeBusinessId } : {}) }).catch(() => ({ receipts: [], summary: { total: 0, byMethod: {} } })) })
   const expensesQ = useQuery({ queryKey: ["field-expenses", today], queryFn: () => ExpensesAPI.list({ from: today, to: today }).catch(() => ({ expenses: [], summary: null } as unknown as Awaited<ReturnType<typeof ExpensesAPI.list>>)) })
   const isError = leadsQ.isError || holdsQ.isError
 

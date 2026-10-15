@@ -11,6 +11,8 @@
 import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { invalidateMoney } from "@/lib/query/money-keys"
+import { useActiveBusinessStore } from "@/lib/store/active-business-store"
 import {
   ExpensesAPI, type VendorExpense, type ExpenseCategory, type ExpensePaymentMethod, type CreateExpenseInput,
 } from "@/lib/api/vendorExpenses"
@@ -144,7 +146,9 @@ export function ExpensesArtifact() {
     const s = shadowRef.current
     if (!s || !ready || bound.current) return
     bound.current = true
-    const refetch = () => qc.invalidateQueries({ queryKey: ["expenses-art"] })
+    // PAY-UI_VENDOR-001 — an expense moves the tax report, the Venue OS profit and the
+    // Reports figures too; report it to the shared fan-out, not just this list.
+    const refetch = () => { void invalidateMoney({ businessId: useActiveBusinessStore.getState().activeBusinessId }, qc) }
     s.addEventListener("click", async (e) => {
       const t = e.target as HTMLElement
       if ((e.target as HTMLElement).closest("[data-retry]")) { qc.invalidateQueries({ queryKey: ["expenses-art"] }); return }

@@ -69,14 +69,15 @@ function eventCard(ev: TodayEvent): string {
   // and never reflects a payment recorded AFTER it — so the door-side vendor was
   // shown a stale baqaya and could re-collect money already received. Derive live
   // baqaya from the reconciled receipts column (downPayment), matching every other
-  // money surface: grand (renegotiated, if any) − received; cancelled owes nothing.
-  const total = money(b.orderGrand ?? b.totalAmount)
+  // money surface: booking total − received; cancelled owes nothing. The order snapshot (orderGrand) is a DRAFT
+  // and no money surface reads it (WP06 Q7).
+  const total = money(b.totalAmount)
   const balance = isCancelledBooking(b) ? 0 : Math.max(0, total - receivedOn(b))
   // Today is the single highest-value moment to collect baqaya — the customer is
   // AT the venue. Record it in place instead of forcing a trip to the detail.
   const recBtn = balance > 0 ? `<button class="iconbtn rec" data-rec="${b.id}" data-rec-name="${escHtml(name)}" data-rec-due="${Math.round(balance)}" title="Baqaya record karein">${svg(IC.wallet, 1.9)}</button>` : ""
   const acts = `<div class="ev-acts">${phone ? `<button class="iconbtn" data-tel="${escHtml(phone)}" title="Call">${svg(IC.call)}</button><button class="iconbtn wa" data-wa="${escHtml(phone)}" title="WhatsApp">${svg(IC.wa)}</button>` : ""}${recBtn}<button class="iconbtn" data-nav-btn="/dashboard/bookings/${b.id}" title="Kholein">${svg(IC.open)}</button></div>`
-  const moneyRow = (b.orderGrand != null || b.totalAmount != null) ? `<div class="ev-money"><div><div class="em-cap">Kul</div><div class="em-val tnum"><span class="rs">Rs</span> ${pkNum(money(b.orderGrand ?? b.totalAmount))}</div></div>${balance > 0 ? `<div><div class="em-cap">Baqaya</div><div class="em-val due tnum"><span class="rs">Rs</span> ${pkNum(balance)}</div></div>` : ""}</div>` : ""
+  const moneyRow = b.totalAmount != null ? `<div class="ev-money"><div><div class="em-cap">Kul</div><div class="em-val tnum"><span class="rs">Rs</span> ${pkNum(money(b.totalAmount))}</div></div>${balance > 0 ? `<div><div class="em-cap">Baqaya</div><div class="em-val due tnum"><span class="rs">Rs</span> ${pkNum(balance)}</div></div>` : ""}</div>` : ""
   const tasks = ev.tasks.length ? `<div class="tasks">${[...ev.tasks].sort((a, c) => (a.sortOrder - c.sortOrder) || (a.scheduledTime || "").localeCompare(c.scheduledTime || "")).map(taskHtml).join("")}</div>` : `<div class="notasks">Is event ke liye koi run-sheet task nahi.</div>`
   return `<div class="evcard">
     <div class="ev-h"><div class="ev-time"><div class="t">${b.bookingTime ? fmtTime(b.bookingTime).split(" ")[0] : "—"}</div><div class="a">${b.bookingTime ? fmtTime(b.bookingTime).split(" ")[1] || "" : ""}</div></div>
@@ -87,7 +88,7 @@ function eventCard(ev: TodayEvent): string {
 
 function buildContent(d: TodayResponse): string {
   const events = d.events || []
-  const totalVal = events.reduce((a, e) => a + money(e.booking.orderGrand ?? e.booking.totalAmount), 0)
+  const totalVal = events.reduce((a, e) => a + money(e.booking.totalAmount), 0)
   const pendingTasks = events.reduce((a, e) => a + e.tasks.filter((t) => t.status !== "done").length, 0)
   const dLabel = d.date ? new Date(d.date).toLocaleDateString("en-PK", { weekday: "long", day: "numeric", month: "long" }) : new Date().toLocaleDateString("en-PK", { weekday: "long", day: "numeric", month: "long" })
 

@@ -189,6 +189,10 @@ function returnBanner(mode: ReturnMode, status: BillingStatus | null, waitedSeco
 function statusCard(status: BillingStatus | null): string {
   if (!status || !status.subscription) return ""
   const s = status.subscription
+  // PAY-UI_VENDOR-007 — a lapsed plan said "<date> tak access rahegi" with a date in the
+  // PAST. The sentence is chosen by whether that date has gone by.
+  const endsMs = status.subscriptionEndsAt ? new Date(status.subscriptionEndsAt).getTime() : NaN
+  const accessEnded = Number.isFinite(endsMs) && endsMs < Date.now()
   const pill: Record<string, [string, string]> = {
     active: ["ok", "Active"], past_due: ["warn", "Payment fail — retry ho rahi hai"], pending: ["info", "Payment ka intezaar"], none: ["bad", "Koi active plan nahi"],
   }
@@ -205,9 +209,9 @@ function statusCard(status: BillingStatus | null): string {
     status.access === "past_due"
       ? `<div class="sp-s" style="color:var(--warn)">Is mahine ki payment nahi hui. Safepay dobara koshish karega; portal ${escHtml(fmtDate(status.subscriptionEndsAt))} tak khula rahega. Apna card ya account check karein, ya "Card badlein" se naya card lagayein.</div>`
       : s.status === "cancelled"
-        ? `<div class="sp-s">Subscription cancel ho chuki hai. ${escHtml(fmtDate(status.subscriptionEndsAt))} tak access rahegi; jab chahein neeche se dobara subscribe karein.</div>`
+        ? `<div class="sp-s">Subscription cancel ho chuki hai. ${accessEnded ? `${escHtml(fmtDate(status.subscriptionEndsAt))} ko access khatam ho gaya;` : `${escHtml(fmtDate(status.subscriptionEndsAt))} tak access rahegi;`} jab chahein neeche se dobara subscribe karein.</div>`
         : s.status === "paused"
-          ? `<div class="sp-s">Subscription rok di gayi hai — koi charge nahi ho raha. ${escHtml(fmtDate(status.subscriptionEndsAt))} tak access rahegi. Dobara chalu karwane ke liye hum se rabta karein.</div>`
+          ? `<div class="sp-s">Subscription rok di gayi hai — koi charge nahi ho raha. ${accessEnded ? `${escHtml(fmtDate(status.subscriptionEndsAt))} ko access khatam ho gaya.` : `${escHtml(fmtDate(status.subscriptionEndsAt))} tak access rahegi.`} Dobara chalu karwane ke liye hum se rabta karein.</div>`
           : s.status === "trialing"
             ? `<div class="sp-s">Free trial ${escHtml(fmtDate(s.trialEndsAt || s.currentPeriodEndsAt))} tak chalega — koi card nahi, koi charge nahi. Us se pehle subscribe karein to portal bina rukay chalta rahega aur bache din paid plan mein shamil ho jate hain.</div>`
             : ""
@@ -217,7 +221,7 @@ function statusCard(status: BillingStatus | null): string {
     : ""
   return `<div class="sp" role="status">${svg(IC.lock)}<div style="flex:1;min-width:0">
     <div class="sp-t">Subscription <span class="st ${tone}" style="margin-left:8px">${escHtml(label)}</span>${status.environment === "sandbox" ? ` <span class="st mut" style="margin-left:6px">Sandbox</span>` : ""}</div>
-    <dl class="sp-grid"><div><dt>${s.status === "trialing" ? "Trial until" : "Paid until"}</dt><dd>${escHtml(fmtDate(s.status === "trialing" ? s.trialEndsAt || s.currentPeriodEndsAt : s.currentPeriodEndsAt))}</dd></div><div><dt>Portal open until</dt><dd>${escHtml(fmtDate(status.subscriptionEndsAt))}</dd></div><div><dt>Billing</dt><dd>${s.status === "cancelled" ? "Band — koi charge nahi" : s.status === "trialing" ? "Free trial · koi charge nahi" : "Monthly · Safepay"}</dd></div></dl>
+    <dl class="sp-grid"><div><dt>${s.status === "trialing" ? "Trial until" : "Paid until"}</dt><dd>${escHtml(fmtDate(s.status === "trialing" ? s.trialEndsAt || s.currentPeriodEndsAt : s.currentPeriodEndsAt))}</dd></div><div><dt>${accessEnded ? "Portal closed on" : "Portal open until"}</dt><dd>${escHtml(fmtDate(status.subscriptionEndsAt))}</dd></div><div><dt>Billing</dt><dd>${s.status === "cancelled" ? "Band — koi charge nahi" : s.status === "trialing" ? "Free trial · koi charge nahi" : "Monthly · Safepay"}</dd></div></dl>
     ${extra}${cancelBtn}</div></div>`
 }
 

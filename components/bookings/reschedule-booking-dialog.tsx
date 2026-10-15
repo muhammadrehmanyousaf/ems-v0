@@ -92,6 +92,8 @@ function humaniseError(code?: string, extra?: { diff?: number }): string {
       return "We couldn't reprice this booking for the new date. Please contact support.";
     case "business_not_found":
       return "We couldn't load one of this booking's vendors. Please contact support.";
+    case "USE_CHANGE_REQUEST":
+      return "This change alters the price, so it has to go to your vendor as a change request. Please send a change request from this booking.";
     case "requires_top_up":
       return extra?.diff
         ? `The new date costs ${fmtMoney(extra.diff)} more. A higher-priced date can't be set here yet — please coordinate with your vendor.`
@@ -130,6 +132,9 @@ export function RescheduleBookingDialog({
   const [newDate, setNewDate] = useState("");
   const [newTime, setNewTime] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // The price difference the server previewed for the chosen date (409 PRICE_CHANGE_CONFIRMATION_REQUIRED).
+  // Set => the next press accepts exactly that number and resends it as confirmPriceDelta.
+  const [priceDelta, setPriceDelta] = useState<number | null>(null);
 
   const todayStr = toDateInput(new Date().toISOString());
   const currentStr = toDateInput(currentDate);
@@ -155,6 +160,7 @@ export function RescheduleBookingDialog({
       setNewDate("");
       setNewTime("");
     }
+    setPriceDelta(null);
   };
 
   const handleSubmit = async () => {
@@ -164,6 +170,7 @@ export function RescheduleBookingDialog({
       const result = await BookingAPI.reschedule(bookingId, {
         newBookingDate: newDate,
         ...(newTime ? { newBookingTime: newTime } : {}),
+        ...(priceDelta !== null ? { confirmPriceDelta: priceDelta } : {}),
       });
       const refunded = Number(result?.totalRefunded || 0);
       toast({
@@ -184,6 +191,12 @@ export function RescheduleBookingDialog({
       // Backend puts the structured code in `message` (rescheduleBooking) OR in
       // `data.code` (space-conflict path); check both.
       const code = data?.data?.code || data?.message;
+      if (code === "PRICE_CHANGE_CONFIRMATION_REQUIRED" && Number.isFinite(Number(data?.data?.diff))) {
+        // Not a failure: the date is fine, the price moves. Show the number and ask.
+        setPriceDelta(Number(data?.data?.diff));
+        return;
+      }
+      setPriceDelta(null);
       toast({
         title: "Couldn't reschedule",
         description: humaniseError(code, { diff: data?.data?.diff }),
@@ -237,9 +250,8 @@ export function RescheduleBookingDialog({
                 </p>
                 <p className="text-xs text-neutral-500 flex items-start gap-2">
                   <Info className="h-3 w-3 mt-0.5 shrink-0" />
-                  If the new date is cheaper, the difference is refunded. If it
-                  costs more, we&apos;ll ask you to coordinate a top-up with your
-                  vendor.
+                  If the price changes for the new date, we show you the difference and
+                  you accept it before the date moves.
                 </p>
               </div>
             </AlertDialogDescription>
@@ -255,7 +267,7 @@ export function RescheduleBookingDialog({
                 type="date"
                 min={todayStr}
                 value={newDate}
-                onChange={(e) => setNewDate(e.target.value)}
+                onChange={(e) => { setNewDate(e.target.value); setPriceDelta(null); }}
                 disabled={submitting}
               />
             </div>
@@ -267,7 +279,7 @@ export function RescheduleBookingDialog({
               <select
                 id="reschedule-time"
                 value={newTime}
-                onChange={(e) => setNewTime(e.target.value)}
+                onChange={(e) => { setNewTime(e.target.value); setPriceDelta(null); }}
                 disabled={submitting}
                 className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2 disabled:opacity-60"
               >
@@ -279,6 +291,16 @@ export function RescheduleBookingDialog({
               </select>
             </div>
           </div>
+
+          {priceDelta !== null && (
+            <p className="text-sm font-medium" role="status">
+              {priceDelta === 0
+                ? "The price stays the same for this date."
+                : priceDelta > 0
+                  ? `This date costs ${fmtMoney(priceDelta)} more. The difference is added to what you owe your vendor.`
+                  : `This date costs ${fmtMoney(Math.abs(priceDelta))} less. Your booking total goes down by that amount.`}
+            </p>
+          )}
 
           <AlertDialogFooter>
             <AlertDialogCancel disabled={submitting}>Keep current date</AlertDialogCancel>
@@ -295,7 +317,7 @@ export function RescheduleBookingDialog({
                   Rescheduling…
                 </>
               ) : (
-                "Confirm new date"
+                priceDelta !== null ? "Accept price and reschedule" : "Confirm new date"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
