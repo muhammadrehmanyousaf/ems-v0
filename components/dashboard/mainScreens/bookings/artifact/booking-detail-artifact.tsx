@@ -1167,7 +1167,9 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
         const bizId = Number(pes.dataset.bkPriceBiz) || undefined
         pes.disabled = true; pes.textContent = "Update ho raha…"
         try {
-          const priceBody = { newTotalAmount: amount, businessId: bizId, reason }
+          // the drawer shows and sends the BOOKING total, so say so (WP06 Q1): on a multi-vendor
+          // booking the server moves the caller's own line by the difference, not by the whole total.
+          const priceBody = { newTotalAmount: amount, businessId: bizId, reason, basis: "booking" as const }
           const out = await BookingsAPI.adjustPrice(Number(pes.dataset.bkPriceSave), priceBody, { idempotencyKey: keyFor("price", [pes.dataset.bkPriceSave, priceBody]) })
           rotateKey("price")
           toast.success(out?.cashRefundOwed ? `Qeemat update ho gayi — Rs ${pkNum(out.cashRefundOwed)} wapsi pending hai` : "Qeemat update ho gayi")

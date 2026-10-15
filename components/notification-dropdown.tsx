@@ -43,6 +43,9 @@ const NOTIFICATION_CONFIG: Record<
   payment_received: { icon: CreditCard, color: "text-green-600", bg: "bg-green-50", label: "Payment" },
   payment_failed: { icon: AlertCircle, color: "text-red-600", bg: "bg-red-50", label: "Failed" },
   payment_refunded: { icon: RefreshCcw, color: "text-amber-600", bg: "bg-amber-50", label: "Refund" },
+  // a customer says they paid (needs the vendor's check) / the vendor could not find it
+  payment_claim: { icon: CreditCard, color: "text-blue-600", bg: "bg-blue-50", label: "Payment report" },
+  payment_claim_rejected: { icon: AlertCircle, color: "text-red-600", bg: "bg-red-50", label: "Not found" },
   payout_processed: { icon: Wallet, color: "text-emerald-600", bg: "bg-emerald-50", label: "Payout" },
   new_review: { icon: Star, color: "text-yellow-600", bg: "bg-yellow-50", label: "Review" },
   welcome: { icon: Sparkles, color: "text-bridal-gold-dark", bg: "bg-bridal-cream", label: "Welcome" },

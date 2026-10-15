@@ -85,7 +85,11 @@ export function PaymentClaimsPanel({ bookingId }: { bookingId: number }) {
         { idempotencyKey: k.forBody(String(claim.id)) },
       );
     },
-    onSuccess: () => { toast.success('Payment recorded. The booking is updated.'); invalidate(); },
+    // 200 { noop: true } = the advance was already on the ledger (a replay / second tap): not an error, nothing was added.
+    onSuccess: (res: { data?: { noop?: boolean } } | undefined) => {
+      toast.success(res?.data?.noop ? 'That payment was already recorded - nothing was added.' : 'Payment recorded. The booking is updated.');
+      invalidate();
+    },
     onError: (e: any) => toast.error(errorMessage(e, "Couldn't record that payment")),
   });
 

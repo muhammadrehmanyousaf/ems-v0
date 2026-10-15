@@ -40,6 +40,8 @@ const NOTIFICATION_ICONS: Record<string, { icon: React.ElementType; color: strin
   payment_received: { icon: CreditCard, color: "text-green-600", bg: "bg-green-50" },
   payment_failed: { icon: AlertCircle, color: "text-red-600", bg: "bg-red-50" },
   payment_refunded: { icon: RefreshCcw, color: "text-amber-600", bg: "bg-amber-50" },
+  payment_claim: { icon: CreditCard, color: "text-blue-600", bg: "bg-blue-50" },
+  payment_claim_rejected: { icon: AlertCircle, color: "text-red-600", bg: "bg-red-50" },
   payout_processed: { icon: Wallet, color: "text-emerald-600", bg: "bg-emerald-50" },
   new_review: { icon: Star, color: "text-yellow-600", bg: "bg-yellow-50" },
   welcome: { icon: Sparkles, color: "text-violet-600", bg: "bg-violet-50" },

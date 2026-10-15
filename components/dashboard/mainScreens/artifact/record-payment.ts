@@ -198,8 +198,14 @@ export function openRecordPaymentDrawer(shadow: ShadowRoot, opts: RecordPaymentO
           // A refusal the server answered: nothing was written. A 409 usually means the
           // booking moved under this drawer (another device) - show its fresh numbers.
           submitKey.rotate()
+          const resp = (err as { response?: { data?: { message?: string; data?: { code?: string; outstanding?: number } } } })?.response?.data
           if (status === 409) { BookingAPI.getSchedule(bookingId).then(applySchedule).catch(() => {}); void invalidateMoney({ bookingId }) }
-          toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || (err as { message?: string })?.message || "Record nahi hui")
+          if (status === 409 && resp?.data?.code === "OUTSTANDING_CHANGED") {
+            // another device / screen moved this booking's baqaya since the drawer opened (WP02)
+            toast.error(`Is booking ka baqaya badal chuka hai${typeof resp.data.outstanding === "number" ? ` (ab ${rsText(resp.data.outstanding)})` : ""}. Naye hisaab ke saath amount dobara check karke save karein.`, { duration: 9000 })
+          } else {
+            toast.error(resp?.message || (err as { message?: string })?.message || "Record nahi hui")
+          }
         }
         btn.disabled = false; btn.innerHTML = orig
       }

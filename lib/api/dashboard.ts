@@ -1564,7 +1564,13 @@ export class BookingsAPI {
    */
   static async adjustPrice(
     id: number,
-    body: { newTotalAmount: number; businessId?: number | null; reason?: string | null },
+    body: {
+      newTotalAmount: number;
+      businessId?: number | null;
+      reason?: string | null;
+      /** "booking": newTotalAmount is the BOOKING total (the server applies the delta to the caller's own line). Default "line". */
+      basis?: "line" | "booking";
+    },
     /** PAY-UI_VENDOR-002 — sent as the Idempotency-Key header; reuse it when the same submit is retried. */
     opts?: IdempotencyOptions,
   ): Promise<{

@@ -174,9 +174,10 @@ export function PdcsArtifact() {
       let k = keys.get(name); if (!k) { k = new SubmitKey(); keys.set(name, k) }
       try {
         const body = { to, ...extra }
-        await PdcAPI.transition(id, body, { idempotencyKey: k.forBody(JSON.stringify(body)) })
+        const done = await PdcAPI.transition(id, body, { idempotencyKey: k.forBody(JSON.stringify(body)) })
         k.rotate()
         toast.success("Cheque update ho gaya"); refetch(bookingId)
+        done?.warnings?.forEach((w) => toast.warning(w.message, { duration: 9000 }))
       }
       catch (err: unknown) {
         if (isAmbiguousFailure(err)) { toast.error("Jawab nahi aaya — cheque ka status shayad badal chuka hai. List dekh kar check karein.", { duration: 9000 }); refetch(bookingId) }
@@ -200,7 +201,11 @@ export function PdcsArtifact() {
         const body: CreatePdcInput = { chequeNumber: val("c-num"), bankName: val("c-bank"), amount, chequeDate: val("c-date"), bookingId: bk }
         if (val("c-notes")) body.notes = val("c-notes")
         save.disabled = true; const orig = save.textContent; save.textContent = "Add ho raha…"
-        try { await PdcAPI.create(body); toast.success("Cheque add ho gaya"); closeDrawer(s); refetch(bk) }
+        try {
+          const made = await PdcAPI.create(body); toast.success("Cheque add ho gaya"); closeDrawer(s); refetch(bk)
+          // duplicate number / stale date / above the baqaya: saved, but say so
+          made?.warnings?.forEach((w) => toast.warning(w.message, { duration: 9000 }))
+        }
         catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Add nahi hua — booking # sahi hai?"); save.disabled = false; if (orig) save.textContent = orig }
         return
       }

@@ -724,7 +724,16 @@ export class BookingAPI {
   // each structured code to friendly copy.
   static async reschedule(
     bookingId: number,
-    body: { newBookingDate: string; newBookingTime?: string },
+    body: {
+      newBookingDate: string;
+      newBookingTime?: string;
+      /**
+       * PAY-UI / WP06 Q12 — a reschedule onto a pricier (or cheaper) date is refused with
+       * 409 PRICE_CHANGE_CONFIRMATION_REQUIRED and the previewed `diff`; sending that same
+       * number back accepts it.
+       */
+      confirmPriceDelta?: number;
+    },
   ): Promise<RescheduleResult> {
     const res = await axiosInstance.post(`${v1}/${bookingId}/reschedule`, body);
     return res.data?.data;
