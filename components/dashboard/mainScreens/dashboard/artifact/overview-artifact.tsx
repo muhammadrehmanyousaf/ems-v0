@@ -434,7 +434,7 @@ svg .today-lbl{ fill:var(--accent-ink); font-size:10px; font-weight:600; }
 export function OverviewArtifact() {
   const hostRef = React.useRef<HTMLDivElement | null>(null)
   const { user } = useUser()
-  const { business, loading: businessLoading } = useBusiness()
+  const { businesses, loading: businessLoading } = useBusiness()
   const activeBusinessId = useActiveBusinessId()
   const qc = useQueryClient()
   const { shadowRef, ready } = useArtifactShell(hostRef, {
@@ -456,14 +456,38 @@ export function OverviewArtifact() {
     queryFn: ({ signal }) => AnalyticsAPI.getOverviewBundle(activeBusinessId, signal),
   })
   const compQ = useQuery({ queryKey: ["art-completeness"], queryFn: () => CompletenessAPI.listMine() })
-  const bizId = activeBusinessId ?? (business as { id?: number } | null)?.id ?? null
-  const reviewsQ = useQuery({ queryKey: ["art-reviews", bizId], enabled: !!bizId, queryFn: () => ReviewsAPI.getBusinessReviews(Number(bizId)).catch(() => null) })
-  // `bizId` is null until the business list resolves, so this fired once under
-  // ["art-refunds", null] and again under ["art-refunds", 3358] — a different
-  // key, so TanStack could not dedupe it. `reviewsQ` above dodges this with
-  // `enabled: !!bizId`, but null is a legitimate value here (it means "all
-  // venues"), so the gate is on the list having settled instead.
-  const refundQ = useQuery({ queryKey: ["art-refunds", bizId], enabled: !businessLoading, queryFn: () => listRefundObligations(bizId ?? undefined).catch(() => null) })
+  /**
+   * PAY-UI_VENDOR-004 — "Sabhi venue" (activeBusinessId null) used to be turned into
+   * the FIRST venue here (`activeBusinessId ?? business.id`) and handed to the refund
+   * card, so a vendor with customers owed Rs 90,000 on any other venue read "Koi
+   * wapsi baaki nahi — sab settle" while every other tile on the screen described all
+   * venues. null is a real value: it means every venue, and the server answers across
+   * all the vendor's businesses when no businessId is sent.
+   */
+  const reviewVenueIds = React.useMemo(
+    () => (activeBusinessId != null ? [activeBusinessId] : (businesses ?? []).map((b) => Number((b as { id?: number }).id)).filter((id) => Number.isFinite(id) && id > 0).slice(0, 10)),
+    [activeBusinessId, businesses],
+  )
+  // Reviews are read per venue; "all venues" is the combination of every venue's reviews,
+  // not the first one's.
+  const reviewsQ = useQuery({
+    queryKey: ["art-reviews", activeBusinessId ?? "all", reviewVenueIds.join(",")],
+    enabled: reviewVenueIds.length > 0,
+    queryFn: async () => {
+      const parts = (await Promise.all(reviewVenueIds.map((id) => ReviewsAPI.getBusinessReviews(id).catch(() => null)))).filter(Boolean) as Array<{ reviews?: unknown[]; averageRating?: number | null; totalReviews?: number }>
+      if (parts.length === 0) return null
+      if (parts.length === 1) return parts[0]
+      const total = parts.reduce((s, p) => s + n(p.totalReviews), 0)
+      const weighted = parts.reduce((s, p) => s + n(p.averageRating) * n(p.totalReviews), 0)
+      const reviews = parts.flatMap((p) => p.reviews ?? []) as Array<{ createdAt?: string }>
+      reviews.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      return { reviews, totalReviews: total, averageRating: total > 0 ? Math.round((weighted / total) * 10) / 10 : null }
+    },
+  })
+  // Keyed by activeBusinessId itself: the key is stable from the first render (the old
+  // first-venue fallback was null until the business list resolved, then a different
+  // key, so the call fired twice).
+  const refundQ = useQuery({ queryKey: ["art-refunds", activeBusinessId], enabled: !businessLoading, queryFn: () => listRefundObligations(activeBusinessId ?? undefined).catch(() => null) })
 
   const data: ArtData = React.useMemo(() => {
     const bundle = dashQ.data

@@ -11,6 +11,7 @@ import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { BrokerAPI, type Broker, type BrokerType, type CreateBrokerInput, type BrokerCommission, type OutstandingBrokerRow, type CommissionPaymentMethod } from "@/lib/api/brokers"
+import { invalidateMoney } from "@/lib/query/money-keys"
 import { useBusiness } from "@/context/BusinessContext"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
@@ -157,8 +158,12 @@ export function BrokersArtifact() {
   const activeBusinessId = useActiveBusinessId()
   const bizId = activeBusinessId ?? (business as { id?: number } | null)?.id ?? null
   const bizRef = React.useRef(bizId); bizRef.current = bizId
-  const { data, isError } = useQuery({ queryKey: ["brokers-art", bizId], enabled: !!bizId, queryFn: () => BrokerAPI.list({ businessId: Number(bizId) }) })
-  const outQ = useQuery({ queryKey: ["brokers-out", bizId], enabled: !!bizId, queryFn: () => BrokerAPI.outstandingSummary({ businessId: Number(bizId) }).catch(() => ({ perBroker: [], grandTotal: 0 })) })
+  // PAY-UI_VENDOR-004 (same class) — "Baqaya commission" is money owed to brokers. With "Sabhi
+  // venue" (activeBusinessId null) it used to describe the FIRST venue only; both endpoints
+  // answer across every venue the vendor owns when no businessId is sent. `bizId` (first-venue
+  // fallback) remains for the writes that need ONE venue (new broker).
+  const { data, isError } = useQuery({ queryKey: ["brokers-art", activeBusinessId], enabled: !!bizId, queryFn: () => BrokerAPI.list(activeBusinessId ? { businessId: activeBusinessId } : {}) })
+  const outQ = useQuery({ queryKey: ["brokers-out", activeBusinessId], enabled: !!bizId, queryFn: () => BrokerAPI.outstandingSummary(activeBusinessId ? { businessId: activeBusinessId } : {}).catch(() => ({ perBroker: [], grandTotal: 0 })) })
   const list = React.useMemo(() => (data?.brokers ?? []) as Broker[], [data])
   const listRef = React.useRef(list); listRef.current = list
   const outMap = React.useMemo(() => {
@@ -186,13 +191,13 @@ export function BrokersArtifact() {
     const s = shadowRef.current
     if (!s || !ready || bound.current) return
     bound.current = true
-    const refetch = () => { qc.invalidateQueries({ queryKey: ["brokers-art", bizRef.current] }); qc.invalidateQueries({ queryKey: ["brokers-out", bizRef.current] }) }
+    const refetch = () => { qc.invalidateQueries({ queryKey: ["brokers-art"] }); qc.invalidateQueries({ queryKey: ["brokers-out"] }) }
     const val = (id: string) => (s.getElementById(id) as HTMLInputElement | HTMLSelectElement | null)?.value?.trim() ?? ""
 
     const openLedger = (brokerId: number) => {
       const broker = listRef.current.find((y) => y.id === brokerId); if (!broker) return
       openDrawer(s, "Commission ledger", `<div class="cl-load">Ledger load ho raha hai…</div>`)
-      BrokerAPI.listCommissions({ brokerId, businessId: Number(bizRef.current) }).then(({ commissions }) => {
+      BrokerAPI.listCommissions({ brokerId, businessId: Number(broker.businessId || bizRef.current) }).then(({ commissions }) => {
         const b = s.getElementById("ww-drawer-body"); if (b) b.innerHTML = commissionLedgerBody(broker, commissions)
       }).catch(() => { const b = s.getElementById("ww-drawer-body"); if (b) b.innerHTML = `<div class="cl-empty">Ledger load nahi hui.</div>` })
     }
@@ -206,10 +211,12 @@ export function BrokersArtifact() {
         const r = await BrokerAPI.recordPayment(commId, { amount: amt, method: method || "cash" })
         toast.success(`Ada darj: Rs ${pkNum(amt)}${r.result?.autoTransitioned ? " · poora ho gaya" : ""}`)
         refetch()
+        // PAY-UI_VENDOR-001 — a commission payment is money out: Khata / Reports / tax read it.
+        void invalidateMoney({ businessId: activeBusinessId })
         // re-render the open ledger for this broker (find via the still-open drawer)
         const nameEl = s.querySelector(".cl-name")?.textContent || ""
         const broker = listRef.current.find((y) => y.name === nameEl)
-        if (broker) { const { commissions } = await BrokerAPI.listCommissions({ brokerId: broker.id, businessId: Number(bizRef.current) }); const b = s.getElementById("ww-drawer-body"); if (b) b.innerHTML = commissionLedgerBody(broker, commissions) }
+        if (broker) { const { commissions } = await BrokerAPI.listCommissions({ brokerId: broker.id, businessId: Number(broker.businessId || bizRef.current) }); const b = s.getElementById("ww-drawer-body"); if (b) b.innerHTML = commissionLedgerBody(broker, commissions) }
       } catch (err: unknown) {
         toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Ada darj nahi hui")
         if (btn) { btn.disabled = false; btn.textContent = "Ada" }
@@ -220,7 +227,7 @@ export function BrokersArtifact() {
     }
     s.addEventListener("click", async (e) => {
       const t = e.target as HTMLElement
-      if (t.closest("[data-retry]")) { qc.invalidateQueries({ queryKey: ["brokers-art", bizRef.current] }); qc.invalidateQueries({ queryKey: ["brokers-out", bizRef.current] }); return }
+      if (t.closest("[data-retry]")) { qc.invalidateQueries({ queryKey: ["brokers-art"] }); qc.invalidateQueries({ queryKey: ["brokers-out"] }); return }
       const wa = t.closest("[data-wa]") as HTMLElement | null
       if (wa) { const p = waDigits(wa.dataset.wa); if (p) window.open(`https://wa.me/${p}`, "_blank", "noopener"); return }
       const tel = t.closest("[data-tel]") as HTMLElement | null
