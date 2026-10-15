@@ -12,6 +12,7 @@ import * as React from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { QuotesAPI, SITE_VISIT_LABELS, type Quote, type QuoteStatus } from "@/lib/api/quotes"
+import { invalidateMoney } from "@/lib/query/money-keys"
 import { useBusiness } from "@/context/BusinessContext"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useRouter } from "next/navigation"
@@ -196,7 +197,13 @@ export function QuotesArtifact() {
       if (acc?.dataset.accept) {
         const id = Number(acc.dataset.accept)
         const btn = acc as HTMLButtonElement; const o = btn.innerHTML; btn.disabled = true; btn.textContent = "…"
-        try { const r = await QuotesAPI.accept(id); toast.success("Accept ho gaya — booking ban gayi"); api.current.refetch(); if (r?.bookingId) router.push(`/dashboard/bookings/${r.bookingId}`) }
+        try {
+          const r = await QuotesAPI.accept(id); toast.success("Accept ho gaya — booking ban gayi"); api.current.refetch()
+          // PAY-UI_VENDOR-001 — accepting a quote creates a booking: the Bookings list, Khata and
+          // the Overview totals must see it without a reload.
+          void invalidateMoney({ bookingId: r?.bookingId ?? null })
+          if (r?.bookingId) router.push(`/dashboard/bookings/${r.bookingId}`)
+        }
         catch { toast.error("Accept nahi hua"); btn.disabled = false; btn.innerHTML = o }
         return
       }

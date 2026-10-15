@@ -23,6 +23,8 @@ import { toast } from "sonner"
 import { BookingAPI, type BookingSchedule, type SettlementPreview, type DepositPosition, type BookingChangeRequest } from "@/lib/api/bookings"
 import { BookingsAPI, BlockedDatesAPI } from "@/lib/api/dashboard"
 import { openRecordPaymentDrawer } from "@/components/dashboard/mainScreens/artifact/record-payment"
+import { invalidateMoney } from "@/lib/query/money-keys"
+import { SubmitKey, isAmbiguousFailure } from "@/lib/utils/idempotency"
 import { PaymentAPI } from "@/lib/api/payments"
 import { FunctionSheetAPI, type FunctionSheet } from "@/lib/api/functionSheets"
 import type { BookingData } from "@/lib/dashboard-types"
@@ -1005,7 +1007,34 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
     const s = shadowRef.current
     if (!s || !ready || bound.current) return
     bound.current = true
-    const invalidateAll = () => ["bk-detail", "bk-detail-pay", "bk-detail-schedule", "bk-detail-hist", "bk-detail-settle", "bk-detail-deposit", "bk-detail-refunds", "bk-detail-cr"].forEach((k) => qc.invalidateQueries({ queryKey: [k, bookingId] }))
+    // PAY-UI_VENDOR-001 — every money write on this page (payment, qist op, price,
+    // cancel, settlement, refund, deposit...) ends here. It used to refresh only this
+    // booking's own cards, so Khata / Payments / Receipts / Receivables / Overview /
+    // the Bookings list kept the old number for 10 minutes; invalidateMoney() moves
+    // all of them (and this booking's cards) in one pass.
+    const invalidateAll = () => { void invalidateMoney({ bookingId }, qc) }
+    // PAY-UI_VENDOR-002 — one Idempotency-Key per money submit, minted when its drawer
+    // opens and reused only for an identical re-send; a new key after success or after
+    // the server answered a refusal.
+    const submitKeys = new Map<string, SubmitKey>()
+    const freshKey = (name: string) => { submitKeys.set(name, new SubmitKey()) }
+    const keyFor = (name: string, body: unknown) => {
+      let k = submitKeys.get(name)
+      if (!k) { k = new SubmitKey(); submitKeys.set(name, k) }
+      return k.forBody(JSON.stringify(body))
+    }
+    const rotateKey = (name: string) => { submitKeys.get(name)?.rotate() }
+    /**
+     * A money write whose answer never arrived (no response / 5xx) may have
+     * committed. Say that instead of "nahi hua", and refresh the booking so the
+     * screen shows what the server actually holds before the vendor retries.
+     */
+    const lostAnswer = (err: unknown, what: string, keyName: string): boolean => {
+      if (!isAmbiguousFailure(err)) { rotateKey(keyName); return false }
+      toast.error(`${what}: jawab nahi aaya, shayad ho chuka hai. Booking dekh kar check karein, phir dobara koshish karein.`, { duration: 9000 })
+      invalidateAll()
+      return true
+    }
     s.addEventListener("click", async (e) => {
       const t = e.target as HTMLElement
       // The Payments card and its drawers (plan editor, edit / split / waive / remind,
@@ -1124,6 +1153,7 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
       const pe = t.closest("[data-bk-price]") as HTMLElement | null
       if (pe?.dataset.bkPrice) {
         const paid = Number(pe.dataset.bkPricePaid) || 0
+        freshKey("price")
         openDrawer(s, "Qeemat badlein", priceEditHtml(Number(pe.dataset.bkPrice), Number(pe.dataset.bkPriceTotal) || 0, paid, Number(pe.dataset.bkPriceBiz) || 0))
         const inp = s.getElementById("pe-amount") as HTMLInputElement | null
         if (inp) { inp.addEventListener("input", () => priceEditWarn(s, paid)); priceEditWarn(s, paid) }
@@ -1137,10 +1167,13 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
         const bizId = Number(pes.dataset.bkPriceBiz) || undefined
         pes.disabled = true; pes.textContent = "Update ho raha…"
         try {
-          const out = await BookingsAPI.adjustPrice(Number(pes.dataset.bkPriceSave), { newTotalAmount: amount, businessId: bizId, reason })
+          const priceBody = { newTotalAmount: amount, businessId: bizId, reason }
+          const out = await BookingsAPI.adjustPrice(Number(pes.dataset.bkPriceSave), priceBody, { idempotencyKey: keyFor("price", [pes.dataset.bkPriceSave, priceBody]) })
+          rotateKey("price")
           toast.success(out?.cashRefundOwed ? `Qeemat update ho gayi — Rs ${pkNum(out.cashRefundOwed)} wapsi pending hai` : "Qeemat update ho gayi")
           closeDrawer(s); invalidateAll()
         } catch (err: unknown) {
+          if (lostAnswer(err, "Qeemat", "price")) { pes.disabled = false; pes.textContent = "Qeemat update karein"; return }
           const res = (err as { response?: { data?: { message?: string; data?: { code?: string } } } })?.response?.data
           const byCode: Record<string, string> = {
             booking_not_adjustable: "Band booking ki qeemat nahi badalti.",
@@ -1309,6 +1342,7 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
       const scash = t.closest("[data-settle-cash]") as HTMLButtonElement | null
       if (scash?.dataset.settleCash) {
         const out = Number(scash.dataset.cashOut) || 0
+        freshKey("settle-cash")
         openDrawer(s, "Cash mila — settle", `<div class="settle-note">Us raat customer se cash mila? Ye <b>Rs ${pkNum(out)}</b> ki baaqi raqam settle kar deta hai (ledger + receipt dono).</div>
           <div class="dfield"><label class="dlabel">Reference (optional)</label><input id="sc-ref" placeholder="Receipt book no. ya note"/></div>
           <div class="ww-dfoot"><button class="btn btn-ghost" type="button" data-drawer-close>Waapas</button><button class="btn btn-primary" type="button" data-settle-cash-save="${scash.dataset.settleCash}">Haan, cash mila</button></div>`)
@@ -1317,8 +1351,16 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
       const scs = t.closest("[data-settle-cash-save]") as HTMLButtonElement | null
       if (scs?.dataset.settleCashSave) {
         scs.disabled = true; scs.textContent = "Record ho raha…"
-        try { await BookingAPI.confirmCashSettlement(Number(scs.dataset.settleCashSave), { reference: (s.getElementById("sc-ref") as HTMLInputElement | null)?.value?.trim() || undefined }); toast.success("Cash settle ho gaya"); closeDrawer(s); invalidateAll() }
-        catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua"); scs.disabled = false; scs.textContent = "Haan, cash mila" }
+        try {
+          const cashBody = { reference: (s.getElementById("sc-ref") as HTMLInputElement | null)?.value?.trim() || undefined }
+          await BookingAPI.confirmCashSettlement(Number(scs.dataset.settleCashSave), cashBody, { idempotencyKey: keyFor("settle-cash", [scs.dataset.settleCashSave, cashBody]) })
+          rotateKey("settle-cash")
+          toast.success("Cash settle ho gaya"); closeDrawer(s); invalidateAll()
+        }
+        catch (err: unknown) {
+          if (!lostAnswer(err, "Cash settle", "settle-cash")) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua")
+          scs.disabled = false; scs.textContent = "Haan, cash mila"
+        }
         return
       }
       // ── WW-REFUNDUI: the refund request lifecycle ────────────────────
@@ -1345,6 +1387,7 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
       }
       const rrPaid = t.closest("[data-rr-paid]") as HTMLElement | null
       if (rrPaid?.dataset.rrPaid) {
+        freshKey("refund-paid")
         openDrawer(s, "Refund de diya", refundPaidDrawerBody(Number(rrPaid.dataset.rrPaid), Number(rrPaid.dataset.rrAmt) || 0))
         return
       }
@@ -1354,10 +1397,12 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
         const reference = (s.getElementById("rr-ref") as HTMLInputElement | null)?.value?.trim() || undefined
         rrSave.disabled = true; const o = rrSave.textContent; rrSave.textContent = "Ho raha…"
         try {
-          await markRefundPaid(bookingId, Number(rrSave.dataset.rrPaidSave), { method: method as never, reference })
+          const paidBody = { method: method as never, reference }
+          await markRefundPaid(bookingId, Number(rrSave.dataset.rrPaidSave), paidBody, { idempotencyKey: keyFor("refund-paid", [rrSave.dataset.rrPaidSave, paidBody]) })
+          rotateKey("refund-paid")
           toast.success("Mark ho gaya — ab customer tasdeeq karega"); closeDrawer(s); invalidateAll()
         } catch (err: unknown) {
-          toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua")
+          if (!lostAnswer(err, "Refund", "refund-paid")) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua")
           rrSave.disabled = false; if (o) rrSave.textContent = o
         }
         return
@@ -1366,8 +1411,16 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
       const rfs = t.closest("[data-refund-settle]") as HTMLButtonElement | null
       if (rfs?.dataset.refundSettle) {
         rfs.disabled = true; const o = rfs.textContent; rfs.textContent = "Ho raha…"
-        try { await PaymentAPI.settleCashRefund(Number(rfs.dataset.refundSettle)); toast.success("Refund handed-over mark ho gaya"); invalidateAll() }
-        catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua"); rfs.disabled = false; if (o) rfs.textContent = o }
+        const handoverName = `refund-handover:${rfs.dataset.refundSettle}`
+        try {
+          await PaymentAPI.settleCashRefund(Number(rfs.dataset.refundSettle), { idempotencyKey: keyFor(handoverName, rfs.dataset.refundSettle) })
+          rotateKey(handoverName)
+          toast.success("Refund handed-over mark ho gaya"); invalidateAll()
+        }
+        catch (err: unknown) {
+          if (!lostAnswer(err, "Refund", handoverName)) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua")
+          rfs.disabled = false; if (o) rfs.textContent = o
+        }
         return
       }
       // ── Security deposit ─────────────────────────────────────────────

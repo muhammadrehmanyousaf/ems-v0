@@ -24,6 +24,7 @@ import { Loader2, Check, HandCoins, Clock, TriangleAlert, Undo2 } from "lucide-r
 import { SectionCard } from "@/components/user-dashboard";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import { invalidateMoney } from "@/lib/query/money-keys";
 import {
   listRefundRequests, acknowledgeRefund, disputeRefundSettlement, withdrawRefundRequest,
   setRefundPayoutDestination,
@@ -75,7 +76,9 @@ export function RefundSettlementCard({ bookingId }: { bookingId: number | string
     enabled: Number.isFinite(id) && id > 0,
   });
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["refund-requests", id] });
+  // PAY-UI_VENDOR-001 — a confirm / dispute / payout change moves the booking's refund figures
+  // on every other card and list of this app, not only this one.
+  const invalidate = () => { void invalidateMoney({ bookingId: id }, qc); };
   const onFail = (e: unknown) => {
     const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
       ?? "Something went wrong — please try again.";
