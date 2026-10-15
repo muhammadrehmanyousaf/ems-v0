@@ -250,9 +250,8 @@ export function RescheduleBookingDialog({
                 </p>
                 <p className="text-xs text-neutral-500 flex items-start gap-2">
                   <Info className="h-3 w-3 mt-0.5 shrink-0" />
-                  If the new date is cheaper, the difference is refunded. If it
-                  costs more, we&apos;ll ask you to coordinate a top-up with your
-                  vendor.
+                  If the price changes for the new date, we show you the difference and
+                  you accept it before the date moves.
                 </p>
               </div>
             </AlertDialogDescription>
