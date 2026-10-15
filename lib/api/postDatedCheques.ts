@@ -9,6 +9,7 @@
  */
 
 import axiosInstance from "@/lib/axiosConfig";
+import { idempotencyConfig, type IdempotencyOptions } from "@/lib/utils/idempotency";
 
 export type PdcStatus =
   | "held"
@@ -129,9 +130,12 @@ export class PdcAPI {
     return res.data?.data?.pdc;
   }
 
-  /** POST /api/v1/pdcs/:id/transition — status writes go here. */
-  static async transition(id: number, body: TransitionPdcInput): Promise<PostDatedCheque> {
-    const res = await axiosInstance.post(`/api/v1/pdcs/${id}/transition`, body);
+  /**
+   * POST /api/v1/pdcs/:id/transition — status writes go here. A clear is a money
+   * event, so `opts.idempotencyKey` is sent as the Idempotency-Key header.
+   */
+  static async transition(id: number, body: TransitionPdcInput, opts?: IdempotencyOptions): Promise<PostDatedCheque> {
+    const res = await axiosInstance.post(`/api/v1/pdcs/${id}/transition`, body, idempotencyConfig(opts?.idempotencyKey));
     return res.data?.data?.pdc;
   }
 

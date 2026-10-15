@@ -8,6 +8,7 @@
  */
 
 import axiosInstance from "@/lib/axiosConfig";
+import { idempotencyConfig, type IdempotencyOptions } from "@/lib/utils/idempotency";
 
 export type ReceiptMethod =
   | "cash"
@@ -81,6 +82,14 @@ export interface CreateReceiptInput {
   bookingId?: number | null;
   // WW-QIST-SCHEDULE — pay a specific qist of the booking. Omit = oldest owing qist first.
   installmentId?: number | null;
+  /**
+   * PAY-UI_VENDOR-003 — the outstanding amount the vendor was SHOWN when the
+   * drawer opened. A server that checks it (WP02) refuses a second device whose
+   * drawer is stale with 409 instead of booking an overpayment; a server that
+   * does not know the field ignores it (the receipt validator picks the fields
+   * it reads and drops the rest).
+   */
+  expectedOutstanding?: number;
 }
 
 export type UpdateReceiptInput = Partial<
@@ -118,13 +127,17 @@ export class ReceiptsAPI {
     return res.data?.data?.receipt ?? null;
   }
 
-  static async create(body: CreateReceiptInput): Promise<PaymentReceipt> {
-    const res = await axiosInstance.post(`/api/v1/receipts`, body);
+  /**
+   * `opts.idempotencyKey` is sent as the Idempotency-Key header: one per drawer
+   * open, reused when the same submit is retried (PAY-UI_VENDOR-002).
+   */
+  static async create(body: CreateReceiptInput, opts?: IdempotencyOptions): Promise<PaymentReceipt> {
+    const res = await axiosInstance.post(`/api/v1/receipts`, body, idempotencyConfig(opts?.idempotencyKey));
     return res.data?.data?.receipt;
   }
 
-  static async update(id: number, body: UpdateReceiptInput): Promise<PaymentReceipt> {
-    const res = await axiosInstance.patch(`/api/v1/receipts/${id}`, body);
+  static async update(id: number, body: UpdateReceiptInput, opts?: IdempotencyOptions): Promise<PaymentReceipt> {
+    const res = await axiosInstance.patch(`/api/v1/receipts/${id}`, body, idempotencyConfig(opts?.idempotencyKey));
     return res.data?.data?.receipt;
   }
 

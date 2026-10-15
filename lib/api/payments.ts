@@ -1,4 +1,5 @@
 import axiosInstance from '../axiosConfig';
+import { idempotencyConfig, type IdempotencyOptions } from '../utils/idempotency';
 import { BACKEND_URL } from '../backend-url';
 import type {
   PaymentResponse,
@@ -164,10 +165,15 @@ export class PaymentAPI {
    * WW-CASHREFUND — mark a cash refund the vendor owed as handed over.
    * Idempotent server-side, so a double-tap is safe.
    */
-  static async settleCashRefund(refundId: number): Promise<{ id: number; amount: number; settledAt: string }> {
+  static async settleCashRefund(
+    refundId: number,
+    /** PAY-UI_VENDOR-002 — sent as the Idempotency-Key header; reuse it when the same submit is retried. */
+    opts?: IdempotencyOptions,
+  ): Promise<{ id: number; amount: number; settledAt: string }> {
     const response = await axiosInstance.post(
       `${BACKEND_URL}api/v1/payments/cash-refund/${refundId}/settle`,
       {},
+      idempotencyConfig(opts?.idempotencyKey),
     );
     return response.data.data;
   }

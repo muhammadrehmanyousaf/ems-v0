@@ -1,4 +1,5 @@
 import axiosInstance from "../axiosConfig";
+import { idempotencyConfig, type IdempotencyOptions } from "../utils/idempotency";
 import { BACKEND_URL } from "../backend-url";
 import type { BookingData } from "../dashboard-types";
 
@@ -502,8 +503,10 @@ export class BookingAPI {
   static async confirmCashSettlement(
     bookingId: number,
     body: { amountPkr?: number; reference?: string; note?: string } = {},
+    /** PAY-UI_VENDOR-002 — sent as the Idempotency-Key header; reuse it when the same submit is retried. */
+    opts?: IdempotencyOptions,
   ): Promise<SettlementPreview> {
-    const res = await axiosInstance.post(`${v1}/${bookingId}/settlement/confirm-cash`, body);
+    const res = await axiosInstance.post(`${v1}/${bookingId}/settlement/confirm-cash`, body, idempotencyConfig(opts?.idempotencyKey));
     return res.data?.data;
   }
 
