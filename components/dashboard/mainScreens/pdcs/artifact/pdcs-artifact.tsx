@@ -97,6 +97,8 @@ function buildContent(list: PostDatedCheque[], summary: { total: number; byStatu
     let acts = ""
     if (c.status === "held") acts += `<button class="mini pri" data-dep="${c.id}">${svg(IC.check)} Jama karein</button>`
     else if (c.status === "deposited") acts += `<button class="mini ok" data-clr="${c.id}">${svg(IC.check)} Clear</button><button class="mini bad" data-bnc="${c.id}">Bounce</button>`
+    // WP03 / Q10: the bank may return a cheque it had credited; the server reverses the receipt.
+    else if (c.status === "cleared") acts += `<button class="mini bad" data-bnc="${c.id}" title="Bank ne cheque wapas kar diya">Bounce</button>`
     else if (c.status === "bounced") {
       const ph = waDigits(c.customer?.phoneNumber)
       if (ph) {
@@ -181,7 +183,7 @@ export function PdcsArtifact() {
       }
       catch (err: unknown) {
         if (isAmbiguousFailure(err)) { toast.error("Jawab nahi aaya — cheque ka status shayad badal chuka hai. List dekh kar check karein.", { duration: 9000 }); refetch(bookingId) }
-        else { k.rotate(); toast.error("Update nahi hua") }
+        else { k.rotate(); toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Update nahi hua") }
         if (btn) { btn.disabled = false; btn.innerHTML = orig }
       }
     }

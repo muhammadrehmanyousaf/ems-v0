@@ -41,7 +41,7 @@ import { BookingAPI, type BookingSchedule } from "@/lib/api/bookings"
 import { openDrawer, closeDrawer, escHtml, pkNum } from "./artifact-shell"
 import { dayText, qistHeading, rsText } from "@/lib/utils/qist"
 import { invalidateMoney } from "@/lib/query/money-keys"
-import { SubmitKey, isAmbiguousFailure, checkPaymentLanded } from "@/lib/utils/idempotency"
+import { SubmitKey, isAmbiguousFailure, isRetrySameKey, checkPaymentLanded } from "@/lib/utils/idempotency"
 
 const METHODS: { v: ReceiptMethod; l: string }[] = [
   { v: "cash", l: "Cash" }, { v: "bank_transfer", l: "Bank transfer" }, { v: "jazzcash", l: "JazzCash" },
@@ -172,6 +172,16 @@ export function openRecordPaymentDrawer(shadow: ShadowRoot, opts: RecordPaymentO
         opts.onSaved?.()
       } catch (err: unknown) {
         const status = (err as { response?: { status?: number } })?.response?.status
+        if (isRetrySameKey(err)) {
+          // 409 IN_PROGRESS / RETRY, 503 BUSY (WP00a): the server is still on the same submit (or
+          // asked for a moment). Nothing is known to be lost; the key is KEPT, so pressing save again
+          // replays the first answer instead of writing the money a second time.
+          const m = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+          toast.warning(m || "Pichli koshish abhi chal rahi hai — thori der baad dobara dabayein, payment dobara record nahi hogi.", { duration: 9000 })
+          void invalidateMoney({ bookingId })
+          btn.disabled = false; btn.innerHTML = orig
+          return
+        }
         if (isAmbiguousFailure(err)) {
           // The server may have committed although we never saw the answer. Read the
           // booking back before saying anything (PAY-UI_VENDOR-002).

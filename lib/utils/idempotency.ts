@@ -80,7 +80,24 @@ export function isAmbiguousFailure(err: unknown): boolean {
   const e = err as { response?: { status?: number } } | null | undefined
   if (!e || !e.response) return true
   const status = Number(e.response.status)
+  // WP00a: 409 IN_PROGRESS = the same key is still being processed (the first attempt may yet
+  // commit); 409 RETRY = a deadlock / serialisation rollback. Both mean "send the SAME key again
+  // after Retry-After", never "new intent": a fresh key could write the money twice.
+  if (isRetrySameKey(err)) return true
   return !Number.isFinite(status) || status >= 500 || status === 408
+}
+
+/** The machine code of a refusal (`data.code` of the envelope), or null. */
+export function refusalCode(err: unknown): string | null {
+  const e = err as { response?: { data?: { data?: { code?: unknown }; code?: unknown } } } | null | undefined
+  const c = e?.response?.data?.data?.code ?? e?.response?.data?.code
+  return typeof c === "string" && c ? c : null
+}
+
+/** 409 IN_PROGRESS / 409 RETRY / 503 BUSY: the server asks the client to wait and re-send the same key. */
+export function isRetrySameKey(err: unknown): boolean {
+  const code = refusalCode(err)
+  return code === "IN_PROGRESS" || code === "RETRY" || code === "BUSY"
 }
 
 export interface PaymentCheck {

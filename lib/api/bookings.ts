@@ -446,8 +446,13 @@ export class BookingAPI {
   }
 
   // Hand the returnable balance back to the customer. Refuses if claims are open.
-  static async returnDeposit(bookingId: number, note?: string): Promise<DepositPosition> {
-    const res = await axiosInstance.post(`${v1}/${bookingId}/deposit/return`, { note });
+  static async returnDeposit(
+    bookingId: number,
+    note?: string,
+    /** WP14b / PAY-UI_VENDOR-002 - Idempotency-Key header (WP04 doors honour it); reuse it when the same submit is retried. */
+    opts?: IdempotencyOptions,
+  ): Promise<DepositPosition> {
+    const res = await axiosInstance.post(`${v1}/${bookingId}/deposit/return`, { note }, idempotencyConfig(opts?.idempotencyKey));
     return res.data?.data;
   }
 
@@ -455,8 +460,10 @@ export class BookingAPI {
   static async raiseDamageClaim(
     bookingId: number,
     body: { description: string; amountPkr: number; photos?: string[] },
+    /** WP14b / PAY-UI_VENDOR-002 - Idempotency-Key header (WP04 doors honour it); reuse it when the same submit is retried. */
+    opts?: IdempotencyOptions,
   ): Promise<unknown> {
-    const res = await axiosInstance.post(`${v1}/${bookingId}/damage-claims`, body);
+    const res = await axiosInstance.post(`${v1}/${bookingId}/damage-claims`, body, idempotencyConfig(opts?.idempotencyKey));
     return res.data?.data;
   }
 
@@ -466,13 +473,20 @@ export class BookingAPI {
     bookingId: number,
     claimId: number,
     body: { deductPkr?: number; note?: string } = {},
+    /** WP14b / PAY-UI_VENDOR-002 - Idempotency-Key header (WP04 doors honour it); reuse it when the same submit is retried. */
+    opts?: IdempotencyOptions,
   ): Promise<unknown> {
-    const res = await axiosInstance.post(`${v1}/${bookingId}/damage-claims/${claimId}/settle`, body);
+    const res = await axiosInstance.post(`${v1}/${bookingId}/damage-claims/${claimId}/settle`, body, idempotencyConfig(opts?.idempotencyKey));
     return res.data?.data;
   }
 
-  static async withdrawDamageClaim(bookingId: number, claimId: number): Promise<unknown> {
-    const res = await axiosInstance.post(`${v1}/${bookingId}/damage-claims/${claimId}/withdraw`, {});
+  static async withdrawDamageClaim(
+    bookingId: number,
+    claimId: number,
+    /** WP14b / PAY-UI_VENDOR-002 - Idempotency-Key header (WP04 doors honour it); reuse it when the same submit is retried. */
+    opts?: IdempotencyOptions,
+  ): Promise<unknown> {
+    const res = await axiosInstance.post(`${v1}/${bookingId}/damage-claims/${claimId}/withdraw`, {}, idempotencyConfig(opts?.idempotencyKey));
     return res.data?.data;
   }
 
@@ -483,8 +497,10 @@ export class BookingAPI {
   static async settle(
     bookingId: number,
     body: { total: number; kidsUnder5?: number; kids5to12?: number; staff?: number; crew?: number; note?: string },
+    /** WP14b / PAY-UI_VENDOR-002 - Idempotency-Key header (WP04 doors honour it); reuse it when the same submit is retried. */
+    opts?: IdempotencyOptions,
   ): Promise<SettlementPreview> {
-    const res = await axiosInstance.post(`${v1}/${bookingId}/settle`, body);
+    const res = await axiosInstance.post(`${v1}/${bookingId}/settle`, body, idempotencyConfig(opts?.idempotencyKey));
     return res.data?.data;
   }
 
@@ -493,8 +509,10 @@ export class BookingAPI {
   static async lockHeadcount(
     bookingId: number,
     body: { guaranteed?: number } = {},
+    /** WP14b / PAY-UI_VENDOR-002 - Idempotency-Key header (WP04 doors honour it); reuse it when the same submit is retried. */
+    opts?: IdempotencyOptions,
   ): Promise<SettlementPreview> {
-    const res = await axiosInstance.post(`${v1}/${bookingId}/headcount-lock`, body);
+    const res = await axiosInstance.post(`${v1}/${bookingId}/headcount-lock`, body, idempotencyConfig(opts?.idempotencyKey));
     return res.data?.data;
   }
 

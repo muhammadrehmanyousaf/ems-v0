@@ -1183,7 +1183,11 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
             business_required: "Is booking mein ek se zyada vendor hain — venue chunein.",
             no_change: "Qeemat wahi hai — koi tabdeeli nahi.",
             invalid_amount: "Qeemat theek likhein.",
+            // WP04/WP06 refusals whose `message` is the bare code
+            booking_settled: "Final bill ban chuka hai — ab qeemat nahi badal sakti.",
+            PRICE_CHANGED: "Is dauran qeemat badal chuki hai — booking naye sire se kholein aur dobara koshish karein.",
           }
+          if (String(res?.data?.code || "") === "PRICE_CHANGED") invalidateAll()
           toast.error(byCode[String(res?.data?.code || "")] || res?.message || "Qeemat update nahi hui")
           pes.disabled = false; pes.textContent = "Qeemat update karein"
         }
@@ -1299,19 +1303,24 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
       }
       // ── Settlement: lock the guarantee before the night ──────────────
       const hcLock = t.closest("[data-hc-lock]") as HTMLElement | null
-      if (hcLock?.dataset.hcLock) { openDrawer(s, "Guarantee lock karein", lockDrawerBody(Number(hcLock.dataset.hcLock), Number(hcLock.dataset.hcGuar) || 0)); return }
+      if (hcLock?.dataset.hcLock) { freshKey("hc-lock"); openDrawer(s, "Guarantee lock karein", lockDrawerBody(Number(hcLock.dataset.hcLock), Number(hcLock.dataset.hcGuar) || 0)); return }
       const hcSave = t.closest("[data-hc-lock-save]") as HTMLButtonElement | null
       if (hcSave?.dataset.hcLockSave) {
         const g = Number((s.getElementById("hc-guar") as HTMLInputElement | null)?.value || 0)
         if (!g || g <= 0) { toast.error("Guarantee likhein (kam az kam 1)"); return }
         hcSave.disabled = true; hcSave.textContent = "Lock ho raha…"
-        try { await BookingAPI.lockHeadcount(Number(hcSave.dataset.hcLockSave), { guaranteed: g }); toast.success("Guarantee lock ho gayi"); closeDrawer(s); invalidateAll() }
-        catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Lock nahi hui"); hcSave.disabled = false; hcSave.textContent = "Lock karein" }
+        try {
+          const lockBody = { guaranteed: g }
+          await BookingAPI.lockHeadcount(Number(hcSave.dataset.hcLockSave), lockBody, { idempotencyKey: keyFor("hc-lock", [hcSave.dataset.hcLockSave, lockBody]) })
+          rotateKey("hc-lock"); toast.success("Guarantee lock ho gayi"); closeDrawer(s); invalidateAll()
+        }
+        catch (err: unknown) { if (!lostAnswer(err, "Guarantee lock", "hc-lock")) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Lock nahi hui"); hcSave.disabled = false; hcSave.textContent = "Lock karein" }
         return
       }
       // ── Settlement: strike the final bill ────────────────────────────
       const settle = t.closest("[data-settle]") as HTMLElement | null
       if (settle?.dataset.settle) {
+        freshKey("settle-bill")
         openDrawer(s, "Final bill — settle karein", settleDrawerBody(Number(settle.dataset.settle), Number(settle.dataset.settleTotal) || 0, Number(settle.dataset.settleGuar) || 0))
         return
       }
@@ -1336,8 +1345,11 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
         const c = readCounts()
         if (!c.total || c.total <= 0) { toast.error("Kul mehmaan likhein") ; return }
         sss.disabled = true; const o = sss.innerHTML; sss.textContent = "Settle ho raha…"
-        try { await BookingAPI.settle(Number(sss.dataset.settleSave), c); toast.success("Final bill ban gaya"); closeDrawer(s); invalidateAll() }
-        catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Settle nahi hua"); sss.disabled = false; sss.innerHTML = o }
+        try {
+          await BookingAPI.settle(Number(sss.dataset.settleSave), c, { idempotencyKey: keyFor("settle-bill", [sss.dataset.settleSave, c]) })
+          rotateKey("settle-bill"); toast.success("Final bill ban gaya"); closeDrawer(s); invalidateAll()
+        }
+        catch (err: unknown) { if (!lostAnswer(err, "Final bill", "settle-bill")) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Settle nahi hua"); sss.disabled = false; sss.innerHTML = o }
         return
       }
       // cash handed over on the night, against the struck bill (whole outstanding)
@@ -1429,12 +1441,17 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
       const depRet = t.closest("[data-dep-return]") as HTMLButtonElement | null
       if (depRet?.dataset.depReturn) {
         depRet.disabled = true; const o = depRet.innerHTML; depRet.textContent = "Wapas ho raha…"
-        try { await BookingAPI.returnDeposit(Number(depRet.dataset.depReturn)); toast.success("Deposit wapas ho gaya"); invalidateAll() }
-        catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Wapas nahi hua"); depRet.disabled = false; depRet.innerHTML = o }
+        const depName = `dep-return:${depRet.dataset.depReturn}`
+        try {
+          await BookingAPI.returnDeposit(Number(depRet.dataset.depReturn), undefined, { idempotencyKey: keyFor(depName, depRet.dataset.depReturn) })
+          rotateKey(depName); toast.success("Deposit wapas ho gaya"); invalidateAll()
+        }
+        catch (err: unknown) { if (!lostAnswer(err, "Deposit wapsi", depName)) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Wapas nahi hua"); depRet.disabled = false; depRet.innerHTML = o }
         return
       }
       const depClaim = t.closest("[data-dep-claim]") as HTMLElement | null
       if (depClaim?.dataset.depClaim) {
+        freshKey("dmg-claim")
         openDrawer(s, "Nuqsan claim karein", damageClaimDrawerBody(Number(depClaim.dataset.depClaim), Number(depClaim.dataset.depReturnable) || 0))
         return
       }
@@ -1445,22 +1462,34 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
         if (desc.length < 5) { toast.error("Nuqsan ki tafseel likhein (kam az kam 5 harf)"); return }
         if (!amt || amt <= 0) { toast.error("Raqam likhein"); return }
         dcSave.disabled = true; dcSave.textContent = "Raise ho raha…"
-        try { await BookingAPI.raiseDamageClaim(Number(dcSave.dataset.dcSave), { description: desc, amountPkr: amt }); toast.success("Claim raise ho gayi"); closeDrawer(s); invalidateAll() }
-        catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Claim raise nahi hui"); dcSave.disabled = false; dcSave.textContent = "Claim raise karein" }
+        try {
+          const claimBody = { description: desc, amountPkr: amt }
+          await BookingAPI.raiseDamageClaim(Number(dcSave.dataset.dcSave), claimBody, { idempotencyKey: keyFor("dmg-claim", [dcSave.dataset.dcSave, claimBody]) })
+          rotateKey("dmg-claim"); toast.success("Claim raise ho gayi"); closeDrawer(s); invalidateAll()
+        }
+        catch (err: unknown) { if (!lostAnswer(err, "Claim", "dmg-claim")) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Claim raise nahi hui"); dcSave.disabled = false; dcSave.textContent = "Claim raise karein" }
         return
       }
       const clSettle = t.closest("[data-claim-settle]") as HTMLButtonElement | null
       if (clSettle?.dataset.claimSettle) {
         clSettle.disabled = true; clSettle.textContent = "…"
-        try { await BookingAPI.settleDamageClaim(bookingId, Number(clSettle.dataset.claimSettle), {}); toast.success("Claim settle — deposit se kaat liya"); invalidateAll() }
-        catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Settle nahi hua"); clSettle.disabled = false; clSettle.textContent = "Kaatein" }
+        const clName = `claim-settle:${clSettle.dataset.claimSettle}`
+        try {
+          await BookingAPI.settleDamageClaim(bookingId, Number(clSettle.dataset.claimSettle), {}, { idempotencyKey: keyFor(clName, clSettle.dataset.claimSettle) })
+          rotateKey(clName); toast.success("Claim settle — deposit se kaat liya"); invalidateAll()
+        }
+        catch (err: unknown) { if (!lostAnswer(err, "Claim settle", clName)) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Settle nahi hua"); clSettle.disabled = false; clSettle.textContent = "Kaatein" }
         return
       }
       const clWd = t.closest("[data-claim-withdraw]") as HTMLButtonElement | null
       if (clWd?.dataset.claimWithdraw) {
         clWd.disabled = true; clWd.textContent = "…"
-        try { await BookingAPI.withdrawDamageClaim(bookingId, Number(clWd.dataset.claimWithdraw)); toast.success("Claim chhor di"); invalidateAll() }
-        catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua"); clWd.disabled = false; clWd.textContent = "Chhorें" }
+        const wdName = `claim-withdraw:${clWd.dataset.claimWithdraw}`
+        try {
+          await BookingAPI.withdrawDamageClaim(bookingId, Number(clWd.dataset.claimWithdraw), { idempotencyKey: keyFor(wdName, clWd.dataset.claimWithdraw) })
+          rotateKey(wdName); toast.success("Claim chhor di"); invalidateAll()
+        }
+        catch (err: unknown) { if (!lostAnswer(err, "Claim", wdName)) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua"); clWd.disabled = false; clWd.textContent = "Chhorें" }
         return
       }
       const wa = t.closest("[data-wa]") as HTMLElement | null
