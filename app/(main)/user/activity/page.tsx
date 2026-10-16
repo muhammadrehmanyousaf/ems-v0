@@ -3,6 +3,7 @@
 import * as React from "react";
 import { ActivityAPI, type ActivityEvent } from "@/lib/api/activity";
 import { ActivityFeed } from "@/components/activity/activity-feed";
+import { PageContainer } from "@/components/user-dashboard";
 
 /**
  * Customer "Your activity" feed (Activity & Audit Engine, Phase 2) — the trust
@@ -42,7 +43,8 @@ export default function UserActivityPage() {
   const hasMore = events.length < total;
 
   return (
-    <div className="max-w-3xl">
+    <PageContainer>
+      <div className="max-w-3xl">
       <div className="mb-6">
         <p className="text-[10px] font-bridal uppercase tracking-[0.28em] text-bridal-text-label">Your account</p>
         <h1 className="font-display italic text-[30px] text-bridal-charcoal leading-tight mt-1">Activity</h1>
@@ -78,6 +80,7 @@ export default function UserActivityPage() {
           }}
         />
       )}
-    </div>
+      </div>
+    </PageContainer>
   );
 }

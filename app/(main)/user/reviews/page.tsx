@@ -179,7 +179,7 @@ export default function UserReviewsPage() {
           }
         />
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-3 min-[1400px]:grid-cols-2">
           {reviews.map((review) => (
             <Card key={review.id} className="p-5">
               <div className="flex items-start justify-between gap-4 mb-3">

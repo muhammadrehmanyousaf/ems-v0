@@ -15,6 +15,7 @@ import { AlertTriangle, CheckCircle2, Clock, Loader2, MessageSquareWarning } fro
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { PageContainer } from "@/components/user-dashboard"
 import {
   CATEGORY_LABEL,
   STATUS_LABEL,
@@ -50,7 +51,7 @@ export default function UserComplaintsPage() {
   const rows = data ?? []
 
   return (
-    <div className="space-y-6">
+    <PageContainer>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">My complaints</h1>
@@ -96,7 +97,7 @@ export default function UserComplaintsPage() {
         </Card>
       )}
 
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 gap-3 min-[1400px]:grid-cols-2">
         {rows.map((row) => {
           const isOpen = row.status === "open" || row.status === "in_progress"
           return (
@@ -153,6 +154,6 @@ export default function UserComplaintsPage() {
           )
         })}
       </div>
-    </div>
+    </PageContainer>
   )
 }

@@ -458,7 +458,7 @@ export default function BankTransferScreen({
                 </select>
               </div>
             )}
-            <div className={split ? "grid gap-3 sm:grid-cols-[minmax(0,170px)_minmax(0,1fr)] min-[1180px]:grid-cols-1 min-[1260px]:grid-cols-[minmax(0,170px)_minmax(0,1fr)]" : "space-y-3"}>
+            <div className={split ? "grid gap-3 sm:max-[1179px]:grid-cols-[minmax(0,170px)_minmax(0,1fr)] min-[1260px]:grid-cols-[minmax(0,170px)_minmax(0,1fr)]" : "space-y-3"}>
             <div>
               <label htmlFor="bank-claim-method" className={`mb-1 block ${LABEL}`}>How you paid</label>
               <select
