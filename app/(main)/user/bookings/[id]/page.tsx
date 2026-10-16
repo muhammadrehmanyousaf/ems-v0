@@ -71,6 +71,7 @@ import { RefundRequestCard } from "@/components/bookings/refund-request-card";
 import { RefundSettlementCard } from "@/components/bookings/refund-settlement-card";
 // QA #4 — show the refund the customer would get back inside the cancel dialog.
 import { getRefundPreview, requestCancellation, type RefundPreview } from "@/lib/api/bookingOrder";
+import { refundParts, refundPin } from "@/lib/refund-total";
 import { bookingSlotText } from "@/lib/booking/slot-vocabulary";
 import { bookingMoney } from "@/lib/utils/booking-money";
 import { PaymentInstructionsAPI } from "@/lib/api/paymentInstructions";
@@ -390,10 +391,11 @@ export default function BookingDetailPage() {
         // PAY-CLOCK-014: pin the refund the customer was shown. If the figure
         // moved before the click (a tier boundary passed) the server answers
         // 409 REFUND_CHANGED and cancels nothing.
-        const shown = refundPreview?.preview?.refund;
+        // WP26: the pin is the POLICY part (the figure the server computes and compares), not the total shown.
+        const shown = refundPreview ? refundPin(refundPreview) : undefined;
         await axiosInstance.patch(
           `${BACKEND_URL}api/v1/bookings/${booking.id}/cancel`,
-          typeof shown === "number" && Number.isFinite(shown) ? { expectedRefund: shown } : undefined,
+          shown !== undefined ? { expectedRefund: shown } : undefined,
         );
         toast({
           title: "Booking cancelled",
@@ -1273,12 +1275,36 @@ export default function BookingDetailPage() {
                 {refundPreviewLoading && (
                   <p className="text-xs text-bridal-text-soft">Checking your refund…</p>
                 )}
-                {refundPreview && (refundPreview.totalPaid > 0 || (refundPreview.unledgeredAdvance ?? 0) > 0) && (
+                {refundPreview && (refundPreview.totalPaid > 0 || (refundPreview.unledgeredAdvance ?? 0) > 0 || refundParts(refundPreview).hasExtras) && (
                   <div className="rounded-md border border-bridal-gold/45 bg-bridal-cream p-3 text-sm">
                     <div className="flex items-center justify-between">
                       <span className="text-bridal-charcoal">You&apos;ll get back</span>
-                      <span className="font-semibold text-emerald-700">{fmt(refundPreview.preview.refund)}</span>
+                      {/* WP26: the TOTAL the customer receives (policy refund + price-drop + declined-line), not the policy part alone */}
+                      <span className="font-semibold text-emerald-700" data-refund-total>{fmt(refundParts(refundPreview).total)}</span>
                     </div>
+                    {/* one short line per component, only when money beyond the policy refund is owed */}
+                    {refundParts(refundPreview).hasExtras && (
+                      <div className="mt-1 space-y-0.5 text-xs text-bridal-text-soft" data-refund-components>
+                        {refundParts(refundPreview).policy > 0 && (
+                          <div className="flex items-center justify-between">
+                            <span>Refund per the venue&apos;s policy</span>
+                            <span>{fmt(refundParts(refundPreview).policy)}</span>
+                          </div>
+                        )}
+                        {refundParts(refundPreview).priceDrop > 0 && (
+                          <div className="flex items-center justify-between">
+                            <span>Paid above the reduced price</span>
+                            <span>{fmt(refundParts(refundPreview).priceDrop)}</span>
+                          </div>
+                        )}
+                        {refundParts(refundPreview).declinedLine > 0 && (
+                          <div className="flex items-center justify-between">
+                            <span>Held for a service the venue declined</span>
+                            <span>{fmt(refundParts(refundPreview).declinedLine)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {refundPreview.preview.forfeit > 0 && (
                       <div className="mt-1 flex items-center justify-between text-xs text-bridal-text-soft">
                         {/*

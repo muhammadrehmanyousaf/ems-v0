@@ -598,6 +598,13 @@ export interface RefundPreview {
    */
   unledgeredAdvance?: number;
   /**
+   * WP19: the vendor cut the price below what was paid. The overpayment is owed back IN FULL on its own obligation;
+   * it is not in `totalPaid` or `preview.refund`. Absent when none. WP26: shown in the total (lib/refund-total.ts).
+   */
+  priceDropRefund?: number;
+  /** WP18: money a line the venue declined holds, owed back in full on its own obligation. Absent when none. */
+  declinedLineRefund?: number;
+  /**
    * WW-CANCELWINDOW — the vendor's notice period, in hours, and how long is
    * actually left. `null` means this venue has not set one, which is the
    * platform default and means the customer may cancel at any time.
