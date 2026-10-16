@@ -16,6 +16,7 @@ import { Loader2, MessageCircle, Shield } from "lucide-react";
 import { getRefundPreview, type RefundPreview } from "@/lib/api/bookingOrder";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { refundParts } from "@/lib/refund-total";
 
 const rs = (n: number) => "Rs " + Math.round(n || 0).toLocaleString("en-PK");
 
@@ -42,7 +43,9 @@ export function RefundPreviewCard({ bookingId }: { bookingId: number }) {
      going out raw both on this card and inside the WhatsApp message a vendor
      sends the customer. */
   const days = Math.round(daysBefore);
-  const waText = `Assalam-o-Alaikum.\n${data.policy.labelUr} policy ke mutabiq — agar aap ${days} din pehle cancel karte hain:\nWapas: ${rs(preview.refund)}\nZabt (advance/deposit): ${rs(preview.forfeit)}\nShukriya — Wedding Wala`;
+  // WP26: "wapas" is everything the customer receives (policy refund + price-drop + declined-line), not the policy part alone
+  const parts = refundParts(data);
+  const waText = `Assalam-o-Alaikum.\n${data.policy.labelUr} policy ke mutabiq — agar aap ${days} din pehle cancel karte hain:\nWapas: ${rs(parts.total)}\nZabt (advance/deposit): ${rs(preview.forfeit)}\nShukriya — Wedding Wala`;
   const waHref = `https://wa.me/?text=${encodeURIComponent(waText)}`;
 
   return (
@@ -76,7 +79,7 @@ export function RefundPreviewCard({ bookingId }: { bookingId: number }) {
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/50 p-3">
             <p className="text-xs text-muted-foreground">Customer ko wapas</p>
-            <p className="text-xl font-bold tabular-nums text-emerald-700 dark:text-emerald-400 mt-0.5">{rs(preview.refund)}</p>
+            <p className="text-xl font-bold tabular-nums text-emerald-700 dark:text-emerald-400 mt-0.5">{rs(parts.total)}</p>
           </div>
           <div className="rounded-lg border border-amber-300 dark:border-amber-900/50 p-3">
             <p className="text-xs text-muted-foreground">Zabt (aap ke paas)</p>
@@ -97,6 +100,12 @@ export function RefundPreviewCard({ bookingId }: { bookingId: number }) {
           )}
           {preview.breakdown.overpayment > 0 && (
             <div className="flex justify-between"><span>Zyada jama (wapas)</span><span className="tabular-nums text-emerald-700 dark:text-emerald-400">{rs(preview.breakdown.overpayment)}</span></div>
+          )}
+          {parts.priceDrop > 0 && (
+            <div className="flex justify-between" data-price-drop-refund><span>Price kam karne par zyada jama (wapas)</span><span className="tabular-nums text-emerald-700 dark:text-emerald-400">{rs(parts.priceDrop)}</span></div>
+          )}
+          {parts.declinedLine > 0 && (
+            <div className="flex justify-between" data-declined-line-refund><span>Decline hui service ka jama paisa (wapas)</span><span className="tabular-nums text-emerald-700 dark:text-emerald-400">{rs(parts.declinedLine)}</span></div>
           )}
         </div>
 

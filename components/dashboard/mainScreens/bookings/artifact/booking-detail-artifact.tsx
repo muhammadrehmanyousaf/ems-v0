@@ -31,7 +31,7 @@ import type { BookingData } from "@/lib/dashboard-types"
 import { bookingStatusLabel } from "@/lib/booking-status-label"
 import { spaceNameOf } from "@/lib/utils/booking-space"
 import { todayInKarachi } from "@/lib/utils/pk-date"
-import { canMarkCompleted } from "@/lib/utils/booking-completion"
+import { canMarkCompleted, completionHold, completionHoldNote } from "@/lib/utils/booking-completion"
 import { bookedOn, receivedOn, outstandingOn } from "@/lib/utils/booking-money"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
 import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
@@ -148,6 +148,7 @@ const EXTRA_CSS = String.raw`
 .doc-main{ flex:1; min-width:0; } .doc-nm{ font-weight:600; font-size:12.5px; } .doc-sub{ font-size:11px; color:var(--ink-3); margin-top:1px; }
 .doc-dl{ width:30px; height:30px; border-radius:7px; border:0; background:transparent; color:var(--ink-3); display:grid; place-items:center; } .doc-dl:hover{ background:var(--surface); color:var(--ink); } .doc-dl svg{ width:16px; height:16px; }
 .note{ padding:2px 16px 16px; } .note textarea{ width:100%; min-height:76px; resize:vertical; border:1px solid var(--border); border-radius:9px; background:var(--surface-2); color:var(--ink); padding:10px 11px; font:inherit; font-size:12.5px; outline:none; } .note textarea:focus{ border-color:var(--border-2); background:var(--surface); } .note textarea::placeholder{ color:var(--ink-3); }
+.holdnote{ display:flex; gap:10px; align-items:flex-start; padding:12px 15px; margin-bottom:14px; background:var(--warn-wash); border-radius:var(--r); } .holdnote svg{ width:17px; height:17px; color:var(--warn); flex:none; margin-top:1px; } .holdnote .hn-t{ font-size:12.5px; line-height:1.5; color:var(--ink-2); } .holdnote .hn-t b{ color:var(--warn); font-weight:600; }
 .note-bar{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; } .note-status{ font-size:11.5px; color:var(--ok); font-weight:600; } .note-hint{ font-size:11px; color:var(--ink-3); margin-top:7px; }
 .inst-row{ display:flex; align-items:center; gap:12px; padding:11px 8px; border-bottom:1px solid var(--border); } .inst-row:last-child{ border-bottom:0; }
 .inst-row .ir-l{ flex:1; } .inst-row .ir-nm{ font-weight:600; font-size:13px; } .inst-row .ir-d{ font-size:11.5px; color:var(--ink-3); margin-top:1px; }
@@ -483,7 +484,7 @@ function refundOwedCard(refunds: CashRefundOwed[], payout: RefundPayout = null):
     </div>`
 }
 
-function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmount?: number; remainingAmount?: number; cashRefundOwedTotal?: number; cashRefundsOwed?: CashRefundOwed[]; refundPayout?: RefundPayout } | null, history: any[], sheets: FunctionSheet[], schedule: BookingSchedule | null, scheduleFailed: boolean, settlement: SettlementPreview | null, deposit: DepositPosition | null, refundReqs: RefundReq[] = [], changeReqs: BookingChangeRequest[] = []): string {
+function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmount?: number; remainingAmount?: number; cashRefundOwedTotal?: number; cashRefundsOwed?: CashRefundOwed[]; refundPayout?: RefundPayout } | null, history: any[], sheets: FunctionSheet[], schedule: BookingSchedule | null, scheduleFailed: boolean, settlement: SettlementPreview | null, deposit: DepositPosition | null, refundReqs: RefundReq[] = [], changeReqs: BookingChangeRequest[] = [], dispute: { status?: string | null } | null = null): string {
   const statusLabel = bookingStatusLabel(booking) || "Booking"
   const tone = toneOf(statusLabel)
   const st = (booking.status || "").toLowerCase()
@@ -629,6 +630,12 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
       ${isCancelled ? "" : `<button class="btn ${isPending ? "btn-ghost" : "btn-primary"}" ${recAttrs}>${svg(I.money)} Payment record karein</button>`}
     </div>
   </div>
+
+  ${(() => {
+    // WP26 / V4-8: the sweeper keeps a Confirmed booking open past its event while a refund request or a dispute is open; say so
+    const hold = completionHold(booking, { refundRequests: refundReqs, dispute })
+    return hold ? `<div class="holdnote" role="status" data-completion-hold="${hold}">${svg(I.clock)}<div class="hn-t"><b>Booking abhi Ho gaya nahi hui.</b> ${escHtml(completionHoldNote(hold))}</div></div>` : ""
+  })()}
 
   <div class="stats">
     <div class="stat hl"><div class="s-cap">${svg(I.clock)} Event</div><div class="s-val">${escHtml(ev.big)}</div><div class="s-sub">${escHtml(ev.sub)} · ${escHtml(bookingSlotText(booking, "vendor"))}</div></div>
@@ -954,6 +961,10 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
    * account alone, all of them asking to change the guest count.
    */
   const crQ = useQuery({ queryKey: ["bk-detail-cr", bookingId], queryFn: () => BookingAPI.getChangeRequests(bookingId).then((r) => r?.requests ?? []).catch(() => [] as BookingChangeRequest[]), enabled: valid })
+  // WP26 / V4-8: the sweeper also holds a booking for an open dispute. Asked only where the answer can matter (a Confirmed
+  // booking whose event day has passed); 404 = no dispute, a normal answer, not an error.
+  const holdCandidate = completionHold(bookingQ.data?.booking, { dispute: { status: "open" } }) !== null
+  const disputeQ = useQuery({ queryKey: ["bk-detail-dispute", bookingId], queryFn: () => BookingAPI.getDispute(bookingId).then((r) => r?.dispute ?? null).catch(() => null), enabled: valid && holdCandidate })
 
   React.useEffect(() => {
     const s = shadowRef.current
@@ -988,6 +999,7 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
       depQ.data ?? null,
       (refundQ.data?.requests ?? []) as unknown as RefundReq[],
       crQ.data ?? [],
+      disputeQ.data ?? null,
     )
     // restore the vendor's private per-booking note (persisted locally)
     const vn = s.getElementById("vendor-note") as HTMLTextAreaElement | null
@@ -995,7 +1007,7 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
     // update the crumb with the real customer name
     const crumb = s.querySelector(".crumb b"); if (crumb) crumb.textContent = booking.customerName || "Booking"
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, bookingQ.data, bookingQ.isLoading, bookingQ.isError, payQ.data, histQ.data, sheetsQ.data, scheduleQ.data, scheduleQ.isError, settleQ.data, depQ.data, refundQ.data, crQ.data])
+  }, [ready, bookingQ.data, bookingQ.isLoading, bookingQ.isError, payQ.data, histQ.data, sheetsQ.data, scheduleQ.data, scheduleQ.isError, settleQ.data, depQ.data, refundQ.data, crQ.data, disputeQ.data])
 
   const bound = React.useRef(false)
   React.useEffect(() => {

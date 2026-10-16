@@ -20,6 +20,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { cancellationKey, cancellationLabel, cancellationText, fixedRefundCeiling, isGeneratedPartialText, partialPolicyText, partialRefundErrors, validatePartialRefund } from "../lib/cancellation-policy.ts";
 import { humanizeKey } from "../lib/humanize-key.ts";
+import { refundParts, refundPin, refundTotal } from "../lib/refund-total.ts";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..");
@@ -116,6 +117,36 @@ check("the step-4 fields say the venue keeps (label, suffix, helper)", /Venue Ke
 check("the step-4 fields never describe the value as the customer's refund", !/they get this (share|amount)/.test(fields) && !/Refund Amount|Refund Percentage|Refund Type/.test(fields));
 check("the policy screen, the refund preview card and the types use venueKeepsFixed (not the superseded refundFixed)", !/refundFixed/.test(read("components/dashboard/mainScreens/cancellation-policy/artifact/cancellation-policy-artifact.tsx") + read("components/bookings/refund-preview-card.tsx") + read("lib/api/bookingOrder.ts")) && /venueKeepsFixed/.test(read("components/bookings/refund-preview-card.tsx")) && /venueKeepsFixed/.test(read("components/dashboard/mainScreens/cancellation-policy/artifact/cancellation-policy-artifact.tsx")));
 check("the customer cancel dialog says the venue keeps (not an unexplained 'forfeited')", /Venue keeps \(per \{refundPreview/.test(read("app/(main)/user/bookings/[id]/page.tsx")));
+
+// ── WP26 / V4-1: the venue page's Cancellation tile shows the whole sentence (it was cut at "venue keeps 4...") ──
+for (const [file, tile] of [["components/VendorDetails/VendorDetails.tsx", "StatTile"], ["components/VendorDetails/VendorDetailsMobile.tsx", "BridalStatTile"]] as const) {
+  const src = read(file);
+  const tileFn = src.slice(src.indexOf(`function ${tile}(`), src.indexOf(`function ${tile}(`) + 1500);
+  check(`${file}: ${tile} can wrap a long value (wide) instead of truncating it`, /wide\?: boolean/.test(tileFn) && /wide \? "break-words" : "truncate"/.test(tileFn) && /col-span-2/.test(tileFn));
+  check(`${file}: the Cancellation tile is wide when the sentence is long`, /label="Cancellation"[\s\S]{0,260}wide=\{[^}]*\.length > 20\}/.test(src));
+}
+
+// ── WP26 / V4-6: the cancel dialog tells the customer what they will RECEIVE, not only the policy part ──
+// (the cancel dialog said "You'll get back Rs 18,000" to a customer owed 38,000: the price-drop overpayment is a
+// separate obligation the preview reports in `priceDropRefund`, the declined-line sum in `declinedLineRefund`)
+const totalCases = JSON.parse(readFileSync(path.join(HERE, "fixtures", "refundTotalCases.json"), "utf8")).cases as {
+  name: string; refund: number; priceDropRefund?: unknown; declinedLineRefund?: unknown; total: number; pin: number; hasExtras: boolean;
+}[];
+for (const c of totalCases) {
+  const input = { preview: { refund: c.refund }, priceDropRefund: c.priceDropRefund as number | null | undefined, declinedLineRefund: c.declinedLineRefund as number | null | undefined };
+  check(`refund total: ${c.name}`, refundTotal(input) === c.total && refundParts(input).total === c.total, String(refundTotal(input)));
+  check(`refund pin is the policy part only: ${c.name}`, refundPin(input) === c.pin, String(refundPin(input)));
+  check(`refund extras flag: ${c.name}`, refundParts(input).hasExtras === c.hasExtras);
+}
+check("refund pin: no preview figure -> no pin (old behaviour)", refundPin({ preview: null }) === undefined && refundPin({}) === undefined);
+const cancelPage = read("app/(main)/user/bookings/[id]/page.tsx");
+check("the cancel dialog headline is the TOTAL (refundParts), never the policy part alone", /data-refund-total[^>]*>\{fmt\(refundParts\(refundPreview\)\.total\)\}/.test(cancelPage) && !/fmt\(refundPreview\.preview\.refund\)/.test(cancelPage));
+check("the cancel dialog names each non-zero component (policy, price drop, declined line)", /refundParts\(refundPreview\)\.priceDrop > 0/.test(cancelPage) && /refundParts\(refundPreview\)\.declinedLine > 0/.test(cancelPage) && /data-refund-components/.test(cancelPage));
+check("expectedRefund pins the POLICY part (refundPin), not the total the dialog shows", /refundPin\(refundPreview\)/.test(cancelPage) && !/expectedRefund: refundParts|expectedRefund: refundTotal/.test(cancelPage));
+check("REFUND_CHANGED: the toast names the same total as the refreshed dialog (not only the policy part the server answers)", /const nowShown = fresh \? refundParts\(fresh\)\.total : now;/.test(cancelPage) && /The refund is now \$\{fmt\(nowShown\)\}/.test(cancelPage));
+const vendorCard = read("components/bookings/refund-preview-card.tsx");
+check("the vendor refund card and its WhatsApp line use the same total", /refundParts\(data\)/.test(vendorCard) && /Wapas: \$\{rs\(parts\.total\)\}/.test(vendorCard) && /\{rs\(parts\.total\)\}<\/p>/.test(vendorCard) && !/rs\(preview\.refund\)/.test(vendorCard));
+check("the preview type carries the two additive fields", /priceDropRefund\?: number/.test(read("lib/api/bookingOrder.ts")) && /declinedLineRefund\?: number/.test(read("lib/api/bookingOrder.ts")));
 
 // no component prints the stored policy raw: a JSX expression that is just the field, or a Field/StatTile value, must go through the label helper
 // (form controls such as <Select value={formData.cancelationPolicy}> hold the KEY on purpose: they are not display)

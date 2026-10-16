@@ -19,7 +19,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-import { canMarkCompleted, statusBucket } from "../lib/utils/booking-completion.ts";
+import { canMarkCompleted, completionHold, completionHoldNote, statusBucket } from "../lib/utils/booking-completion.ts";
 import { outstandingOn, receivedOn } from "../lib/utils/booking-money.ts";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -80,6 +80,31 @@ check("the list's row menu offers Mark completed from canMarkCompleted, through 
   /canMarkCompleted\(b\)/.test(list) && /data-pop-done/.test(list) && /BookingsAPI\.markCompleted/.test(list));
 check("the list confirms first (completion is forward-only) and refreshes every money screen after", /openConfirm\(s, \{\s*title: "Event ho gaya\?"/.test(list) && /invalidateMoney\(\{ bookingId/.test(list));
 check("the booking page uses the same rule (no browser-local date compare)", /canMarkCompleted\(/.test(detail) && !/setHours\(0, 0, 0, 0\) < new Date\(\)\.setHours/.test(detail));
+
+// ── 5. WP26 / V4-8: a booking the sweeper holds says why ─────────────────────
+// mirrors bookingCompletionService.holdReason: an open dispute, or a refund request RAISED / APPROVED, holds a CONFIRMED
+// booking whose event day is over (the PKT day before today)
+const NOW = T("2026-10-17T05:00:00Z"); // 17 Oct 10:00 PKT
+const OVER = { status: "Confirmed", bookingDate: "2026-10-16" };
+check("hold: an open refund request (RAISED) is named", completionHold(OVER, { refundRequests: [{ state: "RAISED" }] }, NOW) === "refund_open");
+check("hold: an APPROVED refund request is named too", completionHold(OVER, { refundRequests: [{ state: "APPROVED" }] }, NOW) === "refund_open");
+for (const st of ["APPLIED", "PAID_BY_VENDOR", "DISPUTED", "ACKNOWLEDGED", "REJECTED", "WITHDRAWN"]) {
+  check(`hold: a ${st} refund request does not hold the sweeper, so no hint`, completionHold(OVER, { refundRequests: [{ state: st }] }, NOW) === null);
+}
+check("hold: an open dispute is named", completionHold(OVER, { dispute: { status: "open" } }, NOW) === "dispute_open");
+check("hold: a resolved dispute is not", completionHold(OVER, { dispute: { status: "resolved_refund" } }, NOW) === null);
+check("hold: both are named together", completionHold(OVER, { refundRequests: [{ state: "RAISED" }], dispute: { status: "open" } }, NOW) === "both");
+check("hold: nothing open, no hint", completionHold(OVER, { refundRequests: [], dispute: null }, NOW) === null && completionHold(OVER, {}, NOW) === null);
+check("hold: the event day itself is not 'passed' (the sweeper waits for the day after)", completionHold({ status: "Confirmed", bookingDate: "2026-10-17" }, { dispute: { status: "open" } }, NOW) === null);
+check("hold: a future event has no hint", completionHold({ status: "Confirmed", bookingDate: "2026-10-18" }, { dispute: { status: "open" } }, NOW) === null);
+check("hold: the day rolls on the Pakistan clock (00:30 PKT on the 17th is already after the 16th)", completionHold(OVER, { dispute: { status: "open" } }, T("2026-10-16T19:30:00Z")) === "dispute_open");
+check("hold: only Confirmed bookings are swept, so only they get the hint", ["Completed", "Cancelled", "Pending", "Awaiting Payment"].every((st) => completionHold({ status: st, bookingDate: "2026-10-16" }, { dispute: { status: "open" } }, NOW) === null));
+check("hold: the sentence names the reason in the product's Roman Urdu and what to do",
+  completionHoldNote("refund_open") === "Event guzar gaya hai; refund request khuli hai, usay band karein tab booking Ho gaya hogi." &&
+  /dispute khuli hai/.test(completionHoldNote("dispute_open")) && /refund request aur dispute khuli hain, unhe band karein/.test(completionHoldNote("both")));
+check("the booking page renders the hint from the shared rule and loads the dispute only for a held candidate",
+  /completionHold\(booking, \{ refundRequests: refundReqs, dispute \}\)/.test(detail) && /data-completion-hold/.test(detail) && /enabled: valid && holdCandidate/.test(detail));
+check("the sweeper itself is untouched by this screen change (the hint reads, never completes)", !/autoCompleteDue|completeOne/.test(detail));
 
 console.log(results.join("\n"));
 console.log(`\n${failures === 0 ? "ALL PASS" : `${failures} FAILED`} (${results.length} checks)`);

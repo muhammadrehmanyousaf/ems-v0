@@ -49,3 +49,36 @@ export function statusBucket(status?: string | null): StatusBucket {
   if (v.includes("confirm")) return "confirmed"
   return "pending"
 }
+
+/**
+ * WP26 / V4-8: why a Confirmed booking is still Confirmed after its event day.
+ *
+ * The nightly sweeper (src/services/bookingCompletionService.js holdReason) completes a Confirmed booking the
+ * PKT day after its event, EXCEPT while it holds an open dispute (`BookingDispute.status = "open"`) or an open
+ * refund request (`RefundRequest.state` RAISED or APPROVED). Such a booking sat Confirmed with a past event
+ * and nothing on the vendor's screens said why. This mirrors that rule on the data the booking page already
+ * loads (the refund requests and the dispute), so the vendor can be told. Display only: the sweeper is the
+ * authority and is not changed.
+ */
+export type CompletionHold = "refund_open" | "dispute_open" | "both"
+
+export function completionHold(
+  b: { status?: string | null; bookingDate?: string | null } | null | undefined,
+  facts: { refundRequests?: { state?: string | null }[] | null; dispute?: { status?: string | null } | null },
+  now: Date = new Date(),
+): CompletionHold | null {
+  if (!b || !b.bookingDate) return null
+  if (String(b.status ?? "").trim().toLowerCase() !== "confirmed") return null // the sweeper completes Confirmed bookings only
+  const eventDay = String(b.bookingDate).slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(eventDay) || eventDay >= todayInKarachi(now)) return null // the event day itself is not "passed"
+  const refund = (facts.refundRequests ?? []).some((r) => r?.state === "RAISED" || r?.state === "APPROVED")
+  const dispute = facts.dispute?.status === "open"
+  return refund && dispute ? "both" : refund ? "refund_open" : dispute ? "dispute_open" : null
+}
+
+/** The vendor-facing sentence (Roman Urdu, the console's voice). */
+export function completionHoldNote(hold: CompletionHold): string {
+  const what = hold === "both" ? "refund request aur dispute khuli hain" : hold === "refund_open" ? "refund request khuli hai" : "dispute khuli hai"
+  const them = hold === "both" ? "unhe" : "usay"
+  return `Event guzar gaya hai; ${what}, ${them} band karein tab booking Ho gaya hogi.`
+}
