@@ -12,6 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { LeadAPI, type Lead, type LeadStatus, type LeadSource, type LeadEventType, type CreateLeadInput, type UpdateLeadInput } from "@/lib/api/leads"
 import { LEAD_STAGE } from "@/lib/lead-stage"
+import { leadBudgetError, leadGuestsError, leadNumberMessageUr } from "@/lib/lead-numbers"
 import { venueSpacesApi, type SubVenueNode } from "@/lib/api/venueSpaces"
 import { openBookingForm, bookingIdFromSaved } from "@/components/dashboard/mainScreens/artifact/booking-form"
 import { StaffAPI } from "@/lib/api/staff"
@@ -48,7 +49,7 @@ const LEAD_FIELD_ID: Record<string, string> = {
 }
 const LEAD_FIELD_TEXT: Record<string, string> = {
   source: "Ye zariya abhi qabool nahi ho raha — koi aur zariya chunein (ya \"Other\")",
-  status: "Ye stage sahi nahi — dobara chunein",
+  status: "Ye status sahi nahi — dobara chunein",
   eventType: "Event ki qism dobara chunein",
   contactName: "Naam likhein",
   contactPhone: "Phone number sahi likhein (e.g. 0300 1234567)",
@@ -56,9 +57,7 @@ const LEAD_FIELD_TEXT: Record<string, string> = {
   contactEmail: "Email sahi likhein",
   eventDate: "Taareekh sahi chunein",
 }
-function showLeadFieldError(root: ShadowRoot, err: unknown): boolean {
-  const d = (err as { response?: { data?: { message?: string; data?: { field?: string } } } })?.response?.data
-  const field = d?.data?.field || ""
+function markLeadField(root: ShadowRoot, field: string, text: string): boolean {
   const el = (LEAD_FIELD_ID[field] && root.getElementById(LEAD_FIELD_ID[field])) as HTMLElement | null
   root.querySelectorAll(".ferr").forEach((n) => n.remove())
   root.querySelectorAll("[aria-invalid=true]").forEach((n) => n.removeAttribute("aria-invalid"))
@@ -66,10 +65,29 @@ function showLeadFieldError(root: ShadowRoot, err: unknown): boolean {
   el.setAttribute("aria-invalid", "true")
   const note = document.createElement("div")
   note.className = "ferr"; note.setAttribute("role", "alert")
-  note.textContent = LEAD_FIELD_TEXT[field] || d?.message || "Ye field sahi nahi"
+  note.textContent = text
   el.insertAdjacentElement("afterend", note)
   el.scrollIntoView({ block: "center", behavior: "smooth" }); (el as HTMLInputElement).focus?.()
   return true
+}
+function showLeadFieldError(root: ShadowRoot, err: unknown): boolean {
+  const d = (err as { response?: { data?: { message?: string; data?: { field?: string } } } })?.response?.data
+  const field = d?.data?.field || ""
+  // estimatedBudget / estimatedGuests carry no LEAD_FIELD_TEXT entry: the server's own sentence names the rule
+  return markLeadField(root, field, LEAD_FIELD_TEXT[field] || d?.message || "Ye field sahi nahi")
+}
+/**
+ * WP21 — Budget / Mehmaan are checked BEFORE the round trip (lib/lead-numbers.ts mirrors the server rule: empty ok,
+ * otherwise Budget > 0 and Mehmaan a whole number >= 1). On EDIT a stored legacy value that the vendor did not
+ * change is not re-judged (older leads carry a 0), exactly as the server lets it through.
+ */
+function leadNumberProblem(root: ShadowRoot, raw: { budget: string; guests: string }, orig?: Lead): boolean {
+  const same = (typed: string, stored: unknown) => stored != null && stored !== "" && Number(typed) === Number(stored)
+  const be = leadBudgetError(raw.budget)
+  if (be && !(orig && same(raw.budget, orig.estimatedBudget))) return markLeadField(root, "estimatedBudget", leadNumberMessageUr("budget", be))
+  const ge = leadGuestsError(raw.guests)
+  if (ge && !(orig && same(raw.guests, orig.estimatedGuests))) return markLeadField(root, "estimatedGuests", leadNumberMessageUr("guests", ge))
+  return false
 }
 const STAGE: Record<LeadStatus, { label: string; tone: string; tab: string }> = LEAD_STAGE
 const SOURCE: Record<LeadSource, { label: string; color: string }> = {
@@ -249,8 +267,8 @@ function leadFormHtml(l?: Lead, prefillDate?: string, businesses?: BizLite[], cu
     <div class="dfield"><label class="dlabel">Email</label><input id="ld-email" value="${v(l?.contactEmail)}" placeholder="optional"/></div>
     <div class="dfield row2"><div><label class="dlabel">Venue <span class="req">*</span></label><select id="ld-biz">${bizOpts || `<option value="">—</option>`}</select></div><div><label class="dlabel">Hall / space</label><select id="ld-subvenue"><option value="">— poora venue —</option></select></div></div>
     <div class="dfield row2"><div><label class="dlabel">Event</label><select id="ld-event">${evOpts}</select></div><div><label class="dlabel">Shaadi kab</label><input type="date" id="ld-date" value="${dateVal}"/></div></div>
-    <div class="dfield row2"><div><label class="dlabel">Budget (Rs)</label><input type="number" id="ld-budget" value="${l?.estimatedBudget != null ? l.estimatedBudget : ""}" placeholder="optional"/></div><div><label class="dlabel">Mehmaan</label><input type="number" id="ld-guests" value="${l?.estimatedGuests != null ? l.estimatedGuests : ""}" placeholder="optional"/></div></div>
-    <div class="dfield row2"><div><label class="dlabel">Zariya</label><select id="ld-source">${srcOpts}</select></div><div><label class="dlabel">Stage</label><select id="ld-status">${stOpts}</select></div></div>
+    <div class="dfield row2"><div><label class="dlabel">Budget (Rs)</label><input type="number" min="1" id="ld-budget" value="${l?.estimatedBudget != null ? l.estimatedBudget : ""}" placeholder="optional"/></div><div><label class="dlabel">Mehmaan</label><input type="number" min="1" step="1" id="ld-guests" value="${l?.estimatedGuests != null ? l.estimatedGuests : ""}" placeholder="optional"/></div></div>
+    <div class="dfield row2"><div><label class="dlabel">Zariya</label><select id="ld-source">${srcOpts}</select></div><div><label class="dlabel">Status</label><select id="ld-status">${stOpts}</select></div></div>
     <div class="dfield row2"><div><label class="dlabel">Assign to</label><select id="ld-rep"><option value="">— koi nahi —</option></select></div><div><label class="dlabel">Agli follow-up</label><input type="datetime-local" id="ld-followup" value="${fuVal}"/></div></div>
     <div class="dfield"><label class="dlabel">Puchh-gichh / note</label><textarea id="ld-inquiry" placeholder="Kya poocha…">${v(l?.inquiry || l?.notes)}</textarea></div>
     <div class="ww-dfoot"><button class="btn btn-ghost" data-drawer-close>Cancel</button><button class="btn btn-primary" data-lead-save>${l ? "Update karein" : "Lead add karein"}</button></div>`
@@ -271,7 +289,7 @@ function buildContent(leads: Lead[]): string {
     </div><div class="filters"><label class="f-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="Naam ya number dhoondein…" aria-label="Filter"/></label></div></div>`
   const body = leads.map(rowHtml).join("")
   return `${toolbar}<div class="card"><div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Lead</th><th>Event</th><th>Shaadi kab</th><th>Zariya</th><th>Stage</th><th>Aakhri raabta</th><th></th></tr></thead>
+    <thead><tr><th>Lead</th><th>Event</th><th>Shaadi kab</th><th>Zariya</th><th>Status</th><th>Aakhri raabta</th><th></th></tr></thead>
     <tbody id="tbody">${body}</tbody></table></div>
     ${leads.length ? `<div class="tbl-foot"><span id="rowcount">${leads.length} leads</span></div>` : `<div class="empty">Abhi koi lead nahi. Nayi puchh-gichh yahan aayegi.<div style="margin-top:12px"><button class="btn btn-primary" data-lead-new>+ Naya lead</button></div></div>`}</div>`
 }
@@ -337,8 +355,8 @@ export function LeadsArtifact() {
         if (adv?.dataset.leadAdv) {
           const id = Number(adv.dataset.advId); const to = adv.dataset.leadAdv as LeadStatus
           adv.setAttribute("disabled", "true")
-          try { await LeadAPI.transition(id, { to }); toast.success(`Stage: ${STAGE[to]?.label || to}`); closeDrawer(s); qc.invalidateQueries({ queryKey: ["leads-artifact"] }) }
-          catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Stage nahi badla"); adv.removeAttribute("disabled") }
+          try { await LeadAPI.transition(id, { to }); toast.success(`Status: ${STAGE[to]?.label || to}`); closeDrawer(s); qc.invalidateQueries({ queryKey: ["leads-artifact"] }) }
+          catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Status nahi badla"); adv.removeAttribute("disabled") }
           return
         }
         const led = t.closest("[data-lead-edit]") as HTMLElement | null
@@ -362,7 +380,7 @@ export function LeadsArtifact() {
                 if (newBookingId) await LeadAPI.linkBooking(l.id, newBookingId)
                 else await LeadAPI.update(l.id, { status: "booked" } as UpdateLeadInput)
               } catch {
-                toast.error("Booking ban gayi, lekin lead 'jeeta' mark nahi hui — lead khol kar stage badal dein")
+                toast.error("Booking ban gayi, lekin lead 'jeeta' mark nahi hui — lead khol kar status badal dein")
               }
               qc.invalidateQueries({ queryKey: ["leads-artifact"] })
             },
@@ -372,6 +390,7 @@ export function LeadsArtifact() {
         if (t.closest("[data-lead-save]")) {
           const name = val("ld-name"); if (!name) { toast.error("Naam likhein"); return }
           const editId = Number(val("ld-id"))
+          if (leadNumberProblem(s, { budget: val("ld-budget"), guests: val("ld-guests") }, editId ? leadsRef.current.find((x) => x.id === editId) : undefined)) return
           const bizPick = Number(val("ld-biz")) || Number(bizRef.current) || 0
           const common = {
             contactName: name, contactPhone: val("ld-phone") || undefined, contactWhatsapp: val("ld-wa") || undefined, contactEmail: val("ld-email") || undefined,
@@ -386,7 +405,10 @@ export function LeadsArtifact() {
           try {
             if (editId) await LeadAPI.update(editId, { ...common, businessId: bizPick || undefined } as UpdateLeadInput)
             else { if (!bizPick) { toast.error("Venue select karein"); btn.disabled = false; return } await LeadAPI.create({ businessId: bizPick, ...common } as CreateLeadInput) }
-            toast.success(editId ? "Lead update ho gaya" : "Naya lead ban gaya"); closeDrawer(s); qc.invalidateQueries({ queryKey: ["leads-artifact"] })
+            // WP21 — the list shows the venue picked in the sidebar. A lead saved under ANOTHER venue is real, but it is not in
+            // this list: say where it went instead of a plain "ban gaya" next to a list that did not change.
+            const elsewhere = bizPick && bizRef.current != null && Number(bizRef.current) !== bizPick
+            toast.success(editId ? "Lead update ho gaya" : elsewhere ? `Naya lead ban gaya — ${bizListRef.current.find((b) => b.id === bizPick)?.name || "doosre venue"} mein (sidebar se wo venue chunein)` : "Naya lead ban gaya"); closeDrawer(s); qc.invalidateQueries({ queryKey: ["leads-artifact"] })
           } catch (err: unknown) { if (!showLeadFieldError(s, err)) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua"); btn.disabled = false; btn.textContent = editId ? "Update karein" : "Lead add karein" }
           return
         }
