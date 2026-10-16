@@ -232,12 +232,14 @@ export function CalendarArtifact() {
 
   function weekView(): string {
     const sel = parseKey(selKey); const start = new Date(sel); start.setDate(sel.getDate() - sel.getDay())
-    const HS = 14, HE = 24
+    // WP23: the grid starts at 2 PM unless an event of this week starts earlier (a Day / Morning slot must not be drawn on the 2 PM row)
+    const weekKeys = new Set(Array.from({ length: 7 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return keyOf(d) }))
+    const HS = Math.min(14, ...events.filter((e) => weekKeys.has(e.key) && pass(e)).map((e) => e.hour)), HE = 24
     let html = `<div class="wk-corner"></div>`
     for (let i = 0; i < 7; i++) { const dt = new Date(start); dt.setDate(start.getDate() + i); const k = keyOf(dt); html += `<div class="wk-dh ${k === todayKey ? "today" : ""}" style="grid-column:${i + 2};grid-row:1"><span class="dw">${WD[dt.getDay()]}</span><span class="dd tnum">${dt.getDate()}</span></div>` }
     for (let h = HS; h < HE; h++) { const row = h - HS + 2; const h12 = ((h + 11) % 12) + 1; html += `<div class="wk-hour" style="grid-row:${row}"><span>${h12} ${h < 12 ? "AM" : "PM"}</span></div>`; for (let i = 0; i < 7; i++) html += `<div class="wk-slot" style="grid-column:${i + 2};grid-row:${row}"></div>` }
-    for (let i = 0; i < 7; i++) { const dt = new Date(start); dt.setDate(start.getDate() + i); const k = keyOf(dt); events.filter((e) => e.key === k && pass(e)).forEach((e) => { const rs = Math.max(2, Math.min(HE - HS + 1, e.hour - HS + 2)); const re = Math.min(HE - HS + 2, rs + 3); const h12 = ((e.hour + 11) % 12) + 1; html += `<div class="wkev ${evtTone(e.status).cls}" data-nav-btn="/dashboard/bookings/${e.id}" style="grid-column:${i + 2};grid-row:${rs}/${re}"><b>${escHtml(e.name)}</b><div class="wsub">${escHtml(e.slot)} · ${escHtml(e.hall || "")}</div></div>` }) }
-    return `<div class="wkcard"><div class="wkwrap"><div class="wk">${html}</div></div></div>`
+    for (let i = 0; i < 7; i++) { const dt = new Date(start); dt.setDate(start.getDate() + i); const k = keyOf(dt); events.filter((e) => e.key === k && pass(e)).forEach((e) => { const rs = Math.max(2, Math.min(HE - HS + 1, e.hour - HS + 2)); const re = Math.min(HE - HS + 2, rs + 3); const h12 = ((e.hour + 11) % 12) + 1; html += `<div class="wkev ${evtTone(e.status).cls}" data-nav-btn="/dashboard/bookings/${e.id}" style="grid-column:${i + 2};grid-row:${rs}/${re}"><b>${escHtml(e.name)}</b><div class="wsub">${escHtml(e.slot)}${e.hall ? ` · ${escHtml(e.hall)}` : ""}</div></div>` }) }
+    return `<div class="wkcard"><div class="wkwrap"><div class="wk" style="grid-template-rows:52px repeat(${HE - HS},56px)">${html}</div></div></div>`
   }
 
   function agendaView(): string {

@@ -62,7 +62,7 @@ function rowHtml(b: BookingData): string {
   const bar = total > 0 ? `<div class="paybar"><span style="width:${Math.min(100, pct)}%"></span></div>` : `<div class="paybar"><span class="zero"></span></div>`
   return `<tr data-nav-btn="/dashboard/bookings/${b.id}" data-status="${bkt}" data-due="${due}">
     <td><div class="c-couple"><span class="ava">${escHtml(initialsOf(b.customerName))}</span><div><div class="cc-nm">${escHtml(b.customerName || "—")}</div><div class="cc-ev">${escHtml(serviceLabel(b) || "Booking")} · #${b.id}</div></div></div></td>
-    <td class="td-date">${escHtml(d.main)}${d.sub ? `<div class="sub">${escHtml(d.sub)}</div>` : ""}</td>
+    <td class="td-date">${escHtml(d.main)}${d.sub ? ` <div class="sub">${escHtml(d.sub)}</div>` : ""}</td>
     <td class="td-mut">${escHtml(hall)}</td>
     <td class="r td-guests tnum">${escHtml(guests)}</td>
     <td class="r td-amt tnum"><span class="rs">Rs</span> ${pkNum(total)}${amtSub}</td>

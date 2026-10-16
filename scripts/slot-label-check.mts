@@ -34,7 +34,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 import { describeSlot, slotText, slotTextFor, slotFromBooking, bookingSlotText } from "../lib/booking/slot-vocabulary.ts";
-import { fmtYmd, ymdOf } from "../lib/utils/ymd.ts";
+import { fmtYmd, ymdOf, pickedDayOf, dateOnlyOf } from "../lib/utils/ymd.ts";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..");
@@ -54,6 +54,10 @@ if (process.argv.includes("--probe")) {
   for (const v of ["2026-10-16", "2026-10-16T00:00:00.000Z", "2026-01-01", "2026-12-31", "2026-03-29", "2026-02-30", "", null, "16 Oct"]) {
     out.push(JSON.stringify(["ymd", v, ymdOf(v), fmtYmd(v), fmtYmd(v, "long"), fmtYmd(v, "weekday"), fmtYmd(v, "dayMonth"), fmtYmd(v, "numeric")]));
   }
+  // the booking flow: a picker Date at local midnight + the slot hour, stored as toISOString(), sent as the PICKED day
+  const evening = new Date(2026, 9, 16); evening.setHours(19, 0, 0, 0);
+  const midnight = new Date(2026, 9, 16);
+  out.push(["pick", pickedDayOf(evening), pickedDayOf(evening.toISOString()), pickedDayOf(midnight.toISOString()), pickedDayOf("2026-10-16"), pickedDayOf(null) ?? "", dateOnlyOf("2026-10-16T00:00:00.000Z"), dateOnlyOf("2026-10-15T19:00:00.000Z") ?? ""].join("|"));
   process.stdout.write(out.join("\n"));
   process.exit(0);
 }
@@ -95,6 +99,7 @@ check("the vendor sees a clear fallback, never a made-up time", bookingSlotText(
     return r.status === 0 ? r.stdout : `FAILED ${tz}: ${r.stderr}`;
   };
   const base = run("UTC");
+  check("the picked day is sent as YYYY-MM-DD in every zone (an evening slot used to become the next day for a customer abroad)", base.includes("pick|2026-10-16|2026-10-16|2026-10-16|2026-10-16||2026-10-16|"), base.split("\n").filter((l) => l.startsWith("pick")).join(""));
   check("probe runs", base.length > 200 && !base.startsWith("FAILED"), base.slice(0, 200));
   for (const tz of ["Asia/Karachi", "America/Los_Angeles", "Pacific/Auckland", "Pacific/Kiritimati"]) {
     check(`slot text and day text are identical under TZ=${tz}`, run(tz) === base);
@@ -147,6 +152,12 @@ const TIME_ON_DATE_ALLOW: Record<string, string> = {
     t.split("\n").forEach((line, i) => { if (DAY_FIELD.test(line)) offenders.push(`${f}:${i + 1}`); });
   }
   check("no web file prints a booking day through new Date(...) in the browser zone (use fmtYmd)", offenders.length === 0, offenders.slice(0, 40).join("\n        "));
+}
+
+{
+  // The booking flow must SEND the picked day, never the UTC instant of "that day at the slot hour".
+  const bf = src.get("components/booking/booking-form.tsx") || "";
+  check("the booking flow sends the picked day (pickedDayOf), not toISOString()", /bookingDate:\s*pickedDayOf\(currentForm\.bookingDate\)/.test(bf) && !/bookingDate:\s*currentForm\.bookingDate,/.test(bf) && !/currentForm\.bookingDate\.toISOString\(\)/.test(bf));
 }
 
 console.log(results.join("\n"));

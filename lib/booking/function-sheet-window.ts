@@ -18,7 +18,7 @@
  */
 
 import type { BookingData } from "@/lib/dashboard-types"
-import { legacyPeriodWindow, to12h, formatSlotRange } from "@/lib/booking/slot-vocabulary"
+import { legacyPeriodWindow, to12h, formatSlotRange, slotFromBooking } from "@/lib/booking/slot-vocabulary"
 import { slotContainsTime } from "@/lib/booking/slot-picker-model"
 
 export type BookingWindow = { label: string; start: string; end: string; source: "slot" | "period" }
@@ -37,11 +37,12 @@ const mins = (t: unknown): number | null => {
  * time ("Baraat") claims no hours, so nothing is checked against it.
  */
 export function bookingWindowOf(
-  b: Pick<BookingData, "bookingTime" | "slotTemplateSnapshotJson"> | null | undefined,
+  b: Pick<BookingData, "bookingTime" | "slotTemplateSnapshotJson" | "slotLabel" | "slotStartTime" | "slotEndTime"> | null | undefined,
 ): BookingWindow | null {
-  const snap = b?.slotTemplateSnapshotJson
-  if (snap?.startTime && snap?.endTime) {
-    return { label: String(snap.label || "Slot"), start: hhmm(snap.startTime), end: hhmm(snap.endTime), source: "slot" }
+  // WP23: the ONE slot reading (server fields, else the frozen snapshot unless it is stale against bookingTime)
+  const snap = slotFromBooking(b)
+  if (snap.slotStartTime && snap.slotEndTime) {
+    return { label: String(snap.slotLabel || "Slot"), start: hhmm(snap.slotStartTime), end: hhmm(snap.slotEndTime), source: "slot" }
   }
   const p = legacyPeriodWindow(hhmm(b?.bookingTime))
   return p ? { label: p.label, start: p.startTime, end: p.endTime, source: "period" } : null
@@ -59,7 +60,7 @@ export function timingNotes({ window: w, timeline, setup, teardown }: TimingInpu
   if (!w) return []
   const notes: string[] = []
   const span = formatSlotRange(w.start, w.end)
-  const where = `${w.label}${span ? ` (${span})` : ""}`
+  const where = `${w.label}${span ? ` · ${span}` : ""}` // the canonical wording (slot-vocabulary)
   const wrapsMidnight = (mins(w.end) ?? 0) <= (mins(w.start) ?? 0)
 
   for (const r of timeline) {
