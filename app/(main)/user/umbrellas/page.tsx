@@ -13,6 +13,7 @@
  * discount + multi-event booking flow.
  */
 
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -59,6 +60,7 @@ const STATUS_TONE: Record<UmbrellaStatus, string> = {
 
 function fmtDate(s: string | null | undefined): string {
   if (!s) return "Date TBD";
+  if (dateOnlyOf(s)) return fmtYmd(s, "long"); // WP23: a calendar day, printed from the string
   try {
     return new Date(s).toLocaleDateString("en-PK", {
       year: "numeric",

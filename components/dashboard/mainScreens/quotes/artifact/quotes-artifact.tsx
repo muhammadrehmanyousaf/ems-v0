@@ -8,6 +8,7 @@
  * an inline responder so a vendor can send a price without leaving the row.
  */
 
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import * as React from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -28,7 +29,7 @@ const STATUS_UI: Record<QuoteStatus, { label: string; tone: string }> = {
 }
 const su = (s: QuoteStatus) => STATUS_UI[s] || STATUS_UI.inquiry
 const money = (v: string | number | null | undefined) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : 0 }
-function fmtDate(s?: string | null) { if (!s) return "—"; const d = new Date(s); return isNaN(d.getTime()) ? String(s) : d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) }
+function fmtDate(s?: string | null) { if (!s) return "—"; if (dateOnlyOf(s)) return fmtYmd(s, "short"); const d = new Date(s); return isNaN(d.getTime()) ? String(s) : d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) }
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
 
 const IC = {

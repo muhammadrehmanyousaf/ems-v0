@@ -23,6 +23,7 @@ import { ReceiptsAPI } from "@/lib/api/paymentReceipts"
 import { ExpensesAPI } from "@/lib/api/vendorExpenses"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useBusiness } from "@/context/BusinessContext"
+import { holdSlotText } from "@/lib/booking/slot-vocabulary"
 import { useArtifactShell, pkNum, escHtml, errorBannerHtml, openDrawer, closeDrawer } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const svg = (p: string, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}">${p}</svg>`
@@ -39,7 +40,6 @@ const IC = {
 const todayIso = () => new Date().toISOString().slice(0, 10)
 const isToday = (s?: string | null) => !!s && String(s).slice(0, 10) === todayIso()
 const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
-function fmtTime(t?: string | null) { if (!t) return ""; const [h, m] = String(t).split(":").map(Number); if (Number.isNaN(h)) return String(t); const ap = h >= 12 ? "PM" : "AM"; return `${h % 12 || 12}:${String(m || 0).padStart(2, "0")} ${ap}` }
 function relTime(s?: string | null) {
   if (!s) return ""
   const d = new Date(s).getTime(); if (isNaN(d)) return ""
@@ -171,7 +171,7 @@ export function FieldArtifact() {
     }
     const feed = [
       ...todayLeads.map((l) => ({ icon: IC.users, color: "var(--info)", t: l.contactName || "Lead", s: `Lead${l.contactPhone ? " · " + l.contactPhone : ""}`, time: relTime(l.createdAt), _at: l.createdAt || "" })),
-      ...todayHolds.map((h) => ({ icon: IC.lock, color: "var(--accent-ink)", t: `Hold · ${String(h.holdDate || "").slice(0, 10)}`, s: `Slot roka${h.holdTime ? " · " + fmtTime(h.holdTime) : ""}`, time: relTime(h.createdAt), _at: h.createdAt || "" })),
+      ...todayHolds.map((h) => ({ icon: IC.lock, color: "var(--accent-ink)", t: `Hold · ${String(h.holdDate || "").slice(0, 10)}`, s: `Slot roka${h.holdTime ? " · " + holdSlotText(h.holdTime) : ""}`, time: relTime(h.createdAt), _at: h.createdAt || "" })),
     ].sort((a, b) => (b._at || "").localeCompare(a._at || "")).slice(0, 8)
     return { counts, feed, loading: leadsQ.isLoading || holdsQ.isLoading }
   }, [leadsQ.data, holdsQ.data, receiptsQ.data, expensesQ.data, leadsQ.isLoading, holdsQ.isLoading])

@@ -21,6 +21,7 @@
  *     other failure)
  */
 
+import { fmtYmd } from "@/lib/utils/ymd"
 import * as React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -60,7 +61,7 @@ function defaultBody(variant: PdfVariant, sheet: FunctionSheet): string {
   const total = Number(sheet.grandTotal) || 0;
   const totalLine =
     total > 0 ? `Rs. ${Math.round(total).toLocaleString('en-PK')}` : null;
-  const event = sheet.eventDate ? `\nEvent: ${sheet.eventDate}` : '';
+  const event = sheet.eventDate ? `\nEvent: ${fmtYmd(sheet.eventDate, 'long', null)}` : ''; // WP23: the day in words, not the raw ISO string
   switch (variant) {
     case 'quote':
       return [

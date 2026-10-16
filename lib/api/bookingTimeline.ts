@@ -38,6 +38,12 @@ export interface TodayEvent {
     customerPhone: string | null;
     bookingDate: string | null;
     bookingTime: string | null;
+    // WP23 - the booking's STANDARD SLOT as the server words it (additive; see lib/booking/slot-vocabulary.ts)
+    slotLabel?: string | null;
+    slotStartTime?: string | null;
+    slotEndTime?: string | null;
+    slotText?: string;
+    slotKind?: "slot" | "whole_day" | "unset";
     status: string;
     totalAmount: number | string | null;
     // Received money (receipts sync into it) — needed to derive a real baqaya

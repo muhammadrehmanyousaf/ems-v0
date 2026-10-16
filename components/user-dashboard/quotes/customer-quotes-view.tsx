@@ -9,6 +9,7 @@
  * is on (the API 404s → the empty/disabled note shows).
  */
 
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -25,6 +26,7 @@ import { toast } from "sonner"
 
 const fmtDate = (s?: string | null) => {
   if (!s) return null
+  if (dateOnlyOf(s)) return fmtYmd(s, { day: "2-digit", month: "short", year: "numeric" }) // WP23: a calendar day
   const d = new Date(s)
   return isNaN(d.getTime()) ? s : d.toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
 }

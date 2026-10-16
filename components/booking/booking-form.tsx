@@ -1,5 +1,6 @@
 "use client"
 
+import { pickedDayOf } from "@/lib/utils/ymd"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import DateTimeStepV2 from "@/components/booking/steps-v2/date-time-step"
 import PackageStepV2 from "@/components/booking/steps-v2/package-step"
@@ -524,7 +525,9 @@ export default function BookingForm() {
       customerEmail: currentForm.email,
       customerPhone: currentForm.phoneNumber,
       vendorId: venue?.vendor?.id || venue?.id,
-      bookingDate: currentForm.bookingDate,
+      // WP23: the DAY the customer picked ("2026-10-16"), never the UTC instant of slot-time-on-that-day: the server reads an
+      // instant as its Pakistan day, so a customer abroad picking an evening slot used to book the NEXT day.
+      bookingDate: pickedDayOf(currentForm.bookingDate) ?? currentForm.bookingDate,
       bookingTime: currentForm.timeSlot,
       vendors: vendorsPayload.map(vendor => ({
         ...vendor,
@@ -689,11 +692,7 @@ export default function BookingForm() {
             [sentIndex]: {
               bookingId: realBookingId,
               amount: summedDownPayment,
-              bookingDate: typeof currentForm.bookingDate === "string"
-                ? currentForm.bookingDate
-                : currentForm.bookingDate instanceof Date
-                  ? currentForm.bookingDate.toISOString()
-                  : undefined,
+              bookingDate: pickedDayOf(currentForm.bookingDate) ?? undefined,
               guestCount: currentForm.guestCount,
             },
           }))
@@ -707,11 +706,7 @@ export default function BookingForm() {
             amount: summedDownPayment,
             paymentType: "down_payment",
             customerEmail: currentForm.email,
-            bookingDate: typeof currentForm.bookingDate === "string"
-              ? currentForm.bookingDate
-              : currentForm.bookingDate instanceof Date
-                ? currentForm.bookingDate.toISOString()
-                : undefined,
+            bookingDate: pickedDayOf(currentForm.bookingDate) ?? undefined,
           },
         }))
         // The inline Stripe screen that used to run here is gone from THIS

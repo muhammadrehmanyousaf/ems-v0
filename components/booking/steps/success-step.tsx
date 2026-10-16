@@ -11,6 +11,7 @@
  * reduced motion. Every prop is unchanged.
  */
 
+import { fmtYmd, pickedDayOf } from "@/lib/utils/ymd"
 import { Check, Printer, Home, Building, DollarSign } from "lucide-react"
 import type { BookingFormData, EventVenue, Vendor } from "@/lib/types"
 import confetti from "canvas-confetti"
@@ -78,7 +79,7 @@ export default function SuccessStep({
       ? [{ label: "Guests", value: `${formData.guestCount}` }]
       : []
     ),
-    { label: "Date", value: formData.bookingDate ? new Date(formData.bookingDate).toLocaleDateString() : "N/A" },
+    { label: "Date", value: fmtYmd(pickedDayOf(formData.bookingDate), "short", "N/A") },
     { label: "Time", value: timeSlotText || "N/A" },
   ]
 

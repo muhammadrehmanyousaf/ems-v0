@@ -1,5 +1,6 @@
 "use client";
 
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -48,7 +49,7 @@ import {
 } from "@/components/user-dashboard";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { slotText, slotFromBooking } from "@/lib/booking/slot-vocabulary";
+import { bookingSlotText } from "@/lib/booking/slot-vocabulary";
 import { cancelRouteFor, cancelErrorMessage, isPaymentAlreadyReceived } from "@/lib/bookings/cancel-route";
 
 interface BookingDetail {
@@ -161,7 +162,7 @@ const PAYMENT_CONFIG: Record<string, { label: string; tone: string }> = {
 
 const fmt = (n: number) => `Rs. ${Number(n || 0).toLocaleString()}`;
 const fmtDate = (s: string) =>
-  new Date(s).toLocaleDateString("en-US", {
+  dateOnlyOf(s) ? fmtYmd(s, "short", null, "en-US") : new Date(s).toLocaleDateString("en-US", { // WP23: a calendar day is printed from the string
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -558,10 +559,12 @@ export default function BookingsPage() {
                       <Calendar className="size-3.5 text-bridal-gold" />
                       {fmtDate(booking.bookingDate)}
                     </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <Clock className="size-3.5 text-bridal-gold" />
-                      {slotText(slotFromBooking(booking)) || booking.bookingTime}
-                    </span>
+                    {bookingSlotText(booking, "customer") ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <Clock className="size-3.5 text-bridal-gold" />
+                        {bookingSlotText(booking, "customer")}
+                      </span>
+                    ) : null}
                     {primaryVendor?.business?.city && (
                       <span className="inline-flex items-center gap-1.5">
                         <MapPin className="size-3.5 text-bridal-gold" />

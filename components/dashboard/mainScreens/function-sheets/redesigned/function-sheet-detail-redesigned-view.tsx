@@ -8,6 +8,7 @@
  * untouched. Route /dashboard/function-sheets/[id]. Token-only (themes).
  */
 
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import * as React from "react"
 import { BookingReceiptsCard, BookingDisputesCard } from "@/components/bookings/booking-related-lists"
 import { toast } from "sonner"
@@ -46,6 +47,7 @@ import { PlanLockChip } from "@/components/dashboard/plans/plan-locked"
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const fmtDate = (s?: string | null) => {
   if (!s) return "—"
+  if (dateOnlyOf(s)) return fmtYmd(s, { day: "2-digit", month: "short", year: "numeric" }) // WP23: a calendar day
   const d = new Date(s)
   return isNaN(d.getTime()) ? s : d.toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
 }

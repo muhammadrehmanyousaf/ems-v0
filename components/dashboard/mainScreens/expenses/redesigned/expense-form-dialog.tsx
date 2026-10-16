@@ -7,6 +7,7 @@
  * parity recipe.
  */
 
+import { fmtYmd } from "@/lib/utils/ymd"
 import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -182,7 +183,7 @@ export function ExpenseFormDialog({
   })
   const bookings = bookingsQ.data ?? []
   const bookingLabel = (b: { id: number; customerName: string | null; bookingDate: string | null }) =>
-    `${b.customerName || `Booking #${b.id}`}${b.bookingDate ? ` · ${new Date(b.bookingDate).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })}` : ""}`
+    `${b.customerName || `Booking #${b.id}`}${b.bookingDate ? ` · ${fmtYmd(b.bookingDate, { day: "2-digit", month: "short", year: "numeric" }, null)}` : ""}`
 
   const saveMut = useMutation({
     mutationFn: async () => {

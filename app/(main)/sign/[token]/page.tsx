@@ -16,6 +16,7 @@
  * confirming).
  */
 
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import * as React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -117,6 +118,7 @@ function fmtPKR(n: number | string | null | undefined): string {
 }
 function fmtDate(iso: string | null | undefined): string {
   if (!iso) return '—';
+  if (dateOnlyOf(iso)) return fmtYmd(iso, 'short'); // WP23: a calendar day, printed from the string
   try {
     return new Date(iso).toLocaleDateString('en-PK', {
       year: 'numeric',

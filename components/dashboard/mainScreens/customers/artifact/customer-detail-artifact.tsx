@@ -7,6 +7,7 @@
  * bookings list, activity timeline, and a contact/stats rail.
  */
 
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -27,7 +28,7 @@ function parseId(raw: string): { email?: string; phone?: string; offlineId?: num
   return { phone: t }
 }
 const money = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
-function fmtDate(s?: string | null) { if (!s) return "—"; const d = new Date(s); return isNaN(d.getTime()) ? String(s) : d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) }
+function fmtDate(s?: string | null) { if (!s) return "—"; if (dateOnlyOf(s)) return fmtYmd(s, "short"); const d = new Date(s); return isNaN(d.getTime()) ? String(s) : d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) }
 const rs = (n: number) => `<span class="rs">Rs</span> ${pkNum(n)}`
 const svg = (p: string, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}">${p}</svg>`
 const bkTone = (s?: string) => { const v = (s || "").toLowerCase(); if (v.includes("confirm")) return "ok"; if (v.includes("complete")) return "info"; if (v.includes("cancel")) return "bad"; return "warn" }

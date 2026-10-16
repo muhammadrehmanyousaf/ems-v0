@@ -286,6 +286,12 @@ export class PaymentAPI {
           customerName:  booking.customerName  || 'Customer',
           bookingDate:   booking.bookingDate,
           bookingTime:   booking.bookingTime,
+          // WP23 - the booking's STANDARD SLOT as the server words it (the page renders bookingSlotText(booking))
+          slotLabel:     booking.slotLabel,
+          slotStartTime: booking.slotStartTime,
+          slotEndTime:   booking.slotEndTime,
+          slotText:      booking.slotText,
+          slotKind:      booking.slotKind,
           businesses,
           paymentType:   determinedPaymentType,
           amount:        calculatedAmount,

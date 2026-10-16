@@ -6,6 +6,7 @@
  * Route /dashboard/admin/disputes-new.
  */
 
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { listAdminDisputes, type AdminDisputeRow } from "@/lib/api/disputes"
@@ -26,6 +27,8 @@ const initials = (name?: string | null) =>
   (name || "?").split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("")
 const fmtDate = (v?: string | null) => {
   if (!v) return "—"
+  // WP23: a booking date is a calendar day, printed from the string (never through the browser zone)
+  if (dateOnlyOf(v)) return fmtYmd(v, "short")
   const d = new Date(v)
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("en-PK", { year: "numeric", month: "short", day: "numeric" })
 }

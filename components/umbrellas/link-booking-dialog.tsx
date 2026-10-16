@@ -13,6 +13,8 @@
  * dialog only ever lists this customer's own bookings.
  */
 
+import { bookingSlotText } from "@/lib/booking/slot-vocabulary"
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import * as React from "react";
 import {
   Dialog,
@@ -55,6 +57,7 @@ interface LinkBookingDialogProps {
 
 function fmtDate(s: string | null | undefined): string {
   if (!s) return "—";
+  if (dateOnlyOf(s)) return fmtYmd(s, "short"); // WP23: a calendar day, printed from the string
   try {
     return new Date(s).toLocaleDateString("en-PK", {
       year: "numeric",
@@ -177,7 +180,7 @@ export function LinkBookingDialog({
                           <CalendarDays className="h-3 w-3" />
                           {fmtDate(b.bookingDate)}
                         </span>
-                        {b.bookingTime && <span>· {b.bookingTime}</span>}
+                        {bookingSlotText(b, "customer") ? <span>· {bookingSlotText(b, "customer")}</span> : null}
                         {b.eventCity && (
                           <span className="flex items-center gap-1">
                             <MapPin className="h-3 w-3" />

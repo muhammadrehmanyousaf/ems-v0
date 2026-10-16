@@ -13,6 +13,7 @@
  * last update) rather than inventing events.
  */
 
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -56,11 +57,13 @@ const RANK: Partial<Record<LeadStatus, number>> = { new: 0, contacted: 1, quoted
 /* ── formatting ──────────────────────────────────────────────── */
 function fmtDate(iso?: string | null) {
   if (!iso) return "—"
+  if (dateOnlyOf(iso)) return fmtYmd(iso, "short") // WP23
   const d = new Date(iso); if (isNaN(d.getTime())) return String(iso)
   return d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })
 }
 function fmtMonth(iso?: string | null) {
   if (!iso) return "—"
+  if (dateOnlyOf(iso)) return fmtYmd(iso, { month: "short", year: "numeric" }) // WP23
   const d = new Date(iso); if (isNaN(d.getTime())) return String(iso)
   return d.toLocaleDateString("en-PK", { month: "short", year: "numeric" })
 }

@@ -269,6 +269,17 @@ export interface BookingData {
    */
   slotTemplateId?: number | string | null;
   slotTemplateSnapshotJson?: { id?: number | string; label?: string; startTime?: string; endTime?: string } | null;
+  /**
+   * WP23 — the booking's STANDARD SLOT as the server words it (backend
+   * src/utils/slotLabel.js; same rule as lib/booking/slot-vocabulary.ts). Additive:
+   * `bookingTime` keeps its meaning. `slotText` is "" when no slot was chosen.
+   * Render with `bookingSlotText(booking, "vendor" | "customer")`.
+   */
+  slotLabel?: string | null;
+  slotStartTime?: string | null;
+  slotEndTime?: string | null;
+  slotText?: string;
+  slotKind?: "slot" | "whole_day" | "unset";
 }
 
 export interface BookingListResponse {

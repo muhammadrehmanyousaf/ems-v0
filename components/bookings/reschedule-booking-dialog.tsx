@@ -22,6 +22,7 @@
  * flag), so once the client flag is on it works end-to-end.
  */
 
+import { dateOnlyOf } from "@/lib/utils/ymd"
 import { useState } from "react";
 import {
   AlertDialog,
@@ -109,6 +110,7 @@ function humaniseError(code?: string, extra?: { diff?: number }): string {
 
 function toDateInput(raw?: string | null): string {
   if (!raw) return "";
+  if (dateOnlyOf(raw)) return dateOnlyOf(raw) as string; // WP23: a calendar day is the day in the string (it pre-filled the day before west of UTC)
   const d = new Date(raw);
   if (Number.isNaN(d.getTime())) {
     // Already a YYYY-MM-DD string? Trust the leading 10 chars.
