@@ -1,4 +1,5 @@
 import { FormType } from '@/lib/context/form-context';
+import { partialRefundErrors } from '@/lib/cancellation-policy';
 
 interface ValidationArgs {
     currentStep: number;
@@ -66,6 +67,7 @@ export const BridalWearValidations = ({ currentStep, formData, currentErrors }: 
             currentErrors.downPayment = 'Percentage must be between 1 and 100';
         }
         if (!formData.cancelationPolicy) currentErrors.cancelationPolicy = 'Cancellation policy is required';
+        else Object.assign(currentErrors, partialRefundErrors(formData)); // WP20
     } else if (currentStep === 4) {
         if (!formData.subBusinessType || formData.subBusinessType.length === 0) {
             currentErrors.subBusinessType = 'Please select a store type';

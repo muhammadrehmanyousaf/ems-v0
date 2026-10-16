@@ -158,7 +158,16 @@ const FIELD_HELP_DATA = {
   },
   cancellationPolicy: {
     name: "cancellation policy",
-    text: "What happens to the advance if a couple cancels. Refundable: it is returned. Partially refundable: it is returned minus a deduction. Non-refundable: you keep it.",
+    text: "What happens to the advance if a couple cancels. Refundable: it is returned. Partially refundable: a part of what they paid is returned, and you set that part next (a fixed amount or a percentage). Non-refundable: you keep it.",
+  },
+  partialRefundType: {
+    name: "refund type",
+    text: "How the partial refund is worked out. Fixed Amount is the same rupee amount back to the couple. Percentage is a share of what they paid.",
+  },
+  partialRefundValue: {
+    name: "refund value",
+    text: "What the couple gets back if they cancel. Rupees for Fixed Amount (never more than they paid), or a number from 1 to 99 for Percentage. This is the refund the platform pays out on a cancellation.",
+    example: "Fixed 20000, or Percentage 50",
   },
   additionalInfo: {
     name: "additional information",

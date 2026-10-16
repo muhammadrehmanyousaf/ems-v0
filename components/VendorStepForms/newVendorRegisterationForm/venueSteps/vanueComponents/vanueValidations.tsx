@@ -1,4 +1,5 @@
 import { FormType } from "@/lib/context/form-context";
+import { partialRefundErrors } from "@/lib/cancellation-policy";
 
 type ValidationTypes = {
     currentStep: number;
@@ -81,6 +82,8 @@ export const vanueValidations = ({currentStep, formData, currentErrors }: Valida
         if (!formData.downPayment || Number(formData.downPayment) <= 0) currentErrors.downPayment = "Down Payment is required";
         else if (formData.downPaymentType === "Percentage" && Number(formData.downPayment) > 100) currentErrors.downPayment = "Percentage must be between 0 and 100";
         if (!formData.cancelationPolicy) currentErrors.cancelationPolicy = "Cancelation Policy is required";
+        // WP20: Partially Refundable needs its fixed amount / percentage
+        else Object.assign(currentErrors, partialRefundErrors(formData));
         if (formData.parking !== false && formData.parking !== true) currentErrors.parking = "Parking is required";
       }
       // VR-050 — venue flow inserted a "Specialty & Trust" step at 4, so

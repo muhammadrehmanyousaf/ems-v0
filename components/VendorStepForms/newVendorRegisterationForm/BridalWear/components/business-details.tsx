@@ -1,6 +1,7 @@
 'use client';
 
 import { FieldLabel } from "@/components/ui/field-help";
+import PartialRefundFields from "@/components/VendorStepForms/components/partial-refund-fields";
 import React, { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -196,6 +197,9 @@ const BridalWearBusinessDetails = ({ errors, setErrors }: BusinessDetailsProps) 
                             {errors.cancelationPolicy && (
                                 <p className="text-red-500 text-sm mt-1">{errors.cancelationPolicy}</p>
                             )}
+                        </div>
+                        <div className="mt-4">
+                            <PartialRefundFields policy={formData.cancelationPolicy} errors={errors} setErrors={setErrors} labelClassName="text-sm font-medium text-neutral-700 block mb-1" triggerClassName="border-neutral-300" />
                         </div>
                     </div>
                 </div>

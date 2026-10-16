@@ -17,6 +17,7 @@ import AddReview from "./AddReview"
 import { BookingModal } from "./booking-modal"
 import VendorInquiryDialog from "./VendorInquiryDialog"
 import RequestQuoteDialog from "./RequestQuoteDialog"
+import { cancellationLabel } from "@/lib/cancellation-policy"
 
 interface VendorDetailsProps {
   vendor: Vendor
@@ -112,7 +113,7 @@ export default function VendorDetails({ vendor, vendorType }: VendorDetailsProps
                     <Clock className="w-5 h-5 text-primary" />
                     <div>
                       <p className="text-xs sm:text-sm font-medium">Cancellation</p>
-                      <p className="text-xs sm:text-sm text-gray-600">{vendor.cancellationPolicy}</p>
+                      <p className="text-xs sm:text-sm text-gray-600">{cancellationLabel(vendor.cancellationPolicy)}</p>
                     </div>
                   </div>
                 )}
@@ -216,7 +217,7 @@ export default function VendorDetails({ vendor, vendorType }: VendorDetailsProps
                   <AccordionItem value="cancellation">
                     <AccordionTrigger>What is the cancellation policy?</AccordionTrigger>
                     <AccordionContent>
-                      Our venue follows a {vendor.cancellationPolicy} policy. Please contact us for specific details
+                      Our venue follows a {cancellationLabel(vendor.cancellationPolicy)} policy. Please contact us for specific details
                       about refunds and rescheduling.
                     </AccordionContent>
                   </AccordionItem>

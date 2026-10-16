@@ -11,6 +11,7 @@
  */
 
 import { BACKEND_URL } from "@/lib/backend-url"
+import { cancellationLabel } from "@/lib/cancellation-policy"
 
 export interface VendorDetail {
   id: number | string
@@ -242,7 +243,7 @@ function normalize(raw: any): VendorDetail {
     },
     amenities: Array.isArray(raw?.amenities) ? raw.amenities : [],
     serviceProvided: Array.isArray(raw?.serviceProvided) ? raw.serviceProvided : [],
-    cancellationPolicy: raw?.cancellationPolicy ?? raw?.cancelationPolicy ?? "",
+    cancellationPolicy: cancellationLabel(raw?.cancellationPolicy ?? raw?.cancelationPolicy ?? ""),
     staff: Array.isArray(raw?.staff) ? raw.staff : [],
     raw,
   }
