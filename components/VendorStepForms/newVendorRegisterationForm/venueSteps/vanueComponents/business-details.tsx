@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import MultipleRadio from '@/components/VendorStepForms/components/multiple-radio'
 import MultipleSelect from '@/components/VendorStepForms/components/multiple-select'
 import RadioButton from '@/components/VendorStepForms/components/radio-button'
+import PartialRefundFields from '@/components/VendorStepForms/components/partial-refund-fields'
 import { useFormContext } from '@/lib/context/form-context'
 import { EVENT_OPTIONS_SELECT } from '@/lib/event-options'
 import React, { useEffect, useState } from 'react'
@@ -459,6 +460,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                 />
                 {errors.cancelationPolicy && <p className="text-xs text-red-500">{errors.cancelationPolicy}</p>}
             </section>
+            <PartialRefundFields policy={cancellation} errors={errors} setErrors={setErrors} />
 
         </div>
     )

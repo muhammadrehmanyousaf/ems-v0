@@ -17,6 +17,8 @@ import {
     CheckCircle,
 } from "lucide-react";
 import { FloralDivider } from "@/components/bridal/floral-divider";
+import { cancellationText } from "@/lib/cancellation-policy";
+import { humanizeKey } from "@/lib/humanize-key";
 
 // ── Bridal section header — caps gold label + thin gold rule on each side ────
 const SectionTitle = ({ title }: { title: string }) => (
@@ -680,7 +682,10 @@ const Preview = () => {
                             <div className="sm:col-span-2">
                                 <Field
                                     label="Cancellation Policy"
-                                    value={formData.cancelationPolicy}
+                                    value={cancellationText(formData.cancelationPolicy, {
+                                        type: formData.partialRefundType,
+                                        value: formData.partialRefundValue,
+                                    })}
                                 />
                             </div>
                         )}
@@ -770,8 +775,8 @@ const Preview = () => {
                                                                       ac: "AC",
                                                                       decoration:
                                                                           "Decoration",
-                                                                  }[cat] ?? cat)
-                                                                : cat;
+                                                                  }[cat] ?? humanizeKey(cat))
+                                                                : humanizeKey(cat);
                                                             return (
                                                                 <div
                                                                     key={cat}

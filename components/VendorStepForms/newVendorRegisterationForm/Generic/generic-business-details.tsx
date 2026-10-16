@@ -41,6 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import RadioButton from "@/components/VendorStepForms/components/radio-button";
+import PartialRefundFields from "@/components/VendorStepForms/components/partial-refund-fields";
 import MultipleSelect from "@/components/VendorStepForms/components/multiple-select";
 import { useFormContext } from "@/lib/context/form-context";
 
@@ -253,6 +254,9 @@ const GenericBusinessDetails = ({
           {errors.cancelationPolicy && (
             <p className="text-xs text-red-500 mt-1">{errors.cancelationPolicy}</p>
           )}
+          <div className="mt-4">
+            <PartialRefundFields policy={formData.cancelationPolicy} errors={errors} setErrors={setErrors} />
+          </div>
         </div>
       </SectionCard>
     </div>
