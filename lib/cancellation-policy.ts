@@ -6,6 +6,7 @@
  * review step, the venue page and the settings screens printed whatever was stored, so the key leaked
  * ("Why '_' is showing"). Every surface goes through `cancellationLabel` / `cancellationText` now.
  *
+ * The value is what the VENUE KEEPS (owner decision 2026-10-16), never what the customer gets back.
  * The rules (percentage 1-99, fixed amount > 0 and not above the highest known price) and the
  * generated sentence mirror the server's src/utils/partialRefundPolicy.js. The parity is guarded by
  * scripts/cancellation-policy-check.mts, which runs the backend's shared cases
@@ -49,11 +50,11 @@ export function formatRefundValue(type: PartialRefundType, value: number | strin
   return `PKR ${group(Number.isInteger(n) ? n : Number(n.toFixed(2)))}`
 }
 
-/** "50% refunded" / "PKR 20,000 refunded" */
+/** "venue keeps 50%" / "venue keeps PKR 20,000" */
 export const describePartialRefund = (type: PartialRefundType, value: number | string) =>
-  `${formatRefundValue(type, value)} refunded`
+  `venue keeps ${formatRefundValue(type, value)}`
 
-/** The text stored in `cancelationPolicy` for a partial refund: "Partially Refundable: 50% refunded". */
+/** The text stored in `cancelationPolicy` for a partial refund: "Partially Refundable: venue keeps 50%". */
 export const partialPolicyText = (type: PartialRefundType, value: number | string) =>
   `${CANCELLATION_LABELS.partially_refundable}: ${describePartialRefund(type, value)}`
 
@@ -78,12 +79,12 @@ function parsePlain(v: unknown): number | null {
  */
 export function validatePartialRefund(type: unknown, value: unknown, ceiling: number | null = null): PartialRefundCheck {
   if (type !== "percent" && type !== "fixed") {
-    return { ok: false, field: "partialRefundType", message: "Choose whether the refund is a fixed amount or a percentage" }
+    return { ok: false, field: "partialRefundType", message: "Choose whether the venue keeps a fixed amount or a percentage" }
   }
   const n = parsePlain(value)
   if (type === "percent") {
     if (n === null || n < PARTIAL_PERCENT_MIN || n > PARTIAL_PERCENT_MAX) {
-      return { ok: false, field: "partialRefundValue", message: `Refund percentage must be a number between ${PARTIAL_PERCENT_MIN} and ${PARTIAL_PERCENT_MAX}` }
+      return { ok: false, field: "partialRefundValue", message: `The percentage the venue keeps must be a number between ${PARTIAL_PERCENT_MIN} and ${PARTIAL_PERCENT_MAX}` }
     }
     return { ok: true, type, value: n }
   }
@@ -94,8 +95,8 @@ export function validatePartialRefund(type: unknown, value: unknown, ceiling: nu
       ok: false,
       field: "partialRefundValue",
       message: bounded
-        ? `Refund amount must be more than 0 and not above your highest listed price (PKR ${group(Math.round(ceiling as number))})`
-        : "Refund amount must be more than 0",
+        ? `The amount the venue keeps must be more than 0 and not above your highest listed price (PKR ${group(Math.round(ceiling as number))})`
+        : "The amount the venue keeps must be more than 0",
     }
   }
   return { ok: true, type, value: n }
@@ -112,12 +113,12 @@ export function fixedRefundCeiling(o: { minimumPrice?: unknown; packages?: Array
 }
 
 /** The sentence the server generates for a partial refund (so a couple's page and the stored text agree). */
-const GENERATED_RE = /^Partially Refundable: (?:\d+(?:\.\d{1,2})?%|PKR [\d,]+(?:\.\d{1,2})?) refunded$/
+const GENERATED_RE = /^Partially Refundable: venue keeps (?:\d+(?:\.\d{1,2})?%|PKR [\d,]+(?:\.\d{1,2})?)$/
 export const isGeneratedPartialText = (s: unknown) => typeof s === "string" && GENERATED_RE.test(s.trim())
 
 /**
  * What a registration form shows for the chosen policy: the label, plus the refund detail when it is
- * a partial refund whose detail has been entered ("Partially Refundable: 50% refunded").
+ * a partial refund whose detail has been entered ("Partially Refundable: venue keeps 50%").
  * Free text is shown as typed.
  */
 export function cancellationText(raw: unknown, detail?: { type?: unknown; value?: unknown } | null): string {

@@ -411,8 +411,8 @@ export async function listRefundObligations(businessId?: number): Promise<Refund
 }
 
 // Cancellation-policy management (5.4)
-/** `refundFixed` (WP20): a flat amount back instead of a share, set by a venue that registered "Partially Refundable: fixed amount"; absent on every percentage slab. */
-export interface PolicySlab { daysToEvent: number; pctForfeit: number; refundFixed?: number }
+/** `venueKeepsFixed` (WP20): a flat amount the VENUE KEEPS instead of a share (a venue that registered "Partially Refundable: fixed amount"); the customer gets the advance minus it, never below 0. Absent on every percentage slab. */
+export interface PolicySlab { daysToEvent: number; pctForfeit: number; venueKeepsFixed?: number }
 export interface PolicyTemplate {
   key: string; name: string; labelEn: string; forceMajeureRule: string; slabs: PolicySlab[];
   /** The engine's non-refundable deposit for this template, for display (WWL-501). */
@@ -581,7 +581,7 @@ export async function logReminder(
 }
 
 // ── Refund preview (Phase-2 EPIC 5) ────────────────────────────────────────
-export interface RefundTier { minDaysBefore: number; refundPct: number; /** WP20: flat amount back for this band (a fixed partial refund) */ refundFixed?: number }
+export interface RefundTier { minDaysBefore: number; refundPct: number; /** WP20: flat amount the venue keeps for this band (a fixed partial refund) */ venueKeepsFixed?: number }
 export interface RefundPolicy {
   key: string; labelUr: string; labelEn: string; depositPct: number; tiers: RefundTier[];
 }

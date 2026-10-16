@@ -25,12 +25,12 @@ function slabLadder(slabs: PolicySlab[]): string {
   if (!sorted.length) return `<div style="padding:12px 16px;color:var(--ink-3);font-size:12px">Koi slab nahi.</div>`
   return `<div class="ladder">${sorted.map((s, i) => {
     const next = sorted[i + 1]
-    // one band from day 0 (a flat refund, e.g. a venue's "Partially Refundable") applies on every day
+    // one band from day 0 (a flat cut, e.g. a venue's "Partially Refundable") applies on every day
     const range = sorted.length === 1 && s.daysToEvent === 0 ? "Kisi bhi din" : i === 0 ? `${s.daysToEvent}+ din pehle` : next ? `${next.daysToEvent + 1}–${s.daysToEvent} din pehle` : `${s.daysToEvent} din tak`
     const pct = Number(s.pctForfeit) || 0
-    // WP20: a flat refund ("Rs 20,000 wapsi") has no percentage to draw, so no bar and the amount in words
-    const fixed = Number(s.refundFixed) || 0
-    return `<div class="slab"><span class="sl-range">${escHtml(range)}</span><span class="sl-bar">${fixed > 0 ? "" : `<span style="width:${Math.min(100, pct)}%"></span>`}</span><span class="sl-pct">${fixed > 0 ? `PKR ${Math.round(fixed).toLocaleString("en-US")} wapsi` : `${pct}% kata`}</span></div>`
+    // WP20: a flat amount the venue keeps ("PKR 20,000 kata") has no percentage to draw, so no bar and the amount in words
+    const fixed = Number(s.venueKeepsFixed) || 0
+    return `<div class="slab"><span class="sl-range">${escHtml(range)}</span><span class="sl-bar">${fixed > 0 ? "" : `<span style="width:${Math.min(100, pct)}%"></span>`}</span><span class="sl-pct">${fixed > 0 ? `PKR ${Math.round(fixed).toLocaleString("en-US")} kata` : `${pct}% kata`}</span></div>`
   }).join("")}</div>`
 }
 

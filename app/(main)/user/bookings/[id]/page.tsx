@@ -1289,7 +1289,7 @@ export default function BookingDetailPage() {
                           which is the only version of this sentence a customer
                           could act on.
                         */}
-                        <span>Forfeited (per {refundPreview.policyName || refundPreview.policy.labelEn} policy)</span>
+                        <span>Venue keeps (per {refundPreview.policyName || refundPreview.policy.labelEn} policy)</span>
                         <span>{fmt(refundPreview.preview.forfeit)}</span>
                       </div>
                     )}

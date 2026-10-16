@@ -1,7 +1,7 @@
 "use client"
 
 /**
- * "Partially Refundable" needs a number: how much does the couple get back?
+ * "Partially Refundable" needs a number: how much does the VENUE KEEP when a couple cancels?
  *
  * Shown under the Cancellation Policy control of every vendor registration form, and only when
  * Partially Refundable is the chosen policy. Same shape as the Down Payment Type / Down Payment pair
@@ -56,7 +56,7 @@ export default function PartialRefundFields({ policy, errors, setErrors, labelCl
   return (
     <div className="space-y-6" data-testid="partial-refund-fields">
       <section className="space-y-3">
-        <FieldLabel help="partialRefundType" className={labelClassName}>Refund Type</FieldLabel>
+        <FieldLabel help="partialRefundType" className={labelClassName}>Venue Keeps</FieldLabel>
         <Select
           value={type}
           onValueChange={(v) => {
@@ -65,7 +65,7 @@ export default function PartialRefundFields({ policy, errors, setErrors, labelCl
             clear("partialRefundValue")
           }}
         >
-          <SelectTrigger className={cn("w-full", triggerClassName)} aria-label="Refund type" aria-invalid={!!typeError}>
+          <SelectTrigger className={cn("w-full", triggerClassName)} aria-label="Venue keeps type" aria-invalid={!!typeError}>
             <SelectValue placeholder="Select Type" />
           </SelectTrigger>
           <SelectContent>
@@ -78,33 +78,40 @@ export default function PartialRefundFields({ policy, errors, setErrors, labelCl
 
       <section className="space-y-3">
         <FieldLabel help="partialRefundValue" className={labelClassName}>
-          {type === "percent" ? "Refund Percentage" : type === "fixed" ? "Refund Amount (PKR)" : "Refund Value"}
+          {type === "percent" ? "Venue Keeps (%)" : type === "fixed" ? "Venue Keeps (PKR)" : "Venue Keeps"}
         </FieldLabel>
-        <Input
-          type="number"
-          inputMode="decimal"
-          min={type === "percent" ? PARTIAL_PERCENT_MIN : 1}
-          max={type === "percent" ? PARTIAL_PERCENT_MAX : undefined}
-          step={type === "percent" ? "0.01" : "1"}
-          className={inputClassName}
-          placeholder={type === "percent" ? "Enter a percentage, 1 to 99" : type === "fixed" ? "Enter the amount refunded" : "Choose a refund type first"}
-          value={value}
-          disabled={!type}
-          aria-label="Refund value"
-          aria-invalid={!!shownValueError}
-          onChange={(e) => {
-            setFormData((prev) => ({ ...prev, partialRefundValue: e.target.value }))
-            clear("partialRefundValue")
-          }}
-        />
+        <div className="relative">
+          <Input
+            type="number"
+            inputMode="decimal"
+            min={type === "percent" ? PARTIAL_PERCENT_MIN : 1}
+            max={type === "percent" ? PARTIAL_PERCENT_MAX : undefined}
+            step={type === "percent" ? "0.01" : "1"}
+            className={cn("pr-14 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none", inputClassName)}
+            placeholder={type === "percent" ? "Enter a percentage, 1 to 99" : type === "fixed" ? "Enter the amount the venue keeps" : "Choose a type first"}
+            value={value}
+            disabled={!type}
+            aria-label="Venue keeps value"
+            aria-invalid={!!shownValueError}
+            onChange={(e) => {
+              setFormData((prev) => ({ ...prev, partialRefundValue: e.target.value }))
+              clear("partialRefundValue")
+            }}
+          />
+          {type && (
+            <span aria-hidden className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground">
+              {type === "percent" ? "%" : "PKR"}
+            </span>
+          )}
+        </div>
         {shownValueError ? (
           <p className={cn("text-xs text-red-500", errorClassName)}>{shownValueError}</p>
         ) : (
           type && (
             <p className="text-xs text-muted-foreground">
               {type === "percent"
-                ? "If a couple cancels, they get this share of what they paid back."
-                : "If a couple cancels, they get this amount back (never more than they paid)."}
+                ? "If a couple cancels, the venue keeps this share of what they paid and they get the rest back."
+                : "If a couple cancels, the venue keeps this amount of what they paid and they get the rest back (nothing, if they paid no more than this)."}
             </p>
           )
         )}
