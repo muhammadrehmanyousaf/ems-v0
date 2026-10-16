@@ -14,6 +14,7 @@
  */
 
 import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
+import { daysUntilEventDay } from "@/lib/utils/event-day"
 import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -69,9 +70,11 @@ function fmtMonth(iso?: string | null) {
 }
 function monthsAway(iso?: string | null) {
   if (!iso) return ""
-  const d = new Date(iso).getTime(); if (isNaN(d)) return ""
-  const days = Math.round((d - Date.now()) / 86400000)
+  // WP24: whole Pakistan DAYS from the string; `new Date("2026-10-16") - Date.now()` is UTC midnight (05:00 PKT)
+  // and called an event happening today "guzar gayi" from 05:00 on
+  const days = daysUntilEventDay(iso); if (days === null) return ""
   if (days < 0) return "guzar gayi"
+  if (days === 0) return "aaj"
   if (days < 31) return `~${days} din`
   return `~${Math.round(days / 30)} mahine`
 }

@@ -32,6 +32,7 @@ import { LEGACY_PERIODS, formatSlotRange } from "@/lib/booking/slot-vocabulary"
 // SLOT-PICKER — the ONE rule for "may this slot be offered", shared with the
 // vendor's Nayi booking form and reschedule dialog (lib/booking/slot-picker-model.ts).
 import { isSlotOpen } from "@/lib/booking/slot-picker-model"
+import { pktTodayCell } from "@/lib/utils/event-day"
 // 10.13 / 10.16 — the arrangement a family needs, and rain on an open lawn.
 // A mirror of src/utils/spaceRequirements.js, held to it by
 // scripts/space-fit-parity.mts. The server re-runs the same check at booking
@@ -202,7 +203,7 @@ export default function DateTimeStep({
   createHold,
   releaseHold,
 }: Props) {
-  const today = startOfDay(new Date())
+  const today = pktTodayCell() // WP24: "today" is the Pakistan day the server checks, not the browser's (Auckland / Los Angeles)
 
   // The month currently shown in the calendar grid. Defaults to today's month
   // (or the selected booking month if the user already has one).

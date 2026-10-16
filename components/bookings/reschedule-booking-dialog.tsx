@@ -41,6 +41,7 @@ import { CalendarClock, Loader2, Info } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { BookingAPI } from "@/lib/api/bookings";
 import { claimRequiredMessage } from "@/lib/utils/api-error";
+import { todayInKarachi } from "@/lib/utils/pk-date";
 import { cn } from "@/lib/utils";
 import { LEGACY_PERIODS, formatSlotRange } from "@/lib/booking/slot-vocabulary";
 
@@ -139,7 +140,7 @@ export function RescheduleBookingDialog({
   // Set => the next press accepts exactly that number and resends it as confirmPriceDelta.
   const [priceDelta, setPriceDelta] = useState<number | null>(null);
 
-  const todayStr = toDateInput(new Date().toISOString());
+  const todayStr = todayInKarachi(); // WP24: the server refuses days before today in PAKISTAN; the UTC day is yesterday until 05:00 PKT
   const currentStr = toDateInput(currentDate);
 
   const canReschedule = !["Cancelled", "Completed", "cancelled", "completed"].includes(

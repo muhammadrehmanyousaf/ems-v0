@@ -8,6 +8,7 @@
  */
 
 import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
@@ -261,7 +262,7 @@ export function FunctionSheetsArtifact() {
 
     const openNewSheet = () => {
       openDrawer(s, "Nayi function sheet", newSheetDrawerBody())
-      const d = (s.getElementById("fsn-date") as HTMLInputElement | null); if (d) d.value = new Date().toISOString().slice(0, 10)
+      const d = (s.getElementById("fsn-date") as HTMLInputElement | null); if (d) d.value = todayInKarachi()
       ;(s.getElementById("fsn-title") as HTMLInputElement | null)?.focus()
     }
     const saveNewSheet = async () => {

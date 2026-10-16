@@ -8,7 +8,8 @@ import "swiper/css";
 import "swiper/css/navigation";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { X, Expand } from "lucide-react";
-import { format, isBefore, startOfToday } from "date-fns";
+import { format, isBefore } from "date-fns";
+import { pktTodayCell } from "@/lib/utils/event-day";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -565,7 +566,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
   };
 
   const isDateDisabled = (d: Date) => {
-    const today = startOfToday();
+    const today = pktTodayCell(); // WP24: the Pakistan day the server checks
     if (isBefore(d, today)) return true;
     const avail = availability[toDateKey(d)];
     if (avail && (avail.isBlocked || avail.availableSlots.length === 0)) return true;

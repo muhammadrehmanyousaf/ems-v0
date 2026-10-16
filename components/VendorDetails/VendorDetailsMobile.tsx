@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { safeJsonLd } from "@/lib/seo/jsonld";
 
 import { format } from "date-fns";
+import { pktTodayCell } from "@/lib/utils/event-day";
 import {
   motion,
   useScroll,
@@ -534,8 +535,7 @@ export default function VendorDetailsMobile({
 
   // Check if a date is in the past
   const isDateInPast = (date: Date): boolean => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = pktTodayCell(); // WP24: the Pakistan day the server checks, not the browser's
     const checkDate = new Date(date);
     checkDate.setHours(0, 0, 0, 0);
     return checkDate < today;
@@ -2552,7 +2552,7 @@ export default function VendorDetailsMobile({
                       {(() => {
                         const daysInMonth = getDaysInMonth(currentDate);
                         const firstDayOfMonth = getFirstDayOfMonth(currentDate);
-                        const today = new Date();
+                        const today = pktTodayCell();
                         const isCurrentMonth =
                           currentDate.getMonth() === today.getMonth() &&
                           currentDate.getFullYear() === today.getFullYear();

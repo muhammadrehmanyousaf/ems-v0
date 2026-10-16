@@ -34,6 +34,7 @@ import { ExportMenu } from "@/components/dashboard/shared/export-menu"
 import { ImportButton } from "@/components/dashboard/shared/import-button"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { cn } from "@/lib/utils"
+import { isEventDayPast } from "@/lib/utils/event-day"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 
@@ -64,14 +65,7 @@ const fmtDate = (s?: string | null) => {
 }
 
 /** True when the event date has already gone by — a lead worth double-checking. */
-const isPastDate = (s?: string | null) => {
-  if (!s) return false
-  const d = new Date(s)
-  if (isNaN(d.getTime())) return false
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return d < today
-}
+const isPastDate = (s?: string | null) => isEventDayPast(s) // WP24: a Pakistan day compare; today is not past
 
 export function LeadsRedesignedView() {
   const qc = useQueryClient()
