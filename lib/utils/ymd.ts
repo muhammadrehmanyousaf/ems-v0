@@ -48,16 +48,46 @@ const STYLES: Record<YmdStyle, Intl.DateTimeFormatOptions> = {
  * Format a calendar day for display. `fallback` is returned for an empty or
  * unreadable value (default "—"); pass `null` to get the input back as text.
  */
-export function fmtYmd(value: unknown, style: YmdStyle | Intl.DateTimeFormatOptions = "short", fallback: string | null = "—"): string {
+export function fmtYmd(value: unknown, style: YmdStyle | Intl.DateTimeFormatOptions = "short", fallback: string | null = "—", locale = "en-PK"): string {
   const ymd = ymdOf(value);
   if (!ymd) return fallback === null ? (value == null ? "" : String(value)) : fallback;
   const opts = typeof style === "string" ? STYLES[style] : style;
   const d = new Date(Date.UTC(Number(ymd.slice(0, 4)), Number(ymd.slice(5, 7)) - 1, Number(ymd.slice(8, 10))));
-  return d.toLocaleDateString("en-PK", { ...opts, timeZone: "UTC" });
+  return d.toLocaleDateString(locale, { ...opts, timeZone: "UTC" });
 }
 
 /** The calendar day as a UTC-midnight Date, for arithmetic / sorting. Never format it in a local zone. */
 export function ymdToUtcDate(value: unknown): Date | null {
   const ymd = ymdOf(value);
   return ymd ? new Date(Date.UTC(Number(ymd.slice(0, 4)), Number(ymd.slice(5, 7)) - 1, Number(ymd.slice(8, 10)))) : null;
+}
+
+/**
+ * The calendar day a person PICKED, as "YYYY-MM-DD", for sending to the server.
+ *
+ * A date picker hands back a Date at local midnight, and the booking flow adds the slot's hour to it
+ * (`setHours(19, 0)`) and stores `toISOString()`. That ISO string is the UTC instant, and the
+ * server reads an instant as its PAKISTAN day: a customer in Los Angeles who picks 16 Oct, evening,
+ * sends 17 Oct 02:00Z = 17 Oct in Karachi, and books the wrong day. The day they picked is the
+ * LOCAL calendar day of that Date, which this returns. A value that is already "YYYY-MM-DD" is
+ * returned unchanged.
+ */
+export function pickedDayOf(value: unknown): string | null {
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return ymdOf(value);
+  const d = value instanceof Date ? value : typeof value === "string" || typeof value === "number" ? new Date(value) : null;
+  if (!d || Number.isNaN(d.getTime())) return null;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * "2026-10-16" or the UTC midnight of that day ("2026-10-16T00:00:00.000Z"): the two shapes the API
+ * uses for a DATE column. Anything else is a real instant (a timestamp with a time of day), which
+ * is formatted in the viewer's zone as before. Use this in a helper that formats BOTH kinds.
+ */
+export function dateOnlyOf(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const s = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}(T00:00:00(\.0+)?Z)?$/.test(s)) return null;
+  return ymdOf(s);
 }

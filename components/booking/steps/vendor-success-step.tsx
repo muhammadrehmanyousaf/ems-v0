@@ -12,6 +12,7 @@
  * printed was never the currency of anything booked here.
  */
 
+import { fmtYmd, pickedDayOf } from "@/lib/utils/ymd"
 import { Check, Printer, Home, Calendar, Users, MapPin, Package, Building, Camera, Palette, Star, Sparkles } from "lucide-react"
 import type { BookingFormData, Vendor } from "@/lib/types"
 import confetti from "canvas-confetti"
@@ -238,8 +239,7 @@ export default function VendorSuccessStep({
               <Fact
                 label="Event date"
                 value={
-                  formData.bookingDate ? new Date(formData.bookingDate).toLocaleDateString() :
-                  bookingData?.bookingDate ? new Date(bookingData.bookingDate).toLocaleDateString() : "N/A"
+                  fmtYmd(pickedDayOf(formData.bookingDate) ?? bookingData?.bookingDate, "short", "N/A")
                 }
               />
               <Fact label="Time slot" value={timeSlotText || "N/A"} />

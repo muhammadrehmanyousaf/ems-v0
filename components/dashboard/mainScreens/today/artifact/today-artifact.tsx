@@ -16,6 +16,9 @@ import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/lead
 import { receivedOn, isCancelledBooking } from "@/lib/utils/booking-money"
 import { openRecordPaymentDrawer } from "@/components/dashboard/mainScreens/artifact/record-payment"
 import { bookingStatusLabel } from "@/lib/booking-status-label"
+import { describeSlot, slotFromBooking, UNSET_TEXT } from "@/lib/booking/slot-vocabulary"
+import { fmtYmd } from "@/lib/utils/ymd"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 import { useArtifactShell, pkNum, escHtml, initialsOf, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const money = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
@@ -64,6 +67,8 @@ function eventCard(ev: TodayEvent): string {
   const b = ev.booking
   const name = b.customerName || "Customer"
   const phone = b.customerPhone || ""
+  // WP23: the booking's STANDARD SLOT (label above, its hours under it), not the clock of a date
+  const slot = describeSlot(slotFromBooking(b))
   const done = ev.tasks.filter((t) => t.status === "done").length
   // Money-QA C7/C9/C8: the order snapshot (orderBalance) is FROZEN at order time
   // and never reflects a payment recorded AFTER it — so the door-side vendor was
@@ -80,7 +85,7 @@ function eventCard(ev: TodayEvent): string {
   const moneyRow = b.totalAmount != null ? `<div class="ev-money"><div><div class="em-cap">Kul</div><div class="em-val tnum"><span class="rs">Rs</span> ${pkNum(money(b.totalAmount))}</div></div>${balance > 0 ? `<div><div class="em-cap">Baqaya</div><div class="em-val due tnum"><span class="rs">Rs</span> ${pkNum(balance)}</div></div>` : ""}</div>` : ""
   const tasks = ev.tasks.length ? `<div class="tasks">${[...ev.tasks].sort((a, c) => (a.sortOrder - c.sortOrder) || (a.scheduledTime || "").localeCompare(c.scheduledTime || "")).map(taskHtml).join("")}</div>` : `<div class="notasks">Is event ke liye koi run-sheet task nahi.</div>`
   return `<div class="evcard">
-    <div class="ev-h"><div class="ev-time"><div class="t">${b.bookingTime ? fmtTime(b.bookingTime).split(" ")[0] : "—"}</div><div class="a">${b.bookingTime ? fmtTime(b.bookingTime).split(" ")[1] || "" : ""}</div></div>
+    <div class="ev-h"><div class="ev-time"><div class="t">${escHtml(slot.label || "—")}</div><div class="a">${escHtml(slot.label ? slot.hint : UNSET_TEXT.vendor)}</div></div>
       <div class="ev-main"><div class="ev-nm">${escHtml(name)}</div><div class="ev-sub">#${b.id}${b.primaryBusiness?.name ? ` · ${escHtml(b.primaryBusiness.name)}` : ""}${ev.tasks.length ? ` · ${done}/${ev.tasks.length} tasks` : ""}</div></div>
       <span class="st ${bkTone(b.status)}"><i></i> ${escHtml(bookingStatusLabel(b))}</span>${acts}</div>
     ${moneyRow}${tasks}</div>`
@@ -90,7 +95,7 @@ function buildContent(d: TodayResponse): string {
   const events = d.events || []
   const totalVal = events.reduce((a, e) => a + money(e.booking.totalAmount), 0)
   const pendingTasks = events.reduce((a, e) => a + e.tasks.filter((t) => t.status !== "done").length, 0)
-  const dLabel = d.date ? new Date(d.date).toLocaleDateString("en-PK", { weekday: "long", day: "numeric", month: "long" }) : new Date().toLocaleDateString("en-PK", { weekday: "long", day: "numeric", month: "long" })
+  const dLabel = fmtYmd(d.date || todayInKarachi(), { weekday: "long", day: "numeric", month: "long" })
 
   const tiles = `<div class="tday-tiles">
     <div class="tile hl"><div class="t-cap">${svg(IC.cal, 1.8)} Aaj ke events</div><div class="t-val tnum">${events.length}</div><div class="t-sub">${escHtml(dLabel)}</div></div>

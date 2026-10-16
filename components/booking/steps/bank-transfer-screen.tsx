@@ -28,6 +28,7 @@
  * unchanged.
  */
 
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import { Copy, Check, Clock, FileText, Home, AlertTriangle, Loader2, Send } from "lucide-react"
 import { useEffect, useState } from "react"
 import Link from "next/link"
@@ -113,6 +114,7 @@ export default function BankTransferScreen({
 
   const formatDate = (d?: string) => {
     if (!d) return ""
+    if (dateOnlyOf(d)) return fmtYmd(d, "long") // WP23: a calendar day
     try { return new Date(d).toLocaleDateString("en-PK", { day: "numeric", month: "long", year: "numeric" }) }
     catch { return d }
   }

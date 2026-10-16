@@ -1,5 +1,6 @@
 "use client";
 
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -70,7 +71,7 @@ import { RefundRequestCard } from "@/components/bookings/refund-request-card";
 import { RefundSettlementCard } from "@/components/bookings/refund-settlement-card";
 // QA #4 — show the refund the customer would get back inside the cancel dialog.
 import { getRefundPreview, requestCancellation, type RefundPreview } from "@/lib/api/bookingOrder";
-import { slotText, slotFromBooking } from "@/lib/booking/slot-vocabulary";
+import { bookingSlotText } from "@/lib/booking/slot-vocabulary";
 import { bookingMoney } from "@/lib/utils/booking-money";
 import { PaymentInstructionsAPI } from "@/lib/api/paymentInstructions";
 import { paymentNotDueYet, customerDepositLine } from "@/lib/payment-status";
@@ -207,7 +208,7 @@ const fmt = (n: number | string | null | undefined) =>
   `Rs. ${Number(n || 0).toLocaleString()}`;
 
 const fmtDate = (s: string) =>
-  new Date(s).toLocaleDateString("en-US", {
+  dateOnlyOf(s) ? fmtYmd(s, "long", null, "en-US") : new Date(s).toLocaleDateString("en-US", { // WP23: a calendar day is printed from the string
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -821,7 +822,7 @@ export default function BookingDetailPage() {
                     Time slot
                   </p>
                   <p className="font-display italic text-[16px] text-foreground mt-1">
-                    {slotText(slotFromBooking(booking)) || booking.bookingTime}
+                    {bookingSlotText(booking, "customer") || "—"}
                   </p>
                 </div>
               </div>

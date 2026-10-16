@@ -6,6 +6,7 @@
  * PaymentsAPI.getVendorRevenue. Read-only; rows deep-link to the booking.
  */
 
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { PaymentsAPI } from "@/lib/api/dashboard"
@@ -14,7 +15,7 @@ import { useArtifactShell, pkNum, escHtml, initialsOf, initTablePager, errorBann
 import { openRecordPaymentDrawer } from "@/components/dashboard/mainScreens/artifact/record-payment"
 
 const money = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
-function fmtDate(s?: string | null) { if (!s) return "—"; const d = new Date(s); return isNaN(d.getTime()) ? String(s) : d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) }
+function fmtDate(s?: string | null) { if (!s) return "—"; if (dateOnlyOf(s)) return fmtYmd(s, "short"); const d = new Date(s); return isNaN(d.getTime()) ? String(s) : d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) }
 const svg = (p: string, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}">${p}</svg>`
 const IC = {
   billed: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>', in: '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',

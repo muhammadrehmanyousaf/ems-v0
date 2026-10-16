@@ -1,5 +1,6 @@
 "use client";
 
+import { fmtYmd } from "@/lib/utils/ymd"
 import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "@/lib/axiosConfig";
 import { MONEY_STALE_MS } from "@/lib/query/money-keys";
@@ -83,7 +84,7 @@ export function formatBookingLabel(b: VendorBookingLite): string {
 
   if (b.bookingDate) {
     parts.push(
-      new Date(b.bookingDate).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }),
+      fmtYmd(b.bookingDate, { day: "2-digit", month: "short", year: "numeric" }, null), // WP23: a calendar day, not an instant
     );
   }
 

@@ -15,6 +15,8 @@
  * existing vendor → customer share-link flows on each booking/sheet.
  */
 
+import { bookingSlotText } from "@/lib/booking/slot-vocabulary"
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import * as React from 'react';
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
@@ -113,6 +115,7 @@ function fmtPKR(n: number): string {
 }
 function fmtDate(iso: string | null): string {
   if (!iso) return '—';
+  if (dateOnlyOf(iso)) return fmtYmd(iso, { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' }); // WP23: a calendar day
   try {
     return new Date(iso).toLocaleDateString('en-PK', {
       weekday: 'short',
@@ -124,15 +127,6 @@ function fmtDate(iso: string | null): string {
     return iso;
   }
 }
-function fmtTime(t: string | null): string {
-  if (!t) return '';
-  const [h, m] = t.split(':').map(Number);
-  if (Number.isNaN(h)) return t;
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  const hour = h % 12 || 12;
-  return `${hour}:${String(m || 0).padStart(2, '0')} ${ampm}`;
-}
-
 interface PageProps {
   params: Promise<{ token: string }>;
 }
@@ -283,7 +277,7 @@ export default function Page({ params }: PageProps) {
                         {fmtDate(b.bookingDate)}
                       </div>
                       <div className="text-xs text-neutral-500 mt-0.5">
-                        {fmtTime(b.bookingTime)}
+                        {bookingSlotText(b, 'customer')}
                         {b.guestCount ? ` · ${b.guestCount} guests` : ''}
                       </div>
                     </div>

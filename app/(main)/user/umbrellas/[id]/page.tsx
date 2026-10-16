@@ -8,6 +8,8 @@
  * cancellation cascade + bundle discount auto-compute.
  */
 
+import { bookingSlotText } from "@/lib/booking/slot-vocabulary"
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import * as React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -66,6 +68,7 @@ import { LinkBookingDialog } from "@/components/umbrellas/link-booking-dialog";
 
 function fmtDate(s: string | null | undefined): string {
   if (!s) return "—";
+  if (dateOnlyOf(s)) return fmtYmd(s, "short"); // WP23: a calendar day, printed from the string
   try {
     return new Date(s).toLocaleDateString("en-PK", {
       year: "numeric",
@@ -383,7 +386,7 @@ export default function UmbrellaDetailPage() {
                           <CalendarDays className="h-3 w-3" />
                           {fmtDate(b.bookingDate)}
                         </span>
-                        {b.bookingTime && <span>· {b.bookingTime}</span>}
+                        {bookingSlotText(b, "customer") ? <span>· {bookingSlotText(b, "customer")}</span> : null}
                         {b.eventCity && (
                           <span className="flex items-center gap-1">
                             <MapPin className="h-3 w-3" />

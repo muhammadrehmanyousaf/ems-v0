@@ -20,6 +20,9 @@ import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useBusiness } from "@/context/BusinessContext"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
 import type { BookingData } from "@/lib/dashboard-types"
+import { ymdOf } from "@/lib/utils/ymd"
+import { todayInKarachi } from "@/lib/utils/pk-date"
+import { bookingSlotText, slotStartHour } from "@/lib/booking/slot-vocabulary"
 import { useArtifactShell, escHtml, openDrawer, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const WD = ["Itwar", "Peer", "Mangal", "Budh", "Jumeraat", "Juma", "Hafta"]
@@ -92,7 +95,7 @@ const EXTRA_CSS = String.raw`
 .sd-hint{ font-size:11.5px; color:var(--ink-3); line-height:1.5; margin-top:6px; }
 `
 
-interface Evt { key: string; id: number; name: string; status: string; hall: string; guests: string; hour: number; phone: string }
+interface Evt { key: string; id: number; name: string; status: string; hall: string; guests: string; hour: number; slot: string; phone: string }
 const chev = (d: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${d}"/></svg>`
 const banIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>`
 const hhmm = (t?: string) => { if (!t) return ""; const [h, m] = String(t).split(":").map(Number); if (Number.isNaN(h)) return String(t); const ap = h >= 12 ? "PM" : "AM"; return `${(h % 12) || 12}:${String(m || 0).padStart(2, "0")} ${ap}` }
@@ -169,9 +172,10 @@ export function CalendarArtifact() {
   const rows: BookingData[] = data?.data?.data ?? []
 
   const events: Evt[] = React.useMemo(() => rows.map((b) => {
-    const d = new Date(b.bookingDate)
-    const hour = isNaN(d.getTime()) ? 20 : (d.getHours() || 20)
-    return { key: isNaN(d.getTime()) ? "" : keyOf(d), id: b.id, name: b.customerName || "Booking", status: b.status || "", hall: spaceNameOf(b) || "", guests: b.guestCount != null ? String(b.guestCount) : "—", hour, phone: (b as { customerPhone?: string }).customerPhone || "" }
+    // WP23: the day is the calendar day in the string (never the browser's reading of a UTC midnight) and the
+    // hour / words come from the booking's STANDARD SLOT. `getHours()` of `bookingDate` printed "5am" for every booking.
+    const hour = slotStartHour(b) ?? 20
+    return { key: ymdOf(b.bookingDate) || "", id: b.id, name: b.customerName || "Booking", status: b.status || "", hall: spaceNameOf(b) || "", guests: b.guestCount != null ? String(b.guestCount) : "—", hour, slot: bookingSlotText(b, "vendor"), phone: (b as { customerPhone?: string }).customerPhone || "" }
   }).filter((e) => e.key), [rows])
   const blockedSet = React.useMemo(() => new Set((blockedQ.data ?? []).map(bdate).filter(Boolean)), [blockedQ.data])
   // Live refs — the click listener binds once, so it must read the latest blocked
@@ -182,7 +186,7 @@ export function CalendarArtifact() {
   const slotDrawerDateRef = React.useRef<string>("")
   const slotDrawerVenueRef = React.useRef<number | null>(null)
 
-  const today = new Date(); const todayKey = keyOf(today)
+  const today = parseKey(todayInKarachi()); const todayKey = keyOf(today) // the Pakistan day, whatever the browser zone is
   const [offset, setOffset] = React.useState(0)
   const [selKey, setSelKey] = React.useState(todayKey)
   const [view, setView] = React.useState<"month" | "week" | "agenda">("month")
@@ -232,7 +236,7 @@ export function CalendarArtifact() {
     let html = `<div class="wk-corner"></div>`
     for (let i = 0; i < 7; i++) { const dt = new Date(start); dt.setDate(start.getDate() + i); const k = keyOf(dt); html += `<div class="wk-dh ${k === todayKey ? "today" : ""}" style="grid-column:${i + 2};grid-row:1"><span class="dw">${WD[dt.getDay()]}</span><span class="dd tnum">${dt.getDate()}</span></div>` }
     for (let h = HS; h < HE; h++) { const row = h - HS + 2; const h12 = ((h + 11) % 12) + 1; html += `<div class="wk-hour" style="grid-row:${row}"><span>${h12} ${h < 12 ? "AM" : "PM"}</span></div>`; for (let i = 0; i < 7; i++) html += `<div class="wk-slot" style="grid-column:${i + 2};grid-row:${row}"></div>` }
-    for (let i = 0; i < 7; i++) { const dt = new Date(start); dt.setDate(start.getDate() + i); const k = keyOf(dt); events.filter((e) => e.key === k && pass(e)).forEach((e) => { const rs = Math.max(2, Math.min(HE - HS + 1, e.hour - HS + 2)); const re = Math.min(HE - HS + 2, rs + 3); const h12 = ((e.hour + 11) % 12) + 1; html += `<div class="wkev ${evtTone(e.status).cls}" data-nav-btn="/dashboard/bookings/${e.id}" style="grid-column:${i + 2};grid-row:${rs}/${re}"><b>${escHtml(e.name)}</b><div class="wsub">${h12}${e.hour < 12 ? "am" : "pm"} · ${escHtml(e.hall || "")}</div></div>` }) }
+    for (let i = 0; i < 7; i++) { const dt = new Date(start); dt.setDate(start.getDate() + i); const k = keyOf(dt); events.filter((e) => e.key === k && pass(e)).forEach((e) => { const rs = Math.max(2, Math.min(HE - HS + 1, e.hour - HS + 2)); const re = Math.min(HE - HS + 2, rs + 3); const h12 = ((e.hour + 11) % 12) + 1; html += `<div class="wkev ${evtTone(e.status).cls}" data-nav-btn="/dashboard/bookings/${e.id}" style="grid-column:${i + 2};grid-row:${rs}/${re}"><b>${escHtml(e.name)}</b><div class="wsub">${escHtml(e.slot)} · ${escHtml(e.hall || "")}</div></div>` }) }
     return `<div class="wkcard"><div class="wkwrap"><div class="wk">${html}</div></div></div>`
   }
 
@@ -241,7 +245,7 @@ export function CalendarArtifact() {
     const groups: Record<string, Evt[]> = {}; up.forEach((e) => { (groups[e.key] = groups[e.key] || []).push(e) })
     const keys = Object.keys(groups).sort()
     if (!keys.length) return `<div class="da-empty">Koi aane wala event nahi.</div>`
-    return `<div class="agenda">${keys.map((k) => { const dt = parseKey(k); const isT = k === todayKey; return `<div class="ag-group"><div class="ag-gh ${isT ? "today" : ""}"><span class="agd">${isT ? "Aaj" : `${dt.getDate()} ${MO[dt.getMonth()]}`}</span>${isT ? '<span class="tdchip">AAJ</span>' : ""}<span class="agw">${WD[dt.getDay()]}</span><span class="agc">${groups[k].length} event${groups[k].length === 1 ? "" : "s"}</span></div><div class="ag-card">${groups[k].map((e) => { const h12 = ((e.hour + 11) % 12) + 1; return `<div class="ag-row ${evtTone(e.status).cls}" data-nav-btn="/dashboard/bookings/${e.id}"><div class="ag-icon">${escHtml(e.name.slice(0, 2).toUpperCase())}</div><div class="ag-main"><div class="ag-name">${escHtml(e.name)}</div><div class="ag-sub">${h12}${e.hour < 12 ? "am" : "pm"} · ${escHtml(e.hall || "—")} · ${escHtml(bookingStatusLabel({ status: e.status }) || "")}</div></div></div>` }).join("")}</div></div>` }).join("")}</div>`
+    return `<div class="agenda">${keys.map((k) => { const dt = parseKey(k); const isT = k === todayKey; return `<div class="ag-group"><div class="ag-gh ${isT ? "today" : ""}"><span class="agd">${isT ? "Aaj" : `${dt.getDate()} ${MO[dt.getMonth()]}`}</span>${isT ? '<span class="tdchip">AAJ</span>' : ""}<span class="agw">${WD[dt.getDay()]}</span><span class="agc">${groups[k].length} event${groups[k].length === 1 ? "" : "s"}</span></div><div class="ag-card">${groups[k].map((e) => { const h12 = ((e.hour + 11) % 12) + 1; return `<div class="ag-row ${evtTone(e.status).cls}" data-nav-btn="/dashboard/bookings/${e.id}"><div class="ag-icon">${escHtml(e.name.slice(0, 2).toUpperCase())}</div><div class="ag-main"><div class="ag-name">${escHtml(e.name)}</div><div class="ag-sub">${escHtml(e.slot)} · ${escHtml(e.hall || "—")} · ${escHtml(bookingStatusLabel({ status: e.status }) || "")}</div></div></div>` }).join("")}</div></div>` }).join("")}</div>`
   }
 
   function render(): string {
@@ -346,7 +350,7 @@ export function CalendarArtifact() {
         const view2 = t.closest("[data-view]") as HTMLElement | null
         if (view2) { setView(view2.dataset.view as "month" | "week" | "agenda"); closeMenu(); return }
         const cal = t.closest("[data-cal]") as HTMLElement | null
-        if (cal) { const a = cal.dataset.cal; if (a === "prev") setOffset((o) => o - 1); else if (a === "next") setOffset((o) => o + 1); else { setOffset(0); setSelKey(keyOf(new Date())) } return }
+        if (cal) { const a = cal.dataset.cal; if (a === "prev") setOffset((o) => o - 1); else if (a === "next") setOffset((o) => o + 1); else { setOffset(0); setSelKey(todayInKarachi()) } return }
         const tab = t.closest(".tab") as HTMLElement | null
         if (tab) { setFilter(tab.dataset.f || "all"); return }
         const add = t.closest("[data-add]") as HTMLElement | null

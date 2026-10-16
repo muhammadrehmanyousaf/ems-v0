@@ -321,3 +321,26 @@ export function slotFromBooking(b: unknown): SlotDescriptor {
 export function bookingSlotText(b: unknown, audience: "vendor" | "customer" = "customer"): string {
   return slotTextFor(slotFromBooking(b), audience);
 }
+
+/**
+ * The hour (0-23) a booking's slot STARTS, for placing it on a time grid (the calendar's week view).
+ * Read from the slot's own start, else the stored clock; null when the booking has no clock slot
+ * ("Baraat", nothing chosen). Never read off `bookingDate`: that is a date.
+ */
+export function slotStartHour(b: unknown): number | null {
+  const d = slotFromBooking(b);
+  if (describeSlot(d).kind === "unset") return null;
+  const hm = toHHMM(d.slotStartTime) ?? toHHMM(d.bookingTime);
+  return hm ? Number(hm.slice(0, 2)) : null;
+}
+
+/**
+ * A DATE HOLD's slot in words. A hold stores free text: a preset ("Evening", "Baraat"), a clock
+ * ("18:00:00") or, for a hold placed against a venue slot, "<label>#<slot id>". The id suffix is
+ * plumbing and is never shown. Same rule as a booking, so a hold turned into a booking does not
+ * change its wording.
+ */
+export function holdSlotText(holdTime: string | null | undefined, audience: "vendor" | "customer" = "vendor"): string {
+  const raw = String(holdTime ?? "").replace(/#\d+\s*$/, "").trim();
+  return slotTextFor({ bookingTime: raw }, audience);
+}

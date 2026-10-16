@@ -7,6 +7,7 @@
  * the existing sheet detail (composer / sign / PDF stay there).
  */
 
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
@@ -28,7 +29,7 @@ const STATE_TONE: Partial<Record<FunctionSheetState, string>> = {
 const st = (s: FunctionSheetState) => STATE_TONE[s] || "mut"
 const ORDER: FunctionSheetState[] = ["draft", "quote_sent", "contract_pending", "signed", "beo_ready", "invoiced", "paid"]
 const money = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
-function fmtDate(s?: string | null) { if (!s) return "—"; const d = new Date(s); return isNaN(d.getTime()) ? String(s) : d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) }
+function fmtDate(s?: string | null) { if (!s) return "—"; if (dateOnlyOf(s)) return fmtYmd(s, "short"); const d = new Date(s); return isNaN(d.getTime()) ? String(s) : d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) }
 const svg = (p: string, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}">${p}</svg>`
 const IC = {
   doc: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/>', wallet: '<path d="M20 12V8H6a2 2 0 0 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>', check: '<path d="M20 6 9 17l-5-5"/>', pen: '<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>', plus: '<path d="M12 5v14M5 12h14"/>',

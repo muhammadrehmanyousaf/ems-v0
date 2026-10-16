@@ -35,6 +35,8 @@ import { bookedOn, receivedOn, outstandingOn } from "@/lib/utils/booking-money"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
 import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { paymentsCardHtml, handleQistClick, QIST_CSS } from "./qist-payments"
+import { fmtYmd, ymdOf, ymdToUtcDate } from "@/lib/utils/ymd"
+import { bookingSlotText } from "@/lib/booking/slot-vocabulary"
 import { slotPickerField, bindSlotPicker, loadSlotPicker, refreshPicker, recheckPicker, pickerChoice } from "@/components/dashboard/mainScreens/artifact/slot-picker"
 
 /* ── formatting ──────────────────────────────────────────────── */
@@ -49,19 +51,14 @@ function fmtDateShort(iso?: string | null) {
   const d = new Date(iso); if (isNaN(d.getTime())) return String(iso)
   return d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })
 }
-function fmtTime(t?: string | null) {
-  if (!t) return "—"
-  const [h, m] = String(t).split(":").map(Number)
-  if (Number.isNaN(h)) return String(t)
-  const ampm = h >= 12 ? "PM" : "AM"; const hr = h % 12 || 12
-  return `${hr}:${String(m || 0).padStart(2, "0")} ${ampm}`
-}
+// WP23: `bookingDate` is a calendar day, not an instant. Counted in whole Pakistan days and printed from the
+// string (fmtYmd), so the card reads the same in every browser zone (it said 15 Oct west of Greenwich).
 function eventWhen(iso?: string | null) {
-  if (!iso) return { big: "—", sub: "" }
-  const d = new Date(iso); if (isNaN(d.getTime())) return { big: "—", sub: "" }
-  const days = Math.round((new Date(d).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000)
-  const big = days === 0 ? "Aaj" : days === 1 ? "Kal" : days < 0 ? "Ho chuka" : days < 7 ? `${days} din baaki` : fmtDateShort(iso)
-  return { big, sub: fmtDate(iso) }
+  const ev = ymdToUtcDate(iso), today = ymdToUtcDate(todayInKarachi())
+  if (!ev || !today) return { big: "—", sub: "" }
+  const days = Math.round((ev.getTime() - today.getTime()) / 86400000)
+  const big = days === 0 ? "Aaj" : days === 1 ? "Kal" : days < 0 ? "Ho chuka" : days < 7 ? `${days} din baaki` : fmtYmd(iso, "short")
+  return { big, sub: fmtYmd(iso, "weekday") }
 }
 
 function toneOf(label: string): "ok" | "warn" | "bad" | "mut" {
@@ -564,7 +561,7 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
   const isOffline = String(booking.bookingSource || "").toLowerCase() === "offline"
   const reschedBtn =
     isOffline && !isClosed
-      ? `<button class="btn btn-ghost" data-bk-resched="${booking.id}" data-bk-date="${escHtml(booking.bookingDate || "")}" data-bk-time="${escHtml(booking.bookingTime || "")}" data-bk-biz="${booking.bookingDetails?.[0]?.businessId ?? ""}" data-bk-slot="${booking.bookingDetails?.[0]?.slotTemplateId ?? booking.slotTemplateId ?? ""}" data-bk-hall="${booking.bookingDetails?.[0]?.subVenueId ?? ""}">${svg(I.clock)} Taareekh badlein</button>`
+      ? `<button class="btn btn-ghost" data-bk-resched="${booking.id}" data-bk-date="${escHtml(ymdOf(booking.bookingDate) || "")}" data-bk-time="${escHtml(booking.bookingTime || "")}" data-bk-biz="${booking.bookingDetails?.[0]?.businessId ?? ""}" data-bk-slot="${booking.bookingDetails?.[0]?.slotTemplateId ?? booking.slotTemplateId ?? ""}" data-bk-hall="${booking.bookingDetails?.[0]?.subVenueId ?? ""}">${svg(I.clock)} Taareekh badlein</button>`
       : ""
   /**
    * WW-PRICEADJ — the agreed number moves after signing all the time (the
@@ -636,7 +633,7 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
   </div>
 
   <div class="stats">
-    <div class="stat hl"><div class="s-cap">${svg(I.clock)} Event</div><div class="s-val">${escHtml(ev.big)}</div><div class="s-sub">${escHtml(ev.sub)}${booking.bookingTime ? ` · ${fmtTime(booking.bookingTime)}` : ""}</div></div>
+    <div class="stat hl"><div class="s-cap">${svg(I.clock)} Event</div><div class="s-val">${escHtml(ev.big)}</div><div class="s-sub">${escHtml(ev.sub)} · ${escHtml(bookingSlotText(booking, "vendor"))}</div></div>
     <div class="stat"><div class="s-cap">${svg(I.users)} Mehmaan</div><div class="s-val tnum">${guests != null ? guests : "—"}</div><div class="s-sub">${escHtml(space || "Venue")}</div></div>
     <div class="stat"><div class="s-cap">${svg(I.card)} Kul package</div><div class="s-val tnum">${rs(total)}</div><div class="s-sub">${pct}% mil chuka</div></div>
     ${refundOwed > 0
@@ -688,8 +685,8 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
         <div class="card-h"><div><h2>Event details</h2></div></div>
         <div class="dl">
           <div class="dl-row"><span class="k">Service</span><span class="v">${escHtml(service)}</span></div>
-          <div class="dl-row"><span class="k">Taareekh</span><span class="v">${fmtDate(booking.bookingDate)}</span></div>
-          <div class="dl-row"><span class="k">Waqt</span><span class="v">${fmtTime(booking.bookingTime)}</span></div>
+          <div class="dl-row"><span class="k">Taareekh</span><span class="v">${escHtml(fmtYmd(booking.bookingDate, "weekday"))}</span></div>
+          <div class="dl-row"><span class="k">Waqt</span><span class="v">${escHtml(bookingSlotText(booking, "vendor"))}</span></div>
           <div class="dl-row"><span class="k">Hall</span><span class="v">${escHtml(space || "—")}</span></div>
           <div class="dl-row"><span class="k">Mehmaan</span><span class="v tnum">${guests != null ? guests : "—"}</span></div>
           ${booking.serviceLocationAddress ? `<div class="dl-row"><span class="k">${svg(I.pin)} Jagah</span><span class="v">${escHtml(booking.serviceLocationAddress)}</span></div>` : ""}
@@ -882,7 +879,7 @@ async function rsDayPreview(s: ShadowRoot, bizId: number, date: string, selfId: 
     lines.push(`<div style="color:var(--bad);background:var(--bad-wash);border-radius:8px;padding:9px 11px">🚫 Is din aap ne venue band kiya hua hai${why ? ` — ${escHtml(String(why))}` : ""}. Pehle calendar se kholein, warna move nahi hoga.</div>`)
   }
   if (busy.length > 0) {
-    const who = busy.slice(0, 4).map((b) => `${escHtml(fmtTime(b.bookingTime))} · ${escHtml(b.offlineCustomerName || b.user?.fullName || "booking")}`).join(" · ")
+    const who = busy.slice(0, 4).map((b) => `${escHtml(bookingSlotText(b, "vendor"))} · ${escHtml(b.offlineCustomerName || b.user?.fullName || "booking")}`).join(" · ")
     lines.push(`<div style="color:var(--warn-ink,var(--ink-2));background:var(--warn-wash,var(--bg-2));border-radius:8px;padding:9px 11px">⚠️ Us din pehle se ${busy.length} booking hai: ${who}${busy.length > 4 ? " …" : ""}. Agar doosra hall hai to theek, warna taareekh badlein.</div>`)
   }
   if (!lines.length) lines.push(`<div style="color:var(--ok)">✓ Us din koi aur booking nahi hai.</div>`)

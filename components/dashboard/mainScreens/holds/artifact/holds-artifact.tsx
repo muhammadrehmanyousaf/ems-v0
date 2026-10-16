@@ -14,9 +14,11 @@ import { VendorHoldsAPI, type VendorHold } from "@/lib/api/vendorHolds"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useArtifactShell, escHtml, initTablePager, errorBannerHtml, openDrawer, closeDrawer } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { openBookingForm } from "@/components/dashboard/mainScreens/artifact/booking-form"
+import { fmtYmd } from "@/lib/utils/ymd"
+import { holdSlotText } from "@/lib/booking/slot-vocabulary"
 
-function fmtDate(s?: string | null) { if (!s) return "—"; const d = new Date(s); return isNaN(d.getTime()) ? String(s) : d.toLocaleDateString("en-PK", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) }
-function fmtTime(t?: string | null) { if (!t) return ""; const [h, m] = String(t).split(":").map(Number); if (Number.isNaN(h)) return String(t); const ap = h >= 12 ? "PM" : "AM"; return `${h % 12 || 12}:${String(m || 0).padStart(2, "0")} ${ap}` }
+// WP23: a hold date is a calendar day (no zone): printed from the string, never through the browser zone
+function fmtDate(s?: string | null) { return s ? fmtYmd(s, "weekday", null) : "—" }
 function expiresIn(s?: string | null) {
   if (!s) return { txt: "—", soon: false, gone: false }
   const ms = new Date(s).getTime() - Date.now(); if (isNaN(ms)) return { txt: "—", soon: false, gone: false }
@@ -65,7 +67,7 @@ function buildContent(list: VendorHold[]): string {
   const rows = list.length ? `<div class="card" data-ww-list>${[...list].sort((a, b) => (a.holdDate || "").localeCompare(b.holdDate || "")).map((h) => {
     const ex = expiresIn(h.expiresAt)
     return `<div class="hold${ex.gone ? " gone" : ""}"><span class="h-ic">${svg(IC.cal, 1.8)}</span>
-      <div class="h-main"><div class="h-d">${fmtDate(h.holdDate)}</div><div class="h-t">${fmtTime(h.holdTime)}${h.bookingId ? ` · Booking ban gayi #${h.bookingId}` : ""}</div></div>
+      <div class="h-main"><div class="h-d">${fmtDate(h.holdDate)}</div><div class="h-t">${escHtml(holdSlotText(h.holdTime))}${h.bookingId ? ` · Booking ban gayi #${h.bookingId}` : ""}</div></div>
       <span class="h-exp ${ex.soon ? "soon" : ""}${ex.gone ? " gone" : ""}">${svg(IC.clock)} ${escHtml(ex.txt)}</span>
       ${h.bookingId ? `<button class="iconbtn" data-nav-btn="/dashboard/bookings/${h.bookingId}" title="Booking">${svg(IC.open)}</button>` : `${ex.gone ? "" : `<button class="iconbtn book" data-hold-book data-hb-date="${escHtml(h.holdDate || "")}" data-hb-time="${escHtml(h.holdTime || "")}" data-hb-biz="${h.businessId}" title="Is date par pakki booking banayein">${svg(IC.book, 1.8)} Book karein</button>`}${ex.soon || ex.gone ? `<button class="iconbtn extend" data-hold-extend data-he-date="${escHtml(h.holdDate || "")}" data-he-time="${escHtml(h.holdTime || "")}" data-he-biz="${h.businessId}" title="Aur waqt rok lein — hold barha dein">${svg(IC.renew, 1.8)}</button>` : ""}<button class="iconbtn bad" data-release="${h.id}" title="Release">${svg(IC.x)}</button>`}</div>`
   }).join("")}</div>` : `<div class="card"><div class="empty">Abhi koi hold nahi. "Naya hold" se date rok lein.</div></div>`

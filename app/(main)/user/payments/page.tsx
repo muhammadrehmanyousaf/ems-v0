@@ -1,5 +1,6 @@
 "use client";
 
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import { useState, useEffect, Suspense, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -23,7 +24,7 @@ import { cn } from "@/lib/utils";
 import { PaymentAPI } from "@/lib/api/payments";
 import { toast } from "@/components/ui/use-toast";
 import { getUser } from "@/hooks/getLoggedinUser";
-import { slotText, slotFromBooking } from "@/lib/booking/slot-vocabulary";
+import { bookingSlotText } from "@/lib/booking/slot-vocabulary";
 
 import {
   PageContainer,
@@ -38,7 +39,7 @@ const fmt = (n: number | string | null | undefined) =>
   `Rs. ${Number(n || 0).toLocaleString()}`;
 
 const fmtDate = (s: string) =>
-  new Date(s).toLocaleDateString("en-US", {
+  dateOnlyOf(s) ? fmtYmd(s, "short", null, "en-US") : new Date(s).toLocaleDateString("en-US", { // WP23: a calendar day is printed from the string
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -392,10 +393,10 @@ function PaymentsPageContent() {
                         <Calendar className="size-3.5 text-bridal-gold" />
                         {fmtDate(booking.bookingDate)}
                       </span>
-                      {booking.bookingTime ? (
+                      {bookingSlotText(booking, "customer") ? (
                         <span className="inline-flex items-center gap-1.5">
                           <Clock className="size-3.5 text-bridal-gold" />
-                          {slotText(slotFromBooking(booking)) || booking.bookingTime}
+                          {bookingSlotText(booking, "customer")}
                         </span>
                       ) : null}
                       {booking.businesses?.length > 0 ? (

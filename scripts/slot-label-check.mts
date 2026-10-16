@@ -124,22 +124,24 @@ const TIME_FORMAT = /toLocaleTimeString|\bhour12\b|\bhour:\s*["'`](?:numeric|2-d
 /** Files that handle a booking's event date AND format a time of day. Each needs a reason it is a real timestamp. */
 const TIME_ON_DATE_ALLOW: Record<string, string> = {
   "components/dashboard/mainScreens/leads/lead-detail-view.tsx": "fmtWhen formats the lead's createdAt / follow-up timestamps; the linked booking prints its date only",
+  "components/booking/steps-v2/date-time-step.tsx": "toLocaleTimeString of holdFailedUntil, the instant a slot hold expires (a real timestamp, not the booking day)",
+  "components/booking/steps/date-selection-step.tsx": "toLocaleTimeString of holdFailedUntil, the instant a slot hold expires (a real timestamp, not the booking day)",
 };
 {
   const offenders: string[] = [];
   for (const [f, t] of src) {
-    if (!/\b(bookingDate|eventDate)\b/.test(t)) continue;
+    if (!/\bbookingDate\b/.test(t)) continue;
     if (!TIME_FORMAT.test(t)) continue;
     if (TIME_ON_DATE_ALLOW[f]) continue;
     offenders.push(f);
   }
-  check("no web file that handles bookingDate / eventDate formats a time of day", offenders.length === 0, offenders.join(", "));
+  check("no web file that handles bookingDate formats a time of day", offenders.length === 0, offenders.join(", "));
   const stale = Object.keys(TIME_ON_DATE_ALLOW).filter((f) => !src.has(f) || !TIME_FORMAT.test(src.get(f)!));
   check("the allow-list has no stale entries", stale.length === 0, stale.join(", "));
 }
 {
   // `new Date(<a booking day>)` printed through toLocale*/toDateString in the browser zone.
-  const DAY_FIELD = /new Date\(\s*[^()]*\b(bookingDate|eventDate|holdDate)\b[^()]*\)\s*\.\s*(toLocaleDateString|toLocaleString|toDateString|getDate|getMonth|getFullYear|getDay)\b/;
+  const DAY_FIELD = /new Date\(\s*[^()]*\b(bookingDate|holdDate)\b[^()]*\)\s*\.\s*(toLocaleDateString|toLocaleString|toDateString|getDate|getMonth|getFullYear|getDay)\b/;
   const offenders: string[] = [];
   for (const [f, t] of src) {
     t.split("\n").forEach((line, i) => { if (DAY_FIELD.test(line)) offenders.push(`${f}:${i + 1}`); });

@@ -15,6 +15,7 @@
  * booking relation, so it works for every vendor, not just GL pilots.
  */
 
+import { fmtYmd } from "@/lib/utils/ymd"
 import * as React from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
@@ -77,7 +78,7 @@ function periodLabel(gran: Gran, anchor: Date): string {
 }
 
 const fmtEventDate = (s?: string | null) =>
-  s ? new Date(s).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—"
+  s ? fmtYmd(s, { day: "2-digit", month: "short", year: "numeric" }, null) : "—" // WP23: a calendar day, not an instant
 
 export function ExpenseCockpit({
   /**

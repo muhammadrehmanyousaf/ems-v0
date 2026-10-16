@@ -1,5 +1,6 @@
 'use client';
 
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import * as React from 'react';
 import {
   Card, CardContent, CardHeader, CardTitle,
@@ -65,6 +66,8 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function formatBookingDate(dateStr: string) {
+  // WP23: a calendar day, printed from the string (never through the browser zone)
+  if (dateOnlyOf(dateStr)) return fmtYmd(dateStr, 'short', null, 'en-US');
   const date = new Date(dateStr);
   return date.toLocaleDateString('en-US', {
     month: 'short',

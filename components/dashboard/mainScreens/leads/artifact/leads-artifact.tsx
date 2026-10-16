@@ -6,6 +6,7 @@
  * Wired to the REAL LeadAPI through the shared artifact shell.
  */
 
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import * as React from "react"
 import { useSearchParams } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
@@ -22,6 +23,7 @@ import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, 
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
 function shortDate(s?: string | null) {
   if (!s) return "—"
+  if (dateOnlyOf(s)) return fmtYmd(s, "short") // WP23: a calendar day is printed from the string, never through the browser zone
   const d = new Date(s); if (isNaN(d.getTime())) return String(s)
   return d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })
 }

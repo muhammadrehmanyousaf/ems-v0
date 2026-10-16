@@ -21,6 +21,7 @@
  * reference copies on tap; a multi-function booking gets "Continue to {next}".
  */
 
+import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import { useEffect, useRef, useState } from "react"
 import { Check, Copy, FileText, Home, MessageCircle, ArrowRight } from "lucide-react"
 import Link from "next/link"
@@ -59,6 +60,7 @@ export default function RequestSentScreen({
 }: RequestSentScreenProps) {
   const formatDate = (d?: string) => {
     if (!d) return null
+    if (dateOnlyOf(d)) return fmtYmd(d, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) // WP23: a calendar day
     try {
       return new Date(d).toLocaleDateString("en-PK", {
         weekday: "long", day: "numeric", month: "long", year: "numeric",
