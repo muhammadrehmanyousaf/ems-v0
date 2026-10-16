@@ -1269,7 +1269,7 @@ export default function BookingDetailPage() {
                 {refundPreviewLoading && (
                   <p className="text-xs text-bridal-text-soft">Checking your refund…</p>
                 )}
-                {refundPreview && refundPreview.totalPaid > 0 && (
+                {refundPreview && (refundPreview.totalPaid > 0 || (refundPreview.unledgeredAdvance ?? 0) > 0) && (
                   <div className="rounded-md border border-bridal-gold/45 bg-bridal-cream p-3 text-sm">
                     <div className="flex items-center justify-between">
                       <span className="text-bridal-charcoal">You&apos;ll get back</span>
@@ -1303,6 +1303,13 @@ export default function BookingDetailPage() {
                     {!windowClosed && !!refundPreview.minNoticeHours && (
                       <p className="mt-1 text-[11px] text-bridal-text-soft leading-relaxed">
                         You can cancel online up to {noticeText(refundPreview.minNoticeHours)} before the event.
+                      </p>
+                    )}
+                    {/* WP16: an advance the booking shows as paid but the venue never recorded is not part of
+                        the refund; say so in one line rather than let the figure look short. */}
+                    {(refundPreview.unledgeredAdvance ?? 0) > 0 && (
+                      <p className="mt-1 text-[11px] text-bridal-text-soft leading-relaxed" data-unledgered-advance>
+                        {fmt(refundPreview.unledgeredAdvance as number)} shown as paid on this booking isn&apos;t recorded as received by the venue, so it isn&apos;t in this refund. Ask the venue to confirm it.
                       </p>
                     )}
                   </div>

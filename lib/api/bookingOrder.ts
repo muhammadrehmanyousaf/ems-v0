@@ -592,6 +592,11 @@ export interface RefundPreview {
   bookingId: number; eventDate: string | null; daysBefore: number;
   grand: number; totalPaid: number;
   /**
+   * WP16: money the booking's roll-up shows but no receipt backs (a legacy advance never ledgered). Not in
+   * `totalPaid` or the refund: only what the ledger holds can be handed back. Absent when there is none.
+   */
+  unledgeredAdvance?: number;
+  /**
    * WW-CANCELWINDOW — the vendor's notice period, in hours, and how long is
    * actually left. `null` means this venue has not set one, which is the
    * platform default and means the customer may cancel at any time.

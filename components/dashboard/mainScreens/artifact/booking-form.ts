@@ -96,7 +96,7 @@ function bookingFormBody(prefill?: BookingPrefill, businesses?: BizLite[], activ
     <div class="dfield"><label class="dlabel">Tay raqam <span style="color:var(--ink-4);font-weight:400">(jo customer se tay hui)</span></label><input type="number" id="bf-agreed" placeholder="e.g. 700000"/><div id="bf-agreed-hint" class="dhint" style="font-size:11.5px;color:var(--ink-3);margin-top:4px"></div></div>
 
     <div class="bf-sec">Paisa</div>
-    <div class="dfield row2"><div><label class="dlabel">Advance (mila)</label><input type="number" id="bf-advance" placeholder="booking advance"/></div><div><label class="dlabel">Tareeqa</label><select id="bf-method">${methodOpts}</select></div></div>
+    <div class="dfield row2"><div><label class="dlabel">Advance (mila)</label><input type="number" id="bf-advance" placeholder="jo raqam mili — khali = kuch record nahi"/></div><div><label class="dlabel">Tareeqa</label><select id="bf-method">${methodOpts}</select></div></div>
 
     <div class="dfield"><label class="dlabel">Khaas farmaish</label><textarea id="bf-special" placeholder="stage, decor, timing…"></textarea></div>
     <div class="ww-dfoot"><button class="btn btn-ghost" data-drawer-close type="button">Cancel</button><button class="btn btn-primary" data-bf-save type="button">Booking banayein</button></div>`

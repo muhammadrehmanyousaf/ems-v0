@@ -47,6 +47,28 @@ export function claimRequiredMessage(error: unknown): string | null {
 }
 
 /**
+ * WP17 (PAY-UI_CUSTOMER-019): a second payment report while one is open answers 409 `CLAIM_ALREADY_OPEN` with
+ * the existing claim in `data.claim`. Returns that claim (or an empty object when the server sent none) so the
+ * screen can show the report that is already with the venue instead of a generic error; null for anything else.
+ */
+export function claimAlreadyOpen<T = Record<string, unknown>>(error: unknown): T | null {
+  const d = (error as { response?: { status?: number; data?: { data?: { code?: string; claim?: unknown } | null } } } | null | undefined)?.response;
+  if (!d || d.status !== 409 || d.data?.data?.code !== "CLAIM_ALREADY_OPEN") return null;
+  return ((d.data.data.claim ?? {}) as T);
+}
+
+/**
+ * Money refusals that arrive with a machine code. The server always sends its own sentence and it wins; these
+ * are only the words used when a proxy or an older build drops the message (WP16: 503 MONEY_WRITES_PAUSED,
+ * 400 BOOKING_NOT_PAYABLE, 400 bad_date on a qist due date).
+ */
+const CODE_FALLBACK: Record<string, string> = {
+  MONEY_WRITES_PAUSED: "Money changes are temporarily paused while the platform is being checked. Nothing was saved. Please try again in a little while.",
+  BOOKING_NOT_PAYABLE: "This booking can't take a payment (it is cancelled or closed).",
+  bad_date: "That due date isn't a real date. Check the date and try again.",
+};
+
+/**
  * The sentence to show a vendor when a request failed.
  *
  * @param error    whatever the catch block received
@@ -62,6 +84,8 @@ export function errorMessage(error: unknown, fallback: string): string {
   // 1. The server said something. That is always the most specific answer.
   const fromServer = e.response?.data?.message;
   if (typeof fromServer === "string" && fromServer.trim()) return fromServer.trim();
+  const code = e.response?.data?.data?.code;
+  if (typeof code === "string" && CODE_FALLBACK[code]) return CODE_FALLBACK[code];
 
   // 2. The request never reached a server. Say that, in the product's voice —
   //    it is a genuinely different situation from a refusal and the vendor's

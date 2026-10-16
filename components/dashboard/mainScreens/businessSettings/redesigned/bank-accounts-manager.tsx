@@ -101,7 +101,7 @@ export function BankAccountsManager() {
   })
   const activeMut = useMutation({
     mutationFn: (id: number) => BankDetailsAPI.setActive(id),
-    onSuccess: () => { showSuccessToast("Default payout account updated"); invalidate() },
+    onSuccess: () => { showSuccessToast("Default account updated"); invalidate() },
     onError: (e: any) => toast.error(
         errorMessage(e, "Couldn't set active"),
         { duration: 8000 },
@@ -181,7 +181,7 @@ export function BankAccountsManager() {
     <div className="rounded-xl border border-border bg-card shadow-sm">
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
         <span className="grid h-8 w-8 place-items-center rounded-lg bg-muted text-muted-foreground"><Icon name="CreditCard" size={16} /></span>
-        <div className="mr-auto"><h2 className="text-sm font-semibold">Bank details</h2><p className="text-xs text-muted-foreground">Payout accounts for your receivables.</p></div>
+        <div className="mr-auto"><h2 className="text-sm font-semibold">Bank details</h2><p className="text-xs text-muted-foreground">Payout accounts for your receivables. Bank, JazzCash and Easypaisa each have their own default.</p></div>
         {!adding && <Button size="sm" variant="outline" onClick={() => setAdding(true)}><Icon name="Plus" size={14} className="mr-1" /> Add account</Button>}
       </div>
 
@@ -259,7 +259,7 @@ export function BankAccountsManager() {
               {!isWallet && (
               <div className="space-y-1.5"><HelpRow help="branchCode"><label className={labelCls}>Branch code</label></HelpRow><input className={inputCls} value={form.branchCode ?? ""} onChange={(e) => set("branchCode", e.target.value)} placeholder="Optional" /></div>
               )}
-              <label className="flex items-center gap-2 self-end pb-1.5 text-sm"><input type="checkbox" className="h-4 w-4" checked={Boolean(form.isActive)} onChange={(e) => set("isActive", e.target.checked)} /> Make this the default payout account</label>
+              <label className="flex items-center gap-2 self-end pb-1.5 text-sm"><input type="checkbox" className="h-4 w-4" checked={Boolean(form.isActive)} onChange={(e) => set("isActive", e.target.checked)} /> Make this the default {(form.accountType ?? "bank") === "jazzcash" ? "JazzCash" : (form.accountType ?? "bank") === "easypaisa" ? "Easypaisa" : "bank"} account</label>
             </div>
 
             {/* WW-RECORD-MODE — publishing this account to customers.
@@ -279,7 +279,7 @@ export function BankAccountsManager() {
                 <span className="font-medium">Show this account to customers paying me</span>
                 <span className="mt-0.5 block text-xs text-muted-foreground">
                   {form.showToCustomers
-                    ? "Customers booking you will see these details on their payment screen, with a reference to quote. Shown only once we've verified the account."
+                    ? "Customers booking you will see these details on their payment screen, with a reference to quote. Until we've verified the account it shows as not yet checked."
                     : "Off — customers won't see this account. They'll be asked to contact you to arrange payment instead."}
                 </span>
               </span>

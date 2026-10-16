@@ -165,6 +165,9 @@ export function customerPaymentFromView(booking: {
 export interface NotDueYetInput {
   paymentType?: string | null;
   amountDue?: number;
+  /** WP17 additive: what is due TODAY and what it is. Present = the server states it; absent = older server. */
+  dueNow?: number;
+  basis?: string | null;
   amountReceived?: number;
   overdueAmount?: number;
   installments?: Array<{ state?: string; remaining?: number; waived?: boolean }>;
@@ -175,10 +178,42 @@ export function paymentNotDueYet(i: NotDueYetInput | null | undefined): { amount
   if (!i || !i.paymentType || !(Number(i.amountDue) > 0)) return null;
   if (!(Number(i.amountReceived) === 0)) return null; // unstated or already paying: server figure stands
   if (Number(i.overdueAmount) > 0) return null;
+  // WP17: the server now says it outright. `basis: "none"` with `dueNow: 0` = nothing is due today (the
+  // figure quoted is only the NEXT qist). Anything else is due. No schedule needs to be read.
+  if (typeof i.basis === "string" && i.basis !== "" && i.dueNow !== undefined && i.dueNow !== null) {
+    if (i.basis !== "none" || Number(i.dueNow) > 0) return null;
+    return { amount: Number(i.amountDue), dueDate: i.nextInstallment?.dueDate ?? null };
+  }
+  // Older server (no dueNow / basis): read the schedule states, as before.
   const open = (Array.isArray(i.installments) ? i.installments : []).filter((q) => !q.waived && Number(q.remaining) > 0);
   if (open.length === 0) return null; // no schedule to read
   if (open.some((q) => q.state === "overdue" || q.state === "due_today")) return null;
   return { amount: Number(i.amountDue), dueDate: i.nextInstallment?.dueDate ?? null };
+}
+
+/**
+ * PAY-UI_CUSTOMER-015 (WP17) - a multi-venue booking pays each venue separately. The server now sends every
+ * venue's own share (`vendors[].amountDue`); this returns them, or null when there is nothing to split (one
+ * venue, or an older server that states no shares), in which case the screen keeps ONE whole-booking claim.
+ */
+export interface VenueShareInput {
+  businessId: number;
+  businessName?: string | null;
+  name?: string | null;
+  amountDue?: number;
+  accounts?: unknown[];
+}
+export interface VenueShare { businessId: number; name: string; amountDue: number; hasAccounts: boolean }
+
+export function venueClaimShares(vendors: VenueShareInput[] | null | undefined): VenueShare[] | null {
+  if (!Array.isArray(vendors) || vendors.length < 2) return null;
+  if (!vendors.every((v) => typeof v.amountDue === "number" && Number.isFinite(v.amountDue))) return null;
+  return vendors.map((v) => ({
+    businessId: Number(v.businessId),
+    name: v.name || v.businessName || "The venue",
+    amountDue: Number(v.amountDue),
+    hasAccounts: Array.isArray(v.accounts) && v.accounts.length > 0,
+  }));
 }
 
 /**
