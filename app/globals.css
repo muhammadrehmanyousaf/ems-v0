@@ -427,8 +427,19 @@ html[data-locale="ur"] body {
     --card-foreground: 263 30% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 263 30% 10%;
-    --primary: 263 84% 57%;
+    /* Brand primary = bridal-gold-dark (#916539), the gold built for a white label
+       (5.09:1; plain bridal-gold #C9956A is 2.63:1 under white and cannot carry a
+       label or text). It was violet (263 84% 57%), so every default shadcn Button,
+       switch, checkbox, tab and focus ring on the customer and public pages was
+       violet beside the gold brand (owner bug 8, WP27). The vendor console does
+       not read these values: its layout imports app/styles/dashboard-styles.css,
+       which declares its own :root and .dark. --primary-hover is the hover step
+       (bridal-gold-deep): primary at 90% opacity is 4.18:1 under white. Only the
+       Button reads it (tailwind.config primary.hover), and it falls back to the
+       old primary/90 wherever the variable is absent. */
+    --primary: 30 44% 40%;
     --primary-foreground: 0 0% 100%;
+    --primary-hover: 29 45% 34%;
     --secondary: 263 20% 95%;
     --secondary-foreground: 263 40% 20%;
     --muted: 263 10% 95%;
@@ -439,7 +450,7 @@ html[data-locale="ur"] body {
     --destructive-foreground: 0 0% 98%;
     --border: 263 15% 90%;
     --input: 263 15% 90%;
-    --ring: 263 84% 57%;
+    --ring: 30 44% 40%;
     --gold: 46 65% 52%;
     --gold-foreground: 46 80% 15%;
     --gold-muted: 46 30% 90%;
@@ -467,8 +478,9 @@ html[data-locale="ur"] body {
     --card-foreground: 263 5% 95%;
     --popover: 263 25% 9%;
     --popover-foreground: 263 5% 95%;
-    --primary: 263 84% 65%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 27 47% 60%;               /* bridal-gold, charcoal label */
+    --primary-foreground: 17 47% 12%;
+    --primary-hover: 27 47% 68%;
     --secondary: 263 15% 15%;
     --secondary-foreground: 263 5% 95%;
     --muted: 263 10% 15%;
@@ -479,7 +491,7 @@ html[data-locale="ur"] body {
     --destructive-foreground: 0 0% 98%;
     --border: 263 15% 15%;
     --input: 263 15% 15%;
-    --ring: 263 84% 65%;
+    --ring: 27 47% 60%;
     --gold: 46 55% 45%;
     --gold-foreground: 46 20% 95%;
     --gold-muted: 46 20% 15%;
