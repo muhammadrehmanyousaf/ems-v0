@@ -426,6 +426,9 @@ export default function BookingDetailPage() {
       if (e?.response?.status === 409 && e?.response?.data?.data?.code === "CANCEL_WINDOW_CLOSED") {
         setWindowClosed(true);
         setIsCancelling(false);
+        // PAY-UI_CUSTOMER-006: the finally below used to close the dialog anyway,
+        // so the "ask the venue" mode never appeared.
+        keepDialogOpen = true;
         return; // keep the dialog open, now in "ask the venue" mode
       }
       toast({
@@ -1303,7 +1306,12 @@ export default function BookingDetailPage() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
-                if (windowClosed) { e.preventDefault(); void handleRequestCancellation(); return; }
+                // Radix closes the dialog on every action click. Hold it open and let
+                // the handlers close it: handleCancel keeps it open on REFUND_CHANGED /
+                // CANCEL_WINDOW_CLOSED (PAY-UI_CUSTOMER-006, RD-7) and closes it on
+                // success or any other answer.
+                e.preventDefault();
+                if (windowClosed) { void handleRequestCancellation(); return; }
                 void handleCancel();
               }}
               disabled={isCancelling || requestSent}
