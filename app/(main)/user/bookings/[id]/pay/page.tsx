@@ -42,6 +42,8 @@ import {
   type PaymentInstructions,
 } from "@/lib/api/paymentInstructions";
 import BankTransferScreen from "@/components/booking/steps/bank-transfer-screen";
+import { paymentNotDueYet } from "@/lib/payment-status";
+import { dayTextCustomer } from "@/lib/utils/qist";
 
 export default function PayBookingPage() {
   const router = useRouter();
@@ -173,6 +175,32 @@ export default function PayBookingPage() {
           <p className="font-bridal text-[13px] text-bridal-text-soft">
             We&apos;ll ask you for the advance once they&apos;ve accepted — there&apos;s nothing to
             pay yet, and your date is held in the meantime.
+          </p>
+          <Button onClick={() => router.push(`/user/bookings/${bookingId}`)} size="sm" className="mt-4">
+            View booking
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // PAY-UI_CUSTOMER-010: a venue that asks no advance has one qist, due near the event. The server quotes it as
+  // `amountDue` when nothing is due today; asking the customer to transfer the whole bill months early is wrong,
+  // and the booking review said "Advance Rs 0". Say when it is due instead.
+  const notYet = paymentNotDueYet(instructions);
+  if (notYet) {
+    return (
+      <div className="mx-auto w-full max-w-[1100px] px-4 sm:px-6 lg:px-8 py-10">
+        {back}
+        <div className="rounded-md border border-bridal-beige bg-bridal-cream p-6 text-center">
+          <Clock className="mx-auto mb-3 h-6 w-6 text-bridal-gold-dark" />
+          <p className="font-display italic text-[20px] text-bridal-charcoal mb-1.5">
+            Nothing is due yet
+          </p>
+          <p className="font-bridal text-[13px] text-bridal-text-soft">
+            Your next payment, Rs. {Number(notYet.amount).toLocaleString()}
+            {notYet.dueDate ? `, is due on ${dayTextCustomer(notYet.dueDate)}` : " is due later"}. There&apos;s nothing to
+            transfer before then.
           </p>
           <Button onClick={() => router.push(`/user/bookings/${bookingId}`)} size="sm" className="mt-4">
             View booking

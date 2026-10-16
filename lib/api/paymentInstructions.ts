@@ -68,6 +68,21 @@ export interface PaymentInstructions {
   amountReceived?: number;
   /** Legacy alias for `advanceDue`; kept so older callers keep working. */
   downPayment: number;
+  /** The schedule behind `amountDue` (WW-QIST-SCHEDULE): the qists with their true state. */
+  installments?: Array<{
+    id: number | null;
+    title?: string;
+    amount: number;
+    amountPaid?: number;
+    remaining?: number;
+    dueDate?: string;
+    state?: string;
+    waived?: boolean;
+  }>;
+  /** What is overdue right now, 0 when nothing is. */
+  overdueAmount?: number;
+  /** The next unpaid qist; `state` is "upcoming" when it is not due yet. */
+  nextInstallment?: { installmentId?: number; title?: string; remaining?: number; dueDate?: string; state?: string } | null;
   vendors: PaymentVendor[];
   /** FALSE ⇒ no vendor has published an account; do not show a transfer form. */
   bankTransferAvailable: boolean;
@@ -133,7 +148,9 @@ export class PaymentInstructionsAPI {
       transactionRef?: string;
       proofUrl?: string;
       notes?: string;
-      paymentType?: string;
+      // No `paymentType`: the server decides which slice a claim is for
+      // (PAY-UI_CUSTOMER-019 - a customer-supplied type let one advance carry
+      // three pending claims). The only caller never sent one.
     },
   ): Promise<{ claim: PaymentClaim; reference: string }> {
     const res = await axiosInstance.post(

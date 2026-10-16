@@ -148,6 +148,11 @@ export default function BankTransferScreen({
   const dueAmount = instructions?.amountDue ?? Number(amount)
   const reference = instructions?.reference ?? `BK-${bookingId}`
   const vendorsWithAccounts = (instructions?.vendors || []).filter((v) => v.accounts.length > 0)
+  // PAY-UI_CUSTOMER-015: a cart can hold several venues, and a venue with no published account used to vanish from
+  // this screen, so the whole amount looked like it belonged to the first venue shown. The server returns every
+  // venue; name the ones that cannot be paid here. (It does not yet return a per-venue amount.)
+  const allVendors = instructions?.vendors || []
+  const vendorsWithoutAccounts = allVendors.filter((v) => v.accounts.length === 0)
   // A reference is what the venue matches against their statement, so every
   // rail except cash needs one before this can be submitted.
   const refRequired = method !== "cash"
@@ -323,9 +328,26 @@ export default function BankTransferScreen({
         </section>
       ))}
 
+      {/* Several venues on one booking: the figure above covers all of them. */}
+      {!loading && !loadError && allVendors.length > 1 && (
+        <div className={`${CARD} mt-3 px-4 py-3`} role="note" aria-label="Venues on this booking">
+          <p className="font-bridal text-[13px] leading-[18px] text-bridal-text">
+            This booking is with {allVendors.length} venues and the amount above covers all of them. Each venue is paid
+            separately, so check with each what it is owed before you transfer.
+          </p>
+          {vendorsWithoutAccounts.map((v) => (
+            <p key={v.businessId} className="mt-2 font-bridal text-[13px] leading-[18px] text-bridal-text">
+              <strong className="font-medium text-bridal-charcoal">{v.businessName || "A venue"}</strong> hasn&apos;t published
+              bank details yet. Contact them to arrange payment
+              {v.whatsappNumber ? <> — WhatsApp <strong className="font-medium text-bridal-charcoal">{v.whatsappNumber}</strong></> : null}.
+            </p>
+          ))}
+        </div>
+      )}
+
       {/* No published account is a normal state, not an error. Say what to do
           instead of showing an account that isn't theirs. */}
-      {!loading && !loadError && vendorsWithAccounts.length === 0 && (
+      {!loading && !loadError && vendorsWithAccounts.length === 0 && allVendors.length <= 1 && (
         <div className={`${CARD} mt-3 px-4 py-3`}>
           <p className="font-bridal text-[13px] leading-[18px] text-bridal-text">
             This venue hasn&apos;t published bank details yet. Contact them to arrange
