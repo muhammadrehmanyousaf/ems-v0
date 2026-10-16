@@ -54,6 +54,7 @@ import { focusField } from "@/components/dashboard/primitives/focus-field"
 import { invalidateBusinessData } from "@/lib/query/business-keys"
 import { businessStatusInfo, businessSubtitle } from "@/lib/business-status"
 import { describeLimit, useBusinessLimit } from "@/lib/business-limits"
+import { cancellationLabel } from "@/lib/cancellation-policy"
 
 const numOrNull = (v: string) => (v.trim() === "" ? null : Number(v) || 0)
 
@@ -341,7 +342,8 @@ export function BusinessSettingsHubView() {
          */
         downPaymentType: biz.downPaymentType ?? "",
         downPayment: biz.downPayment ?? "",
-        cancelationPolicy: biz.cancelationPolicy ?? "",
+        // WP20: a registration stored the raw key ("partially_refundable"); show and save the readable label
+        cancelationPolicy: cancellationLabel(biz.cancelationPolicy ?? ""),
         // WW-PRICING-OVERHAUL — vendor-declared pricing mode ("" = not set = legacy).
         pricingMode: biz.pricingMode ?? "",
         // WW-RATECARD — the per_unit knobs live in pricingConfigJson. Flattened
@@ -374,7 +376,7 @@ export function BusinessSettingsHubView() {
         maxCapacity: biz.maxCapacity ?? "",
         downPaymentType: biz.downPaymentType ?? "",
         downPayment: biz.downPayment ?? "",
-        cancelationPolicy: biz.cancelationPolicy ?? "",
+        cancelationPolicy: cancellationLabel(biz.cancelationPolicy ?? ""),
         pricingMode: biz.pricingMode ?? "",
         // WW-RATECARD — the per_unit knobs live in pricingConfigJson. Flattened
         // into the form so they edit like any other field, and folded back on save.

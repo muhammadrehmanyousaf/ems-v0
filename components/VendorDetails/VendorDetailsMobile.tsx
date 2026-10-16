@@ -74,6 +74,7 @@ import { VendorBranches } from "@/components/VendorDetails/vendor-branches";
 // null while the flag is off, so this vendor page stays byte-identical.
 import { AddToPlanButton } from "@/components/wedding-plan/add-to-plan-button";
 import { featureMap } from "@/lib/packages/features";
+import { cancellationLabel } from "@/lib/cancellation-policy";
 
 interface VendorDetailsMobileProps {
   vendor: Vendor;
@@ -719,7 +720,7 @@ export default function VendorDetailsMobile({
   };
 
   const vendorSpecificDetails = getVendorSpecificDetails();
-  const cancellationPolicy = vendor.cancelationPolicy || vendor.cancellationPolicy;
+  const cancellationPolicy = cancellationLabel(vendor.cancelationPolicy || vendor.cancellationPolicy);
 
   const BACKEND_BASE = BACKEND_URL.replace(/\/$/, "");
   const resolveImg = (url: string) => {

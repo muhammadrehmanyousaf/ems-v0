@@ -1,5 +1,6 @@
 import axiosInstance from '@/lib/axiosConfig'
 import type { Vendor } from '@/lib/types'
+import { cancellationLabel } from "@/lib/cancellation-policy"
 
 // API base path
 const BASE = '/api/v1/businesses'
@@ -98,7 +99,7 @@ export function normalizeBusiness(raw: any): any {
     staff: raw.staff || [],
     amenities: raw.amenities || [],
     serviceProvided: raw.serviceProvided || [],
-    cancellationPolicy: raw.cancellationPolicy || raw.cancelationPolicy || '',
+    cancellationPolicy: cancellationLabel(raw.cancellationPolicy || raw.cancelationPolicy || ''),
     sponsored: raw.sponsored ?? false,
     description: raw.description || '',
     // `?view=card` returns one image as `primaryImage` rather than the whole

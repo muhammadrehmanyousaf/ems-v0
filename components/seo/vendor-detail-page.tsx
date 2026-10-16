@@ -59,6 +59,7 @@ import { getLocationImagery } from "@/lib/seo/location-imagery"
 import { VenueAnswers } from "@/components/seo/venue-answers"
 import { resolveAmenityLabels } from "@/lib/amenities"
 import { StickyQuoteBar } from "@/components/seo/sticky-quote-bar"
+import { cancellationLabel } from "@/lib/cancellation-policy"
 
 interface PageInput {
   typeSlug: VendorTypeSlug
@@ -223,7 +224,7 @@ export async function VendorDetailPage(input: PageInput) {
       question: `What's ${vendor.name}'s cancellation policy?`,
       answer:
         vendor.cancellationPolicy
-          ? `${vendor.cancellationPolicy}. Full details on our Cancellation Policy page.`
+          ? `${cancellationLabel(vendor.cancellationPolicy)}. Full details on our Cancellation Policy page.`
           : `See ${SITE_NAME}'s default Cancellation Policy. Tier (Flexible / Moderate / Strict) is shown at checkout.`,
     },
     {

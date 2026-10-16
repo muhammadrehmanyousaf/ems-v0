@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { slotText } from "@/lib/booking/slot-vocabulary"
+import { cancellationLabel } from "@/lib/cancellation-policy"
 
 interface PreviewStepProps {
   formData: BookingFormData;
@@ -166,10 +167,10 @@ export default function PreviewStep({
   // Cancellation policies
   const policies: { name: string; policy: string }[] = [];
   if (venue?.cancelationPolicy) {
-    policies.push({ name: venue.name, policy: venue.cancelationPolicy });
+    policies.push({ name: venue.name, policy: cancellationLabel(venue.cancelationPolicy) });
   }
   vendorDetails.forEach((v) => {
-    const pol = v.cancellationPolicy || (v as any).cancelationPolicy;
+    const pol = cancellationLabel(v.cancellationPolicy || (v as any).cancelationPolicy);
     if (pol && !policies.some((p) => p.policy === pol)) {
       policies.push({ name: v.name, policy: pol });
     }

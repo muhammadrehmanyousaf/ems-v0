@@ -22,6 +22,7 @@ import { getVendorTypeFromPath, getVendorTypeDisplayName, getVendorTypeDescripti
 import { VENDOR_TYPES } from "@/lib/vendor-types"
 import { getVendorTypeConfig } from "@/lib/vendor-type-config"
 import { todayInKarachi } from "@/lib/utils/pk-date"
+import { cancellationLabel } from "@/lib/cancellation-policy"
 
 interface VendorSearchProps {
   vendorType: string
@@ -340,7 +341,8 @@ export default function VendorSearch({
 
     if (filters.cancellationPolicy) {
       result = result.filter(v => {
-        const p = v.cancelationPolicy || v.cancellationPolicy || ""
+        // WP20: venues registered before the label fix hold the raw key ("non_refundable"), which never matched "Non-Refundable"
+        const p = cancellationLabel(v.cancelationPolicy || v.cancellationPolicy || "")
         return p.toLowerCase().includes(filters.cancellationPolicy.toLowerCase())
       })
     }

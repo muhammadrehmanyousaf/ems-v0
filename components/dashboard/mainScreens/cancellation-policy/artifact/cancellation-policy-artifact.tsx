@@ -25,9 +25,12 @@ function slabLadder(slabs: PolicySlab[]): string {
   if (!sorted.length) return `<div style="padding:12px 16px;color:var(--ink-3);font-size:12px">Koi slab nahi.</div>`
   return `<div class="ladder">${sorted.map((s, i) => {
     const next = sorted[i + 1]
-    const range = i === 0 ? `${s.daysToEvent}+ din pehle` : next ? `${next.daysToEvent + 1}–${s.daysToEvent} din pehle` : `${s.daysToEvent} din tak`
+    // one band from day 0 (a flat refund, e.g. a venue's "Partially Refundable") applies on every day
+    const range = sorted.length === 1 && s.daysToEvent === 0 ? "Kisi bhi din" : i === 0 ? `${s.daysToEvent}+ din pehle` : next ? `${next.daysToEvent + 1}–${s.daysToEvent} din pehle` : `${s.daysToEvent} din tak`
     const pct = Number(s.pctForfeit) || 0
-    return `<div class="slab"><span class="sl-range">${escHtml(range)}</span><span class="sl-bar"><span style="width:${Math.min(100, pct)}%"></span></span><span class="sl-pct">${pct}% kata</span></div>`
+    // WP20: a flat refund ("Rs 20,000 wapsi") has no percentage to draw, so no bar and the amount in words
+    const fixed = Number(s.refundFixed) || 0
+    return `<div class="slab"><span class="sl-range">${escHtml(range)}</span><span class="sl-bar">${fixed > 0 ? "" : `<span style="width:${Math.min(100, pct)}%"></span>`}</span><span class="sl-pct">${fixed > 0 ? `PKR ${Math.round(fixed).toLocaleString("en-US")} wapsi` : `${pct}% kata`}</span></div>`
   }).join("")}</div>`
 }
 
@@ -38,7 +41,7 @@ const EXTRA_CSS = String.raw`
 .ac-ic{ width:40px; height:40px; border-radius:11px; background:var(--surface); border:1px solid var(--accent-line); display:grid; place-items:center; color:var(--accent-ink); flex:none; } .ac-ic svg{ width:20px; height:20px; }
 .ac-nm{ font-size:15px; font-weight:600; color:var(--accent-ink); } .ac-sub{ font-size:12px; color:var(--ink-2); margin-top:2px; }
 .ladder{ padding:14px 18px; display:flex; flex-direction:column; gap:10px; }
-.slab{ display:grid; grid-template-columns:150px 1fr 90px; gap:12px; align-items:center; }
+.slab{ display:grid; grid-template-columns:150px 1fr 130px; gap:12px; align-items:center; }
 @media (max-width:480px){ .slab{ grid-template-columns:1fr auto; } .slab .sl-bar{ grid-column:1 / -1; order:3; } }
 .sl-range{ font-size:12.5px; font-weight:600; color:var(--ink-2); } .sl-bar{ height:8px; border-radius:4px; background:var(--surface-3); overflow:hidden; } .sl-bar span{ display:block; height:100%; border-radius:4px; background:var(--accent); } .sl-pct{ font-size:12px; font-weight:600; text-align:right; font-variant-numeric:tabular-nums; }
 .ac-foot{ padding:11px 18px; border-top:1px solid var(--accent-line); display:flex; gap:16px; font-size:11.5px; color:var(--ink-2); } .ac-foot b{ color:var(--accent-ink); }

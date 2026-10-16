@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
+import { cancellationLabel } from "@/lib/cancellation-policy";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import "swiper/css";
@@ -860,7 +861,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                         iconBg="bg-bridal-sage/25"
                         iconColor="text-[#3F6B43]"
                         label="Cancellation"
-                        value={vendor.cancelationPolicy || vendor.cancellationPolicy}
+                        value={cancellationLabel(vendor.cancelationPolicy || vendor.cancellationPolicy)}
                       />
                     )}
                     <StatTile
@@ -1673,7 +1674,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                         <div>
                           <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Cancellation Policy</p>
                           <p className="font-bridal text-[13.5px] font-medium text-bridal-charcoal mt-0.5">
-                            {vendor.cancelationPolicy || vendor.cancellationPolicy}
+                            {cancellationLabel(vendor.cancelationPolicy || vendor.cancellationPolicy)}
                           </p>
                         </div>
                       </div>
