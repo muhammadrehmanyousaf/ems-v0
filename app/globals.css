@@ -421,12 +421,12 @@ html[data-locale="ur"] body {
 
 @layer base {
   :root {
-    --background: 270 20% 99%;
-    --foreground: 263 30% 10%;
+    --background: 30 20% 99%;
+    --foreground: 24 30% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 263 30% 10%;
+    --card-foreground: 24 30% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 263 30% 10%;
+    --popover-foreground: 24 30% 10%;
     /* Brand primary = bridal-gold-dark (#916539), the gold built for a white label
        (5.09:1; plain bridal-gold #C9956A is 2.63:1 under white and cannot carry a
        label or text). It was violet (263 84% 57%), so every default shadcn Button,
@@ -437,16 +437,19 @@ html[data-locale="ur"] body {
        (bridal-gold-deep, set below): primary at 90% opacity is 4.18:1 under white. */
     --primary: 30 44% 40%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 263 20% 95%;
-    --secondary-foreground: 263 40% 20%;
-    --muted: 263 10% 95%;
-    --muted-foreground: 263 10% 45%;
-    --accent: 263 15% 93%;
-    --accent-foreground: 263 40% 20%;
+    /* The neutral steps keep their lightness and saturation and move from the violet
+       hue (263) to the brand's warm one (30), so a hover wash, a secondary chip or a
+       hairline is no longer lavender. */
+    --secondary: 30 20% 95%;
+    --secondary-foreground: 24 40% 20%;
+    --muted: 30 10% 95%;
+    --muted-foreground: 24 10% 45%;
+    --accent: 30 15% 93%;
+    --accent-foreground: 24 40% 20%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 263 15% 90%;
-    --input: 263 15% 90%;
+    --border: 30 15% 90%;
+    --input: 30 15% 90%;
     --ring: 30 44% 40%;
     --gold: 46 65% 52%;
     --gold-foreground: 46 80% 15%;

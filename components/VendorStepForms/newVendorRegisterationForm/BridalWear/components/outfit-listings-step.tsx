@@ -79,7 +79,7 @@ function OutfitImageUploader({ files, onAdd, onRemove }: OutfitImageUploaderProp
                 <span className={`text-xs font-medium border px-2.5 py-1 rounded-full ${
                     isAtLimit
                         ? 'bg-red-50 text-red-600 border-red-200'
-                        : 'bg-violet-50 text-violet-600 border-violet-200'
+                        : 'bg-bridal-cream text-bridal-gold-dark border-bridal-beige'
                 }`}>
                     {files.length} / {MAX_OUTFIT_IMAGES}
                 </span>
@@ -90,13 +90,13 @@ function OutfitImageUploader({ files, onAdd, onRemove }: OutfitImageUploaderProp
                     {...getRootProps()}
                     className={`border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 ${
                         isDragActive
-                            ? 'border-violet-500 bg-violet-50'
-                            : 'border-neutral-300 bg-neutral-50 hover:border-violet-400 hover:bg-violet-50/40'
+                            ? 'border-bridal-gold-dark bg-bridal-cream'
+                            : 'border-neutral-300 bg-neutral-50 hover:border-bridal-gold hover:bg-bridal-cream/40'
                     }`}
                 >
                     <input {...getInputProps()} />
                     <div className="flex flex-col items-center justify-center py-7 text-center select-none">
-                        <ImagePlus className={`w-7 h-7 mb-2 ${isDragActive ? 'text-violet-500' : 'text-neutral-400'}`} />
+                        <ImagePlus className={`w-7 h-7 mb-2 ${isDragActive ? 'text-bridal-gold-dark' : 'text-neutral-400'}`} />
                         <p className="text-sm font-medium text-neutral-600">
                             {isDragActive ? 'Drop to upload' : 'Add outfit photos'}
                         </p>
@@ -109,7 +109,7 @@ function OutfitImageUploader({ files, onAdd, onRemove }: OutfitImageUploaderProp
                 <div
                     {...getRootProps({ onClick: (e) => e.stopPropagation() })}
                     className={`border-2 border-dashed rounded-xl p-3 transition-all duration-200 ${
-                        isDragActive ? 'border-violet-400 bg-violet-50' : 'border-neutral-200 bg-neutral-50/40'
+                        isDragActive ? 'border-bridal-gold bg-bridal-cream' : 'border-neutral-200 bg-neutral-50/40'
                     }`}
                 >
                     <input {...getInputProps()} />
@@ -137,14 +137,14 @@ function OutfitImageUploader({ files, onAdd, onRemove }: OutfitImageUploaderProp
                             <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); open(); }}
-                                className="aspect-square rounded-lg border-2 border-dashed border-violet-300 bg-violet-50 hover:bg-violet-100 flex items-center justify-center transition-colors"
+                                className="aspect-square rounded-lg border-2 border-dashed border-bridal-gold/60 bg-bridal-cream hover:bg-bridal-sand flex items-center justify-center transition-colors"
                             >
-                                <ImagePlus className="w-5 h-5 text-violet-400" />
+                                <ImagePlus className="w-5 h-5 text-bridal-gold-dark" />
                             </button>
                         )}
                     </div>
                     {isDragActive && !isAtLimit && (
-                        <p className="text-center text-violet-500 text-xs mt-2 font-medium">Drop images here</p>
+                        <p className="text-center text-bridal-gold-dark text-xs mt-2 font-medium">Drop images here</p>
                     )}
                 </div>
             )}
@@ -297,7 +297,7 @@ const OutfitListingsStep = ({ errors, setErrors }: OutfitListingsStepProps) => {
                                             <span className="text-xs text-neutral-500">PKR {pkg.price.toLocaleString()}</span>
                                         )}
                                         {outfitImages.length > 0 && (
-                                            <span className="text-xs text-violet-500 font-medium">
+                                            <span className="text-xs text-bridal-gold-dark font-medium">
                                                 {outfitImages.length} photo{outfitImages.length > 1 ? 's' : ''}
                                             </span>
                                         )}

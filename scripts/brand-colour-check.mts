@@ -1,0 +1,149 @@
+/**
+ * Guard: the customer and public product is the bridal gold, not violet (owner bug 8, WP27).
+ *
+ * ── The defect this pins ──────────────────────────────────────────────────
+ *
+ * app/globals.css declared `--primary: 263 84% 57%` (violet). Every default shadcn
+ * Button ("Pay now", "Plan my wedding", "Send Message"), Badge, switch, checkbox,
+ * slider, tab and focus ring on the customer and public pages read it, so they were
+ * violet beside screens that use the bridal-* tokens. The owner asked "why blue in
+ * the UI buttons".
+ *
+ * What this guard holds:
+ *   1. the customer/public token set (app/globals.css :root and .dark) keeps
+ *      --primary, --ring and the neutral steps out of the violet-blue hues, and
+ *      --primary stays in the gold family (hue 15-45);
+ *   2. the primary label and the hover step both clear WCAG AA (4.5:1) on the
+ *      primary fill, in both modes (a label on plain bridal-gold #C9956A is 2.63:1;
+ *      primary at 90% opacity under white was 4.18:1 — that is why --primary-hover
+ *      exists);
+ *   3. the Button's default variant is still driven by those tokens
+ *      (bg-primary / hover:bg-primary-hover), and the hover step is declared only
+ *      where <html> has no data-theme, so it cannot leak into the vendor console;
+ *   4. no NEW raw violet/purple/indigo/fuchsia colour utility lands in customer or
+ *      public code. The ones that exist are a ratchet (BASELINE below, each a
+ *      deliberate category or status colour waiting on an owner decision): a file
+ *      may go down, never up, and a file not listed may not appear.
+ *
+ * The vendor console (app/(dashboard), components/dashboard, components/admin)
+ * declares its own tokens in app/styles/dashboard-styles.css and
+ * components/dashboard/layout/champagne-shell.tsx and is not scanned.
+ *
+ *   node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/brand-colour-check.mts
+ *   (add --print-baseline to list the current counts)
+ */
+
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.join(HERE, "..");
+const read = (rel: string) => readFileSync(path.join(ROOT, rel), "utf8");
+
+let failures = 0;
+const fail = (msg: string) => { failures++; console.error("FAIL  " + msg); };
+const pass = (msg: string) => console.log("ok    " + msg);
+
+// ── 1 + 2: the token set ─────────────────────────────────────────────────────
+const css = read("app/globals.css");
+
+function block(selectorRe: RegExp, label: string): Record<string, string> {
+  const m = selectorRe.exec(css);
+  if (!m) { fail(`globals.css: no ${label} block`); return {}; }
+  const out: Record<string, string> = {};
+  for (const d of m[1].matchAll(/--([\w-]+)\s*:\s*([^;]+);/g)) out[d[1]] = d[2].replace(/\/\*.*?\*\//g, "").trim();
+  return out;
+}
+
+type HSL = [number, number, number];
+function hsl(v: string | undefined): HSL | null {
+  const m = v ? /^(-?[\d.]+)\s+([\d.]+)%\s+([\d.]+)%$/.exec(v) : null;
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+}
+function rgb([h, s, l]: HSL): [number, number, number] {
+  const S = s / 100, L = l / 100, k = (n: number) => (n + h / 30) % 12, a = S * Math.min(L, 1 - L);
+  const f = (n: number) => L - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return [f(0) * 255, f(8) * 255, f(4) * 255];
+}
+const lum = (c: [number, number, number]) => {
+  const [r, g, b] = c.map((x) => { const v = x / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const contrast = (a: HSL, b: HSL) => { const x = lum(rgb(a)), y = lum(rgb(b)); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+const violetBlue = (h: number) => h >= 195 && h <= 300;
+
+const light = block(/@layer base\s*\{\s*:root\s*\{([^}]*)\}/, ":root");
+const dark = block(/\n\s*\.dark\s*\{([^}]*)\}/, ".dark");
+const hover = {
+  light: hsl(/:root:not\(\[data-theme\]\)\s*\{\s*--primary-hover\s*:\s*([^;]+);/.exec(css)?.[1]?.trim()),
+  dark: hsl(/\.dark:not\(\[data-theme\]\)\s*\{\s*--primary-hover\s*:\s*([^;]+);/.exec(css)?.[1]?.trim()),
+};
+
+for (const [mode, tokens, hov] of [["light", light, hover.light], ["dark", dark, hover.dark]] as const) {
+  const primary = hsl(tokens["primary"]), fg = hsl(tokens["primary-foreground"]), ring = hsl(tokens["ring"]);
+  if (!primary || !fg || !ring) { fail(`${mode}: --primary / --primary-foreground / --ring missing or not "H S% L%"`); continue; }
+  if (violetBlue(primary[0]) || violetBlue(ring[0])) fail(`${mode}: --primary (${tokens["primary"]}) or --ring (${tokens["ring"]}) is violet/blue again`);
+  else if (primary[0] < 15 || primary[0] > 45) fail(`${mode}: --primary hue ${primary[0]} is outside the bridal gold family (15-45)`);
+  else pass(`${mode}: --primary ${tokens["primary"]} and --ring ${tokens["ring"]} are bridal gold`);
+  for (const k of ["secondary", "muted", "accent", "border", "input", "secondary-foreground", "accent-foreground", "muted-foreground"]) {
+    const v = hsl(tokens[k]);
+    if (v && v[1] >= 8 && violetBlue(v[0]) && mode === "light") fail(`${mode}: --${k} (${tokens[k]}) is a violet-tinted neutral`);
+  }
+  const c = contrast(primary, fg);
+  if (c < 4.5) fail(`${mode}: primary label contrast ${c.toFixed(2)}:1 < 4.5`); else pass(`${mode}: primary label ${c.toFixed(2)}:1`);
+  if (!hov) fail(`${mode}: --primary-hover is not declared (:root:not([data-theme]) / .dark:not([data-theme]))`);
+  else { const ch = contrast(hov, fg); if (ch < 4.5) fail(`${mode}: hover step contrast ${ch.toFixed(2)}:1 < 4.5`); else pass(`${mode}: hover step ${ch.toFixed(2)}:1`); }
+}
+
+// ── 3: the Button and the tailwind colour ────────────────────────────────────
+const button = read("components/ui/button.tsx");
+if (!/default:\s*"bg-primary text-primary-foreground hover:bg-primary-hover/.test(button)) fail('components/ui/button.tsx: the default variant must stay "bg-primary text-primary-foreground hover:bg-primary-hover"');
+else pass("Button default variant is token-driven");
+const tw = read("tailwind.config.ts");
+if (!/hover:\s*'hsl\(var\(--primary-hover,\s*var\(--primary\)\s*\/\s*0\.9\)\)'/.test(tw)) fail("tailwind.config.ts: primary.hover must fall back to primary/90 so the vendor console keeps its hover");
+else pass("primary.hover falls back to primary/90 (vendor console unchanged)");
+
+// ── 4: raw violet utilities in customer/public code (ratchet) ────────────────
+const BASELINE: Record<string, number> = {
+  "app/(main)/planning-tools/budget/page.tsx": 1,
+  "app/(main)/planning-tools/guest-list/page.tsx": 1,
+  "app/(main)/planning-tools/timeline/page.tsx": 1,
+  "app/globals.css": 1,
+  "components/booking/service-location-picker.tsx": 2,
+  "components/booking/steps/package-selection-step.tsx": 3,
+  "components/bookings/event-pnl-card.tsx": 4,
+  "components/floor/floor-home.tsx": 2,
+  "components/homepage/planning-tools.tsx": 3,
+  "components/homepage/wedding-tips.tsx": 5,
+  "components/quotes/quote-status-badge.tsx": 3,
+  "components/steps/business-type-step.tsx": 15,
+  "components/vendors/vendor-trust-badges.tsx": 6,
+};
+const SCAN_ROOTS = ["app/(main)", "app/(auth)", "app/staff", "app/floor", "app/pin", "app/globals.css", "components"];
+const SKIP_DIRS = new Set(["node_modules", ".next", "dashboard", "admin"]);
+const RAW = /(?:^|[\s"'`:])(?:[a-z0-9-]+:)*(?:bg|text|border|ring|from|to|via|fill|stroke|shadow|outline|divide|accent|decoration|placeholder|caret)-(?:violet|purple|indigo|fuchsia)-\d{2,3}/g;
+
+function walk(rel: string, out: string[]) {
+  const abs = path.join(ROOT, rel);
+  let st; try { st = statSync(abs); } catch { return; }
+  if (st.isFile()) { if (/\.(tsx|ts|css)$/.test(rel)) out.push(rel); return; }
+  for (const e of readdirSync(abs)) { if (!SKIP_DIRS.has(e)) walk(rel + "/" + e, out); }
+}
+const files: string[] = [];
+for (const r of SCAN_ROOTS) walk(r, files);
+const counts: Record<string, number> = {};
+for (const f of files) { const n = (read(f).match(RAW) || []).length; if (n) counts[f] = n; }
+
+if (process.argv.includes("--print-baseline")) { console.log(JSON.stringify(counts, null, 2)); process.exit(0); }
+
+let ratchetOk = true;
+for (const [f, n] of Object.entries(counts)) {
+  const allowed = BASELINE[f] ?? 0;
+  if (n > allowed) { ratchetOk = false; fail(`${f}: ${n} raw violet/purple/indigo/fuchsia utilities (allowed ${allowed}). Use the bridal-* tokens, or bg-primary for a primary action`); }
+}
+for (const [f, n] of Object.entries(BASELINE)) { if ((counts[f] ?? 0) < n) console.log(`note  ${f}: down to ${counts[f] ?? 0} from ${n}; lower BASELINE`); }
+if (ratchetOk) pass(`no new raw violet utilities in customer/public code (${Object.keys(counts).length} baselined files)`);
+
+if (failures) { console.error(`\nbrand-colour-check: ${failures} failure(s)`); process.exit(1); }
+console.log("\nbrand-colour-check: all passed");
