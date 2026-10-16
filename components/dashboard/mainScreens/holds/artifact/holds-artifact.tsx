@@ -15,6 +15,7 @@ import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useArtifactShell, escHtml, initTablePager, errorBannerHtml, openDrawer, closeDrawer } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { openBookingForm } from "@/components/dashboard/mainScreens/artifact/booking-form"
 import { fmtYmd } from "@/lib/utils/ymd"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 import { holdSlotText } from "@/lib/booking/slot-vocabulary"
 
 // WP23: a hold date is a calendar day (no zone): printed from the string, never through the browser zone
@@ -26,7 +27,7 @@ function expiresIn(s?: string | null) {
   const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000)
   return { txt: h >= 24 ? `${Math.floor(h / 24)} din mein` : h >= 1 ? `${h} ghante mein` : `${m} min mein`, soon: h < 6, gone: false }
 }
-const todayIso = () => new Date().toISOString().slice(0, 10)
+const todayIso = () => todayInKarachi() // WP24: the Pakistan day (the UTC day is yesterday until 05:00 PKT)
 const svg = (p: string, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}">${p}</svg>`
 const IC = {
   plus: '<path d="M12 5v14M5 12h14"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', cal: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>', lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>', x: '<path d="M18 6 6 18M6 6l12 12"/>', open: '<path d="M7 7h10v10M7 17 17 7"/>', book: '<path d="M4 4h16v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M8 2v4M16 2v4M4 10h16"/><path d="M9 15l2 2 4-4"/>', renew: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',

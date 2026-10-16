@@ -27,6 +27,7 @@
  */
 
 import { useState } from "react";
+import { isEventDayUpcoming } from "@/lib/utils/event-day";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -111,12 +112,10 @@ export function PostponeBookingDialog({
   const canPostponeStatus = ["Pending", "Awaiting Payment", "Confirmed"].includes(
     bookingStatus || "",
   );
-  const eventInFuture = (() => {
-    if (!eventDate) return false;
-    const d = new Date(eventDate);
-    if (Number.isNaN(d.getTime())) return false;
-    return d.getTime() >= Date.now() - 24 * 60 * 60 * 1000; // 24h grace
-  })();
+  // WP24: the same day rule as the server (postpone refuses an event day BEFORE today in Pakistan):
+  // an event today can still be postponed, an event of yesterday cannot. The old instant compare with a
+  // 24 h grace kept the button on for yesterday's event until 05:00 PKT, then the server said no.
+  const eventInFuture = isEventDayUpcoming(eventDate);
   const triggerDisabled = !canPostponeStatus || !eventInFuture || !!alreadyPostponed;
 
   const reasonLen = reason.trim().length;

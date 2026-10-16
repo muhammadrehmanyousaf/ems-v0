@@ -25,6 +25,7 @@ import { openDrawer, closeDrawer, escHtml } from "@/components/dashboard/mainScr
 import { slotPickerField, bindSlotPicker, loadSlotPicker, recheckPicker, pickerChoice } from "@/components/dashboard/mainScreens/artifact/slot-picker"
 import { invalidateMoney } from "@/lib/query/money-keys"
 import { isAmbiguousFailure } from "@/lib/utils/idempotency"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 /** The picker's element id; the date, venue and hall controls below drive it. */
 const SLOTS_ID = "bf-slots"
@@ -70,7 +71,7 @@ const METHODS = [["cash", "Cash"], ["jazzcash", "JazzCash"], ["easypaisa", "Easy
 function bookingFormBody(prefill?: BookingPrefill, businesses?: BizLite[], activeBiz?: number | null): string {
   const p = prefill || {}
   const v = (x: unknown) => (x != null && x !== "" ? escHtml(String(x)) : "")
-  const today = p.bookingDate ? String(p.bookingDate).slice(0, 10) : new Date().toISOString().slice(0, 10)
+  const today = p.bookingDate ? String(p.bookingDate).slice(0, 10) : todayInKarachi() // WP24: the UTC day is yesterday until 05:00 PKT
   const selBiz = p.businessId ?? activeBiz ?? (businesses && businesses[0]?.id) ?? ""
   const bizOpts = (businesses || []).map((b) => `<option value="${b.id}"${b.id === selBiz ? " selected" : ""}>${escHtml(b.name || `Venue #${b.id}`)}</option>`).join("")
   const genderOpts = GENDER.map(([k, l]) => `<option value="${k}">${l}</option>`).join("")
