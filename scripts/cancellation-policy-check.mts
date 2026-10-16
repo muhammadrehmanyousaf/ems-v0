@@ -118,6 +118,14 @@ check("the step-4 fields never describe the value as the customer's refund", !/t
 check("the policy screen, the refund preview card and the types use venueKeepsFixed (not the superseded refundFixed)", !/refundFixed/.test(read("components/dashboard/mainScreens/cancellation-policy/artifact/cancellation-policy-artifact.tsx") + read("components/bookings/refund-preview-card.tsx") + read("lib/api/bookingOrder.ts")) && /venueKeepsFixed/.test(read("components/bookings/refund-preview-card.tsx")) && /venueKeepsFixed/.test(read("components/dashboard/mainScreens/cancellation-policy/artifact/cancellation-policy-artifact.tsx")));
 check("the customer cancel dialog says the venue keeps (not an unexplained 'forfeited')", /Venue keeps \(per \{refundPreview/.test(read("app/(main)/user/bookings/[id]/page.tsx")));
 
+// ── WP26 / V4-1: the venue page's Cancellation tile shows the whole sentence (it was cut at "venue keeps 4...") ──
+for (const [file, tile] of [["components/VendorDetails/VendorDetails.tsx", "StatTile"], ["components/VendorDetails/VendorDetailsMobile.tsx", "BridalStatTile"]] as const) {
+  const src = read(file);
+  const tileFn = src.slice(src.indexOf(`function ${tile}(`), src.indexOf(`function ${tile}(`) + 1500);
+  check(`${file}: ${tile} can wrap a long value (wide) instead of truncating it`, /wide\?: boolean/.test(tileFn) && /wide \? "break-words" : "truncate"/.test(tileFn) && /col-span-2/.test(tileFn));
+  check(`${file}: the Cancellation tile is wide when the sentence is long`, /label="Cancellation"[\s\S]{0,260}wide=\{[^}]*\.length > 20\}/.test(src));
+}
+
 // ── WP26 / V4-6: the cancel dialog tells the customer what they will RECEIVE, not only the policy part ──
 // (the cancel dialog said "You'll get back Rs 18,000" to a customer owed 38,000: the price-drop overpayment is a
 // separate obligation the preview reports in `priceDropRefund`, the declined-line sum in `declinedLineRefund`)

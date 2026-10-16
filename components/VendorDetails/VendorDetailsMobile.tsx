@@ -98,21 +98,24 @@ function BridalStatTile({
   iconColor,
   label,
   value,
+  wide = false,
 }: {
   icon: React.ReactNode;
   iconBg: string;
   iconColor: string;
   label: string;
   value: React.ReactNode;
+  /** WP26 / V4-1: a long value (the cancellation sentence) takes the full row and wraps instead of being cut at "keeps 4...". */
+  wide?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-3 bg-bridal-ivory border border-bridal-beige rounded-md px-4 py-3.5 hover:border-bridal-gold/45 transition-colors">
+    <div className={`flex items-center gap-3 bg-bridal-ivory border border-bridal-beige rounded-md px-4 py-3.5 hover:border-bridal-gold/45 transition-colors${wide ? " col-span-2" : ""}`}>
       <div className={`w-10 h-10 rounded-full ${iconBg} ${iconColor} inline-flex items-center justify-center flex-shrink-0`}>
         {icon}
       </div>
       <div className="min-w-0">
         <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">{label}</p>
-        <p className="font-bridal text-[13px] font-medium text-bridal-charcoal truncate mt-0.5">{value}</p>
+        <p className={`font-bridal text-[13px] font-medium text-bridal-charcoal ${wide ? "break-words" : "truncate"} mt-0.5`}>{value}</p>
       </div>
     </div>
   );
@@ -1319,6 +1322,7 @@ export default function VendorDetailsMobile({
                         iconColor="text-[#3F6B43]"
                         label="Cancellation"
                         value={cancellationPolicy}
+                        wide={cancellationPolicy.length > 20}
                       />
                     )}
                   </div>

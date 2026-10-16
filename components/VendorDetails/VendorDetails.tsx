@@ -863,6 +863,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                         iconColor="text-[#3F6B43]"
                         label="Cancellation"
                         value={cancellationLabel(vendor.cancelationPolicy || vendor.cancellationPolicy)}
+                        wide={cancellationLabel(vendor.cancelationPolicy || vendor.cancellationPolicy).length > 20}
                       />
                     )}
                     <StatTile
@@ -1794,15 +1795,18 @@ function StatTile({
   iconColor,
   label,
   value,
+  wide = false,
 }: {
   icon: React.ReactNode;
   iconBg: string;
   iconColor: string;
   label: string;
   value: React.ReactNode;
+  /** WP26 / V4-1: a long value (the cancellation sentence) takes two columns and wraps instead of being cut at "keeps 4...". */
+  wide?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-3 p-3.5 bg-bridal-ivory rounded-md border border-bridal-beige/70 hover:border-bridal-gold/45 transition-colors">
+    <div className={`flex items-center gap-3 p-3.5 bg-bridal-ivory rounded-md border border-bridal-beige/70 hover:border-bridal-gold/45 transition-colors${wide ? " col-span-2" : ""}`}>
       <div className={`w-10 h-10 rounded-full ${iconBg} ${iconColor} inline-flex items-center justify-center shrink-0`}>
         {icon}
       </div>
@@ -1810,7 +1814,7 @@ function StatTile({
         <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label truncate">
           {label}
         </p>
-        <p className="font-bridal text-[13px] font-medium text-bridal-charcoal mt-0.5 truncate">
+        <p className={`font-bridal text-[13px] font-medium text-bridal-charcoal mt-0.5 ${wide ? "break-words" : "truncate"}`}>
           {value}
         </p>
       </div>
