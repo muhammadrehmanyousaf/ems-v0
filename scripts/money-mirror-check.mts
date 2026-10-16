@@ -216,11 +216,11 @@ const bank = src("components/booking/steps/bank-transfer-screen.tsx");
 check("a venue with no published account is still named on a multi-venue booking", bank.includes("vendorsWithoutAccounts") && bank.includes("allVendors.length > 1"));
 check("the claim body cannot carry a customer-chosen paymentType", !/paymentType\?\s*:/.test(src("lib/api/paymentInstructions.ts").split("static async claim(")[1].split("Promise<{ claim")[0]) && !/claim\([\s\S]{0,260}paymentType/.test(bank));
 check("transfer screen: the claim names the venue chosen (businessId) only when shares are stated", bank.includes("...(selected ? { businessId: selected.businessId } : {})") && bank.includes("venueClaimShares(allVendors)"));
-check("transfer screen: each venue block shows its own amount", bank.includes("shareOf(vendor.businessId)"));
+check("transfer screen: each venue block shows its own amount", bank.includes("{shareOf(vendor.businessId) && ("));
 check("transfer screen: 409 CLAIM_ALREADY_OPEN shows the open claim", bank.includes("claimAlreadyOpen<Partial<PaymentClaim>>(e)") && bank.includes("You&apos;ve already reported this payment"));
 check("claim API type admits businessId and the claim row carries it", /businessId\?: number;/.test(src("lib/api/paymentInstructions.ts")) && src("lib/api/paymentInstructions.ts").includes("businessId?: number | null;"));
 check("payment-instructions type carries dueNow, basis and the per-venue amounts", ["dueNow?: number;", "basis?:", "amountDue?: number;", "outstanding?: number;"].every((s) => src("lib/api/paymentInstructions.ts").includes(s)));
-check("cancel dialog: one line for an advance the venue never recorded", bookingPage.includes("unledgeredAdvance") && src("lib/api/bookingOrder.ts").includes("unledgeredAdvance?: number;"));
+check("cancel dialog: one line for an advance the venue never recorded", bookingPage.includes("(refundPreview.unledgeredAdvance ?? 0) > 0 && (") && bookingPage.includes("data-unledgered-advance") && src("lib/api/bookingOrder.ts").includes("unledgeredAdvance?: number;"));
 check("vendor refund preview: the unledgered advance is a row of the existing breakdown", src("components/bookings/refund-preview-card.tsx").includes("data.unledgeredAdvance"));
 // ── INT-followups: the Nayi booking drawer records exactly what was typed ──
 const nayi = src("components/dashboard/mainScreens/artifact/booking-form.ts");
