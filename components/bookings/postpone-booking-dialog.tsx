@@ -43,6 +43,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, CalendarOff, Heart, Info } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { BookingAPI } from "@/lib/api/bookings";
+import { claimRequiredMessage } from "@/lib/utils/api-error";
 import { cn } from "@/lib/utils";
 
 interface PostponeBookingDialogProps {
@@ -155,7 +156,7 @@ export function PostponeBookingDialog({
         ?.response?.data;
       toast({
         title: "Couldn't postpone",
-        description: humaniseError(data?.message),
+        description: claimRequiredMessage(err) ?? humaniseError(data?.message),
         variant: "destructive",
       });
     } finally {

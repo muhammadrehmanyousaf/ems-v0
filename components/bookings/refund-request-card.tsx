@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { BookingAPI, type RefundReason } from "@/lib/api/bookings";
+import { claimRequiredMessage } from "@/lib/utils/api-error";
 
 interface RefundRequestCardProps {
   bookingId: number | string;
@@ -58,8 +59,10 @@ export function RefundRequestCard({ bookingId, canRequest = true }: RefundReques
       setSubmitted(true);
     } catch (e: unknown) {
       const status = (e as { response?: { status?: number } })?.response?.status;
+      const claim = claimRequiredMessage(e);
       const msg =
-        status === 404 || status === 403
+        claim ? claim
+        : status === 404 || status === 403
           ? "Refund requests aren't available for this booking yet. If the event has passed, you can open a dispute instead."
           : (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
             "Couldn't send your refund request — please try again.";

@@ -13,7 +13,7 @@
 import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { AnalyticsAPI, type ReceivablesData } from "@/lib/api/analytics"
-import { ReceiptsAPI, type PaymentReceipt } from "@/lib/api/paymentReceipts"
+import { ReceiptsAPI, type PaymentReceipt, type ReceiptSummary } from "@/lib/api/paymentReceipts"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { todayInKarachi } from "@/lib/utils/pk-date"
 import { useArtifactShell, pkNum, escHtml, initialsOf, initTablePager, setPagerFilter, errorBannerHtml, restoreTab, savePref } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
@@ -66,9 +66,13 @@ const EXTRA_CSS = String.raw`
 
 interface Row { date: string; sub: string; who: string; ini: string; ref: string; ppLabel: string; ppCls: string; mth: string; amtCls: string; amtVal: string; amtSub: string; stCls: string; stLabel: string; status: string; action: string; nav: string }
 
+// WP08 / Q15 - a refund is a NEGATIVE row (every refund door writes one); the server's
+// own totals split cash in from refunds by sign, never by note text, so the row status
+// has to agree or a tile and the ledger under it count different rows. A positive row
+// whose note merely says "refund" is money in.
 function classify(r: PaymentReceipt): "aya" | "wapsi" | "settled" {
   const amt = num(r.amount), notes = (r.notes || "").toLowerCase()
-  if (amt < 0 || /refund|wapsi/.test(notes)) return "wapsi"
+  if (amt < 0) return "wapsi"
   if (/settle/.test(notes)) return "settled"
   return "aya"
 }
@@ -80,6 +84,10 @@ const rdate = (r: PaymentReceipt) => r.receivedDate || r.createdAt
  * their own tile, and the Overview's "Khata — aya paisa" tile and Revenue chart
  * are exactly this figure (backend: services/vendorOverviewService.js reads the
  * same receipts with the same refund test as `classify` above).
+ *
+ * (WP14b: the figure itself is now the server's `summary.grossIn` for 1 Jan..today on
+ * the same ledger filter; this row sum is only the fallback for a server that does not
+ * state it, and for the while the summary request is in flight.)
  *
  * It used to be /analytics/kpis' totalRevenue — the downPayment of bookings
  * whose EVENT falls this year — which counts an advance for next December but
@@ -96,8 +104,14 @@ function receivedThisYear(receipts: PaymentReceipt[]): number {
   }, 0)
 }
 
-function buildContent(receipts: PaymentReceipt[], rec: ReceivablesData | null | undefined): string {
-  const kulAya = receivedThisYear(receipts)
+/** The server's stated figure when the summary carries it, else null (the caller falls back to row sums). */
+const stated = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null)
+
+/** Server-stated totals the tiles prefer over summing rows (WP08). Each is optional. */
+interface KhataFlow { all?: ReceiptSummary | null; year?: ReceiptSummary | null; month?: ReceiptSummary | null }
+
+function buildContent(receipts: PaymentReceipt[], rec: ReceivablesData | null | undefined, flow: KhataFlow = {}): string {
+  const kulAya = stated(flow.year?.grossIn) ?? receivedThisYear(receipts)
   // Ledger rows from real receipts. Refunds are logged as negative amounts (or
   // notes marked "refund") → Wapsi; "settle" notes → Settled; everything else
   // is money in → Aya. Then top A/R outstanding as Baqaya-due rows.
@@ -124,7 +138,8 @@ function buildContent(receipts: PaymentReceipt[], rec: ReceivablesData | null | 
   const rows = [...txRows, ...dueRows]
   const counts = { all: rows.length, aya: txRows.filter((r) => r.status === "aya").length, due: dueRows.length, wapsi: txRows.filter((r) => r.status === "wapsi").length, settled: txRows.filter((r) => r.status === "settled").length }
   const wapsiRx = sorted.filter((r) => classify(r) === "wapsi")
-  const wapsiTotal = wapsiRx.reduce((s, r) => s + Math.abs(num(r.amount)), 0)
+  const wapsiTotal = stated(flow.all?.refunds) ?? wapsiRx.reduce((s, r) => s + Math.abs(num(r.amount)), 0)
+  const wapsiCount = stated(flow.all?.refundCount) ?? wapsiRx.length
 
   const rowHtml = (r: Row) => `<tr data-status="${r.status}"${r.nav ? ` data-nav-btn="${r.nav}"` : ""}>
     <td class="td-date">${escHtml(r.date)}${r.sub ? `<div class="sub">${escHtml(r.sub)}</div>` : ""}</td>
@@ -150,7 +165,8 @@ function buildContent(receipts: PaymentReceipt[], rec: ReceivablesData | null | 
   // Net money IN this month: a refund (classified "wapsi", whether stored as a
   // negative amount OR a positive amount with a refund/wapsi note) must SUBTRACT,
   // not add — otherwise the tile contradicts its own "− Rs" ledger row + Wapsi tile.
-  const monthTotal = monthReceipts.reduce((s, r) => s + (classify(r) === "wapsi" ? -Math.abs(num(r.amount)) : num(r.amount)), 0)
+  const monthTotal = stated(flow.month?.net) ?? monthReceipts.reduce((s, r) => s + (classify(r) === "wapsi" ? -Math.abs(num(r.amount)) : num(r.amount)), 0)
+  const monthCount = stated(flow.month?.count) ?? monthReceipts.length
 
   const table = `<div class="card"><div class="tbl-wrap"><table class="tbl">
     <thead><tr><th>Taareekh</th><th>Kis ka</th><th>Kis liye</th><th>Tareeqa</th><th class="r">Raqam</th><th>Status</th><th></th></tr></thead>
@@ -160,8 +176,8 @@ function buildContent(receipts: PaymentReceipt[], rec: ReceivablesData | null | 
   const tiles = `<div class="sumrow">
     <div class="sumtile in"><div class="l"><i></i> Kul aya (is saal)</div><div class="v tnum"><span class="rs">Rs</span> ${pkNum(kulAya)}</div><div class="d">1 Jan se aaj tak · wapsi alag</div></div>
     <div class="sumtile due"><div class="l"><i></i> Baqaya</div><div class="v tnum"><span class="rs">Rs</span> ${pkNum(num(rec?.totals?.grandOutstanding))}</div><div class="d"><b>${num(rec?.totals?.customerCount)}</b> customers par</div></div>
-    <div class="sumtile out"><div class="l"><i></i> Wapsi (di gayi)</div><div class="v tnum"><span class="rs">Rs</span> ${pkNum(wapsiTotal)}</div><div class="d">${wapsiRx.length} refund${wapsiRx.length === 1 ? "" : "s"}</div></div>
-    <div class="sumtile mon"><div class="l"><i></i> Is mahine</div><div class="v tnum"><span class="rs">Rs</span> ${pkNum(monthTotal)}</div><div class="d">${monthReceipts.length} payments</div></div>
+    <div class="sumtile out"><div class="l"><i></i> Wapsi (di gayi)</div><div class="v tnum"><span class="rs">Rs</span> ${pkNum(wapsiTotal)}</div><div class="d">${wapsiCount} refund${wapsiCount === 1 ? "" : "s"}</div></div>
+    <div class="sumtile mon"><div class="l"><i></i> Is mahine</div><div class="v tnum"><span class="rs">Rs</span> ${pkNum(monthTotal)}</div><div class="d">${monthCount} payments</div></div>
   </div>`
 
   return `${tiles}${toolbar}${table}`
@@ -177,6 +193,20 @@ export function KhataArtifact() {
   // mixed in, contradicting the per-venue Baqaya / Kul-aya tiles.
   const receiptsQ = useQuery({ queryKey: ["khata-receipts", activeBusinessId], queryFn: () => ReceiptsAPI.list(activeBusinessId ? { businessId: activeBusinessId } : {}) })
   const recQ = useQuery({ queryKey: ["khata-receivables", activeBusinessId], queryFn: () => AnalyticsAPI.getReceivables(activeBusinessId) })
+  // WP14b / WP08 (Q15) - the tiles read the server's totals instead of summing the rows
+  // above: "Kul aya" = grossIn for 1 Jan..today, "Is mahine" = net for this PKT month,
+  // "Wapsi" = refunds of the whole ledger (receiptsQ.summary). `limit: 1` asks only for
+  // the summary (paging is opt-in; the summary always covers the whole filtered set).
+  // The first key element and the business id keep them inside invalidateMoney's fan-out.
+  // Failing to load them is not an error state: the tiles fall back to the row sums.
+  const today = todayInKarachi()
+  const yearFrom = `${today.slice(0, 4)}-01-01`
+  const monthFrom = `${today.slice(0, 7)}-01`
+  const monthLast = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)), 0)).getUTCDate()
+  const monthTo = `${today.slice(0, 7)}-${String(monthLast).padStart(2, "0")}`
+  const scope = activeBusinessId ? { businessId: activeBusinessId } : {}
+  const yearQ = useQuery({ queryKey: ["khata-receipts", activeBusinessId, "year", yearFrom, today], queryFn: () => ReceiptsAPI.list({ ...scope, from: yearFrom, to: today, limit: 1 }) })
+  const monthQ = useQuery({ queryKey: ["khata-receipts", activeBusinessId, "month", monthFrom], queryFn: () => ReceiptsAPI.list({ ...scope, from: monthFrom, to: monthTo, limit: 1 }) })
   const qc = useQueryClient()
 
   const bound = React.useRef(false)
@@ -194,7 +224,7 @@ export function KhataArtifact() {
     }
     const receipts = receiptsQ.data?.receipts ?? []
     const banner = anyError ? errorBannerHtml() : ""
-    wwc.innerHTML = head + banner + buildContent(receipts, recQ.data)
+    wwc.innerHTML = head + banner + buildContent(receipts, recQ.data, { all: receiptsQ.data?.summary, year: yearQ.data?.summary, month: monthQ.data?.summary })
     // Shared paginator owns row visibility — tabs + search + paging stay in sync.
     initTablePager(s, { pageSize: 25 })
     restoreTab(s, "tab:khata", (f) => setPagerFilter(s, (tr) => f === "all" || tr.dataset.status === f))
@@ -224,7 +254,7 @@ export function KhataArtifact() {
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, receiptsQ.data, recQ.data, receiptsQ.isError, recQ.isError, receiptsQ.isLoading, recQ.isLoading])
+  }, [ready, receiptsQ.data, recQ.data, yearQ.data, monthQ.data, receiptsQ.isError, recQ.isError, receiptsQ.isLoading, recQ.isLoading])
 
   return <div ref={hostRef} />
 }

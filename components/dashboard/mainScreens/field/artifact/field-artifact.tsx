@@ -162,7 +162,9 @@ export function FieldArtifact() {
     const counts: Counts = {
       leads: todayLeads.length,
       receiptsN: receipts.length,
-      receiptsRs: receipts.reduce((s, r) => s + num(r.amount), 0),
+      // WP14b / WP08 (Q15): net money in for today is the server's own figure (cash in minus
+      // refunds, by sign); the row sum is the fallback for a server that does not state it.
+      receiptsRs: typeof (receiptsQ.data?.summary as { net?: unknown } | undefined)?.net === "number" ? (receiptsQ.data!.summary as { net: number }).net : receipts.reduce((s, r) => s + num(r.amount), 0),
       expensesN: expenses.length,
       expensesRs: expenses.reduce((s, e) => s + num(e.amount), 0),
       holds: activeHolds.length,

@@ -18,6 +18,7 @@ import { useActiveBusinessId, useActiveBusinessStore } from "@/lib/store/active-
 import type { BookingData } from "@/lib/dashboard-types"
 import { usePlan } from "@/context/plan-context"
 import { useScreenLock } from "@/components/dashboard/mainScreens/artifact/plan-lock"
+import { neutraliseFormula } from "@/lib/utils/csv-escape"
 import { useArtifactShell, pkNum, escHtml, errorBannerHtml, planLockedHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const num = (v: unknown) => (v == null ? 0 : Number(v) || 0)
@@ -105,7 +106,8 @@ function spark(vals: number[]): string {
 // temp anchor, revoke) so "Export" behaves consistently across the console.
 function exportHallsCsv(halls: RData["halls"], name: string) {
   if (!halls.length) return
-  const q = (s: string | number) => `"${String(s).replace(/"/g, '""')}"`
+  // PAY-REPORTS-024: a hall name is vendor-typed text; a leading = + - @ would run as a formula.
+  const q = (s: string | number) => `"${neutraliseFormula(String(s)).replace(/"/g, '""')}"`
   const lines = [["Hall", "Bookings", "Kamaai", "Occupancy"].map(q).join(",")]
   halls.forEach((h) => { lines.push([q(h.name), q(h.bookings), q(h.revenue), q(h.occ != null ? `${h.occ}%` : "—")].join(",")) })
   const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" })

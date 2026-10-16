@@ -81,7 +81,11 @@ export function PdcFormDialog({ open, onOpenChange, pdc, onSaved }: { open: bool
       if (form.bookingId) body.bookingId = Number(form.bookingId)
       return isEdit ? PdcAPI.update(pdc!.id, body) : PdcAPI.create(body)
     },
-    onSuccess: () => { showSuccessToast(isEdit ? "Cheque updated" : "Cheque logged"); onSaved?.(); onOpenChange(false) },
+    onSuccess: (saved) => {
+      showSuccessToast(isEdit ? "Cheque updated" : "Cheque logged"); onSaved?.(); onOpenChange(false)
+      // duplicate number / stale date / above the baqaya: saved, but say so (WP03 `data.warnings`)
+      saved?.warnings?.forEach((w) => toast.warning(w.message, { duration: 9000 }))
+    },
     onError: (e: any) => toast.error(errorMessage(e, "Couldn't save cheque")),
   })
   // NOTE: chequeDate deliberately does NOT use validateNotFutureDate. A PDC is a
@@ -198,10 +202,13 @@ export function PdcFormDialog({ open, onOpenChange, pdc, onSaved }: { open: bool
 }
 
 // ─── Status transition ───────────────────────────────────────────
+// WP03 / Q10: the bank can return a cheque after crediting it, so a CLEARED cheque may still
+// go to bounced (the server soft-deletes its receipt and the booking money follows, in one
+// transaction). Bounced / cancelled are terminal.
 const NEXT: Record<string, PdcStatus[]> = {
   held: ["deposited", "cancelled"],
   deposited: ["cleared", "bounced"],
-  cleared: [], bounced: [], cancelled: [],
+  cleared: ["bounced"], bounced: [], cancelled: [],
 }
 export function PdcTransitionDialog({ open, onOpenChange, pdc, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; pdc?: PostDatedCheque; onSaved?: () => void }) {
   const options = pdc ? (NEXT[pdc.status] ?? []) : []
@@ -218,7 +225,10 @@ export function PdcTransitionDialog({ open, onOpenChange, pdc, onSaved }: { open
     // WWL-174 — this interpolated the raw enum, so the toast read "Cheque
     // marked deposited" while every pill, filter and column in the module reads
     // "Deposited (awaiting clearance)". The canonical map already existed.
-    onSuccess: () => { showSuccessToast(`Cheque marked ${PDC_STATUS_LABELS[to] ?? to}`); onSaved?.(); onOpenChange(false) },
+    onSuccess: (done) => {
+      showSuccessToast(`Cheque marked ${PDC_STATUS_LABELS[to] ?? to}`); onSaved?.(); onOpenChange(false)
+      done?.warnings?.forEach((w) => toast.warning(w.message, { duration: 9000 }))
+    },
     onError: (e: any) => toast.error(errorMessage(e, "Couldn't update cheque")),
   })
   const depositErr = to === "deposited" ? validateNotFutureDate(depositDate, { label: "Deposit date" }) : undefined

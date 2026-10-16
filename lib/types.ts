@@ -548,6 +548,8 @@ export interface PendingPayment {
   createdAt: string;
   totalAmount?: number;
   downPayment?: number;
+  /** WP08 — the server's own figure for this booking (see CustomerPaymentView in lib/payment-status.ts). */
+  paymentView?: import("./payment-status").CustomerPaymentView;
 }
 
 export interface PlatformStats {

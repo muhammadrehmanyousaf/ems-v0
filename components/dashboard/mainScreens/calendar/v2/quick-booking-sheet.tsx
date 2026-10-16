@@ -85,6 +85,8 @@ export function QuickBookingSheet({
 
   const submit = async () => {
     if (!name.trim() || !phone.trim()) { toast.error("Naam aur phone likhein"); return; }
+    // PAY-CLOCK-018: an amount that was typed but cannot be read must stop the save, not become Rs 0.
+    if (rakam.trim() && parsed == null) { toast.error("Rakam samajh nahi aayi — number likhein (jaise 2 lakh ya 250000)"); return; }
     setSaving(true);
     try {
       await BookingsAPI.create({

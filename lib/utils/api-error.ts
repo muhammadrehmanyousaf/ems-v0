@@ -30,8 +30,21 @@ const AXIOS_NOISE = [
 type ApiErrorLike = {
   message?: string;
   code?: string;
-  response?: { status?: number; data?: { message?: string } };
+  response?: { status?: number; data?: { message?: string; data?: { code?: string; hint?: string } | null } };
 };
+
+/**
+ * WP09: a phone-only match may READ a booking but not act on it. The money doors answer 403 with
+ * `data.code: "CLAIM_REQUIRED"` and a `data.hint` that says what to do (ask the venue for a claim
+ * link). Returns "<message> <hint>" for that refusal, null for anything else, so a page can show the
+ * server's own words instead of a generic "not allowed".
+ */
+export function claimRequiredMessage(error: unknown): string | null {
+  const d = (error as ApiErrorLike | null | undefined)?.response?.data;
+  if (!d || d.data?.code !== "CLAIM_REQUIRED") return null;
+  const parts = [d.message, d.data.hint].filter((x): x is string => typeof x === "string" && x.trim() !== "");
+  return parts.length ? parts.join(" ") : null;
+}
 
 /**
  * The sentence to show a vendor when a request failed.
@@ -41,6 +54,10 @@ type ApiErrorLike = {
  */
 export function errorMessage(error: unknown, fallback: string): string {
   const e = (error ?? {}) as ApiErrorLike;
+
+  // 0. WP09 CLAIM_REQUIRED: the refusal's own hint tells the customer how to get unblocked.
+  const claim = claimRequiredMessage(error);
+  if (claim) return claim;
 
   // 1. The server said something. That is always the most specific answer.
   const fromServer = e.response?.data?.message;

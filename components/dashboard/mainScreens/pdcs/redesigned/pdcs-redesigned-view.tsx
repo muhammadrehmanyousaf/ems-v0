@@ -93,7 +93,7 @@ export function PdcsRedesignedView() {
       key: "actions", header: "", align: "right",
       render: (p) => (
         <div className="flex items-center justify-end gap-0.5">
-          {(p.status === "held" || p.status === "deposited") && <Button size="sm" variant="ghost" onClick={() => setMoving(p)} aria-label="Update status"><Icon name="RefreshCw" size={14} /></Button>}
+          {(p.status === "held" || p.status === "deposited" || p.status === "cleared") && <Button size="sm" variant="ghost" onClick={() => setMoving(p)} aria-label="Update status"><Icon name="RefreshCw" size={14} /></Button>}
           <Button size="sm" variant="ghost" onClick={() => openEdit(p)} aria-label="Edit cheque"><Icon name="Pencil" size={14} /></Button>
           <Button size="sm" variant="ghost" onClick={() => setDeleting(p)} aria-label="Remove cheque"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
         </div>

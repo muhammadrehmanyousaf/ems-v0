@@ -39,6 +39,7 @@ import { Label } from "@/components/ui/label";
 import { CalendarClock, Loader2, Info } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { BookingAPI } from "@/lib/api/bookings";
+import { claimRequiredMessage } from "@/lib/utils/api-error";
 import { cn } from "@/lib/utils";
 import { LEGACY_PERIODS, formatSlotRange } from "@/lib/booking/slot-vocabulary";
 
@@ -199,7 +200,8 @@ export function RescheduleBookingDialog({
       setPriceDelta(null);
       toast({
         title: "Couldn't reschedule",
-        description: humaniseError(code, { diff: data?.data?.diff }),
+        // WP09: a phone-only match is refused with CLAIM_REQUIRED + a hint: show it, not "couldn't reschedule".
+        description: claimRequiredMessage(err) ?? humaniseError(code, { diff: data?.data?.diff }),
         variant: "destructive",
       });
     } finally {

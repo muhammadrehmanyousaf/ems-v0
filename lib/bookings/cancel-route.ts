@@ -24,6 +24,8 @@
  * the rule cannot drift apart again — the duplication is what allowed the bug.
  */
 
+import { claimRequiredMessage } from "../utils/api-error";
+
 /** The fields this decision needs. Deliberately narrow so any booking shape fits. */
 export interface CancellableBooking {
   status?: string | null;
@@ -99,6 +101,9 @@ export function cancelRouteFor(booking: CancellableBooking | null | undefined): 
  * release. Prefer the server's message; fall back only when there isn't one.
  */
 export function cancelErrorMessage(error: unknown, fallback = "Failed to cancel booking."): string {
+  // WP09: CLAIM_REQUIRED carries a hint that tells the customer how to get unblocked.
+  const claim = claimRequiredMessage(error);
+  if (claim) return claim;
   const res = (error as { response?: { data?: { message?: string } } })?.response;
   const msg = res?.data?.message;
   return typeof msg === "string" && msg.trim() ? msg : fallback;
