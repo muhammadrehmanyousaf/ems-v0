@@ -1,0 +1,135 @@
+/**
+ * Guard: the cancellation policy a vendor chooses is shown in words, and "Partially Refundable" carries a
+ * number the server also accepts.
+ *
+ * The defects this pins (owner bugs 1 and 2, 2026-10-16): the registration review step printed the stored
+ * key `partially_refundable` (the owner asked why the underscore shows), the venue page and the settings
+ * screens printed whatever was stored, and "Partially Refundable" had no fixed amount / percentage at all.
+ *
+ *   - lib/cancellation-policy.ts mirrors the server's src/utils/partialRefundPolicy.js. Both run the SAME cases
+ *     (scripts/fixtures/partialRefundCases.json is a copy of the backend's tests/fixtures/partialRefundCases.json;
+ *     change them together).
+ *   - every registration form that offers a Cancellation Policy also renders <PartialRefundFields>.
+ *   - no surface prints `cancelationPolicy` / `cancellationPolicy` without going through cancellationLabel /
+ *     cancellationText (the raw-key leak).
+ *
+ *   node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/cancellation-policy-check.mts
+ */
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+import { cancellationKey, cancellationLabel, cancellationText, fixedRefundCeiling, isGeneratedPartialText, partialPolicyText, partialRefundErrors, validatePartialRefund } from "../lib/cancellation-policy.ts";
+import { humanizeKey } from "../lib/humanize-key.ts";
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.join(HERE, "..");
+let passed = 0;
+const failures: string[] = [];
+const check = (name: string, ok: boolean, detail = "") => { if (ok) passed++; else failures.push(`${name}${detail ? "  (" + detail + ")" : ""}`); };
+
+const cases = JSON.parse(readFileSync(path.join(HERE, "fixtures", "partialRefundCases.json"), "utf8")) as {
+  keys: [string, string | null, string][];
+  validate: { type: unknown; value: unknown; ceiling?: number | null; ok: boolean; text?: string }[];
+};
+
+// ── the same key / label answers as the server ──
+for (const [raw, key, label] of cases.keys) {
+  check(`key of ${JSON.stringify(raw)} is ${key}`, cancellationKey(raw) === key, String(cancellationKey(raw)));
+  check(`label of ${JSON.stringify(raw)} is ${JSON.stringify(label)}`, cancellationLabel(raw) === label, cancellationLabel(raw));
+}
+check("a non-string is never a key and has an empty label", cancellationKey(null) === null && cancellationKey(5) === null && cancellationLabel(undefined) === "");
+
+// ── the same verdicts and the same sentence as the server ──
+cases.validate.forEach((c, i) => {
+  const r = validatePartialRefund(c.type, c.value, c.ceiling ?? null);
+  check(`case ${i} ${JSON.stringify(c)} verdict`, r.ok === c.ok, JSON.stringify(r));
+  if (c.ok && r.ok) {
+    check(`case ${i} text`, partialPolicyText(r.type, r.value) === c.text, partialPolicyText(r.type, r.value));
+    check(`case ${i} the sentence is recognised as generated`, isGeneratedPartialText(c.text));
+  }
+  if (!c.ok && !r.ok) check(`case ${i} names the field under which to show the message`, ["partialRefundType", "partialRefundValue"].includes(r.field) && r.message.length > 5);
+});
+
+// ── what the review step prints ──
+check("review: the key is a label", cancellationText("partially_refundable", null) === "Partially Refundable");
+check("review: percent detail", cancellationText("partially_refundable", { type: "percent", value: 50 }) === "Partially Refundable: 50% refunded");
+check("review: fixed detail (a typed string)", cancellationText("partially_refundable", { type: "fixed", value: "20000" }) === "Partially Refundable: PKR 20,000 refunded");
+check("review: a stale detail never rides on another policy", cancellationText("non_refundable", { type: "percent", value: 50 }) === "Non-Refundable" && cancellationText("refundable", { type: "fixed", value: 5000 }) === "Refundable");
+check("review: an invalid detail falls back to the label", cancellationText("partially_refundable", { type: "percent", value: 150 }) === "Partially Refundable");
+check("review: free text is untouched", cancellationText("Advance non-refundable within 30 days.", null) === "Advance non-refundable within 30 days.");
+
+// ── form-level errors (what Continue checks) ──
+check("no policy chosen: no refund error", Object.keys(partialRefundErrors({ cancelationPolicy: "" })).length === 0);
+check("Refundable ignores the detail", Object.keys(partialRefundErrors({ cancelationPolicy: "refundable", partialRefundType: "percent", partialRefundValue: 500 })).length === 0);
+check("partial without a type is an error under the type", Object.keys(partialRefundErrors({ cancelationPolicy: "partially_refundable" })).join() === "partialRefundType");
+check("partial percent 100 is an error under the value", Object.keys(partialRefundErrors({ cancelationPolicy: "partially_refundable", partialRefundType: "percent", partialRefundValue: "100" })).join() === "partialRefundValue");
+check("partial fixed above the dearest package is an error (packages are known on submit)", Object.keys(partialRefundErrors({ cancelationPolicy: "Partially Refundable", partialRefundType: "fixed", partialRefundValue: "200000", packages: [{ price: 150000 }] })).join() === "partialRefundValue");
+check("partial fixed within the dearest package is fine", Object.keys(partialRefundErrors({ cancelationPolicy: "Partially Refundable", partialRefundType: "fixed", partialRefundValue: "20000", packages: [{ price: 150000 }] })).length === 0);
+check("ceiling: minimum price wins, else dearest package, else none", fixedRefundCeiling({ minimumPrice: 100000, packages: [{ price: 500000 }] }) === 100000 && fixedRefundCeiling({ packages: [{ price: 150000 }, { price: "250000" }] }) === 250000 && fixedRefundCeiling({}) === null);
+
+// ── a stored key is shown as words ──
+check("humanizeKey: camelCase and snake_case", humanizeKey("SeatingArrangement") === "Seating Arrangement" && humanizeKey("soundLighting") === "Sound & Lighting" && humanizeKey("additionalServices") === "Additional Services" && humanizeKey("hall") === "Hall / Venue" && humanizeKey("non_refundable") === "Non refundable" && humanizeKey("Hall") === "Hall" && humanizeKey("Main Hall") === "Main Hall" && humanizeKey("AC") === "AC");
+
+// ── source scan ──
+const read = (rel: string) => readFileSync(path.join(ROOT, rel), "utf8");
+const walk = (dir: string, out: string[] = []): string[] => {
+  for (const n of readdirSync(dir)) {
+    if (n === "node_modules" || n === ".next" || n.startsWith(".")) continue;
+    const p = path.join(dir, n);
+    if (statSync(p).isDirectory()) walk(p, out); else if (/\.(tsx?|jsx?)$/.test(n)) out.push(p);
+  }
+  return out;
+};
+const rel = (p: string) => path.relative(ROOT, p).replace(/\\/g, "/");
+
+// every registration form that renders the Cancellation Policy control also renders the detail fields
+const FORMS = [
+  "components/VendorStepForms/newVendorRegisterationForm/venueSteps/vanueComponents/business-details.tsx",
+  "components/VendorStepForms/newVendorRegisterationForm/BridalWear/components/business-details.tsx",
+  "components/VendorStepForms/newVendorRegisterationForm/CarRental/components/business-details.tsx",
+  "components/VendorStepForms/newVendorRegisterationForm/WeddingStationery/components/business-details.tsx",
+  "components/VendorStepForms/newVendorRegisterationForm/Catering/cateringComponents/business-details.tsx",
+  "components/VendorStepForms/newVendorRegisterationForm/Decorator/decoratorComponents/business-details.tsx",
+  "components/VendorStepForms/newVendorRegisterationForm/HennaArtist/hennaArtistComponents/business-details.tsx",
+  "components/VendorStepForms/newVendorRegisterationForm/MakeupArtist/makeupArtistComponents/business-details.tsx",
+  "components/VendorStepForms/newVendorRegisterationForm/Photographer/photographerComponents/business-details.tsx",
+  "components/VendorStepForms/newVendorRegisterationForm/Generic/generic-business-details.tsx",
+];
+for (const f of FORMS) check(`${f} renders <PartialRefundFields>`, /<PartialRefundFields\b/.test(read(f)));
+// and every validator of the step checks it
+for (const f of [
+  "components/VendorStepForms/newVendorRegisterationForm/venueSteps/vanueComponents/vanueValidations.tsx",
+  "components/VendorStepForms/newVendorRegisterationForm/BridalWear/components/validations.tsx",
+  "components/VendorStepForms/newVendorRegisterationForm/CarRental/components/validations.tsx",
+  "components/VendorStepForms/newVendorRegisterationForm/WeddingStationery/components/validations.tsx",
+  "components/business-registration-form.tsx",
+]) check(`${f} validates the partial refund`, /partialRefundErrors\(/.test(read(f)));
+const regForm = read("components/business-registration-form.tsx");
+check("the submit sends the validated detail, and only for Partially Refundable", /partialRefundType: v\.type, partialRefundValue: v\.value/.test(regForm) && /cancellationKey\(formData\.cancelationPolicy\) === "partially_refundable"/.test(regForm));
+
+check("the review step prints the cancellation policy through cancellationText, with the entered detail", /value=\{cancellationText\(formData\.cancelationPolicy, \{\s*type: formData\.partialRefundType,\s*value: formData\.partialRefundValue,\s*\}\)\}/.test(read("components/VendorStepForms/preview.tsx")));
+check("the review step humanizes package spec keys", /: humanizeKey\(cat\)/.test(read("components/VendorStepForms/preview.tsx")));
+
+// no component prints the stored policy raw: a JSX expression that is just the field, or a Field/StatTile value, must go through the label helper
+// (form controls such as <Select value={formData.cancelationPolicy}> hold the KEY on purpose: they are not display)
+const RAW_PRINT = /(\{\s*(?:vendor|venue|biz|activeBiz|business)\??\.(?:cancelationPolicy|cancellationPolicy)(?:\s*\|\|\s*(?:vendor|venue)\.cancellationPolicy)?\s*\})|(\bvalue=\{\s*vendor\.(?:cancelationPolicy|cancellationPolicy)[^)}]*\})/;
+for (const p of walk(path.join(ROOT, "components")).concat(walk(path.join(ROOT, "app")))) {
+  const r = rel(p);
+  const src = readFileSync(p, "utf8");
+  src.split(/\r?\n/).forEach((line, i) => {
+    if (/^\s*(\/\/|\*|\{\/\*)/.test(line)) return;
+    if (RAW_PRINT.test(line) && !/cancellationLabel|cancellationText/.test(line)) failures.push(`${r}:${i + 1} prints the stored cancellation policy raw: ${line.trim().slice(0, 110)}`);
+  });
+}
+
+// the registration radio indicator uses colours the theme defines (roze-* is not one of them)
+const radio = read("components/VendorStepForms/components/radio-button.tsx");
+const radioCode = radio.split(/\r?\n/).filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
+check("RadioButton does not use the undefined roze-* colour", !radioCode.includes("roze-"));
+check("RadioButton keeps the input focusable (not display:none)", !/className="hidden"/.test(radio) && /sr-only/.test(radio));
+
+if (failures.length) {
+  console.error(`cancellation-policy check FAILED (${failures.length}):\n - ` + failures.join("\n - "));
+  process.exit(1);
+}
+console.log(`cancellation-policy check OK: ${passed} checks`);

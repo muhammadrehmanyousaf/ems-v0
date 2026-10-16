@@ -89,7 +89,7 @@ export function RefundPreviewCard({ bookingId }: { bookingId: number }) {
           <div className="flex justify-between"><span>Kul jama (paid)</span><span className="tabular-nums">{rs(totalPaid)}</span></div>
           <div className="flex justify-between"><span>Booking deposit ({data.policy.depositPct}% — non-refundable)</span><span className="tabular-nums">−{rs(preview.breakdown.deposit)}</span></div>
           <div className="flex justify-between">
-            <span>Advance wapsi ({preview.tier.refundPct}% tier)</span>
+            <span>Advance wapsi ({preview.tier.refundFixed ? `fixed ${rs(preview.tier.refundFixed)}` : `${preview.tier.refundPct}% tier`})</span>
             <span className="tabular-nums text-emerald-700 dark:text-emerald-400">{rs(preview.breakdown.advanceRefund)}</span>
           </div>
           {(data.unledgeredAdvance ?? 0) > 0 && (

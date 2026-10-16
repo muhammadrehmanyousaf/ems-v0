@@ -1,4 +1,5 @@
 import { FormType } from '@/lib/context/form-context';
+import { partialRefundErrors } from '@/lib/cancellation-policy';
 
 function fleetMaxUnits(pkg: { features: Record<string, string[]> }): number {
     const raw = pkg.features?.unitsAvailable?.[0] ?? '';
@@ -72,6 +73,7 @@ export const CarRentalValidations = ({ currentStep, formData, currentErrors }: V
             currentErrors.downPayment = 'Percentage must be between 1 and 100';
         }
         if (!formData.cancelationPolicy) currentErrors.cancelationPolicy = 'Cancellation policy is required';
+        else Object.assign(currentErrors, partialRefundErrors(formData)); // WP20
     } else if (currentStep === 4) {
         const validCars = formData.packages?.filter((pkg) => pkg.name?.trim() && pkg.price) ?? [];
         if (validCars.length === 0) {

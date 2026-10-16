@@ -1,4 +1,5 @@
 import { FieldLabel } from "@/components/ui/field-help";
+import PartialRefundFields from "@/components/VendorStepForms/components/partial-refund-fields";
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -282,6 +283,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                         </Select>
                         {errors.cancelationPolicy && <p className="text-bridal-coral text-[12px] mt-1">{errors.cancelationPolicy}</p>}
                     </div>
+                    <PartialRefundFields policy={cancellation} errors={errors} setErrors={setErrors} labelClassName="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label" triggerClassName="mt-1.5 h-11 border-bridal-beige" inputClassName="h-11 border-bridal-beige" errorClassName="text-bridal-coral text-[12px]" />
                 </div>
             </SectionCard>
         </div>

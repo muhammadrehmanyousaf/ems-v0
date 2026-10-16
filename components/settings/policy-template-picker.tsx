@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/dashboard/primitives/page-header";
+import { cancellationLabel } from "@/lib/cancellation-policy";
 
 const rs = (n: number) => "Rs " + Math.round(n || 0).toLocaleString("en-PK");
 // Resolve the forfeit % for a cancel `days` out: largest slab.daysToEvent <= days,
@@ -348,7 +349,7 @@ export function PolicyTemplatePicker() {
         {activeBiz?.cancelationPolicy ? (
           <>
             <p className="font-medium">Your listing also shows this text to couples:</p>
-            <p className="mt-1 whitespace-pre-line text-muted-foreground">{activeBiz.cancelationPolicy}</p>
+            <p className="mt-1 whitespace-pre-line text-muted-foreground">{cancellationLabel(activeBiz.cancelationPolicy)}</p>
             <p className="mt-2 text-xs text-muted-foreground">
               That text is for reading. The refund engine does not use it — the schedule you pick
               below is what decides the money. Keep them saying the same thing.{" "}

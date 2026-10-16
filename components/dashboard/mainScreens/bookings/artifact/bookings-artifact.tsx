@@ -18,7 +18,11 @@ import { bookingStatusLabel, bookingStatusTone as tone } from "@/lib/booking-sta
 import type { BookingData } from "@/lib/dashboard-types"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useBusiness } from "@/context/BusinessContext"
-import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, initTablePager, setPagerFilter, restoreTab, savePref, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { toast } from "sonner"
+import { BookingsAPI } from "@/lib/api/dashboard"
+import { invalidateMoney } from "@/lib/query/money-keys"
+import { canMarkCompleted, statusBucket } from "@/lib/utils/booking-completion"
+import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, openConfirm, initTablePager, setPagerFilter, restoreTab, savePref, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { openRecordPaymentDrawer } from "@/components/dashboard/mainScreens/artifact/record-payment"
 import { openBookingForm } from "@/components/dashboard/mainScreens/artifact/booking-form"
 
@@ -30,12 +34,8 @@ function fmtDate(b: BookingData): { main: string; sub: string } {
   if (!b.bookingDate) return { main: "—", sub: "" }
   return { main: fmtYmd(b.bookingDate, "short", null), sub: bookingSlotText(b, "vendor") }
 }
-function bucket(status?: string): "confirmed" | "pending" | "done" {
-  const v = (status || "").toLowerCase()
-  if (v.includes("complete") || v.includes("cancel")) return "done"
-  if (v.includes("confirm")) return "confirmed"
-  return "pending"
-}
+// WP22: the tab a status counts under is one shared rule (lib/utils/booking-completion.ts)
+const bucket = statusBucket
 const menuSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg>`
 
 function rowHtml(b: BookingData): string {
@@ -50,7 +50,7 @@ function rowHtml(b: BookingData): string {
   // Baqaya tab via the "done" bucket (which lumps completed + cancelled).
   const due = out > 0 ? "1" : "0"
   const phone = (b as { customerPhone?: string }).customerPhone || ""
-  const kebabAttrs = `data-bk="${b.id}" data-bk-name="${escHtml(b.customerName || "")}" data-bk-due="${Math.round(out)}" data-bk-phone="${escHtml(phone)}"`
+  const kebabAttrs = `data-bk="${b.id}" data-bk-name="${escHtml(b.customerName || "")}" data-bk-due="${Math.round(out)}" data-bk-phone="${escHtml(phone)}"${canMarkCompleted(b) ? " data-bk-done" : ""}`
   // Cancelled → no money sub-label: the status chip already says "Cancelled", and
   // whether a refund is still owed (vs already given) isn't in the list payload —
   // that truth lives on the booking detail (cashRefundOwedTotal). Don't guess here.
@@ -177,7 +177,7 @@ export function BookingsArtifact() {
         if (km) {
           const wasOpen = !!s.querySelector(".rowpop"); closePop()
           if (wasOpen) return
-          const id = km.dataset.bk, nm = km.dataset.bkName || "", dueAmt = Number(km.dataset.bkDue) || 0, ph = km.dataset.bkPhone || ""
+          const id = km.dataset.bk, nm = km.dataset.bkName || "", dueAmt = Number(km.dataset.bkDue) || 0, ph = km.dataset.bkPhone || "", canDone = km.dataset.bkDone !== undefined
           const r = km.getBoundingClientRect()
           const pop = document.createElement("div"); pop.className = "rowpop"
           pop.style.cssText = `position:fixed;top:${r.bottom + 5}px;left:${Math.max(8, r.right - 194)}px;z-index:90;min-width:186px;background:var(--surface);border:1px solid var(--border-2);border-radius:11px;box-shadow:var(--shadow-md);padding:5px;display:flex;flex-direction:column;gap:1px`
@@ -187,9 +187,24 @@ export function BookingsArtifact() {
             (dueAmt > 0 ? `<button data-pop-rec data-stop style="${bstyle}">${isvg('<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.4a2 2 0 0 1 2-1.4h1.2a1.8 1.8 0 0 1 0 3.6h-1.4a1.8 1.8 0 0 0 0 3.6H13a2 2 0 0 0 2-1.4"/>')} Payment record</button>` : "")
             + (ph ? `<button data-pop-call data-stop style="${bstyle}">${isvg('<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>')} Call</button>` : "")
             + (ph ? `<button data-pop-wa data-stop style="${bstyle}">${isvg('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>')} WhatsApp</button>` : "")
+            + (canDone ? `<button data-pop-done data-stop style="${bstyle}">${isvg('<path d="M20 6 9 17l-5-5"/>')} Mark completed</button>` : "")
             + `<button data-nav-btn="/dashboard/bookings/${id}" data-stop style="${bstyle}">${isvg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>')} Booking kholein</button>`
           s.appendChild(pop)
           pop.querySelector("[data-pop-rec]")?.addEventListener("click", () => { closePop(); openRecordPaymentDrawer(s, { bookingId: Number(id), customerName: nm, due: dueAmt, onSaved: () => qc.invalidateQueries({ queryKey: ["/api/v1/bookings"] }) }) })
+          pop.querySelector("[data-pop-done]")?.addEventListener("click", () => {
+            closePop()
+            // forward-only (Completed is final), so confirm first; money is untouched, an unpaid balance stays owed
+            openConfirm(s, {
+              title: "Event ho gaya?",
+              message: "Booking mukammal ho jayegi. Baqaya raqam khuli rehti hai — ye sirf event ka record band karta hai. Wapas nahi badla ja sakta.",
+              confirmLabel: "Haan, band karein",
+              danger: false,
+              onConfirm: async () => {
+                try { await BookingsAPI.markCompleted(Number(id)); toast.success("Booking mukammal ho gayi"); void invalidateMoney({ bookingId: Number(id) }, qc) }
+                catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Band nahi hui") }
+              },
+            })
+          })
           pop.querySelector("[data-pop-call]")?.addEventListener("click", () => { closePop(); window.location.href = "tel:" + ph.replace(/\s/g, "") })
           pop.querySelector("[data-pop-wa]")?.addEventListener("click", () => { closePop(); const digits = ph.replace(/[^0-9]/g, "").replace(/^0/, "92"); const text = dueAmt > 0 ? `?text=${encodeURIComponent(`Assalam o Alaikum ${nm || "ji"}, aap ki baqaya Rs ${pkNum(dueAmt)} hai. Bara-e-meherbani event se pehle ada kar dein. Shukriya.`)}` : ""; window.open(`https://wa.me/${digits}${text}`, "_blank", "noopener") })
           return

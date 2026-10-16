@@ -66,6 +66,9 @@ export type FormType = {
   downPayment: number;
   covidComplaint: boolean;
   cancelationPolicy: string;
+  // WP20: the detail of "Partially Refundable" - "fixed" (PKR) or "percent" (1-99) and its value.
+  partialRefundType?: "" | "fixed" | "percent";
+  partialRefundValue?: string | number;
   // packageName: string[];
   // services: string;
   images: string[];
@@ -169,6 +172,8 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     downPayment: 0,
     covidComplaint: false,
     cancelationPolicy: "",
+    partialRefundType: "",
+    partialRefundValue: "",
     // packageName: [],
     // services: "",
     images: [],

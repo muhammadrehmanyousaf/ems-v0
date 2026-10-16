@@ -187,9 +187,9 @@ function buildDetail(lead: Lead): string {
 
   /* honest conversation timeline (no per-lead activity API) */
   const tl: string[] = []
-  tl.push(`<div class="tl-item acc"><span class="tl-dot">${svg(I.clock)}</span><div class="tl-body"><div class="tl-title">${escHtml(nextTitle)}</div><div class="tl-meta">Abhi · stage: ${escHtml(su.label)}</div></div></div>`)
+  tl.push(`<div class="tl-item acc"><span class="tl-dot">${svg(I.clock)}</span><div class="tl-body"><div class="tl-title">${escHtml(nextTitle)}</div><div class="tl-meta">Abhi · status:${escHtml(su.label)}</div></div></div>`)
   if (lead.statusReason) tl.push(`<div class="tl-item done"><span class="tl-dot">${svg(I.check)}</span><div class="tl-body"><div class="tl-title" style="font-weight:500">${escHtml(lead.statusReason)}</div><div class="tl-meta">${fmtDate(lead.updatedAt)}</div></div></div>`)
-  if (lead.updatedAt && lead.updatedAt !== lead.createdAt) tl.push(`<div class="tl-item done"><span class="tl-dot">${svg(I.check)}</span><div class="tl-body"><div class="tl-title" style="font-weight:500">Stage update: ${escHtml(su.label)}</div><div class="tl-meta">${fmtDate(lead.updatedAt)}</div></div></div>`)
+  if (lead.updatedAt && lead.updatedAt !== lead.createdAt) tl.push(`<div class="tl-item done"><span class="tl-dot">${svg(I.check)}</span><div class="tl-body"><div class="tl-title" style="font-weight:500">Status update:${escHtml(su.label)}</div><div class="tl-meta">${fmtDate(lead.updatedAt)}</div></div></div>`)
   tl.push(`<div class="tl-item"><span class="tl-dot">${svg(I.people)}</span><div class="tl-body"><div class="tl-title" style="font-weight:500">Lead aaya — ${escHtml(sourceUi(lead.source))}${lead.sourceRef ? ` (${escHtml(lead.sourceRef)})` : ""}</div><div class="tl-meta">${fmtDate(lead.createdAt)}</div></div></div>`)
 
   const custActions = `<div class="cust-actions">
@@ -216,7 +216,7 @@ function buildDetail(lead: Lead): string {
   </div>
 
   <div class="stats">
-    <div class="stat hl"><div class="s-cap">${svg(I.stage)} Stage</div><div class="s-val">${escHtml(su.label)}</div><div class="s-sub">${cur >= 0 ? `${cur + 1}-wa stage` : "band"}${nextStage ? ` · agla: ${escHtml(nextStage.label)}` : ""}</div></div>
+    <div class="stat hl"><div class="s-cap">${svg(I.stage)} Status</div><div class="s-val">${escHtml(su.label)}</div><div class="s-sub">${cur >= 0 ? `${cur + 1}-wa status` : "band"}${nextStage ? ` · agla: ${escHtml(nextStage.label)}` : ""}</div></div>
     <div class="stat"><div class="s-cap">${svg(I.users)} Event</div><div class="s-val">${escHtml(eventUi(lead.eventType))}</div><div class="s-sub">${guests != null ? `~${guests} mehmaan` : "mehmaan —"}</div></div>
     <div class="stat"><div class="s-cap">${svg(I.cal)} Shaadi kab</div><div class="s-val">${escHtml(fmtMonth(lead.eventDate))}</div><div class="s-sub">${escHtml(monthsAway(lead.eventDate) || "date —")}</div></div>
     <div class="stat"><div class="s-cap">${svg(I.card)} Budget</div><div class="s-val tnum">${budget ? `~<span class="rs">Rs</span> ${pkNum(budget)}` : "—"}</div><div class="s-sub">${hot ? "high value lead" : "estimate"}</div></div>
@@ -266,7 +266,7 @@ function buildDetail(lead: Lead): string {
       <div class="card">
         <div class="card-h"><div><h2>Lead info</h2></div></div>
         <div class="dl">
-          <div class="dl-row"><span class="k">Stage</span><span class="v">${escHtml(su.label)}</span></div>
+          <div class="dl-row"><span class="k">Status</span><span class="v">${escHtml(su.label)}</span></div>
           <div class="dl-row"><span class="k">Aaya</span><span class="v">${escHtml(fmtDate(lead.createdAt))}</span></div>
           <div class="dl-row"><span class="k">Assigned</span><span class="v">${escHtml(lead.assignedTo?.fullName || "—")}</span></div>
           <div class="dl-row"><span class="k">Value</span><span class="v tnum">${budget ? `~Rs ${pkNum(budget)}` : "—"}</span></div>
@@ -335,7 +335,7 @@ export function LeadDetailArtifact({ leadId }: { leadId: number }) {
       const adv = t.closest("[data-adv-status]") as HTMLButtonElement | null
       if (adv?.dataset.advStatus) {
         adv.disabled = true; const o = adv.innerHTML; adv.textContent = "Ho raha…"
-        try { await LeadAPI.transition(leadId, { to: adv.dataset.advStatus as LeadStatus }); toast.success("Stage aage barh gaya"); qc.invalidateQueries({ queryKey: ["lead-detail", leadId] }) }
+        try { await LeadAPI.transition(leadId, { to: adv.dataset.advStatus as LeadStatus }); toast.success("Status aage barh gaya"); qc.invalidateQueries({ queryKey: ["lead-detail", leadId] }) }
         catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua"); adv.disabled = false; adv.innerHTML = o }
         return
       }
@@ -367,7 +367,7 @@ export function LeadDetailArtifact({ leadId }: { leadId: number }) {
               if (newBookingId) await LeadAPI.linkBooking(leadId, newBookingId)
               else await LeadAPI.transition(leadId, { to: "booked" as LeadStatus })
             } catch {
-              toast.error("Booking ban gayi, lekin lead 'jeeta' mark nahi hui — lead khol kar stage badal dein")
+              toast.error("Booking ban gayi, lekin lead 'jeeta' mark nahi hui — lead khol kar status badal dein")
             }
             qc.invalidateQueries({ queryKey: ["lead-detail", leadId] })
           },

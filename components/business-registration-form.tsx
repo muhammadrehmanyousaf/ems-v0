@@ -110,6 +110,7 @@ import {
 } from "@/components/bridal/bridal-card";
 import { BridalBadge } from "@/components/bridal/bridal-badge";
 import { FloralDivider } from "@/components/bridal/floral-divider";
+import { cancellationKey, partialRefundErrors, validatePartialRefund } from "@/lib/cancellation-policy";
 
 export function BusinessRegistrationForm() {
   // const [currentStep, setCurrentStep] = useState(0);
@@ -532,6 +533,7 @@ export function BusinessRegistrationForm() {
           currentErrors.staff = "Staff is required";
         if (!formData.cancelationPolicy)
           currentErrors.cancelationPolicy = "Cancellation policy is required";
+        else Object.assign(currentErrors, partialRefundErrors(formData)); // WP20
         if (!formData.downPaymentType)
           currentErrors.downPaymentType = "Down payment type is required";
         if (!formData.downPayment || Number(formData.downPayment) <= 0)
@@ -641,6 +643,16 @@ export function BusinessRegistrationForm() {
         title: "Validation Error",
         description: Object.values(validationErrors).join(", "),
       });
+      return;
+    }
+
+    // WP20: a fixed refund is bounded by the highest price listed, and the packages are only known now.
+    // Send the vendor back to the Cancellation Policy step (index 3 in every flow) instead of failing at the server.
+    const partialErrs = partialRefundErrors(formData);
+    if (Object.keys(partialErrs).length > 0) {
+      setErrors(partialErrs);
+      setCurrentStep(3);
+      toast({ title: "Check the refund", description: Object.values(partialErrs).join(", ") });
       return;
     }
 
@@ -806,6 +818,13 @@ export function BusinessRegistrationForm() {
         downPaymentType: formData.downPaymentType,
         downPayment: formData.downPayment,
         cancelationPolicy: formData.cancelationPolicy,
+        // WP20: the refund a Partially Refundable venue promises (the server validates it again and saves it as the venue's refund policy)
+        ...(cancellationKey(formData.cancelationPolicy) === "partially_refundable"
+          ? (() => {
+              const v = validatePartialRefund(formData.partialRefundType, formData.partialRefundValue);
+              return v.ok ? { partialRefundType: v.type, partialRefundValue: v.value } : {};
+            })()
+          : {}),
         covidComplaint: formData.covidComplaint,
         parking: formData.parking,
         // Backend column is INTEGER; blank stays undefined rather than 0, so a
@@ -972,6 +991,8 @@ export function BusinessRegistrationForm() {
           downPayment: 0,
           covidComplaint: false,
           cancelationPolicy: "",
+          partialRefundType: "",
+          partialRefundValue: "",
           images: [],
           imageFiles: [],
           packageImageFiles: [],
