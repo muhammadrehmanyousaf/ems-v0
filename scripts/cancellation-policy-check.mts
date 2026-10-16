@@ -107,6 +107,9 @@ for (const f of [
 const regForm = read("components/business-registration-form.tsx");
 check("the submit sends the validated detail, and only for Partially Refundable", /partialRefundType: v\.type, partialRefundValue: v\.value/.test(regForm) && /cancellationKey\(formData\.cancelationPolicy\) === "partially_refundable"/.test(regForm));
 
+check("the review step prints the cancellation policy through cancellationText, with the entered detail", /value=\{cancellationText\(formData\.cancelationPolicy, \{\s*type: formData\.partialRefundType,\s*value: formData\.partialRefundValue,\s*\}\)\}/.test(read("components/VendorStepForms/preview.tsx")));
+check("the review step humanizes package spec keys", /: humanizeKey\(cat\)/.test(read("components/VendorStepForms/preview.tsx")));
+
 // no component prints the stored policy raw: a JSX expression that is just the field, or a Field/StatTile value, must go through the label helper
 // (form controls such as <Select value={formData.cancelationPolicy}> hold the KEY on purpose: they are not display)
 const RAW_PRINT = /(\{\s*(?:vendor|venue|biz|activeBiz|business)\??\.(?:cancelationPolicy|cancellationPolicy)(?:\s*\|\|\s*(?:vendor|venue)\.cancellationPolicy)?\s*\})|(\bvalue=\{\s*vendor\.(?:cancelationPolicy|cancellationPolicy)[^)}]*\})/;
