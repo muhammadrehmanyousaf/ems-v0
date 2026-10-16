@@ -94,7 +94,7 @@ export function validatePartialRefund(type: unknown, value: unknown, ceiling: nu
       ok: false,
       field: "partialRefundValue",
       message: bounded
-        ? `Refund amount must be more than 0 and not above the minimum price (PKR ${group(Math.round(ceiling as number))})`
+        ? `Refund amount must be more than 0 and not above your highest listed price (PKR ${group(Math.round(ceiling as number))})`
         : "Refund amount must be more than 0",
     }
   }

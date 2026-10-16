@@ -68,7 +68,7 @@ check("partial fixed within the dearest package is fine", Object.keys(partialRef
 check("ceiling: minimum price wins, else dearest package, else none", fixedRefundCeiling({ minimumPrice: 100000, packages: [{ price: 500000 }] }) === 100000 && fixedRefundCeiling({ packages: [{ price: 150000 }, { price: "250000" }] }) === 250000 && fixedRefundCeiling({}) === null);
 
 // ── a stored key is shown as words ──
-check("humanizeKey: camelCase and snake_case", humanizeKey("SeatingArrangement") === "Seating Arrangement" && humanizeKey("soundLighting") === "Sound Lighting" && humanizeKey("non_refundable") === "Non refundable" && humanizeKey("Hall") === "Hall" && humanizeKey("Main Hall") === "Main Hall" && humanizeKey("AC") === "AC");
+check("humanizeKey: camelCase and snake_case", humanizeKey("SeatingArrangement") === "Seating Arrangement" && humanizeKey("soundLighting") === "Sound & Lighting" && humanizeKey("additionalServices") === "Additional Services" && humanizeKey("hall") === "Hall / Venue" && humanizeKey("non_refundable") === "Non refundable" && humanizeKey("Hall") === "Hall" && humanizeKey("Main Hall") === "Main Hall" && humanizeKey("AC") === "AC");
 
 // ── source scan ──
 const read = (rel: string) => readFileSync(path.join(ROOT, rel), "utf8");

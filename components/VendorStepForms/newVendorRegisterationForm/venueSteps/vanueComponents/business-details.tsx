@@ -26,12 +26,18 @@ interface BusinessDetails {
 
 const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
     const { businessType, setFormData, formData } = useFormContext()
-    const [selectedTypes, setSelectedTypes] = useState<string>('');
+    // Coming BACK to this step (to fix the refund after a failed check, say) used to start these three empty,
+    // and the sync effect below then wrote the empty values over the venue type and staff the vendor had chosen.
+    const [selectedTypes, setSelectedTypes] = useState<string>(
+        Array.isArray(formData.subBusinessType) ? (formData.subBusinessType[0] || '') : (formData.subBusinessType || ''),
+    );
     const [selectedTypeIndexes, setSelectedTypeIndexes] = useState<number[]>([]);
     const [selectedExpertise, setSelectedExpertise] = useState<string[]>(formData.expertise || []);
     const [selectedAmenities, setSelectedAmenities] = useState<string[]>(formData.amenities || []);
-    const [selectedstaff, setSelectedstaff] = useState<string[]>([]);
-    const [selectedStaffIndexes, setSelectedStaffIndexes] = useState<number[]>([]);
+    const [selectedstaff, setSelectedstaff] = useState<string[]>(formData.staff || []);
+    const [selectedStaffIndexes, setSelectedStaffIndexes] = useState<number[]>(
+        (formData.staff || []).map((s) => ['Male', 'Female', 'Transgender'].indexOf(s)).filter((i) => i >= 0),
+    );
     // A venue can offer in-house catering, allow outside caterers, or BOTH, so
     // this is a list. Existing drafts hold the old single string ("internal" /
     // "external") — widen it rather than dropping what the vendor already
