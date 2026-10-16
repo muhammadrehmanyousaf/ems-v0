@@ -16,6 +16,7 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { leadBudgetError, leadGuestsError, leadNumberMessageEn } from "@/lib/lead-numbers"
 import { enqueue as outboxEnqueue, isOutboxEnabled, isOffline } from "@/lib/outbox"
 import {
   FormBlockedHint,
@@ -225,12 +226,9 @@ export function LeadFormDialog({
     contactPhone: validatePkPhone(form.contactPhone, { label: "Phone", required: false }),
     contactWhatsapp: validatePkPhone(form.contactWhatsapp, { label: "WhatsApp", required: false }),
     contactEmail: validateEmail(form.contactEmail, { required: false }),
-    estimatedBudget: numOrU(form.estimatedBudget) != null && Number(form.estimatedBudget) < 0
-      ? "Budget can't be negative."
-      : undefined,
-    estimatedGuests: numOrU(form.estimatedGuests) != null && Number(form.estimatedGuests) < 0
-      ? "Guests can't be negative."
-      : undefined,
+    // WP21 — one rule with the server and the Leads drawer (lib/lead-numbers.ts): > 0, guests a whole number >= 1
+    estimatedBudget: ((e) => (e ? leadNumberMessageEn("budget", e) : undefined))(leadBudgetError(form.estimatedBudget)),
+    estimatedGuests: ((e) => (e ? leadNumberMessageEn("guests", e) : undefined))(leadGuestsError(form.estimatedGuests)),
     inquiry: validateOptionalText(form.inquiry, { label: "Inquiry / notes", max: 2000 }),
   }
   /**
@@ -334,14 +332,14 @@ export function LeadFormDialog({
             </Field>
             <Field label="Event date"><input type="date" className={inputCls} value={form.eventDate} onChange={(e) => set("eventDate", e.target.value)} /></Field>
             <Field label="Budget (Rs)">
-              <input id="lead-budget" type="number" min={0} step={1} inputMode="numeric"
+              <input id="lead-budget" type="number" min={1} step={1} inputMode="numeric"
                 className={cn(inputCls, "tabular-nums", shown.estimatedBudget && ERROR_INPUT_CLS)} value={form.estimatedBudget}
                 onChange={(e) => set("estimatedBudget", e.target.value)} onBlur={() => touch("estimatedBudget")}
                 {...fieldAria("lead-budget", shown.estimatedBudget)} />
               <FieldError id="lead-budget" message={shown.estimatedBudget} />
             </Field>
             <Field label="Guests">
-              <input id="lead-guests" type="number" min={0} step={1} inputMode="numeric"
+              <input id="lead-guests" type="number" min={1} step={1} inputMode="numeric"
                 className={cn(inputCls, "tabular-nums", shown.estimatedGuests && ERROR_INPUT_CLS)} value={form.estimatedGuests}
                 onChange={(e) => set("estimatedGuests", e.target.value)} onBlur={() => touch("estimatedGuests")}
                 {...fieldAria("lead-guests", shown.estimatedGuests)} />
