@@ -437,11 +437,15 @@ export default function BookingDetailPage() {
         setRefundPreview((p) => (p && Number.isFinite(now) ? { ...p, preview: { ...p.preview, refund: now } } : p));
         // The refund moved because the tier moved, so the forfeit line and the
         // breakdown moved with it: take the whole fresh preview, not just the figure.
-        getRefundPreview(booking.id).then((fresh) => { if (fresh) setRefundPreview(fresh); }).catch(() => {});
+        // WP26: the toast names the same TOTAL the dialog shows (policy refund + price-drop + declined-line), so it waits for the
+        // fresh preview; the server's `d.refund` is only the policy part.
+        const fresh = await getRefundPreview(booking.id).catch(() => null);
+        if (fresh) setRefundPreview(fresh);
+        const nowShown = fresh ? refundParts(fresh).total : now;
         toast({
           title: "Refund amount changed",
-          description: Number.isFinite(now)
-            ? `The refund is now ${fmt(now)}. Nothing was cancelled; check the new amount and confirm again.`
+          description: Number.isFinite(nowShown)
+            ? `The refund is now ${fmt(nowShown)}. Nothing was cancelled; check the new amount and confirm again.`
             : "The refund amount changed. Nothing was cancelled; check the new amount and confirm again.",
           variant: "destructive",
         });
