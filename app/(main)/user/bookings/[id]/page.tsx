@@ -364,10 +364,16 @@ export default function BookingDetailPage() {
   const handleCancel = async () => {
     if (!booking) return;
     setIsCancelling(true);
+    let keepDialogOpen = false;
     try {
       const refundFlow = async () => {
+        // PAY-CLOCK-014: pin the refund the customer was shown. If the figure
+        // moved before the click (a tier boundary passed) the server answers
+        // 409 REFUND_CHANGED and cancels nothing.
+        const shown = refundPreview?.preview?.refund;
         await axiosInstance.patch(
           `${BACKEND_URL}api/v1/bookings/${booking.id}/cancel`,
+          typeof shown === "number" && Number.isFinite(shown) ? { expectedRefund: shown } : undefined,
         );
         toast({
           title: "Booking cancelled",
@@ -403,6 +409,20 @@ export default function BookingDetailPage() {
        * Switch the dialog to the request route instead of reporting a failure
        * the customer can do nothing about.
        */
+      if (e?.response?.status === 409 && e?.response?.data?.data?.code === "REFUND_CHANGED") {
+        const d = e.response.data.data;
+        const now = Number(d?.refund);
+        setRefundPreview((p) => (p && Number.isFinite(now) ? { ...p, preview: { ...p.preview, refund: now } } : p));
+        toast({
+          title: "Refund amount changed",
+          description: Number.isFinite(now)
+            ? `The refund is now ${fmt(now)}. Nothing was cancelled; check the new amount and confirm again.`
+            : "The refund amount changed. Nothing was cancelled; check the new amount and confirm again.",
+          variant: "destructive",
+        });
+        keepDialogOpen = true;
+        return;
+      }
       if (e?.response?.status === 409 && e?.response?.data?.data?.code === "CANCEL_WINDOW_CLOSED") {
         setWindowClosed(true);
         setIsCancelling(false);
@@ -415,7 +435,7 @@ export default function BookingDetailPage() {
       });
     } finally {
       setIsCancelling(false);
-      setCancelDialogOpen(false);
+      if (!keepDialogOpen) setCancelDialogOpen(false);
     }
   };
 

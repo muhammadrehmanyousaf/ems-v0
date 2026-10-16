@@ -604,6 +604,10 @@ export interface RefundPreview {
   refundPolicyNote?: string | null;
   /** The name of the policy actually governing this booking. */
   policyName?: string | null;
+  /** PAY-CLOCK-014: the moment this figure was computed and when it stops being true (next tier boundary). */
+  validAt?: string;
+  validUntil?: string | null;
+  validUntilReason?: string | null;
   policy: RefundPolicy;
   preview: { refund: number; forfeit: number; breakdown: RefundBreakdown; tier: RefundTier; trace: unknown[] };
   comparison: { key: string; labelUr: string; labelEn: string; refund: number; forfeit: number; refundPct: number }[];
