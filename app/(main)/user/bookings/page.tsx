@@ -475,7 +475,7 @@ export default function BookingsPage() {
           }
         />
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-3 min-[1400px]:grid-cols-2">
           {filtered.map((booking) => {
             const sk = statusKey(booking.status);
             const cfg = STATUS_CONFIG[sk] || STATUS_CONFIG.pending;

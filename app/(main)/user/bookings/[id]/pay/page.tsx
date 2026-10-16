@@ -88,7 +88,7 @@ export default function PayBookingPage() {
       variant="ghost"
       size="sm"
       onClick={() => router.push(`/user/bookings/${bookingId}`)}
-      className="gap-1.5 mb-4"
+      className="gap-1.5 mb-2"
     >
       <ArrowLeft className="size-3.5" />
       Back to booking
@@ -230,8 +230,8 @@ export default function PayBookingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-bridal-ivory pb-24 lg:pb-12">
-      <div className="mx-auto w-full max-w-[1200px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
+    <main className="flex-1 bg-bridal-ivory pb-24 lg:pb-12">
+      <div className="mx-auto w-full max-w-[1280px] px-4 sm:px-6 lg:px-8 py-5 sm:py-6 lg:py-8">
         {back}
         {/* The same screen the booking flow ends on, so a customer who pays
             later sees exactly what they would have seen at the time — the
@@ -242,6 +242,7 @@ export default function PayBookingPage() {
           bookingId={bookingId}
           amount={instructions.amountDue}
           paymentType={instructions.paymentType}
+          layout="split"
         />
       </div>
     </main>

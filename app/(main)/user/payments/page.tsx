@@ -328,7 +328,7 @@ function PaymentsPageContent() {
             description="You have no pending payments right now."
           />
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-3 min-[1400px]:grid-cols-2">
             {pending.map((booking) => {
               const action = booking._resolved;
               const isRemaining = action.type === "remaining";

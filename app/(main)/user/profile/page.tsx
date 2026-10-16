@@ -402,6 +402,7 @@ const ProfilePage = () => {
         description="Manage your personal information and account security."
       />
 
+      <div className="grid grid-cols-1 items-start gap-6 min-[1400px]:grid-cols-2">
       {/* Avatar + identity card */}
       <SectionCard
         title="Personal information"
@@ -483,7 +484,7 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:max-[1399px]:grid-cols-2 gap-5">
           <div className="space-y-2">
             <Label htmlFor="fullName" className="text-[12px] font-medium text-foreground inline-flex items-center gap-1.5">
               <User className="size-3.5 text-muted-foreground" />
@@ -514,7 +515,7 @@ const ProfilePage = () => {
             />
           </div>
 
-          <div className="space-y-2 md:col-span-2">
+          <div className="space-y-2 md:max-[1399px]:col-span-2">
             <Label htmlFor="phoneNumber" className="text-[12px] font-medium text-foreground inline-flex items-center gap-1.5">
               <Phone className="size-3.5 text-muted-foreground" />
               Phone number
@@ -543,7 +544,7 @@ const ProfilePage = () => {
         title="Security"
         description="Update your password. You'll be signed out after a successful change."
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:max-[1399px]:grid-cols-2 gap-5">
           <div className="space-y-2">
             <Label htmlFor="oldPassword" className="text-[12px] font-medium text-foreground inline-flex items-center gap-1.5">
               <Lock className="size-3.5 text-muted-foreground" />
@@ -615,7 +616,7 @@ const ProfilePage = () => {
             )}
           </div>
 
-          <div className="space-y-2 md:col-span-2">
+          <div className="space-y-2 md:max-[1399px]:col-span-2">
             <Label htmlFor="repeatPassword" className="text-[12px] font-medium text-foreground inline-flex items-center gap-1.5">
               <CheckCircle className="size-3.5 text-muted-foreground" />
               Confirm new password
@@ -676,6 +677,7 @@ const ProfilePage = () => {
           </Button>
         </div>
       </SectionCard>
+      </div>
     </PageContainer>
   );
 };

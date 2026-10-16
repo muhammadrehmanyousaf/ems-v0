@@ -30,7 +30,7 @@
 
 import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import { Copy, Check, Clock, FileText, Home, AlertTriangle, Loader2, Send } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { errorMessage, claimAlreadyOpen } from "@/lib/utils/api-error"
 import {
@@ -48,6 +48,13 @@ interface BankTransferScreenProps {
   paymentType: string
   customerEmail?: string
   bookingDate?: string
+  /**
+   * "stack" (default): one narrow column, as the booking desk and the plan page expect.
+   * "split": a full page. Wide windows get two columns: the amount, reference and the venue's accounts
+   * (what to pay, and where) on the right, kept in view, and the heading and the report form (what to do
+   * next) on the left. Narrow windows stay one column in the same order.
+   */
+  layout?: "stack" | "split"
 }
 
 const METHOD_LABELS: Record<ClaimMethod, string> = {
@@ -63,6 +70,7 @@ const FOCUS =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2"
 const LABEL = "font-bridal text-[11px] leading-[14px] uppercase tracking-[0.18em] text-bridal-text-label"
 const CARD = "w-full max-w-[560px] rounded-[4px] border border-bridal-beige bg-white"
+const CARD_FULL = "w-full rounded-[4px] border border-bridal-beige bg-white"
 const INPUT = `h-11 w-full rounded-[4px] border border-bridal-beige bg-white px-3 font-bridal text-[14px] text-bridal-charcoal placeholder:text-bridal-text-soft/70 focus:border-bridal-gold-dark ${FOCUS}`
 const COPY_BTN = `inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-bridal-text-soft transition-colors duration-150 hover:bg-bridal-blush/45 hover:text-bridal-gold-dark ${FOCUS}`
 const OUTLINE_LINK = `inline-flex h-12 w-full items-center justify-center gap-2 rounded-[4px] border border-bridal-beige bg-white px-6 font-bridal text-[13px] font-medium uppercase tracking-[0.18em] text-bridal-charcoal transition-colors duration-150 hover:border-bridal-gold-dark hover:text-bridal-gold-dark ${FOCUS}`
@@ -74,7 +82,25 @@ export default function BankTransferScreen({
   amount,
   paymentType,
   bookingDate,
+  layout = "stack",
 }: BankTransferScreenProps) {
+  const split = layout === "split"
+  const card = split ? CARD_FULL : CARD
+  const cap = split ? "" : "max-w-[560px]"
+  // The summary column is kept in view while the form is filled in, but only when it fits the window: a column
+  // taller than the window that is pinned to its top would leave its lower part unreachable.
+  const sumRef = useRef<HTMLDivElement>(null)
+  const [pin, setPin] = useState(false)
+  useEffect(() => {
+    if (!split || !sumRef.current) return
+    const el = sumRef.current
+    const measure = () => setPin(el.offsetHeight <= window.innerHeight - 112)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    window.addEventListener("resize", measure)
+    return () => { ro.disconnect(); window.removeEventListener("resize", measure) }
+  }, [split])
   const [copied, setCopied] = useState<string | null>(null)
   const [instructions, setInstructions] = useState<PaymentInstructions | null>(null)
   const [loading, setLoading] = useState(true)
@@ -201,9 +227,9 @@ export default function BankTransferScreen({
   let block = 0
 
   return (
-    <div className="w-full">
+    <div className={split ? "grid w-full min-[1180px]:grid-cols-[minmax(0,1fr)_minmax(340px,380px)] min-[1180px]:grid-rows-[auto_1fr] min-[1180px]:gap-x-10" : "w-full"}>
       {/* Heading — the screen's own: an arrival, not a step. */}
-      <header className="animate-stagger-fade-up" style={stagger(block++)}>
+      <header className={`animate-stagger-fade-up ${split ? "min-[1180px]:col-start-1 min-[1180px]:row-start-1" : ""}`} style={stagger(block++)}>
         <p className="font-bridal text-[11px] font-medium uppercase leading-[14px] tracking-[0.18em] text-bridal-gold-dark">
           Secure your date
         </p>
@@ -218,10 +244,14 @@ export default function BankTransferScreen({
         </p>
       </header>
 
+      <div
+        ref={sumRef}
+        className={split ? `min-[1180px]:col-start-2 min-[1180px]:row-span-2 min-[1180px]:row-start-1 min-[1180px]:self-start ${pin ? "min-[1180px]:sticky min-[1180px]:top-20" : ""}` : undefined}
+      >
       {/* Amount — the one figure that must be unmistakable, on solid charcoal. */}
       <section
         aria-label="Amount to transfer"
-        className="relative mt-6 w-full max-w-[560px] overflow-hidden rounded-[4px] bg-bridal-charcoal px-4 py-3 text-bridal-ivory animate-stagger-fade-up"
+        className={`relative ${split ? "mt-6 min-[1180px]:mt-0" : "mt-6"} w-full ${cap} overflow-hidden rounded-[4px] bg-bridal-charcoal px-4 py-3 text-bridal-ivory animate-stagger-fade-up`}
         style={stagger(block++)}
       >
         <div className="pointer-events-none absolute inset-0 bg-mughal-jaal opacity-[0.08]" aria-hidden />
@@ -246,7 +276,7 @@ export default function BankTransferScreen({
           own block rather than a bullet buried in an instructions list. */}
       <section
         aria-label="Transfer reference"
-        className={`${CARD} mt-3 flex min-h-[72px] items-center justify-between gap-3 border-bridal-gold-dark px-4 py-2 animate-stagger-fade-up`}
+        className={`${card} mt-3 flex min-h-[72px] items-center justify-between gap-3 border-bridal-gold-dark px-4 py-2 animate-stagger-fade-up`}
         style={stagger(block++)}
       >
         <div className="min-w-0">
@@ -268,13 +298,13 @@ export default function BankTransferScreen({
       </section>
 
       {loading && (
-        <div className="mt-3 flex h-12 w-full max-w-[560px] items-center gap-2 font-bridal text-[13px] leading-[18px] text-bridal-text-soft">
+        <div className={`mt-3 flex h-12 w-full ${cap} items-center gap-2 font-bridal text-[13px] leading-[18px] text-bridal-text-soft`}>
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Loading the venue&apos;s account details…
         </div>
       )}
 
       {!loading && loadError && (
-        <div className="mt-3 flex w-full max-w-[560px] items-start gap-2 rounded-[4px] border border-rose-200 bg-rose-50 px-4 py-3" role="alert">
+        <div className={`mt-3 flex w-full ${cap} items-start gap-2 rounded-[4px] border border-rose-200 bg-rose-50 px-4 py-3`} role="alert">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" aria-hidden />
           <p className="font-bridal text-[13px] leading-[18px] text-rose-800">
             {loadError} You can still contact the venue directly to arrange payment.
@@ -288,7 +318,7 @@ export default function BankTransferScreen({
         <section
           key={vendor.businessId}
           aria-label={`Transfer to ${vendor.businessName || "the venue"}`}
-          className={`${CARD} mt-3 animate-stagger-fade-up`}
+          className={`${card} mt-3 animate-stagger-fade-up`}
           style={stagger(block++)}
         >
           <div className="flex h-9 items-center justify-between gap-3 border-b border-bridal-beige px-4">
@@ -370,7 +400,7 @@ export default function BankTransferScreen({
 
       {/* Several venues on one booking: the figure above covers all of them. */}
       {!loading && !loadError && allVendors.length > 1 && (
-        <div className={`${CARD} mt-3 px-4 py-3`} role="note" aria-label="Venues on this booking">
+        <div className={`${card} mt-3 px-4 py-3`} role="note" aria-label="Venues on this booking">
           <p className="font-bridal text-[13px] leading-[18px] text-bridal-text">
             {shares
               ? <>This booking is with {allVendors.length} venues and the amount above is the total. Each venue is paid
@@ -392,7 +422,7 @@ export default function BankTransferScreen({
       {/* No published account is a normal state, not an error. Say what to do
           instead of showing an account that isn't theirs. */}
       {!loading && !loadError && vendorsWithAccounts.length === 0 && allVendors.length <= 1 && (
-        <div className={`${CARD} mt-3 px-4 py-3`}>
+        <div className={`${card} mt-3 px-4 py-3`}>
           <p className="font-bridal text-[13px] leading-[18px] text-bridal-text">
             This venue hasn&apos;t published bank details yet. Contact them to arrange
             payment{instructions?.vendors?.[0]?.whatsappNumber
@@ -402,10 +432,13 @@ export default function BankTransferScreen({
         </div>
       )}
 
+      </div>
+
+      <div className={split ? "min-[1180px]:col-start-1 min-[1180px]:row-start-2" : undefined}>
       {/* Report the transfer, in-product. This is what replaces "send a
           screenshot to a hardcoded WhatsApp number". */}
       {!loading && !claimed && instructions?.paymentType && (
-        <section aria-label="Report your transfer" className={`${CARD} mt-3 animate-stagger-fade-up`} style={stagger(block++)}>
+        <section aria-label="Report your transfer" className={`${card} ${split ? "mt-6" : "mt-3"} animate-stagger-fade-up`} style={stagger(block++)}>
           <div className="flex h-9 items-center border-b border-bridal-beige px-4">
             <p className={LABEL}>Already sent it?</p>
           </div>
@@ -425,6 +458,7 @@ export default function BankTransferScreen({
                 </select>
               </div>
             )}
+            <div className={split ? "grid gap-3 sm:max-[1179px]:grid-cols-[minmax(0,170px)_minmax(0,1fr)] min-[1260px]:grid-cols-[minmax(0,170px)_minmax(0,1fr)]" : "space-y-3"}>
             <div>
               <label htmlFor="bank-claim-method" className={`mb-1 block ${LABEL}`}>How you paid</label>
               <select
@@ -457,6 +491,7 @@ export default function BankTransferScreen({
                 </p>
               </div>
             )}
+            </div>
 
             {/* The screenshot. Optional, and said to be optional — a customer
                 hunting for a file on a phone at 11pm is a place people abandon,
@@ -518,7 +553,7 @@ export default function BankTransferScreen({
       )}
 
       {reports.map((r) => (
-        <div key={r.key} className="mt-3 flex w-full max-w-[560px] items-start gap-2 rounded-[4px] border border-bridal-sage/45 bg-bridal-sage/15 px-4 py-3" role="status" data-claim-report={r.key}>
+        <div key={r.key} className={`mt-3 flex w-full ${cap} items-start gap-2 rounded-[4px] border border-bridal-sage/45 bg-bridal-sage/15 px-4 py-3`} role="status" data-claim-report={r.key}>
           <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#3F6B43]" strokeWidth={2.5} aria-hidden />
           <div className="min-w-0">
             <p className="font-bridal text-[13px] leading-[18px] text-[#3F6B43]">
@@ -539,7 +574,7 @@ export default function BankTransferScreen({
         </div>
       ))}
       {proofWarning && (
-        <p className="mt-1 w-full max-w-[560px] font-bridal text-[12px] leading-[16px] text-bridal-text-soft">
+        <p className={`mt-1 w-full ${cap} font-bridal text-[12px] leading-[16px] text-bridal-text-soft`}>
           {proofWarning}
         </p>
       )}
@@ -547,7 +582,7 @@ export default function BankTransferScreen({
       {/* Honest disclosure. The previous copy claimed Wedding Wala holds the
           deposit and refunds it if the vendor declines — neither of which is
           true, and the first is not something a non-EMI may lawfully do. */}
-      <section aria-label="How this works" className={`${CARD} mt-3 animate-stagger-fade-up`} style={stagger(block++)}>
+      <section aria-label="How this works" className={`${card} mt-3 animate-stagger-fade-up`} style={stagger(block++)}>
         <div className="flex h-9 items-center gap-1.5 border-b border-bridal-beige px-4">
           <Clock className="h-3.5 w-3.5 text-bridal-gold-dark" aria-hidden />
           <p className={LABEL}>How this works</p>
@@ -565,7 +600,7 @@ export default function BankTransferScreen({
         </ul>
       </section>
 
-      <div className="mt-6 grid w-full max-w-[560px] grid-cols-1 gap-3 xl:grid-cols-2 animate-stagger-fade-up" style={stagger(block++)}>
+      <div className={`mt-6 grid w-full ${cap} grid-cols-1 gap-3 xl:grid-cols-2 animate-stagger-fade-up`} style={stagger(block++)}>
         <Link href="/user/bookings" className={PRIMARY_LINK}>
           <FileText className="h-3.5 w-3.5" aria-hidden />
           View my bookings
@@ -574,6 +609,7 @@ export default function BankTransferScreen({
           <Home className="h-3.5 w-3.5" aria-hidden />
           Back to home
         </Link>
+      </div>
       </div>
     </div>
   )
