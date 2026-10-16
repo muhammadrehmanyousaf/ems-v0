@@ -375,9 +375,9 @@ export default function PlanPayPage() {
                   </span>
                 </div>
                 <p className="text-[11px] text-bridal-text-soft leading-relaxed pt-1">
-                  Each function is charged on its own — the whole-wedding discount
-                  was already applied when you booked. Paying here confirms each
-                  vendor.
+                  Each function is paid to its own venue — the whole-wedding discount
+                  was already applied when you booked. A venue confirms once your
+                  transfer shows in its account.
                 </p>
               </div>
             </SectionCard>
@@ -446,9 +446,8 @@ export default function PlanPayPage() {
             </SectionCard>
 
             <p className="text-[10.5px] text-bridal-text-soft italic leading-relaxed px-1">
-              You pay each venue directly, the same as a single booking. If a
-              card is declined, you can retry that function right here; the others
-              are unaffected.
+              You pay each venue directly, the same as a single booking. Report
+              each transfer on its own; the other functions are unaffected.
             </p>
           </div>
         </div>

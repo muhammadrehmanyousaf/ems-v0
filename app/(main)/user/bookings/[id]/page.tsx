@@ -73,6 +73,9 @@ import { getRefundPreview, requestCancellation, type RefundPreview } from "@/lib
 import { slotText, slotFromBooking } from "@/lib/booking/slot-vocabulary";
 import { bookingMoney } from "@/lib/utils/booking-money";
 import { PaymentInstructionsAPI } from "@/lib/api/paymentInstructions";
+import { paymentNotDueYet, customerDepositLine } from "@/lib/payment-status";
+import { BookingAPI, type DepositPosition } from "@/lib/api/bookings";
+import { dayTextCustomer } from "@/lib/utils/qist";
 import { cancelRouteFor, cancelErrorMessage, isPaymentAlreadyReceived, isClosedBookingStatus } from "@/lib/bookings/cancel-route";
 
 interface BookingDetail {
@@ -267,19 +270,35 @@ export default function BookingDetailPage() {
   // Pay page asks for, so the summary, the button and the Pay page can never show different amounts.
   const [dueNow, setDueNow] = useState<number | null>(null);
   const [dueState, setDueState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+  // PAY-UI_CUSTOMER-010: set when the server's figure is only the NEXT qist, not due yet (a venue that asks no advance).
+  const [nextPayment, setNextPayment] = useState<{ amount: number; dueDate: string | null } | null>(null);
   useEffect(() => {
     if (!booking) return;
     if (isClosedBookingStatus((booking.status || "").toLowerCase()) || bookingMoney(booking as never).outstanding <= 0) {
-      setDueNow(null); setDueState("idle"); return;
+      setDueNow(null); setNextPayment(null); setDueState("idle"); return;
     }
     let live = true;
     setDueState("loading");
     PaymentInstructionsAPI.get(booking.id)
-      .then((d) => { if (live) { setDueNow(Number(d?.amountDue ?? 0)); setDueState("ready"); } })
+      .then((d) => {
+        if (!live) return;
+        const notYet = paymentNotDueYet(d);
+        setNextPayment(notYet);
+        setDueNow(notYet ? 0 : Number(d?.amountDue ?? 0));
+        setDueState("ready");
+      })
       .catch(() => { if (live) setDueState("failed"); });
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [booking?.id, booking?.status, booking?.paymentStatus, booking?.downPayment, booking?.totalAmount]);
+  // PAY-UI_CUSTOMER-011: the refundable deposit, read-only (the customer may read GET /bookings/:id/deposit).
+  const [deposit, setDeposit] = useState<DepositPosition | null>(null);
+  useEffect(() => {
+    if (!booking?.id) return;
+    let live = true;
+    BookingAPI.getDeposit(booking.id).then((p) => { if (live) setDeposit(p); }).catch(() => { if (live) setDeposit(null); });
+    return () => { live = false; };
+  }, [booking?.id, booking?.status]);
   useEffect(() => {
     if (!cancelDialogOpen || !booking) { setRefundPreview(null); return; }
     let cancelled = false;
@@ -426,6 +445,9 @@ export default function BookingDetailPage() {
       if (e?.response?.status === 409 && e?.response?.data?.data?.code === "CANCEL_WINDOW_CLOSED") {
         setWindowClosed(true);
         setIsCancelling(false);
+        // PAY-UI_CUSTOMER-006: the finally below used to close the dialog anyway,
+        // so the "ask the venue" mode never appeared.
+        keepDialogOpen = true;
         return; // keep the dialog open, now in "ask the venue" mode
       }
       toast({
@@ -598,6 +620,7 @@ export default function BookingDetailPage() {
   const nothingDueNow = dueState === "ready" && (dueNow ?? 0) <= 0;
   const payLabel = isPartiallyPaid ? "Pay remaining" : "Pay now";
   const remaining = outstanding;
+  const depositLine = customerDepositLine(deposit);
   const primaryVendorName =
     booking.bookingDetails?.[0]?.business?.name || "Booking details";
 
@@ -612,7 +635,7 @@ export default function BookingDetailPage() {
         <ArrowLeft className="size-3.5" />
         All bookings
       </Button>
-      {showPayCta ? (
+      {showPayCta && !nothingDueNow ? (
         <Button
           size="sm"
           className="gap-1.5"
@@ -1010,6 +1033,15 @@ export default function BookingDetailPage() {
                   </span>
                 </div>
               ) : null}
+              {depositLine ? (
+                <div className="pt-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Refundable deposit</span>
+                    <span className="font-medium text-foreground tabular-nums">{fmt(depositLine.amount)}</span>
+                  </div>
+                  <p className="mt-0.5 text-[11.5px] leading-snug text-muted-foreground">{depositLine.note}</p>
+                </div>
+              ) : null}
             </div>
 
             {showPayCta && dueState === "loading" ? (
@@ -1018,7 +1050,14 @@ export default function BookingDetailPage() {
 
             {showPayCta && nothingDueNow ? (
               <div className="mt-4 pt-4 border-t border-border/60 text-[12.5px] leading-snug text-muted-foreground">
-                Nothing is due right now. The remaining <span className="font-medium text-foreground tabular-nums">{fmt(outstanding)}</span> is due before your event. Your venue will tell you when.
+                {nextPayment ? (
+                  <>
+                    Nothing is due right now. Your next payment, <span className="font-medium text-foreground tabular-nums">{fmt(nextPayment.amount)}</span>
+                    {nextPayment.dueDate ? <> is due on {dayTextCustomer(nextPayment.dueDate)}.</> : <> is due later.</>}
+                  </>
+                ) : (
+                  <>Nothing is due right now. The remaining <span className="font-medium text-foreground tabular-nums">{fmt(outstanding)}</span> is due before your event. Your venue will tell you when.</>
+                )}
               </div>
             ) : null}
 
@@ -1303,7 +1342,12 @@ export default function BookingDetailPage() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
-                if (windowClosed) { e.preventDefault(); void handleRequestCancellation(); return; }
+                // Radix closes the dialog on every action click. Hold it open and let
+                // the handlers close it: handleCancel keeps it open on REFUND_CHANGED /
+                // CANCEL_WINDOW_CLOSED (PAY-UI_CUSTOMER-006, RD-7) and closes it on
+                // success or any other answer.
+                e.preventDefault();
+                if (windowClosed) { void handleRequestCancellation(); return; }
                 void handleCancel();
               }}
               disabled={isCancelling || requestSent}

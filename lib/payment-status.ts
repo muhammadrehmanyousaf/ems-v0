@@ -139,8 +139,83 @@ export function customerPaymentFromView(booking: {
   // Nothing left to pay on a priced booking: history, whatever the flag says.
   if (v.total > 0 && v.outstanding <= 0) return { type: "done", amount: v.total, label: "Paid" };
   const amount = v.amountDue > 0 ? v.amountDue : v.outstanding;
+  // PAY-UI_CUSTOMER-010: the server quotes the next qist as `amountDue` even when nothing is due today
+  // (`dueNow` 0). With no money received yet that is a venue that asks no advance: not "Pay now".
+  if (v.amountDue > 0 && v.dueNow === 0 && v.received <= 0 && !(Number(v.overdueAmount) > 0)) {
+    return { type: "awaiting_down", amount, label: "Next payment" };
+  }
   const remaining = v.paymentType === "remaining" || v.received > 0;
   return remaining
     ? { type: "remaining", amount, label: "Pay remaining" }
     : { type: "awaiting_down", amount, label: "Pay now" };
+}
+
+/**
+ * PAY-UI_CUSTOMER-010 - a venue that asks no advance has ONE qist (the whole
+ * bill, due near the event). The server's `amountDue` falls back to the next
+ * qist when nothing is due today, so the booking and pay pages asked the
+ * customer to move the entire balance weeks or months early while the review
+ * step said "Advance Rs 0".
+ *
+ * Reads only what the server states about the schedule: nothing has been
+ * received, a qist is still open, and none of the open ones is overdue or due
+ * today. Anything else (money already received, no schedule to read, an
+ * overdue qist) returns null and the caller keeps the server's figure.
+ */
+export interface NotDueYetInput {
+  paymentType?: string | null;
+  amountDue?: number;
+  amountReceived?: number;
+  overdueAmount?: number;
+  installments?: Array<{ state?: string; remaining?: number; waived?: boolean }>;
+  nextInstallment?: { dueDate?: string } | null;
+}
+
+export function paymentNotDueYet(i: NotDueYetInput | null | undefined): { amount: number; dueDate: string | null } | null {
+  if (!i || !i.paymentType || !(Number(i.amountDue) > 0)) return null;
+  if (!(Number(i.amountReceived) === 0)) return null; // unstated or already paying: server figure stands
+  if (Number(i.overdueAmount) > 0) return null;
+  const open = (Array.isArray(i.installments) ? i.installments : []).filter((q) => !q.waived && Number(q.remaining) > 0);
+  if (open.length === 0) return null; // no schedule to read
+  if (open.some((q) => q.state === "overdue" || q.state === "due_today")) return null;
+  return { amount: Number(i.amountDue), dueDate: i.nextInstallment?.dueDate ?? null };
+}
+
+/**
+ * PAY-UI_CUSTOMER-011 - the customer's read-only line for the refundable deposit.
+ *
+ * The review step promises "Refundable deposit Rs 40,000 (separate)" and then no
+ * customer screen mentioned it again. `GET /bookings/:id/deposit` is readable by
+ * the customer (WP04); this turns that position into one amount and one
+ * sentence. Returns null when no deposit was ever taken. It states what the
+ * server states and does nothing else: answering a claim is not offered here.
+ */
+export interface DepositPositionLike {
+  deposit?: number;
+  status?: string | null;
+  claimed?: number;
+  deducted?: number;
+  returnable?: number;
+  openClaims?: number;
+  disputedClaims?: number;
+  acceptedClaims?: number;
+}
+
+export function customerDepositLine(pos: DepositPositionLike | null | undefined): { amount: number; note: string } | null {
+  const amount = Number(pos?.deposit);
+  if (!pos || !Number.isFinite(amount) || amount <= 0) return null;
+  const rs = (n: number) => `Rs. ${Math.round(n).toLocaleString()}`;
+  const live = Number(pos.openClaims || 0) + Number(pos.disputedClaims || 0) + Number(pos.acceptedClaims || 0);
+  const status = String(pos.status || "pending");
+  let note: string;
+  if (status === "returned") note = "Returned to you.";
+  else if (status === "partially_returned") note = `Part returned; ${rs(Number(pos.deducted || 0))} was kept for damage.`;
+  else if (status === "forfeited") note = "Kept by the venue.";
+  else if (status === "void") note = "Not charged: the booking was cancelled.";
+  else if (live > 0) {
+    note = `The venue has raised a damage claim of ${rs(Number(pos.claimed || 0))}. The deposit is returned once it is settled.`;
+  } else {
+    note = "Separate from your booking total. Returned after the event if nothing is damaged.";
+  }
+  return { amount, note };
 }
