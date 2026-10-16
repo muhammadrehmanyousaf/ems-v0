@@ -405,7 +405,10 @@ export function LeadsArtifact() {
           try {
             if (editId) await LeadAPI.update(editId, { ...common, businessId: bizPick || undefined } as UpdateLeadInput)
             else { if (!bizPick) { toast.error("Venue select karein"); btn.disabled = false; return } await LeadAPI.create({ businessId: bizPick, ...common } as CreateLeadInput) }
-            toast.success(editId ? "Lead update ho gaya" : "Naya lead ban gaya"); closeDrawer(s); qc.invalidateQueries({ queryKey: ["leads-artifact"] })
+            // WP21 — the list shows the venue picked in the sidebar. A lead saved under ANOTHER venue is real, but it is not in
+            // this list: say where it went instead of a plain "ban gaya" next to a list that did not change.
+            const elsewhere = bizPick && bizRef.current != null && Number(bizRef.current) !== bizPick
+            toast.success(editId ? "Lead update ho gaya" : elsewhere ? `Naya lead ban gaya — ${bizListRef.current.find((b) => b.id === bizPick)?.name || "doosre venue"} mein (sidebar se wo venue chunein)` : "Naya lead ban gaya"); closeDrawer(s); qc.invalidateQueries({ queryKey: ["leads-artifact"] })
           } catch (err: unknown) { if (!showLeadFieldError(s, err)) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua"); btn.disabled = false; btn.textContent = editId ? "Update karein" : "Lead add karein" }
           return
         }

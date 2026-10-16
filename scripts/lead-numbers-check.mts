@@ -64,12 +64,14 @@ const drawer = src("components/dashboard/mainScreens/leads/artifact/leads-artifa
 const dialog = src("components/dashboard/mainScreens/leads/redesigned/lead-form-dialog.tsx");
 check("drawer imports lib/lead-numbers", drawer.includes('from "@/lib/lead-numbers"'));
 check("dialog imports lib/lead-numbers", dialog.includes('from "@/lib/lead-numbers"'));
-const iCheck = drawer.indexOf("leadNumberProblem(s,");
+const iCheck = drawer.indexOf("if (leadNumberProblem(s,");
 const iSend = drawer.indexOf("LeadAPI.create(");
 check("drawer validates budget/guests before the create call", iCheck > 0 && iSend > 0 && iCheck < iSend, `check@${iCheck} create@${iSend}`);
 check("drawer budget input has min=1", /id="ld-budget"/.test(drawer) && /type="number" min="1" id="ld-budget"/.test(drawer));
 check("drawer guests input has min=1", /type="number" min="1" step="1" id="ld-guests"/.test(drawer));
 check("drawer does not send an unchecked negative (no bare Number(val(\"ld-budget\")) before the check)", iCheck < drawer.indexOf('Number(val("ld-budget"))'));
+
+check("a lead saved under another venue says where it went", drawer.includes("const elsewhere = bizPick && bizRef.current != null && Number(bizRef.current) !== bizPick") && drawer.includes("sidebar se wo venue chunein"));
 
 // ── wording: "Status", not "Stage", on every lead label the owner can read ──
 const detail = src("components/dashboard/mainScreens/leads/artifact/lead-detail-artifact.tsx");
