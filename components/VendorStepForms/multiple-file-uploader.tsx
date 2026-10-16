@@ -74,25 +74,25 @@ export default function MultipleFileUploader({ setFiles, files, multiple = true 
           {...getRootProps()}
           className={`relative border-2 border-dashed rounded-2xl cursor-pointer transition-all duration-200
             ${isDragActive
-              ? "border-violet-500 bg-violet-50 scale-[1.01] shadow-lg shadow-violet-100"
-              : "border-neutral-300 bg-neutral-50/80 hover:border-violet-400 hover:bg-violet-50/50 hover:shadow-md"
+              ? "border-bridal-gold-dark bg-bridal-cream scale-[1.01] shadow-lg shadow-bridal-gold/20"
+              : "border-neutral-300 bg-neutral-50/80 hover:border-bridal-gold hover:bg-bridal-cream/50 hover:shadow-md"
             }`}
         >
           <input {...getInputProps()} />
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center select-none">
-            <div className={`mb-5 p-5 rounded-2xl transition-colors duration-200 ${isDragActive ? "bg-violet-100" : "bg-white shadow-sm border border-neutral-100"}`}>
-              <Upload className={`size-9 transition-colors duration-200 ${isDragActive ? "text-violet-500" : "text-neutral-400"}`} />
+            <div className={`mb-5 p-5 rounded-2xl transition-colors duration-200 ${isDragActive ? "bg-bridal-sand" : "bg-white shadow-sm border border-neutral-100"}`}>
+              <Upload className={`size-9 transition-colors duration-200 ${isDragActive ? "text-bridal-gold-dark" : "text-neutral-400"}`} />
             </div>
             {isDragActive ? (
               <>
-                <p className="text-violet-600 font-semibold text-lg">Release to upload your images</p>
-                <p className="text-violet-400 text-sm mt-1">Files will be added to your portfolio</p>
+                <p className="text-bridal-gold-dark font-semibold text-lg">Release to upload your images</p>
+                <p className="text-bridal-gold-dark text-sm mt-1">Files will be added to your portfolio</p>
               </>
             ) : (
               <>
                 <p className="text-neutral-800 font-semibold text-base">Drag & drop your images here</p>
                 <p className="text-neutral-400 text-sm mt-1.5">
-                  or <span className="text-violet-500 font-semibold underline underline-offset-2 cursor-pointer">click to browse</span>
+                  or <span className="text-bridal-gold-dark font-semibold underline underline-offset-2 cursor-pointer">click to browse</span>
                 </p>
                 <div className="flex items-center gap-2 mt-4 text-xs text-neutral-400 bg-white border border-neutral-100 px-3 py-1.5 rounded-full shadow-sm">
                   <span className="font-medium text-neutral-500">JPG, JPEG, PNG</span>
@@ -114,8 +114,8 @@ export default function MultipleFileUploader({ setFiles, files, multiple = true 
           {/* Header row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-violet-100 rounded-lg">
-                <Images className="size-4 text-violet-600" />
+              <div className="p-1.5 bg-bridal-sand rounded-lg">
+                <Images className="size-4 text-bridal-gold-dark" />
               </div>
               <span className="text-sm font-semibold text-neutral-700">Portfolio Images</span>
             </div>
@@ -123,7 +123,7 @@ export default function MultipleFileUploader({ setFiles, files, multiple = true 
               <span className={`text-xs font-medium border px-2.5 py-1 rounded-full
                 ${isAtLimit
                   ? "bg-red-50 text-red-600 border-red-200"
-                  : "bg-violet-50 text-violet-600 border-violet-200"
+                  : "bg-bridal-cream text-bridal-gold-dark border-bridal-beige"
                 }`}>
                 {files.length} / {MAX_IMAGES}
               </span>
@@ -131,7 +131,7 @@ export default function MultipleFileUploader({ setFiles, files, multiple = true 
                 <button
                   type="button"
                   onClick={open}
-                  className="flex items-center gap-1.5 text-xs font-medium text-violet-600 bg-violet-50 hover:bg-violet-100 border border-violet-200 px-3 py-1.5 rounded-full transition-colors duration-150"
+                  className="flex items-center gap-1.5 text-xs font-medium text-bridal-gold-dark bg-bridal-cream hover:bg-bridal-sand border border-bridal-beige px-3 py-1.5 rounded-full transition-colors duration-150"
                 >
                   <ImagePlus size={13} />
                   Add more
@@ -153,7 +153,7 @@ export default function MultipleFileUploader({ setFiles, files, multiple = true 
               ${isAtLimit
                 ? "border-neutral-200 bg-neutral-50/30 cursor-not-allowed"
                 : isDragActive
-                  ? "border-violet-400 bg-violet-50"
+                  ? "border-bridal-gold bg-bridal-cream"
                   : "border-neutral-200 bg-neutral-50/50"
               }`}
           >
@@ -197,7 +197,7 @@ export default function MultipleFileUploader({ setFiles, files, multiple = true 
 
               {/* Drag hint */}
               {isDragActive && !isAtLimit && (
-                <div className="col-span-full flex items-center justify-center py-4 text-violet-500 font-medium text-sm">
+                <div className="col-span-full flex items-center justify-center py-4 text-bridal-gold-dark font-medium text-sm">
                   <Upload size={16} className="mr-2" />
                   Drop to add images
                 </div>

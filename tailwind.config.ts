@@ -77,7 +77,11 @@ const config: Config = {
   			},
   			primary: {
   				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
+  				foreground: 'hsl(var(--primary-foreground))',
+  				// Hover step of the Button. Where a stylesheet does not declare
+  				// --primary-hover (the vendor console's), this is exactly the old
+  				// `hover:bg-primary/90`.
+  				hover: 'hsl(var(--primary-hover, var(--primary) / 0.9))'
   			},
   			secondary: {
   				DEFAULT: 'hsl(var(--secondary))',
