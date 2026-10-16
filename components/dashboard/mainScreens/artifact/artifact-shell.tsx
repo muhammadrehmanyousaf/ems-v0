@@ -49,7 +49,14 @@ function exportWwcTable(shadow: ShadowRoot, name: string) {
   if (!table) return
   // PAY-REPORTS-024 / WWL-123: a cell that opens with = + - @ (tab, CR) is a formula to Excel and
   // Sheets, and these cells carry customer-typed names, notes and references: neutralise (single quote).
-  const cell = (el: Element) => `"${neutraliseFormula((el.textContent || "").replace(/\s+/g, " ").trim()).replace(/"/g, '""')}"`
+  // The console's own signed money cells ("+ Rs 5,000", "− Rs 3,000") also open with + / -; they are
+  // generated, not typed, so they are re-written as "Rs 5,000" / "Rs -3,000" instead of getting a quote.
+  const safeText = (raw: string) => {
+    const m = raw.match(/^([+−–-])\s*(Rs\.?\s*[\d,]+(?:\.\d+)?)$/)
+    if (!m) return neutraliseFormula(raw)
+    return m[1] === "+" ? m[2] : m[2].replace(/^(Rs\.?\s*)/, "$1-")
+  }
+  const cell = (el: Element) => `"${safeText((el.textContent || "").replace(/\s+/g, " ").trim()).replace(/"/g, '""')}"`
   const heads = [...table.querySelectorAll("thead th")]
   const lines: string[] = []
   if (heads.length) lines.push(heads.map(cell).join(","))

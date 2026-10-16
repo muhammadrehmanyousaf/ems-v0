@@ -81,6 +81,22 @@ function resolvePaymentAction(booking: any): {
   return { type: "none", amount: 0, label: "" };
 }
 
+/**
+ * The three figures a booking row prints. The server's `paymentView` (WP08) is the source when the
+ * booking carries one: it is read from the same schedule the pay page uses and already follows a
+ * struck final bill, so "Total", "Paid so far" and "Remaining" cannot disagree with the "Pay now"
+ * amount above them. Without a view the legacy arithmetic stays.
+ */
+function figuresOf(booking: any): { total: number; received: number; outstanding: number } {
+  const v = booking?.paymentView;
+  const n = (x: unknown) => (x === null || x === undefined || x === "" ? NaN : Number(x));
+  if (v && !v.cancelled && [n(v.total), n(v.received), n(v.outstanding)].every(Number.isFinite)) {
+    return { total: n(v.total), received: n(v.received), outstanding: n(v.outstanding) };
+  }
+  const m = bookingMoney(booking);
+  return { total: Number(booking?.totalAmount || 0), received: m.received, outstanding: m.outstanding };
+}
+
 export default function PaymentsPage() {
   return (
     <Suspense
@@ -163,7 +179,7 @@ function PaymentsPageContent() {
   );
 
   const totalDue = pending.reduce((s, b) => s + (b._resolved?.amount || 0), 0);
-  const totalPaid = history.reduce((s, b) => s + Number(b.totalAmount || 0), 0);
+  const totalPaid = history.reduce((s, b) => s + (b.paymentView ? figuresOf(b).received : Number(b.totalAmount || 0)), 0);
 
   /**
    * WW-DIRECT-PAY — send them to the one pay surface instead of a modal.
@@ -366,7 +382,7 @@ function PaymentsPageContent() {
                           {fmt(action.amount)}
                         </p>
                         <p className="text-[11px] text-muted-foreground mt-1">
-                          of <span className="tabular-nums">{fmt(booking.totalAmount)}</span> total
+                          of <span className="tabular-nums">{fmt(figuresOf(booking).total)}</span> total
                         </p>
                       </div>
                     </div>
@@ -396,7 +412,7 @@ function PaymentsPageContent() {
                           Total
                         </p>
                         <p className="font-display italic text-[16px] text-foreground tabular-nums mt-0.5">
-                          {fmt(booking.totalAmount)}
+                          {fmt(figuresOf(booking).total)}
                         </p>
                       </div>
                       <div className="border-x border-border/60">
@@ -404,7 +420,7 @@ function PaymentsPageContent() {
                           Paid so far
                         </p>
                         <p className="font-display italic text-[16px] text-foreground tabular-nums mt-0.5">
-                          {fmt(bookingMoney(booking).received)}
+                          {fmt(figuresOf(booking).received)}
                         </p>
                       </div>
                       <div>
@@ -412,7 +428,7 @@ function PaymentsPageContent() {
                           Remaining
                         </p>
                         <p className="font-display italic text-[16px] text-foreground tabular-nums mt-0.5">
-                          {fmt(bookingMoney(booking).outstanding)}
+                          {fmt(figuresOf(booking).outstanding)}
                         </p>
                       </div>
                     </div>
@@ -494,7 +510,7 @@ function PaymentsPageContent() {
 
                 <div className="text-right flex-shrink-0">
                   <p className="font-display italic text-[18px] text-[#3F6B43] tabular-nums leading-none">
-                    {fmt(booking.totalAmount)}
+                    {fmt(figuresOf(booking).total)}
                   </p>
                   <p className="text-[10.5px] text-muted-foreground mt-1">
                     {fmtDate(booking.createdAt)}
