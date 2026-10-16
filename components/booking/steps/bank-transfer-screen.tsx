@@ -290,9 +290,9 @@ export default function BankTransferScreen({
           style={stagger(block++)}
         >
           <div className="flex h-9 items-center justify-between gap-3 border-b border-bridal-beige px-4">
-            <p className={LABEL}>Transfer to {vendor.businessName || "the venue"}</p>
+            <p className={`min-w-0 ${LABEL}`}>Transfer to {vendor.businessName || "the venue"}</p>
             {shareOf(vendor.businessId) && (
-              <p className="font-bridal text-[13px] font-medium leading-[16px] tabular-nums text-bridal-charcoal">
+              <p className="shrink-0 whitespace-nowrap font-bridal text-[13px] font-medium leading-[16px] tabular-nums text-bridal-charcoal">
                 Rs. {Number(shareOf(vendor.businessId)!.amountDue).toLocaleString()}
               </p>
             )}
