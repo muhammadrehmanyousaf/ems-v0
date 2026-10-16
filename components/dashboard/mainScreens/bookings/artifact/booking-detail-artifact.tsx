@@ -31,6 +31,7 @@ import type { BookingData } from "@/lib/dashboard-types"
 import { bookingStatusLabel } from "@/lib/booking-status-label"
 import { spaceNameOf } from "@/lib/utils/booking-space"
 import { todayInKarachi } from "@/lib/utils/pk-date"
+import { canMarkCompleted } from "@/lib/utils/booking-completion"
 import { bookedOn, receivedOn, outstandingOn } from "@/lib/utils/booking-money"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
 import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
@@ -527,16 +528,13 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
    * worklist started listing them as "band karein", it was pointing vendors at
    * a job with no button.
    *
-   * Only offered once the date has passed: completing a future event is either
-   * a mistake or a data-entry workaround, and the transition is forward-only so
-   * it cannot be undone from here.
+   * WP22: offered from the EVENT DAY itself (Pakistan calendar day), not only once
+   * it has passed: the owner's case was the function being today and the booking
+   * still reading "Confirmed". A future event stays refused (a mistake or a
+   * data-entry workaround), and the transition is forward-only. The server also
+   * completes it by itself the day after the event, whatever the payment state.
    */
-  const isPastEvent = (() => {
-    if (!booking.bookingDate) return false
-    const d = new Date(booking.bookingDate)
-    if (isNaN(d.getTime())) return false
-    return new Date(d).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0)
-  })()
+  const isPastEvent = canMarkCompleted({ status: "Confirmed", bookingDate: booking.bookingDate })
   /**
    * Matched on the status itself, NOT via `isPending` — that flag is
    * `/await|pending|request/`, so "Awaiting Payment" reads as pending to it,
@@ -551,7 +549,7 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
   const closeable = /^(awaiting payment|confirmed)$/.test(st.trim())
   const closeBtn =
     isPastEvent && !isClosed && closeable
-      ? `<button class="btn btn-primary" data-bk-complete="${booking.id}">${svg(I.check, 2.4)} Event ho gaya — band karein</button>`
+      ? `<button class="btn btn-primary" data-bk-complete="${booking.id}">${svg(I.check, 2.4)} Mark completed</button>`
       : ""
   /**
    * WW-RESCHED — move a booking the vendor entered themselves.
@@ -641,7 +639,7 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
     <div class="stat"><div class="s-cap">${svg(I.card)} Kul package</div><div class="s-val tnum">${rs(total)}</div><div class="s-sub">${pct}% mil chuka</div></div>
     ${refundOwed > 0
       ? `<div class="stat"><div class="s-cap" style="color:var(--bad)">${svg(I.money)} Refund dena hai</div><div class="s-val tnum" style="color:var(--bad)">${rs(refundOwed)}</div><div class="s-sub">customer ko wapas karna hai</div></div>`
-      : `<div class="stat ${isCancelled ? "" : "warnv"}"><div class="s-cap">${svg(I.clock)} Baqaya</div><div class="s-val tnum">${isCancelled ? "—" : rs(due)}</div><div class="s-sub">${isCancelled ? "booking cancel ho chuki" : due > 0 ? "event se pehle lena hai" : "sab clear"}</div></div>`}
+      : `<div class="stat ${isCancelled ? "" : "warnv"}"><div class="s-cap">${svg(I.clock)} Baqaya</div><div class="s-val tnum">${isCancelled ? "—" : rs(due)}</div><div class="s-sub">${isCancelled ? "booking cancel ho chuki" : due > 0 ? (/complete/.test(st) ? "event ho chuka — baqaya lena hai" : "event se pehle lena hai") : "sab clear"}</div></div>`}
   </div>
 
   <div class="two">
