@@ -52,6 +52,9 @@ export function MigrationSprintView() {
   const saveAll = async () => {
     if (!businessId) { toast.error("No venue selected"); return; }
     if (ready.length === 0) { toast.error("Kam se kam ek date + naam likhein"); return; }
+    // PAY-CLOCK-018: a typed amount that cannot be read must not become a Rs 0 booking.
+    const unreadable = ready.find((r) => r.rakam.trim() && parseUrduAmount(r.rakam) == null);
+    if (unreadable) { toast.error(`"${unreadable.rakam.trim()}" ki rakam samajh nahi aayi — number likhein (jaise 2 lakh ya 250000)`); return; }
     if (sparse && !ackSparse) { setAckSparse(true); return; } // one-tap confirm on suspiciously few
     setSaving(true);
     let ok = 0;

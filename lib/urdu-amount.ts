@@ -19,49 +19,82 @@ const UNIT: Record<string, number> = {
   "کروڑ": 1e7, // کروڑ
 };
 
+// PAY-CLOCK-018 (WP13 follow-up): the parser used to read "1,5 lakh" as 500,015, "1.500" as 2 and
+// any Urdu / Persian digit string as "not a number" (the booking then saved with total Rs 0). It now
+// reads a number only when its separators mean something, and answers null otherwise: never a guess.
+
+/** Arabic-Indic and Persian digits to ASCII, and their separators to "," / ".". */
+function asciiDigits(input: string): string {
+  return input
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/[\u066c\u060c]/g, ",")
+    .replace(/\u066b/g, ".");
+}
+
+const WESTERN_GROUPS = /^\d{1,3}(,\d{3})+$/;       // 1,500   1,500,000
+const LAKH_GROUPS = /^\d{1,2}(,\d{2})+,\d{3}$/;    // 1,50,000   12,50,000
+
 /**
- * @returns rupee integer, or null if the input can't be parsed.
+ * One number token: digits with optional lakh / western comma grouping and an optional decimal part.
+ * null when a comma sits where no grouping puts one ("1,5"), or - for a plain number with no unit - when
+ * there are three or more decimals ("1.500": thousands or a decimal, the typist's meaning cannot be told).
+ */
+function readNumber(token: string, hasUnit: boolean): number | null {
+  const parts = token.split(".");
+  if (parts.length > 2) return null;
+  const [intPart, frac] = parts;
+  if (!/^\d[\d,]*$/.test(intPart)) return null;
+  if (intPart.includes(",") && !WESTERN_GROUPS.test(intPart) && !LAKH_GROUPS.test(intPart)) return null;
+  if (frac !== undefined) {
+    if (!/^\d+$/.test(frac)) return null;
+    if (!hasUnit && frac.length > 2) return null;
+  }
+  const n = Number(intPart.replace(/,/g, "") + (frac !== undefined ? "." + frac : ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * @returns rupee integer, or null if the input can't be parsed (never 0, never a guess).
  */
 export function parseUrduAmount(input: string | number | null | undefined): number | null {
   if (input == null) return null;
-  if (typeof input === "number") return Number.isFinite(input) ? Math.round(input) : null;
-  const s = String(input).toLowerCase().trim();
+  if (typeof input === "number") return Number.isFinite(input) && input >= 0 ? Math.round(input) : null;
+  let s = asciiDigits(String(input)).toLowerCase().trim();
+  s = s.replace(/^(rs|pkr|rupees?|\u0631\u0648\u067e\u06d2)\.?\s*/i, "").trim();
   if (!s) return null;
 
-  // Plain number with thousands/lakh separators or spaces: "50000", "1,50,000".
-  const cleaned = s.replace(/[,\s_]/g, "");
-  if (/^\d+(\.\d+)?$/.test(cleaned)) return Math.round(Number(cleaned));
-  if (/^(rs|pkr|rupees?|روپے)\.?\s*/i.test(s)) {
-    const rest = s.replace(/^(rs|pkr|rupees?|روپے)\.?\s*/i, "");
-    const n = parseUrduAmount(rest);
-    if (n != null) return n;
+  // Plain number, grouped with commas, spaces or underscores: "50000", "1,50,000", "50 000".
+  if (/^[\d,_ .]+$/.test(s)) {
+    const n = readNumber(s.replace(/[ _]/g, ","), false);
+    return n == null ? null : Math.round(n);
   }
 
-  // "<number> <unit>" groups, possibly several ("2 lakh 50 hazaar").
+  // "<number> <unit>" terms, possibly several ("2 lakh 50 hazaar", "2 lakh 50000"). The whole
+  // string must be consumed: an unknown word or a stray number makes it unreadable, not partial.
+  const term = /\s*(\d[\d,]*(?:\.\d+)?)\s*([a-z\u0600-\u06ff]+)?/y;
   let total = 0;
-  let matched = false;
-  const consumed: [number, number][] = [];
-  const re = /(\d+(?:\.\d+)?)\s*([a-z؀-ۿ]+)/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(s)) !== null) {
-    const mult = UNIT[m[2]];
-    if (mult) {
-      total += Number(m[1]) * mult;
-      matched = true;
-      consumed.push([m.index, m.index + m[0].length]);
+  let units = 0;
+  let pos = 0;
+  while (pos < s.length) {
+    term.lastIndex = pos;
+    const m = term.exec(s);
+    if (!m) return null;
+    pos = term.lastIndex;
+    const unit = m[2];
+    if (unit !== undefined) {
+      const mult = UNIT[unit];
+      const n = mult ? readNumber(m[1], true) : null;
+      if (!mult || n == null) return null;
+      total += n * mult;
+      units += 1;
+    } else {
+      // a bare number is only the tail of a unit expression ("2 lakh 50000"), and only the last term
+      if (units === 0 || pos < s.length) return null;
+      const n = readNumber(m[1], false);
+      if (n == null) return null;
+      total += n;
     }
   }
-
-  // Bare trailing number not attached to a unit ("2 lakh 50000").
-  if (matched) {
-    const bareRe = /(?<![\d.])(\d[\d,]*(?:\.\d+)?)(?![a-z؀-ۿ\d])/g;
-    let b: RegExpExecArray | null;
-    while ((b = bareRe.exec(s)) !== null) {
-      const inConsumed = consumed.some(([a, z]) => b!.index >= a && b!.index < z);
-      if (!inConsumed) total += Number(b[1].replace(/,/g, ""));
-    }
-    return Math.round(total);
-  }
-
-  return null;
+  return units > 0 ? Math.round(total) : null;
 }
