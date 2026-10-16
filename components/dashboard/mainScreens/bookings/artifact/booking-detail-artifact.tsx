@@ -634,7 +634,7 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
   ${(() => {
     // WP26 / V4-8: the sweeper keeps a Confirmed booking open past its event while a refund request or a dispute is open; say so
     const hold = completionHold(booking, { refundRequests: refundReqs, dispute })
-    return hold ? `<div class="holdnote" role="status" data-completion-hold="${hold}">${svg(I.clock)}<div class="hn-t"><b>Abhi Ho gaya nahi hui.</b> ${escHtml(completionHoldNote(hold))}</div></div>` : ""
+    return hold ? `<div class="holdnote" role="status" data-completion-hold="${hold}">${svg(I.clock)}<div class="hn-t"><b>Booking abhi Ho gaya nahi hui.</b> ${escHtml(completionHoldNote(hold))}</div></div>` : ""
   })()}
 
   <div class="stats">
