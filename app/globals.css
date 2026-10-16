@@ -434,12 +434,9 @@ html[data-locale="ur"] body {
        violet beside the gold brand (owner bug 8, WP27). The vendor console does
        not read these values: its layout imports app/styles/dashboard-styles.css,
        which declares its own :root and .dark. --primary-hover is the hover step
-       (bridal-gold-deep): primary at 90% opacity is 4.18:1 under white. Only the
-       Button reads it (tailwind.config primary.hover), and it falls back to the
-       old primary/90 wherever the variable is absent. */
+       (bridal-gold-deep, set below): primary at 90% opacity is 4.18:1 under white. */
     --primary: 30 44% 40%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 29 45% 34%;
     --secondary: 263 20% 95%;
     --secondary-foreground: 263 40% 20%;
     --muted: 263 10% 95%;
@@ -480,7 +477,6 @@ html[data-locale="ur"] body {
     --popover-foreground: 263 5% 95%;
     --primary: 27 47% 60%;               /* bridal-gold, charcoal label */
     --primary-foreground: 17 47% 12%;
-    --primary-hover: 27 47% 68%;
     --secondary: 263 15% 15%;
     --secondary-foreground: 263 5% 95%;
     --muted: 263 10% 15%;
@@ -509,6 +505,16 @@ html[data-locale="ur"] body {
     --sidebar-border: 263 20% 14%;
     --sidebar-ring: 46 55% 50%;
   }
+}
+
+/* Hover step of the Button (tailwind.config primary.hover). Declared only where the
+   console theme engine has not stamped data-theme on <html>: globals.css stays loaded
+   after a client-side hop from /login into the vendor console, and without this guard
+   its hover would leak into the console, whose buttons must keep primary/90 (the
+   fallback in tailwind.config). WP27. */
+@layer base {
+  :root:not([data-theme]) { --primary-hover: 29 45% 34%; }
+  .dark:not([data-theme]) { --primary-hover: 27 47% 68%; }
 }
 
 /* Theme engine — selectors are :root[data-theme] / .dark[data-theme] so they
