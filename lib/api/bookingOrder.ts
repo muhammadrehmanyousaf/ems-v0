@@ -120,7 +120,8 @@ export interface LedgerRow {
   customerName: string | null;
   customerPhone: string | null;
   source: string | null;
-  moneySource: "order" | "legacy";
+  /** WP08: the server states "ledger" (booking total / received); "order" | "legacy" are the pre-WP08 values. */
+  moneySource: "ledger" | "order" | "legacy";
   cancelled: boolean;
   grand: number;
   advance: number;

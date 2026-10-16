@@ -53,8 +53,22 @@ export interface PaymentReceipt {
 }
 
 export interface ReceiptSummary {
+  /** Net money in over the whole filtered ledger (cash in minus refunds). */
   total: number;
   byMethod: Partial<Record<ReceiptMethod, number>>;
+  /** Rows matching the filter (whole ledger, not the page). */
+  count?: number;
+  /**
+   * WP08 / Q15 — stated by the server, so no screen has to sum rows (a page would
+   * silently truncate that sum). Cash in = positive rows, refunds = negative rows
+   * by sign (never by note text), net = grossIn - refunds (= total). Absent on a
+   * server that predates WP08; callers fall back to their own row arithmetic.
+   */
+  grossIn?: number;
+  refunds?: number;
+  net?: number;
+  inCount?: number;
+  refundCount?: number;
 }
 
 export interface ReceiptListResponse {

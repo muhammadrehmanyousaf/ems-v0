@@ -7,7 +7,7 @@ import type {
   PaymentHistory,
   PendingPayment
 } from '../types';
-import { isSettled } from '../payment-status';
+import { isSettled, customerPaymentFromView } from '../payment-status';
 
 export class PaymentAPI {
   /**
@@ -264,8 +264,21 @@ export class PaymentAPI {
           name: detail.business?.name || 'Business',
         })) || [];
 
-        const determinedPaymentType = this.determinePaymentType(booking.status, booking.paymentStatus);
-        const calculatedAmount      = this.calculatePaymentAmount(booking.status, booking.paymentStatus, booking.totalAmount, booking.downPayment);
+        // WP08 / PAY-UI_CUSTOMER-002: the server states what to pay and whether the booking is
+        // paid up (`paymentView`, from the schedule). The flag-and-totals derivation below is
+        // only the fallback for a booking that carries none.
+        const fromServer = customerPaymentFromView(booking);
+        const serverType: PendingPayment['paymentType'] | null = !fromServer
+          ? null
+          : fromServer.type === 'remaining'
+            ? 'remaining_payment'
+            : fromServer.type === 'done'
+              ? 'full_payment'
+              : (booking.paymentView?.paymentType === 'full_payment' ? 'full_payment' : 'down_payment');
+        const determinedPaymentType = serverType ?? this.determinePaymentType(booking.status, booking.paymentStatus);
+        const calculatedAmount      = fromServer
+          ? fromServer.amount
+          : this.calculatePaymentAmount(booking.status, booking.paymentStatus, booking.totalAmount, booking.downPayment);
 
         const paymentData = {
           id:            booking.id,
@@ -282,9 +295,12 @@ export class PaymentAPI {
           createdAt:     booking.createdAt,
           totalAmount:   booking.totalAmount,
           downPayment:   booking.downPayment,
+          // Carried through so the page resolves its action from the same figure.
+          paymentView:   booking.paymentView ?? undefined,
         };
 
-        if (paymentLower === 'paid' || statusLower === 'completed') {
+        const paidUp = fromServer ? fromServer.type === 'done' : (paymentLower === 'paid' || statusLower === 'completed');
+        if (paidUp) {
           paymentHistory.push({
             ...paymentData,
             status:     'completed',

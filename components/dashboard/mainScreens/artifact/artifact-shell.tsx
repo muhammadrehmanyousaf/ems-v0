@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import { useUser } from "@/context/UserContext"
 import { useBusiness } from "@/context/BusinessContext"
+import { neutraliseFormula } from "@/lib/utils/csv-escape"
 import { useActiveBusinessStore } from "@/lib/store/active-business-store"
 import { useShellStore } from "@/lib/store/shell-store"
 import { useResolvedThemeMode } from "@/lib/store/theme-prefs"
@@ -46,7 +47,9 @@ function exportWwcTable(shadow: ShadowRoot, name: string) {
   const wwc = shadow.getElementById("wwc"); if (!wwc) return
   const table = wwc.querySelector("table.tbl") as HTMLTableElement | null
   if (!table) return
-  const cell = (el: Element) => `"${(el.textContent || "").replace(/\s+/g, " ").trim().replace(/"/g, '""')}"`
+  // PAY-REPORTS-024 / WWL-123: a cell that opens with = + - @ (tab, CR) is a formula to Excel and
+  // Sheets, and these cells carry customer-typed names, notes and references: neutralise (single quote).
+  const cell = (el: Element) => `"${neutraliseFormula((el.textContent || "").replace(/\s+/g, " ").trim()).replace(/"/g, '""')}"`
   const heads = [...table.querySelectorAll("thead th")]
   const lines: string[] = []
   if (heads.length) lines.push(heads.map(cell).join(","))

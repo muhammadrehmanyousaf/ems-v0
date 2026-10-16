@@ -32,6 +32,7 @@ import {
   EmptyState,
 } from "@/components/user-dashboard";
 import { bookingMoney } from "@/lib/utils/booking-money";
+import { customerPaymentFromView } from "@/lib/payment-status";
 
 const fmt = (n: number | string | null | undefined) =>
   `Rs. ${Number(n || 0).toLocaleString()}`;
@@ -52,6 +53,10 @@ function resolvePaymentAction(booking: any): {
   amount: number;
   label: string;
 } {
+  // WP08 / PAY-UI_CUSTOMER-002: the server's own figure (`paymentView`, from the schedule) decides
+  // what is due and whether the booking is paid up; the derivation below is the fallback.
+  const fromServer = customerPaymentFromView(booking);
+  if (fromServer) return fromServer;
   const status = sk(booking.status);
   // Amounts decide what is owed, never the status flag; money columns arrive as strings ("0.00"), so no `||` on them.
   const money = bookingMoney(booking);
