@@ -12,6 +12,8 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useFetchData } from "@/hooks/use-fetch-data"
 import { bookedOn, receivedOn, outstandingOn, isCancelledBooking } from "@/lib/utils/booking-money"
 import { spaceNameOf } from "@/lib/utils/booking-space"
+import { fmtYmd } from "@/lib/utils/ymd"
+import { bookingSlotText } from "@/lib/booking/slot-vocabulary"
 import { bookingStatusLabel, bookingStatusTone as tone } from "@/lib/booking-status-label"
 import type { BookingData } from "@/lib/dashboard-types"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
@@ -22,11 +24,11 @@ import { openBookingForm } from "@/components/dashboard/mainScreens/artifact/boo
 
 const serviceLabel = (b: BookingData) =>
   b.bookingDetails?.[0]?.package?.name || b.bookingDetails?.[0]?.business?.name || "Booking"
-function fmtDate(s?: string): { main: string; sub: string } {
-  if (!s) return { main: "—", sub: "" }
-  const d = new Date(s)
-  if (isNaN(d.getTime())) return { main: String(s), sub: "" }
-  return { main: d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }), sub: d.toLocaleTimeString("en-PK", { hour: "numeric", minute: "2-digit" }) }
+// WP23 (owner bug 6): the date is a calendar day (no clock, no zone) and the line under it is the
+// booking's STANDARD SLOT, not the time of day of `bookingDate` (which printed "5:00 am" for every row).
+function fmtDate(b: BookingData): { main: string; sub: string } {
+  if (!b.bookingDate) return { main: "—", sub: "" }
+  return { main: fmtYmd(b.bookingDate, "short", null), sub: bookingSlotText(b, "vendor") }
 }
 function bucket(status?: string): "confirmed" | "pending" | "done" {
   const v = (status || "").toLowerCase()
@@ -39,7 +41,7 @@ const menuSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 function rowHtml(b: BookingData): string {
   const total = bookedOn(b), paid = receivedOn(b), out = outstandingOn(b)
   const pct = total > 0 ? Math.round((paid / total) * 100) : 0
-  const d = fmtDate(b.bookingDate)
+  const d = fmtDate(b)
   const hall = spaceNameOf(b) || "—"
   const guests = b.guestCount != null ? String(b.guestCount) : "—"
   const bkt = bucket(b.status)

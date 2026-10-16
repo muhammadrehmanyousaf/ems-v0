@@ -1,0 +1,40 @@
+{
+  "_comment": "ONE table for both runtimes. Backend: src/utils/slotLabel.js (tests/unit/slotLabel.test.js). Web: lib/booking/slot-vocabulary.ts (scripts/slot-label-check.mts reads lib/booking/slot-label-cases.json, a byte-identical copy). Input is a booking row as the API holds it; bookingDate must never change the answer. Change both files or neither.",
+  "cases": [
+    { "name": "template slot with its snapshot", "row": { "bookingTime": "19:00", "slotTemplateSnapshotJson": { "label": "Dinner event", "startTime": "19:00:00", "endTime": "23:00:00" } }, "full": "Dinner event · 7 PM to 11 PM", "label": "Dinner event", "hint": "7 PM to 11 PM", "kind": "slot", "source": "vendor" },
+    { "name": "template slot, snapshot without hours", "row": { "bookingTime": "19:00", "slotTemplateSnapshotJson": { "label": "Baraat hall" } }, "full": "Baraat hall", "label": "Baraat hall", "hint": "", "kind": "slot", "source": "vendor" },
+    { "name": "template slot named whole day", "row": { "bookingTime": "10:00", "slotTemplateSnapshotJson": { "label": "Whole day", "startTime": "10:00", "endTime": "22:00" } }, "full": "Whole day · 10 AM to 10 PM", "label": "Whole day", "hint": "10 AM to 10 PM", "kind": "whole_day", "source": "vendor" },
+    { "name": "template slot with minutes", "row": { "bookingTime": "11:30", "slotTemplateSnapshotJson": { "label": "Lunch", "startTime": "11:30", "endTime": "15:45" } }, "full": "Lunch · 11:30 AM to 3:45 PM", "label": "Lunch", "hint": "11:30 AM to 3:45 PM", "kind": "slot", "source": "vendor" },
+    { "name": "stale snapshot (time edited after the sale) is ignored", "row": { "bookingTime": "14:00", "slotTemplateSnapshotJson": { "label": "Dinner event", "startTime": "19:00", "endTime": "23:00" } }, "full": "Afternoon · 2 PM to 6 PM", "label": "Afternoon", "hint": "2 PM to 6 PM", "kind": "slot", "source": "legacy" },
+    { "name": "server-resolved fields are used as sent", "row": { "bookingTime": "19:00", "slotLabel": "Dinner event", "slotStartTime": "19:00", "slotEndTime": "23:00" }, "full": "Dinner event · 7 PM to 11 PM", "label": "Dinner event", "hint": "7 PM to 11 PM", "kind": "slot", "source": "vendor" },
+    { "name": "legacy 09:00", "row": { "bookingTime": "09:00" }, "full": "Morning · 9 AM to 12 PM", "label": "Morning", "hint": "9 AM to 12 PM", "kind": "slot", "source": "legacy" },
+    { "name": "legacy 10:00 is the whole-day period", "row": { "bookingTime": "10:00" }, "full": "Whole day · 10 AM to 10 PM", "label": "Whole day", "hint": "10 AM to 10 PM", "kind": "whole_day", "source": "legacy" },
+    { "name": "legacy 12:00", "row": { "bookingTime": "12:00" }, "full": "Midday · 12 PM to 4 PM", "label": "Midday", "hint": "12 PM to 4 PM", "kind": "slot", "source": "legacy" },
+    { "name": "legacy 14:00", "row": { "bookingTime": "14:00" }, "full": "Afternoon · 2 PM to 6 PM", "label": "Afternoon", "hint": "2 PM to 6 PM", "kind": "slot", "source": "legacy" },
+    { "name": "legacy 17:00", "row": { "bookingTime": "17:00" }, "full": "Evening · 5 PM to 10 PM", "label": "Evening", "hint": "5 PM to 10 PM", "kind": "slot", "source": "legacy" },
+    { "name": "legacy 18:00", "row": { "bookingTime": "18:00" }, "full": "Evening · 6 PM to 10 PM", "label": "Evening", "hint": "6 PM to 10 PM", "kind": "slot", "source": "legacy" },
+    { "name": "Postgres TIME text 18:00:00", "row": { "bookingTime": "18:00:00" }, "full": "Evening · 6 PM to 10 PM", "label": "Evening", "hint": "6 PM to 10 PM", "kind": "slot", "source": "legacy" },
+    { "name": "12-hour text 6 PM", "row": { "bookingTime": "6 PM" }, "full": "Evening · 6 PM to 10 PM", "label": "Evening", "hint": "6 PM to 10 PM", "kind": "slot", "source": "legacy" },
+    { "name": "clock nobody named", "row": { "bookingTime": "19:00" }, "full": "7 PM", "label": "7 PM", "hint": "", "kind": "slot", "source": "clock" },
+    { "name": "clock with minutes", "row": { "bookingTime": "13:45" }, "full": "1:45 PM", "label": "1:45 PM", "hint": "", "kind": "slot", "source": "clock" },
+    { "name": "12-hour text 7:30 pm", "row": { "bookingTime": "7:30 pm" }, "full": "7:30 PM", "label": "7:30 PM", "hint": "", "kind": "slot", "source": "clock" },
+    { "name": "named function", "row": { "bookingTime": "Baraat" }, "full": "Baraat", "label": "Baraat", "hint": "", "kind": "slot", "source": "raw" },
+    { "name": "named function, padded", "row": { "bookingTime": "  Mehndi  " }, "full": "Mehndi", "label": "Mehndi", "hint": "", "kind": "slot", "source": "raw" },
+    { "name": "Full day word", "row": { "bookingTime": "Full day" }, "full": "Whole day", "label": "Whole day", "hint": "", "kind": "whole_day", "source": "whole_day" },
+    { "name": "All day word, any case", "row": { "bookingTime": "ALL DAY" }, "full": "Whole day", "label": "Whole day", "hint": "", "kind": "whole_day", "source": "whole_day" },
+    { "name": "no slot: empty time", "row": { "bookingTime": "" }, "full": "", "label": "", "hint": "", "kind": "unset", "source": "none" },
+    { "name": "no slot: null time", "row": { "bookingTime": null }, "full": "", "label": "", "hint": "", "kind": "unset", "source": "none" },
+    { "name": "no slot: nothing at all", "row": {}, "full": "", "label": "", "hint": "", "kind": "unset", "source": "none" },
+    { "name": "no slot: import midnight 00:00 is not a time", "row": { "bookingTime": "00:00" }, "full": "", "label": "", "hint": "", "kind": "unset", "source": "none" },
+    { "name": "no slot: 00:00:00", "row": { "bookingTime": "00:00:00" }, "full": "", "label": "", "hint": "", "kind": "unset", "source": "none" },
+    { "name": "no slot: TBD", "row": { "bookingTime": "TBD" }, "full": "", "label": "", "hint": "", "kind": "unset", "source": "none" },
+    { "name": "midnight-UTC bookingDate date-only never adds a clock", "row": { "bookingDate": "2026-10-16", "bookingTime": "18:00" }, "full": "Evening · 6 PM to 10 PM", "label": "Evening", "hint": "6 PM to 10 PM", "kind": "slot", "source": "legacy" },
+    { "name": "midnight-UTC bookingDate timestamp never adds a clock", "row": { "bookingDate": "2026-10-16T00:00:00.000Z", "bookingTime": "" }, "full": "", "label": "", "hint": "", "kind": "unset", "source": "none" },
+    { "name": "Karachi 05:00 bookingDate never adds a clock", "row": { "bookingDate": "2026-10-15T19:00:00.000Z" }, "full": "", "label": "", "hint": "", "kind": "unset", "source": "none" },
+    { "name": "unreadable clock is kept as a name", "row": { "bookingTime": "25:00" }, "full": "25:00", "label": "25:00", "hint": "", "kind": "slot", "source": "raw" }
+  ],
+  "audience": [
+    { "full": "Evening · 6 PM to 10 PM", "vendor": "Evening · 6 PM to 10 PM", "customer": "Evening · 6 PM to 10 PM" },
+    { "full": "", "vendor": "Slot nahi chuna", "customer": "" }
+  ]
+}

@@ -53,21 +53,50 @@ export interface SlotDescription {
   /** Label and hours together, for one-line display. */
   full: string;
   /** Where the answer came from — useful in tests and for deciding emphasis. */
-  source: "vendor" | "legacy" | "clock" | "raw" | "none";
+  source: "vendor" | "legacy" | "clock" | "raw" | "none" | "whole_day";
+  /** What the slot is: a normal slot, the whole day, or nothing chosen ("unset"). */
+  kind: "slot" | "whole_day" | "unset";
 }
 
-const HHMM = /^(\d{1,2}):(\d{2})/;
+
+/** "19:00" | "19:00:00" | "7:30 PM" | "7 pm" → "HH:MM" (24h), or null. */
+export function toHHMM(value: string | null | undefined): string | null {
+  const s = String(value ?? "").trim();
+  if (!s) return null;
+  const m24 = /^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/.exec(s);
+  if (m24) {
+    const h = Number(m24[1]);
+    const mi = Number(m24[2]);
+    if (h > 23 || mi > 59) return null;
+    return `${String(h).padStart(2, "0")}:${String(mi).padStart(2, "0")}`;
+  }
+  const m12 = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i.exec(s);
+  if (m12) {
+    let h = Number(m12[1]);
+    const mi = m12[2] ? Number(m12[2]) : 0;
+    if (h < 1 || h > 12 || mi > 59) return null;
+    const pm = m12[3].toLowerCase() === "pm";
+    if (pm && h < 12) h += 12;
+    if (!pm && h === 12) h = 0;
+    return `${String(h).padStart(2, "0")}:${String(mi).padStart(2, "0")}`;
+  }
+  return null;
+}
 
 /** "19:00" → "7 PM"; "19:30" → "7:30 PM". Minutes are shown only when non-zero. */
 export function to12h(value: string | null | undefined): string {
-  const m = HHMM.exec(String(value ?? "").trim());
-  if (!m) return "";
-  const h24 = Number(m[1]);
-  const min = Number(m[2]);
-  if (!Number.isFinite(h24) || h24 > 23 || !Number.isFinite(min) || min > 59) return "";
+  const hm = toHHMM(value);
+  if (!hm) return "";
+  const h24 = Number(hm.slice(0, 2));
+  const min = Number(hm.slice(3, 5));
   const suffix = h24 < 12 ? "AM" : "PM";
   const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
   return min === 0 ? `${h12} ${suffix}` : `${h12}:${String(min).padStart(2, "0")} ${suffix}`;
+}
+
+const WHOLE_DAY_WORDS = new Set(["whole day", "wholeday", "full day", "fullday", "all day", "allday", "poora din", "pura din"]);
+function isWholeDayWord(s: string | null | undefined): boolean {
+  return WHOLE_DAY_WORDS.has(String(s ?? "").trim().toLowerCase().replace(/\s+/g, " "));
 }
 
 /** "19:00", "23:00" → "7 PM to 11 PM". Empty when either end is unreadable. */
@@ -172,11 +201,20 @@ export function legacyPeriodWindow(value: string): { label: string; startTime: s
 /**
  * Name a booking's slot, preferring what the vendor actually sold.
  *
+ * WP23 (owner bug 6): this is the ONE rule for how a booking's time is named, on
+ * every web surface and, word for word, in the backend (src/utils/slotLabel.js,
+ * pinned to the same case table: lib/booking/slot-label-cases.json). A booking's
+ * time is its STANDARD SLOT. It is never the clock part of `bookingDate`: that
+ * is a date, and `new Date("2026-10-16")` is 05:00 in Pakistan ("5:00 am").
+ *
  * Resolution order, most specific first:
- *   1. the vendor's own slot  — "Dinner event", "7 PM to 11 PM"
- *   2. a canonical period     — "Morning", "9 AM to 12 PM"
- *   3. a bare clock time      — "7 PM", no hours claimed
- *   4. whatever string it is  — "Baraat", no hours claimed
+ *   1. the vendor's own slot  — "Dinner event · 7 PM to 11 PM"
+ *   2. a whole-day word       — "Full day" -> "Whole day"
+ *   3. a canonical period     — "Morning · 9 AM to 12 PM", 10:00 = "Whole day"
+ *   4. a bare clock time      — "7 PM", no hours claimed
+ *   5. whatever string it is  — "Baraat", no hours claimed
+ *   6. nothing chosen         — "" (empty, "00:00" from an import, "TBD"): NOT a
+ *      made-up time. `slotTextFor` words it per audience.
  */
 export function describeSlot(d: SlotDescriptor | null | undefined): SlotDescription {
   const raw = String(d?.bookingTime ?? "").trim();
@@ -191,55 +229,95 @@ export function describeSlot(d: SlotDescriptor | null | undefined): SlotDescript
       hint: vendorHint,
       full: vendorHint ? `${vendorLabel} · ${vendorHint}` : vendorLabel,
       source: "vendor",
+      kind: isWholeDayWord(vendorLabel) ? "whole_day" : "slot",
     };
   }
   // A slot with hours but no name — describe the hours rather than say nothing.
-  if (vendorHint) {
-    return { label: vendorHint, hint: "", full: vendorHint, source: "vendor" };
-  }
+  if (vendorHint) return { label: vendorHint, hint: "", full: vendorHint, source: "vendor", kind: "slot" };
 
-  if (!raw) return { label: "", hint: "", full: "", source: "none" };
+  if (!raw) return { label: "", hint: "", full: "", source: "none", kind: "unset" };
 
-  // 2 — a canonical period.
-  const period = periodFor(raw.slice(0, 5));
+  // 2 — a whole-day word stored as the time ("Full day", from a hold or a plan).
+  if (isWholeDayWord(raw)) return { label: "Whole day", hint: "", full: "Whole day", source: "whole_day", kind: "whole_day" };
+
+  // 3 — a canonical period.
+  const hm = toHHMM(raw);
+  const period = hm ? periodFor(hm) : null;
   if (period) {
     const hint = formatSlotRange(period.startTime, period.endTime);
-    return { label: period.label, hint, full: `${period.label} · ${hint}`, source: "legacy" };
+    return { label: period.label, hint, full: `${period.label} · ${hint}`, source: "legacy", kind: period.label === "Whole day" ? "whole_day" : "slot" };
   }
 
-  // 3 — a clock time nobody has named. Say the time, claim no hours.
-  const clock = to12h(raw);
-  if (clock) return { label: clock, hint: "", full: clock, source: "clock" };
+  // 6 — midnight is what an import writes when it had no time; "TBD" is no time.
+  if (hm === "00:00" || /^(tbd|tba|na|n\/a|-|--|—|none|null|undefined)$/i.test(raw)) {
+    return { label: "", hint: "", full: "", source: "none", kind: "unset" };
+  }
 
-  // 4 — a named function: "Baraat", "Mehndi". It is already the best label there is.
-  return { label: raw, hint: "", full: raw, source: "raw" };
+  // 4 — a clock time nobody has named. Say the time, claim no hours.
+  if (hm) {
+    const clock = to12h(hm);
+    return { label: clock, hint: "", full: clock, source: "clock", kind: "slot" };
+  }
+
+  // 5 — a named function: "Baraat", "Mehndi". It is already the best label there is.
+  return { label: raw, hint: "", full: raw, source: "raw", kind: "slot" };
 }
 
-/** Convenience for the many screens that only want one line of text. */
+/** One line of text, "" when no slot was chosen. */
 export function slotText(d: SlotDescriptor | null | undefined): string {
   return describeSlot(d).full;
+}
+
+/** What each audience sees when no slot was chosen (never a made-up time). */
+export const UNSET_TEXT = { vendor: "Slot nahi chuna", customer: "" } as const;
+
+/**
+ * One line for a given audience. A vendor surface says "Slot nahi chuna" when
+ * nothing was chosen; a customer surface gets "" and leaves the row out.
+ */
+export function slotTextFor(d: SlotDescriptor | null | undefined, audience: "vendor" | "customer" = "customer"): string {
+  const t = describeSlot(d).full;
+  return t || (audience === "vendor" ? UNSET_TEXT.vendor : UNSET_TEXT.customer);
 }
 
 /**
  * A descriptor for a Booking row as the API returns it.
  *
- * `slotTemplateSnapshotJson` (BK-084) is the slot frozen at the moment of sale,
- * which is the right thing to name a sold booking by — a vendor who later edits
+ * Order: the server's own answer (`slotLabel` / `slotStartTime` / `slotEndTime`,
+ * resolved with the live template when the snapshot is missing) first, then
+ * `slotTemplateSnapshotJson` (BK-084), the slot frozen at the moment of sale. That
+ * is the right thing to name a sold booking by: a vendor who later edits
  * "Dinner 19:00–23:00" to end at 22:00 must not retroactively change what an
- * already-sold wedding says it bought.
- *
- * Read defensively: the customer-facing booking, payments and detail endpoints
- * do not currently return it, so today this resolves to the legacy period names
- * and a bare clock time for vendor slots. It upgrades on its own the moment the
- * field is included, rather than needing every screen revisited again.
+ * already-sold wedding says it bought. A snapshot whose start no longer matches
+ * `bookingTime` (a time edited after the sale) is ignored: the clock the booking
+ * really has wins over a label that no longer describes it.
  */
 export function slotFromBooking(b: unknown): SlotDescriptor {
   const row = (b ?? {}) as Record<string, any>;
   const snap = row.slotTemplateSnapshotJson ?? row.slotTemplate ?? null;
+  const bookingTime = row.bookingTime ?? row.timeSlot ?? null;
+  const rawHM = toHHMM(bookingTime);
+  let label = row.slotLabel ?? null;
+  let start = row.slotStartTime ?? null;
+  let end = row.slotEndTime ?? null;
+  if (!label && !start && snap) {
+    const snapStart = toHHMM(snap.startTime);
+    const stale = !!(rawHM && snapStart && rawHM !== snapStart);
+    if (!stale) {
+      label = snap.label ?? null;
+      start = snap.startTime ?? null;
+      end = snap.endTime ?? null;
+    }
+  }
   return {
-    bookingTime: row.bookingTime ?? row.timeSlot ?? null,
-    slotLabel: snap?.label ?? row.slotLabel ?? null,
-    slotStartTime: snap?.startTime ?? row.slotStartTime ?? null,
-    slotEndTime: snap?.endTime ?? row.slotEndTime ?? null,
+    bookingTime,
+    slotLabel: label,
+    slotStartTime: start ? String(start).slice(0, 5) : null,
+    slotEndTime: end ? String(end).slice(0, 5) : null,
   };
+}
+
+/** The text for a Booking row (or a booking line) as the API returns it, for an audience. */
+export function bookingSlotText(b: unknown, audience: "vendor" | "customer" = "customer"): string {
+  return slotTextFor(slotFromBooking(b), audience);
 }
