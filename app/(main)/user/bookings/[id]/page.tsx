@@ -432,6 +432,9 @@ export default function BookingDetailPage() {
         const d = e.response.data.data;
         const now = Number(d?.refund);
         setRefundPreview((p) => (p && Number.isFinite(now) ? { ...p, preview: { ...p.preview, refund: now } } : p));
+        // The refund moved because the tier moved, so the forfeit line and the
+        // breakdown moved with it: take the whole fresh preview, not just the figure.
+        getRefundPreview(booking.id).then((fresh) => { if (fresh) setRefundPreview(fresh); }).catch(() => {});
         toast({
           title: "Refund amount changed",
           description: Number.isFinite(now)

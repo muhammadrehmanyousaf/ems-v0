@@ -124,7 +124,7 @@ function buildContent(receipts: PaymentReceipt[], rec: ReceivablesData | null | 
     const pp = status === "wapsi" ? "wapsi" : status === "settled" ? "settle" : ""
     const amtCls = out || status === "wapsi" ? "out" : "in"
     const sign = out || status === "wapsi" ? "− " : "+ "
-    return { date: shortDate(rdate(r)), sub: timeOf(rdate(r)), who, ini: initialsOf(who), ref: r.bookingId ? `#${r.bookingId}` : "", ppLabel: r.notes ? escHtml(String(r.notes).slice(0, 24)) : st.label, ppCls: pp, mth: methodLabel(r.method), amtCls, amtVal: `${sign}<span class="rs">Rs</span> ${pkNum(Math.abs(amt))}`, amtSub: "", stCls: st.cls, stLabel: st.label, status, action: "", nav: r.bookingId ? `/dashboard/bookings/${r.bookingId}` : "" }
+    return { date: shortDate(rdate(r)), sub: timeOf(rdate(r)), who, ini: initialsOf(who), ref: r.bookingId ? `#${r.bookingId}` : "", ppLabel: r.notes ? escHtml(String(r.notes).length > 24 ? `${String(r.notes).slice(0, 23)}…` : String(r.notes)) : st.label, ppCls: pp, mth: methodLabel(r.method), amtCls, amtVal: `${sign}<span class="rs">Rs</span> ${pkNum(Math.abs(amt))}`, amtSub: "", stCls: st.cls, stLabel: st.label, status, action: "", nav: r.bookingId ? `/dashboard/bookings/${r.bookingId}` : "" }
   })
   const dueRows: Row[] = (rec?.customers ?? []).filter((c) => num(c.totalOutstanding) > 0).slice(0, 6).map((c) => {
     // The Record button is scoped to ONE booking, so its prefill must be THAT
