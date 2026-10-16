@@ -52,8 +52,8 @@ cases.validate.forEach((c, i) => {
 
 // ── what the review step prints ──
 check("review: the key is a label", cancellationText("partially_refundable", null) === "Partially Refundable");
-check("review: percent detail", cancellationText("partially_refundable", { type: "percent", value: 50 }) === "Partially Refundable: 50% refunded");
-check("review: fixed detail (a typed string)", cancellationText("partially_refundable", { type: "fixed", value: "20000" }) === "Partially Refundable: PKR 20,000 refunded");
+check("review: percent detail", cancellationText("partially_refundable", { type: "percent", value: 50 }) === "Partially Refundable: venue keeps 50%");
+check("review: fixed detail (a typed string)", cancellationText("partially_refundable", { type: "fixed", value: "20000" }) === "Partially Refundable: venue keeps PKR 20,000");
 check("review: a stale detail never rides on another policy", cancellationText("non_refundable", { type: "percent", value: 50 }) === "Non-Refundable" && cancellationText("refundable", { type: "fixed", value: 5000 }) === "Refundable");
 check("review: an invalid detail falls back to the label", cancellationText("partially_refundable", { type: "percent", value: 150 }) === "Partially Refundable");
 check("review: free text is untouched", cancellationText("Advance non-refundable within 30 days.", null) === "Advance non-refundable within 30 days.");
@@ -109,6 +109,13 @@ check("the submit sends the validated detail, and only for Partially Refundable"
 
 check("the review step prints the cancellation policy through cancellationText, with the entered detail", /value=\{cancellationText\(formData\.cancelationPolicy, \{\s*type: formData\.partialRefundType,\s*value: formData\.partialRefundValue,\s*\}\)\}/.test(read("components/VendorStepForms/preview.tsx")));
 check("the review step humanizes package spec keys", /: humanizeKey\(cat\)/.test(read("components/VendorStepForms/preview.tsx")));
+
+// owner decision 2026-10-16: the value is what the VENUE KEEPS, never what the customer gets back
+const fields = read("components/VendorStepForms/components/partial-refund-fields.tsx");
+check("the step-4 fields say the venue keeps (label, suffix, helper)", /Venue Keeps \(%\)/.test(fields) && /Venue Keeps \(PKR\)/.test(fields) && /the venue keeps this share/.test(fields) && /the venue keeps this amount/.test(fields));
+check("the step-4 fields never describe the value as the customer's refund", !/they get this (share|amount)/.test(fields) && !/Refund Amount|Refund Percentage|Refund Type/.test(fields));
+check("the policy screen, the refund preview card and the types use venueKeepsFixed (not the superseded refundFixed)", !/refundFixed/.test(read("components/dashboard/mainScreens/cancellation-policy/artifact/cancellation-policy-artifact.tsx") + read("components/bookings/refund-preview-card.tsx") + read("lib/api/bookingOrder.ts")) && /venueKeepsFixed/.test(read("components/bookings/refund-preview-card.tsx")) && /venueKeepsFixed/.test(read("components/dashboard/mainScreens/cancellation-policy/artifact/cancellation-policy-artifact.tsx")));
+check("the customer cancel dialog says the venue keeps (not an unexplained 'forfeited')", /Venue keeps \(per \{refundPreview/.test(read("app/(main)/user/bookings/[id]/page.tsx")));
 
 // no component prints the stored policy raw: a JSX expression that is just the field, or a Field/StatTile value, must go through the label helper
 // (form controls such as <Select value={formData.cancelationPolicy}> hold the KEY on purpose: they are not display)

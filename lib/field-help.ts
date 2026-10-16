@@ -158,16 +158,16 @@ const FIELD_HELP_DATA = {
   },
   cancellationPolicy: {
     name: "cancellation policy",
-    text: "What happens to the advance if a couple cancels. Refundable: it is returned. Partially refundable: a part of what they paid is returned, and you set that part next (a fixed amount or a percentage). Non-refundable: you keep it.",
+    text: "What happens to the advance if a couple cancels. Refundable: it is returned. Partially refundable: you keep a part (a fixed amount or a percentage, set next) and the rest is returned. Non-refundable: you keep all of it.",
   },
   partialRefundType: {
-    name: "refund type",
-    text: "How the partial refund is worked out. Fixed Amount is the same rupee amount back to the couple. Percentage is a share of what they paid.",
+    name: "what the venue keeps",
+    text: "How the part you keep is worked out. Fixed Amount is the same rupee amount kept from every cancelled booking. Percentage is a share of what the couple paid. The couple gets the rest back.",
   },
   partialRefundValue: {
-    name: "refund value",
-    text: "What the couple gets back if they cancel. Rupees for Fixed Amount (never more than they paid), or a number from 1 to 99 for Percentage. This is the refund the platform pays out on a cancellation.",
-    example: "Fixed 20000, or Percentage 50",
+    name: "what the venue keeps (amount)",
+    text: "What you keep if a couple cancels. Rupees for Fixed Amount (if they paid no more than this, you keep what they paid and they get nothing back), or a number from 1 to 99 for Percentage. The platform refunds the couple the rest.",
+    example: "Fixed 20000, or Percentage 40",
   },
   additionalInfo: {
     name: "additional information",
