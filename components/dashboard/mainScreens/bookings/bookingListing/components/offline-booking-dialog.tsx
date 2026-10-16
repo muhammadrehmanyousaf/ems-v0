@@ -35,6 +35,8 @@ import { isUnpricedVendor, isMoneyUnset } from '@/lib/pricing/unpriced';
 import { WeddingUmbrellasAPI, type WeddingUmbrella } from '@/lib/api/weddingUmbrellas';
 import { useBusiness } from '@/context/BusinessContext';
 import { invalidateMoney } from '@/lib/query/money-keys';
+import { newIdempotencyKey } from '@/lib/utils/idempotency';
+import { errorMessage } from '@/lib/utils/api-error';
 import { PartyPopper, CheckCircle2 } from 'lucide-react';
 
 interface OfflineBookingDialogProps {
@@ -777,12 +779,28 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
             );
             if (Number.isFinite(newBookingId) && newBookingId > 0) {
                 try { onCreated?.(newBookingId); } catch { /* ignore */ }
-                // PAY-UI_VENDOR-006 / WP02 decision Q5 — this used to call
-                // recordPayment(newBookingId, 'down_payment', advanceMethod) HERE. The create above
-                // has already recorded the advance (a cash receipt for the required amount), and on
-                // the server as it stands that second call recorded the ENTIRE remaining balance as
-                // a bank-transfer receipt and marked the booking Paid. Never call it twice.
-                if (advanceCollected) toast.success('Advance recorded');
+                // PAY-UI_VENDOR-006 / INT-followups D1 — the create no longer invents the venue's
+                // REQUIRED advance as a cash receipt: with no `downPayment` typed it records nothing
+                // (this dialog types none; the server computes the requirement). The "advance received
+                // now" tick is therefore recorded here, once, with the method the vendor chose:
+                // record-payment down_payment books the schedule's own advance figure (200 and a no-op,
+                // "advance_already_recorded", if it is somehow already in the ledger). One call, one
+                // fresh key; the old double-write (WP02 Q5) came from a server that had mirrored first.
+                if (advanceCollected) {
+                    try {
+                        await BookingsAPI.recordPayment(newBookingId, 'down_payment', advanceMethod, undefined, {
+                            idempotencyKey: newIdempotencyKey(),
+                        });
+                        toast.success('Advance recorded');
+                    } catch (advErr) {
+                        // The booking itself exists. Say the advance is NOT recorded instead of claiming it is.
+                        toast.warning(
+                            errorMessage(advErr, "Couldn't record the advance") +
+                            ' The booking was created; record the advance from the booking.',
+                            { duration: 9000 },
+                        );
+                    }
+                }
                 void invalidateMoney({ bookingId: newBookingId });
             }
             if (weddingMode) {

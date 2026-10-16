@@ -92,6 +92,9 @@ export function RefundPreviewCard({ bookingId }: { bookingId: number }) {
             <span>Advance wapsi ({preview.tier.refundPct}% tier)</span>
             <span className="tabular-nums text-emerald-700 dark:text-emerald-400">{rs(preview.breakdown.advanceRefund)}</span>
           </div>
+          {(data.unledgeredAdvance ?? 0) > 0 && (
+            <div className="flex justify-between" data-unledgered-advance><span>Advance bina receipt (refund mein shamil nahi)</span><span className="tabular-nums">{rs(data.unledgeredAdvance as number)}</span></div>
+          )}
           {preview.breakdown.overpayment > 0 && (
             <div className="flex justify-between"><span>Zyada jama (wapas)</span><span className="tabular-nums text-emerald-700 dark:text-emerald-400">{rs(preview.breakdown.overpayment)}</span></div>
           )}

@@ -41,6 +41,20 @@ export interface PublishedBankAccount {
 export interface PaymentVendor {
   businessId: number;
   businessName: string | null;
+  /**
+   * WP17 (PAY-UI_CUSTOMER-015) - this venue's own share of what the booking asks. ADDITIVE: absent on an
+   * older server, in which case the screen keeps the one whole-booking figure. One venue = the whole figure;
+   * several = the booking's `amountDue` split over the venues (shares add up to the top-level figure).
+   */
+  name?: string | null;
+  /** What this venue's claim will be for (bounded by `outstanding`). */
+  amountDue?: number;
+  /** The part of `amountDue` that is due today. */
+  dueNow?: number;
+  /** What this venue is still owed on the ledger. */
+  outstanding?: number;
+  /** The owner's venues on the booking: one entry per OWNER, two venues of one owner share an entry. */
+  businessIds?: number[];
   acceptsCash: boolean;
   acceptsBankTransfer: boolean;
   whatsappNumber: string | null;
@@ -58,6 +72,15 @@ export interface PaymentInstructions {
   reference: string;
   paymentType: "down_payment" | "remaining" | "full_payment" | null;
   amountDue: number;
+  /**
+   * WP17 (PAY-UI_CUSTOMER-010) - the part of `amountDue` that is due TODAY, and what it is. ADDITIVE (absent on
+   * an older server). `amountDue` keeps its old meaning: the next qist when nothing is due yet, so a venue that
+   * asks no advance still quotes its whole bill there. `basis: "none"` / `dueNow: 0` = nothing due today.
+   */
+  dueNow?: number;
+  basis?: "advance" | "balance" | "installment" | "none";
+  /** What is still owed on the ledger. */
+  outstanding?: number;
   currency: string;
   paymentStatus: string;
   bookingStatus: string;
@@ -115,6 +138,8 @@ export interface PaymentClaim {
   proofUrl: string | null;
   notes: string | null;
   claimedAt: string;
+  /** WP17: the venue this claim is for; null = the whole booking (every older claim). */
+  businessId?: number | null;
   status: "pending" | "confirmed" | "rejected";
   reviewedAt: string | null;
   reviewNotes: string | null;
@@ -148,6 +173,11 @@ export class PaymentInstructionsAPI {
       transactionRef?: string;
       proofUrl?: string;
       notes?: string;
+      /**
+       * WP17 (PAY-UI_CUSTOMER-015): the venue of a multi-venue booking this claim is for (its own
+       * `vendors[].amountDue`). Omit for a single-venue booking: the claim is then for the whole booking.
+       */
+      businessId?: number;
       // No `paymentType`: the server decides which slice a claim is for
       // (PAY-UI_CUSTOMER-019 - a customer-supplied type let one advance carry
       // three pending claims). The only caller never sent one.

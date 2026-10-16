@@ -31,12 +31,14 @@
 import { Copy, Check, Clock, FileText, Home, AlertTriangle, Loader2, Send } from "lucide-react"
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { errorMessage } from "@/lib/utils/api-error"
+import { errorMessage, claimAlreadyOpen } from "@/lib/utils/api-error"
 import {
   PaymentInstructionsAPI,
   type PaymentInstructions,
+  type PaymentClaim,
   type ClaimMethod,
 } from "@/lib/api/paymentInstructions"
+import { venueClaimShares } from "@/lib/payment-status"
 import { BridalButton } from "@/components/bridal/bridal-button"
 
 interface BankTransferScreenProps {
@@ -84,6 +86,10 @@ export default function BankTransferScreen({
   const [submitting, setSubmitting] = useState(false)
   const [claimError, setClaimError] = useState<string | null>(null)
   const [claimed, setClaimed] = useState(false)
+  // PAY-UI_CUSTOMER-015 (WP17): a multi-venue booking is reported venue by venue. `reports` is what has been
+  // filed (or was already open: 409 CLAIM_ALREADY_OPEN), keyed by venue ("all" = a whole-booking claim).
+  const [venueId, setVenueId] = useState<number | null>(null)
+  const [reports, setReports] = useState<Array<{ key: string; name: string | null; existing: boolean; claim?: Partial<PaymentClaim> }>>([])
   const [proofFile, setProofFile] = useState<File | null>(null)
   // Surfaced on the success screen: the report succeeded, only the image didn't.
   const [proofWarning, setProofWarning] = useState<string | null>(null)
@@ -119,6 +125,9 @@ export default function BankTransferScreen({
         method,
         transactionRef: transactionRef.trim() || undefined,
         notes: notes.trim() || undefined,
+        // Several venues: this claim is for the venue chosen. One venue (or an older server that states no
+        // shares): no businessId, the claim is for the whole booking as it always was.
+        ...(selected ? { businessId: selected.businessId } : {}),
       })
       // The report is already filed and safe. The screenshot is attached
       // separately and its failure is reported WITHOUT undoing the report —
@@ -134,9 +143,16 @@ export default function BankTransferScreen({
           )
         }
       }
-      setClaimed(true)
+      markReported({ key: selected ? String(selected.businessId) : "all", name: selected?.name ?? null, existing: false, claim })
     } catch (e) {
-      setClaimError(errorMessage(e, "Couldn't send that to the venue"))
+      // 409 CLAIM_ALREADY_OPEN: the report is already with the venue. Show THAT claim, not a generic error.
+      const open = claimAlreadyOpen<Partial<PaymentClaim>>(e)
+      if (open) {
+        const whole = !selected || open.businessId == null
+        markReported({ key: whole ? "all" : String(selected!.businessId), name: whole ? null : selected!.name, existing: true, claim: open })
+      } else {
+        setClaimError(errorMessage(e, "Couldn't send that to the venue"))
+      }
     } finally {
       setSubmitting(false)
     }
@@ -157,6 +173,23 @@ export default function BankTransferScreen({
   // rail except cash needs one before this can be submitted.
   const refRequired = method !== "cash"
   const canSubmit = !submitting && (!refRequired || transactionRef.trim().length >= 3)
+
+  // Per-venue shares (WP17), or null: one venue, or a server that does not state them.
+  const shares = venueClaimShares(allVendors)
+  const shareOf = (id: number) => shares?.find((s) => s.businessId === Number(id)) ?? null
+  const unreported = shares
+    ? shares.filter((s) => s.amountDue > 0 && !reports.some((r) => r.key === "all" || r.key === String(s.businessId)))
+    : []
+  const selected = shares ? (unreported.find((s) => s.businessId === venueId) ?? unreported[0] ?? null) : null
+  const markReported = (r: { key: string; name: string | null; existing: boolean; claim?: Partial<PaymentClaim> }) => {
+    setReports((prev) => [...prev.filter((x) => x.key !== r.key), r])
+    // The form is done once nothing is left to report: a whole-booking claim, or every venue that is owed money.
+    const stillOpen = shares && r.key !== "all"
+      ? unreported.filter((s) => String(s.businessId) !== r.key).length
+      : 0
+    if (!shares || r.key === "all" || stillOpen === 0) setClaimed(true)
+    else { setVenueId(null); setTransactionRef(""); setNotes(""); setProofFile(null) }
+  }
 
   const copyIcon = (id: string) =>
     copied === id
@@ -256,8 +289,13 @@ export default function BankTransferScreen({
           className={`${CARD} mt-3 animate-stagger-fade-up`}
           style={stagger(block++)}
         >
-          <div className="flex h-9 items-center border-b border-bridal-beige px-4">
-            <p className={LABEL}>Transfer to {vendor.businessName || "the venue"}</p>
+          <div className="flex h-9 items-center justify-between gap-3 border-b border-bridal-beige px-4">
+            <p className={`min-w-0 ${LABEL}`}>Transfer to {vendor.businessName || "the venue"}</p>
+            {shareOf(vendor.businessId) && (
+              <p className="shrink-0 whitespace-nowrap font-bridal text-[13px] font-medium leading-[16px] tabular-nums text-bridal-charcoal">
+                Rs. {Number(shareOf(vendor.businessId)!.amountDue).toLocaleString()}
+              </p>
+            )}
           </div>
           {vendor.accounts.map((acc) => {
             /**
@@ -332,12 +370,16 @@ export default function BankTransferScreen({
       {!loading && !loadError && allVendors.length > 1 && (
         <div className={`${CARD} mt-3 px-4 py-3`} role="note" aria-label="Venues on this booking">
           <p className="font-bridal text-[13px] leading-[18px] text-bridal-text">
-            This booking is with {allVendors.length} venues and the amount above covers all of them. Each venue is paid
-            separately, so check with each what it is owed before you transfer.
+            {shares
+              ? <>This booking is with {allVendors.length} venues and the amount above is the total. Each venue is paid
+                  separately: transfer each venue&apos;s own amount to its own account, then report each payment below.</>
+              : <>This booking is with {allVendors.length} venues and the amount above covers all of them. Each venue is paid
+                  separately, so check with each what it is owed before you transfer.</>}
           </p>
           {vendorsWithoutAccounts.map((v) => (
             <p key={v.businessId} className="mt-2 font-bridal text-[13px] leading-[18px] text-bridal-text">
-              <strong className="font-medium text-bridal-charcoal">{v.businessName || "A venue"}</strong> hasn&apos;t published
+              <strong className="font-medium text-bridal-charcoal">{v.businessName || "A venue"}</strong>
+              {shareOf(v.businessId) ? <> ({"Rs. " + Number(shareOf(v.businessId)!.amountDue).toLocaleString()})</> : null} hasn&apos;t published
               bank details yet. Contact them to arrange payment
               {v.whatsappNumber ? <> — WhatsApp <strong className="font-medium text-bridal-charcoal">{v.whatsappNumber}</strong></> : null}.
             </p>
@@ -366,6 +408,21 @@ export default function BankTransferScreen({
             <p className={LABEL}>Already sent it?</p>
           </div>
           <div className="space-y-3 px-4 py-3">
+            {selected && (
+              <div>
+                <label htmlFor="bank-claim-venue" className={`mb-1 block ${LABEL}`}>Which venue did you pay?</label>
+                <select
+                  id="bank-claim-venue"
+                  value={selected.businessId}
+                  onChange={(e) => setVenueId(Number(e.target.value))}
+                  className={INPUT}
+                >
+                  {unreported.map((s) => (
+                    <option key={s.businessId} value={s.businessId}>{s.name} — Rs. {s.amountDue.toLocaleString()}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label htmlFor="bank-claim-method" className={`mb-1 block ${LABEL}`}>How you paid</label>
               <select
@@ -407,6 +464,7 @@ export default function BankTransferScreen({
                 Screenshot or receipt <span className="normal-case tracking-normal text-bridal-text-soft">(optional)</span>
               </label>
               <input
+                key={reports.length}
                 id="bank-claim-proof"
                 type="file"
                 accept="image/*,application/pdf"
@@ -457,21 +515,31 @@ export default function BankTransferScreen({
         </section>
       )}
 
-      {claimed && (
-        <div className="mt-3 flex w-full max-w-[560px] items-start gap-2 rounded-[4px] border border-bridal-sage/45 bg-bridal-sage/15 px-4 py-3" role="status">
+      {reports.map((r) => (
+        <div key={r.key} className="mt-3 flex w-full max-w-[560px] items-start gap-2 rounded-[4px] border border-bridal-sage/45 bg-bridal-sage/15 px-4 py-3" role="status" data-claim-report={r.key}>
           <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#3F6B43]" strokeWidth={2.5} aria-hidden />
           <div className="min-w-0">
             <p className="font-bridal text-[13px] leading-[18px] text-[#3F6B43]">
-              Thanks — we&apos;ve told the venue. They&apos;ll confirm once it shows in their
-              account, and you&apos;ll see the booking update.
+              {r.existing ? (
+                <>
+                  You&apos;ve already reported this payment{r.name ? <> to {r.name}</> : null}
+                  {r.claim?.amount ? <> (Rs. {Number(r.claim.amount).toLocaleString()}{r.claim.transactionRef ? <>, ref {r.claim.transactionRef}</> : null})</> : null}.
+                  The venue is checking it, and you&apos;ll see the booking update once it&apos;s confirmed.
+                </>
+              ) : (
+                <>
+                  Thanks — we&apos;ve told {r.name || "the venue"}. They&apos;ll confirm once it shows in their
+                  account, and you&apos;ll see the booking update.
+                </>
+              )}
             </p>
-            {proofWarning && (
-              <p className="mt-1 font-bridal text-[12px] leading-[16px] text-bridal-text-soft">
-                {proofWarning}
-              </p>
-            )}
           </div>
         </div>
+      ))}
+      {proofWarning && (
+        <p className="mt-1 w-full max-w-[560px] font-bridal text-[12px] leading-[16px] text-bridal-text-soft">
+          {proofWarning}
+        </p>
       )}
 
       {/* Honest disclosure. The previous copy claimed Wedding Wala holds the

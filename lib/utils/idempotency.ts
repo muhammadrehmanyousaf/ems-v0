@@ -84,6 +84,9 @@ export function isAmbiguousFailure(err: unknown): boolean {
   // commit); 409 RETRY = a deadlock / serialisation rollback. Both mean "send the SAME key again
   // after Retry-After", never "new intent": a fresh key could write the money twice.
   if (isRetrySameKey(err)) return true
+  // WP16: 503 MONEY_WRITES_PAUSED is the operator's brake. The handler never ran ("Nothing was saved"),
+  // so it is a definite refusal (rotate the key, show the server's sentence), not "may have gone through".
+  if (refusalCode(err) === "MONEY_WRITES_PAUSED") return false
   return !Number.isFinite(status) || status >= 500 || status === 408
 }
 

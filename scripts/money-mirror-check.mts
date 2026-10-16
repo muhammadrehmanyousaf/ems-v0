@@ -1,6 +1,11 @@
 /**
  * Guard: the web half of the payments hardening that landed after WP14a (WP14b).
  *
+ * WP14d adds: the additive `dueNow` / `basis` of payment-instructions (UI_CUSTOMER-010), per-venue shares and the
+ * per-venue claim (UI_CUSTOMER-015, 409 CLAIM_ALREADY_OPEN shows the open claim), 503 MONEY_WRITES_PAUSED is a
+ * definite refusal and 400 BOOKING_NOT_PAYABLE / bad_date print a sentence (WP16), the cancel preview's
+ * `unledgeredAdvance`, the Nayi booking drawer / dialog advance wording and record call (INT-followups).
+ *
  * Pins the client rules that mirror a server contract, driving the REAL modules:
  *   - parseUrduAmount never guesses (PAY-CLOCK-018): "1,5 lakh" and "1.500" are unreadable, Urdu digits read;
  *   - the CSV cell guard neutralises = + - @ tab CR (PAY-REPORTS-024);
@@ -13,9 +18,9 @@
  */
 import { parseUrduAmount } from "../lib/urdu-amount.ts";
 import { neutraliseFormula, escapeCsv } from "../lib/utils/csv-escape.ts";
-import { customerPaymentFromView, paymentNotDueYet, customerDepositLine } from "../lib/payment-status.ts";
+import { customerPaymentFromView, paymentNotDueYet, customerDepositLine, venueClaimShares } from "../lib/payment-status.ts";
 import { isAmbiguousFailure, isRetrySameKey, refusalCode } from "../lib/utils/idempotency.ts";
-import { claimRequiredMessage } from "../lib/utils/api-error.ts";
+import { claimRequiredMessage, claimAlreadyOpen, errorMessage } from "../lib/utils/api-error.ts";
 import { isCancelledBooking, outstandingOn } from "../lib/utils/booking-money.ts";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -90,6 +95,62 @@ eq("no schedule to read: the server figure stands", paymentNotDueYet({ ...part, 
 eq("a waived qist does not count as open", paymentNotDueYet({ ...part, installments: [{ state: "waived", remaining: 5000, waived: true }] }), null);
 eq("nothing payable", paymentNotDueYet({ ...part, paymentType: null }), null);
 
+// ── WP17 / UI_CUSTOMER-010: the server's own `dueNow` + `basis` decide "nothing due yet" when present ──
+const stated = { ...part, dueNow: 0, basis: "none" };
+eq("basis none + dueNow 0: not due yet", paymentNotDueYet(stated)?.dueDate, "2027-08-27");
+eq("...even when no schedule rows came with it", paymentNotDueYet({ ...stated, installments: [] })?.amount, 700000);
+eq("basis advance + dueNow > 0: due", paymentNotDueYet({ ...stated, dueNow: 15000, basis: "advance" }), null);
+eq("basis installment (a qist due today): due", paymentNotDueYet({ ...stated, dueNow: 135000, basis: "installment" }), null);
+eq("basis none but dueNow > 0 is contradictory: due", paymentNotDueYet({ ...stated, dueNow: 5 }), null);
+eq("the server's word does not override money already received", paymentNotDueYet({ ...stated, amountReceived: 1000 }), null);
+eq("the server's word does not override an overdue amount", paymentNotDueYet({ ...stated, overdueAmount: 1 }), null);
+eq("basis stated 'advance' beats a schedule that looks upcoming", paymentNotDueYet({ ...part, dueNow: 700000, basis: "advance" }), null);
+eq("only one of dueNow / basis stated: the schedule decides (older server)", paymentNotDueYet({ ...part, basis: "none" })?.dueDate, "2027-08-27");
+
+// ── WP17 / UI_CUSTOMER-015: each venue's own share ──
+const two = [
+  { businessId: 7, name: "Hall A", businessName: "Hall A", amountDue: 200000, accounts: [{}] },
+  { businessId: 6, name: "Hall B", businessName: "Hall B", amountDue: 138750, accounts: [] },
+];
+const sh = venueClaimShares(two);
+check("two venues: one share each, with their amounts", sh?.length === 2 && sh[0].amountDue === 200000 && sh[1].amountDue === 138750);
+check("...and whether the venue has an account", sh?.[0].hasAccounts === true && sh?.[1].hasAccounts === false);
+eq("one venue: nothing to split, the claim stays whole-booking", venueClaimShares([two[0]]), null);
+eq("an older server that states no shares: the claim stays whole-booking", venueClaimShares([{ businessId: 7 }, { businessId: 6 }]), null);
+eq("one share missing: do not guess", venueClaimShares([two[0], { businessId: 6 }]), null);
+eq("no vendors", venueClaimShares(undefined), null);
+
+// ── WP17 / UI_CUSTOMER-019: 409 CLAIM_ALREADY_OPEN carries the open claim ──
+const open409 = { response: { status: 409, data: { message: "You've already reported this payment.", data: { code: "CLAIM_ALREADY_OPEN", claim: { id: 9, amount: 15000, transactionRef: "TX123" } } } } };
+eq("the open claim is handed back", (claimAlreadyOpen(open409) as { id: number } | null)?.id, 9);
+eq("another 409 is not a claim conflict", claimAlreadyOpen({ response: { status: 409, data: { data: { code: "STATE_CONFLICT" } } } }), null);
+eq("a 400 with the code is not a claim conflict", claimAlreadyOpen({ response: { status: 400, data: { data: { code: "CLAIM_ALREADY_OPEN" } } } }), null);
+eq("a conflict that names no claim still counts", JSON.stringify(claimAlreadyOpen({ response: { status: 409, data: { data: { code: "CLAIM_ALREADY_OPEN" } } } })), "{}");
+eq("no error", claimAlreadyOpen(null), null);
+
+// ── WP16: MONEY_WRITES_PAUSED, BOOKING_NOT_PAYABLE, bad_date ──
+const paused = { response: { status: 503, data: { message: "Money changes are temporarily paused while the platform is being checked. Nothing was saved. Please try again in a little while.", data: { code: "MONEY_WRITES_PAUSED" } } } };
+eq("MONEY_WRITES_PAUSED is a definite refusal, not 'may have gone through'", isAmbiguousFailure(paused), false);
+eq("...its code reads", refusalCode(paused), "MONEY_WRITES_PAUSED");
+eq("a plain 503 with no code is still ambiguous", isAmbiguousFailure({ response: { status: 503, data: {} } }), true);
+eq("503 BUSY is still the re-send-same-key case", isAmbiguousFailure({ response: { status: 503, data: { data: { code: "BUSY" } } } }), true);
+eq("the server's sentence wins", errorMessage(paused, "x"), paused.response.data.message);
+check("a dropped message still reads for MONEY_WRITES_PAUSED", /paused/i.test(errorMessage({ response: { status: 503, data: { data: { code: "MONEY_WRITES_PAUSED" } } } }, "x")));
+check("a dropped message still reads for BOOKING_NOT_PAYABLE", /can't take a payment/i.test(errorMessage({ response: { status: 400, data: { data: { code: "BOOKING_NOT_PAYABLE" } } } }, "x")));
+check("a dropped message still reads for bad_date", /isn't a real date/i.test(errorMessage({ response: { status: 400, data: { data: { code: "bad_date" } } } }, "x")));
+eq("the server's bad_date sentence wins", errorMessage({ response: { status: 400, data: { message: "Qist 2: taareekh sahi nahi.", data: { code: "bad_date" } } } }, "x"), "Qist 2: taareekh sahi nahi.");
+// the web outbox keeps every queued entry when the batch answers 503 (nothing removed in the catch)
+const outboxSync = src("lib/outbox-sync.ts");
+const flushCatch = outboxSync.slice(outboxSync.indexOf("} catch {"), outboxSync.indexOf("} finally {"));
+check("outbox flush: a thrown 503 keeps the queue (no removeOp / recordConflict in the catch)", flushCatch.includes("return null") && !flushCatch.includes("removeOp") && !flushCatch.includes("recordConflict"));
+
+// ── WP17 / UI_CUSTOMER-009: a vendor's Default is per method ──
+const bankMgr = src("components/dashboard/mainScreens/businessSettings/redesigned/bank-accounts-manager.tsx");
+check("vendor bank screen: the default checkbox names the method, not 'the payout account'", !bankMgr.includes("Make this the default payout account") && bankMgr.includes('"JazzCash" : (form.accountType ?? "bank") === "easypaisa"'));
+check("vendor bank screen: says each type has its own default", bankMgr.includes("each have their own default"));
+check("vendor bank screen: every account row keeps its own Default pill and Set default", bankMgr.includes("{a.isActive && <StatusPill") && bankMgr.includes("{!a.isActive && <Button"));
+check("vendor bank screen: no longer says a customer sees only a verified account", !bankMgr.includes("Shown only once we've verified the account"));
+
 // ── PAY-UI_CUSTOMER-011: the customer's deposit line ──
 eq("no deposit, no line", customerDepositLine({ deposit: 0 }), null);
 eq("no position, no line", customerDepositLine(null), null);
@@ -154,6 +215,20 @@ check("the pay page asks paymentNotDueYet before it offers a transfer", src("app
 const bank = src("components/booking/steps/bank-transfer-screen.tsx");
 check("a venue with no published account is still named on a multi-venue booking", bank.includes("vendorsWithoutAccounts") && bank.includes("allVendors.length > 1"));
 check("the claim body cannot carry a customer-chosen paymentType", !/paymentType\?\s*:/.test(src("lib/api/paymentInstructions.ts").split("static async claim(")[1].split("Promise<{ claim")[0]) && !/claim\([\s\S]{0,260}paymentType/.test(bank));
+check("transfer screen: the claim names the venue chosen (businessId) only when shares are stated", bank.includes("...(selected ? { businessId: selected.businessId } : {})") && bank.includes("venueClaimShares(allVendors)"));
+check("transfer screen: each venue block shows its own amount", bank.includes("{shareOf(vendor.businessId) && ("));
+check("transfer screen: 409 CLAIM_ALREADY_OPEN shows the open claim", bank.includes("claimAlreadyOpen<Partial<PaymentClaim>>(e)") && bank.includes("You&apos;ve already reported this payment"));
+check("claim API type admits businessId and the claim row carries it", /businessId\?: number;/.test(src("lib/api/paymentInstructions.ts")) && src("lib/api/paymentInstructions.ts").includes("businessId?: number | null;"));
+check("payment-instructions type carries dueNow, basis and the per-venue amounts", ["dueNow?: number;", "basis?:", "amountDue?: number;", "outstanding?: number;"].every((s) => src("lib/api/paymentInstructions.ts").includes(s)));
+check("cancel dialog: one line for an advance the venue never recorded", bookingPage.includes("(refundPreview.unledgeredAdvance ?? 0) > 0 && (") && bookingPage.includes("data-unledgered-advance") && src("lib/api/bookingOrder.ts").includes("unledgeredAdvance?: number;"));
+check("vendor refund preview: the unledgered advance is a row of the existing breakdown", src("components/bookings/refund-preview-card.tsx").includes("data.unledgeredAdvance"));
+// ── INT-followups: the Nayi booking drawer records exactly what was typed ──
+const nayi = src("components/dashboard/mainScreens/artifact/booking-form.ts");
+check("Nayi booking: a typed advance travels as downPayment with its method; none typed sends neither", nayi.includes('if (adv) vendor.downPayment = adv') && nayi.includes("if (method && adv) payload.paymentMethod = method"));
+check("Nayi booking: the advance field no longer reads like the venue's required advance", !nayi.includes('placeholder="booking advance"') && nayi.includes("khali = kuch record nahi"));
+const offDlg = src("components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog.tsx");
+check("offline dialog: the 'advance received' tick records it (down_payment, chosen method, fresh key) before it says so", /recordPayment\(newBookingId, 'down_payment', advanceMethod, undefined,/.test(offDlg) && offDlg.indexOf("recordPayment(newBookingId") < offDlg.indexOf("toast.success('Advance recorded')"));
+check("offline dialog: a failed advance is reported, never claimed as recorded", offDlg.includes("record the advance from the booking"));
 const planPay = src("app/(main)/user/plan/[id]/pay/page.tsx");
 check("the plan pay screen no longer promises card retries or 'charged'", !/card is declined|is charged on its own|confirms each\s+vendor/i.test(planPay));
 
