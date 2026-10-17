@@ -44,7 +44,7 @@ export default function UserActivityPage() {
 
   return (
     <PageContainer>
-      <div className="max-w-3xl">
+      <div className="max-w-4xl">
       <div className="mb-6">
         <p className="text-[10px] font-bridal uppercase tracking-[0.28em] text-bridal-text-label">Your account</p>
         <h1 className="font-display italic text-[30px] text-bridal-charcoal leading-tight mt-1">Activity</h1>
@@ -71,6 +71,7 @@ export default function UserActivityPage() {
         <ActivityFeed
           events={events}
           loading={loading}
+          timeLead
           emptyLabel="No activity yet — your bookings and account events will appear here."
           hasMore={hasMore}
           onLoadMore={() => {

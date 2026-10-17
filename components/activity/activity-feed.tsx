@@ -25,7 +25,7 @@ function timeOf(iso: string) {
   return new Date(iso).toLocaleTimeString("en-PK", { hour: "numeric", minute: "2-digit" });
 }
 
-function EventRow({ e, showActor }: { e: ActivityEvent; showActor?: boolean }) {
+function EventRow({ e, showActor, timeLead }: { e: ActivityEvent; showActor?: boolean; timeLead?: boolean }) {
   const [open, setOpen] = React.useState(false);
   const sev = SEV[e.severity] || SEV.INFO;
   const hasDetail = (e.changes && Object.keys(e.changes).length > 0) || (e.money && !e.money.redacted) || e.context?.ipCountry;
@@ -33,6 +33,7 @@ function EventRow({ e, showActor }: { e: ActivityEvent; showActor?: boolean }) {
     <li className="relative pl-6 pb-4 last:pb-0">
       <span className={`absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full ${sev.dot}`} aria-hidden />
       <div className="flex items-baseline gap-2 flex-wrap">
+        {timeLead && <span className="w-[4.25rem] shrink-0 text-[11px] text-bridal-text-soft tabular-nums">{timeOf(e.occurredAt)}</span>}
         <span className={`text-[14px] font-medium ${sev.label}`}>{e.humanized}</span>
         {e.outcome === "DENIED" && (
           <span className="text-[10px] font-bridal uppercase tracking-wide text-bridal-coral-dark border border-bridal-coral/40 rounded px-1">denied</span>
@@ -42,9 +43,9 @@ function EventRow({ e, showActor }: { e: ActivityEvent; showActor?: boolean }) {
             Rs {Number(e.money.amount).toLocaleString("en-PK")}
           </span>
         )}
-        <span className="ml-auto text-[11px] text-bridal-text-soft tabular-nums">{timeOf(e.occurredAt)}</span>
+        {!timeLead && <span className="ml-auto text-[11px] text-bridal-text-soft tabular-nums">{timeOf(e.occurredAt)}</span>}
       </div>
-      <div className="mt-0.5 flex items-center gap-2 text-[11px] text-bridal-text-soft">
+      <div className={`mt-0.5 flex items-center gap-2 text-[11px] text-bridal-text-soft ${timeLead ? "pl-[4.75rem]" : ""}`}>
         {showActor && e.actorDisplayName && (
           <span>
             {e.actorDisplayName}
@@ -60,7 +61,7 @@ function EventRow({ e, showActor }: { e: ActivityEvent; showActor?: boolean }) {
         )}
       </div>
       {open && (
-        <div className="mt-1.5 rounded-md border border-bridal-beige bg-bridal-cream/50 p-2 text-[11px] text-bridal-charcoal font-mono space-y-0.5">
+        <div className={`mt-1.5 rounded-md border border-bridal-beige bg-bridal-cream/50 p-2 ${timeLead ? "ml-[4.75rem]" : ""} text-[11px] text-bridal-charcoal font-mono space-y-0.5`}>
           {e.changes &&
             Object.entries(e.changes).map(([f, c]) => (
               <div key={f}>
@@ -82,6 +83,7 @@ export function ActivityFeed({
   emptyLabel = "No activity yet.",
   onLoadMore,
   hasMore,
+  timeLead,
 }: {
   events: ActivityEvent[];
   loading?: boolean;
@@ -89,6 +91,8 @@ export function ActivityFeed({
   emptyLabel?: string;
   onLoadMore?: () => void;
   hasMore?: boolean;
+  /** The time leads each row (a log) instead of sitting at the far right. The customer page uses it. */
+  timeLead?: boolean;
 }) {
   if (!loading && events.length === 0) {
     return <p className="text-[13px] text-bridal-text-soft py-6 text-center">{emptyLabel}</p>;
@@ -108,7 +112,7 @@ export function ActivityFeed({
           <h3 className="text-[10px] font-bridal uppercase tracking-[0.18em] text-bridal-text-label mb-2">{g.day}</h3>
           <ul className="relative border-l border-bridal-beige ml-1">
             {g.items.map((e) => (
-              <EventRow key={e.id} e={e} showActor={showActor} />
+              <EventRow key={e.id} e={e} showActor={showActor} timeLead={timeLead} />
             ))}
           </ul>
         </section>

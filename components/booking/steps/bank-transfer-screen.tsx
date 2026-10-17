@@ -55,6 +55,9 @@ interface BankTransferScreenProps {
    * next) on the left. Narrow windows stay one column in the same order.
    */
   layout?: "stack" | "split"
+  /** With layout "split" inside a card (the plan pay page): the form column is narrow, so method and
+   *  reference stay stacked instead of side by side. */
+  compact?: boolean
 }
 
 const METHOD_LABELS: Record<ClaimMethod, string> = {
@@ -83,6 +86,7 @@ export default function BankTransferScreen({
   paymentType,
   bookingDate,
   layout = "stack",
+  compact = false,
 }: BankTransferScreenProps) {
   const split = layout === "split"
   const card = split ? CARD_FULL : CARD
@@ -458,7 +462,7 @@ export default function BankTransferScreen({
                 </select>
               </div>
             )}
-            <div className={split ? "grid gap-3 sm:max-[1179px]:grid-cols-[minmax(0,170px)_minmax(0,1fr)] min-[1260px]:grid-cols-[minmax(0,170px)_minmax(0,1fr)]" : "space-y-3"}>
+            <div className={split && !compact ? "grid gap-3 sm:max-[1179px]:grid-cols-[minmax(0,170px)_minmax(0,1fr)] min-[1260px]:grid-cols-[minmax(0,170px)_minmax(0,1fr)]" : "space-y-3"}>
             <div>
               <label htmlFor="bank-claim-method" className={`mb-1 block ${LABEL}`}>How you paid</label>
               <select

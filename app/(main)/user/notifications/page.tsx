@@ -189,8 +189,12 @@ function NotificationRow({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
+          {/* Mail-list row from 1024px: the title and its meta sit in a fixed-width left
+              column, the message reads across the rest of the row, so a wide window is not
+              a thin column of text with the right 40% empty. Below 1024px it stays stacked
+              in the same order (title, message, meta). */}
+          <div className="flex-1 min-w-0 lg:grid lg:grid-cols-[minmax(240px,320px)_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:gap-x-10">
+            <div className="flex items-center gap-2 flex-wrap lg:[grid-area:1/1]">
               <h3
                 className={cn(
                   "text-[13.5px] leading-tight",
@@ -205,10 +209,10 @@ function NotificationRow({
                 <span className="size-1.5 rounded-full bg-bridal-gold" />
               ) : null}
             </div>
-            <p className="text-[12.5px] text-muted-foreground mt-1 leading-relaxed">
+            <p className="text-[12.5px] text-muted-foreground mt-1 leading-relaxed lg:mt-0 lg:[grid-area:1/2/3/3]">
               {notification.message}
             </p>
-            <div className="flex items-center gap-2.5 mt-2 flex-wrap">
+            <div className="flex items-center gap-2.5 mt-2 flex-wrap lg:[grid-area:2/1]">
               <span className="text-[10.5px] text-muted-foreground/80 tabular-nums">
                 {formatDate(notification.createdAt)}
               </span>
