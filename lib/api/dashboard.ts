@@ -1668,7 +1668,7 @@ export class PackagesAPI {
 
   static async create(data: {
     name: string;
-    description?: string;
+    description?: string | null;
     price: number;
     features?: PackageFeatures;
     images?: string[];
