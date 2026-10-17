@@ -411,6 +411,9 @@ export async function withdrawRefundRequest(bookingId: number, reqId: number, no
 export interface RefundObligation extends RefundRequestRow { outstanding: number }
 export interface RefundObligations {
   businessId: number | null; count: number; totalOutstanding: number; obligations: RefundObligation[];
+  /** WP37 (MONEY-022, additive): money paid above the booking total that no obligation covers. Absent on an older server. */
+  overpayments?: { bookingId: number; customerName?: string | null; bookingDate?: string | null; overpaid: number }[];
+  overpaymentsTotal?: number;
 }
 
 /** VENDOR worklist: refunds this venue owes and has not been confirmed as paying. */

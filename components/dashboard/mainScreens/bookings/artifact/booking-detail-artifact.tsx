@@ -317,7 +317,7 @@ function depositCard(pos: DepositPosition | null): string {
     ? `<div class="settle-actions"><span class="dep-done">${svg(I.check, 2.4)} Deposit ${st === "forfeited" ? "zabt ho gaya" : "handle ho chuka"}</span></div>`
     : `<div class="settle-actions">
         <button class="btn btn-primary" data-dep-return="${pos.bookingId}" ${hasLiveClaims ? "disabled title='Pehle claims settle/withdraw karein'" : ""}>${svg(I.money)} Deposit wapas karein</button>
-        <button class="btn btn-ghost" data-dep-claim="${pos.bookingId}" data-dep-returnable="${Math.round(pos.returnable)}">${svg(I.minus)} Nuqsan claim karein</button>
+        ${DAMAGE_CLAIM_BUTTON ? `<button class="btn btn-ghost" data-dep-claim="${pos.bookingId}" data-dep-returnable="${Math.round(pos.returnable)}">${svg(I.minus)} Nuqsan claim karein</button>` : ""}
       </div>${hasLiveClaims ? `<div class="bf-hint" style="padding:0 16px 12px">Deposit wapas karne se pehle khuli claims settle ya chhorें.</div>` : ""}`
   return `<div class="card">
       <div class="card-h"><div><h2>Security deposit</h2><div class="sub">Rakha → nuqsan kaat → wapas</div></div><span class="st ${tone}"><i></i> ${label}</span></div>
@@ -368,6 +368,14 @@ function refundPaidDrawerBody(id: number, amount: number): string {
  * record-payment door, which closes the claim, keeps the customer's reference on the receipt and links the two);
  * rejecting needs a reason. Pending reports only; the same card language as the refund request card above it.
  */
+/**
+ * WP37 (LOGIC-029, owner decision): the vendor can OPEN a damage claim, but the customer has no screen to accept or
+ * dispute it and the admin none to settle it, so an open claim blocks the deposit return with no way out except
+ * withdrawing. The button stays hidden until those screens exist (the server door and the claim list are untouched,
+ * so claims already open can still be withdrawn or settled).
+ */
+const DAMAGE_CLAIM_BUTTON = false
+
 const CLAIM_METHOD: Record<string, string> = {
   bank_transfer: "Bank transfer", raast: "Raast", ibft: "IBFT", jazzcash: "JazzCash", easypaisa: "Easypaisa", cash: "Cash",
 }
