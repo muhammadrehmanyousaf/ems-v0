@@ -28,15 +28,15 @@ const STEPS = [
   },
   {
     name: "Book and pay your deposit",
-    text: "When you find the right match, confirm the booking with a deposit through our secure payment processor (PayFast Pakistan). Wedding Wala holds the deposit — the vendor doesn't receive it until the booking is confirmed.",
+    text: "When you find the right match, request the booking. Once the vendor accepts, you pay the deposit directly to the vendor — by bank transfer, JazzCash or Easypaisa into the account they publish — and record the payment on your booking. Wedding Wala never takes or holds your money.",
   },
   {
     name: "Vendor confirms",
-    text: "The vendor reviews and accepts the booking, typically within 24 hours. If they decline, the deposit is fully refunded.",
+    text: "The vendor reviews and accepts the booking, typically within 24 hours. If they decline, you have paid nothing and the date is released.",
   },
   {
     name: "Pay the balance",
-    text: "Pay the remaining balance per the schedule on your booking — usually before or on the event date. Every payment is on the platform; no off-platform transactions are needed.",
+    text: "Pay the remaining balance per the schedule on your booking — usually before or on the event date. Every payment goes straight to the vendor and is recorded on your booking, so both of you keep the same history.",
   },
   {
     name: "Enjoy the event",

@@ -145,7 +145,7 @@ export default function ServicesPage() {
       "@type": "Service",
       name: `${SITE_NAME} wedding vendor marketplace`,
       serviceType: "Wedding vendor marketplace and vendor management software",
-      description: `Find, compare and book verified wedding vendors across Pakistan, with deposits held until the function is delivered. Vendors subscribe to the ${SITE_NAME} portal to manage bookings, payments and availability.`,
+      description: `Find, compare and book verified wedding vendors across Pakistan, paying the vendor directly with every payment recorded. Vendors subscribe to the ${SITE_NAME} portal to manage bookings, payments and availability.`,
       url: `${SITE_URL}/services`,
       provider: { "@id": `${SITE_URL}#organization` },
       areaServed: { "@type": "Country", name: "Pakistan" },
@@ -184,7 +184,7 @@ export default function ServicesPage() {
             </h1>
             <p className="mt-5 max-w-xl font-bridal text-[15.5px] leading-relaxed text-bridal-text-soft">
               {SITE_NAME} does two things. It helps couples find, compare and book verified wedding
-              vendors across Pakistan, with the deposit held until the function is delivered. And it
+              vendors across Pakistan, paying the vendor directly with every payment recorded. And it
               gives those vendors a portal to run bookings, payments and availability. Couples pay
               nothing. Vendors pay a monthly subscription.
             </p>
@@ -233,7 +233,7 @@ export default function ServicesPage() {
             <p className="mt-3 font-bridal text-[14px] leading-relaxed text-bridal-text-soft">
               Search verified vendors, compare real PKR prices, message them, check dates and book —
               at no cost to you. You pay the vendor&apos;s own price for their service and nothing on
-              top. Your deposit is held by {SITE_NAME} until the function is delivered.
+              top. You pay the vendor directly and {SITE_NAME} records the payment.
             </p>
             <Link
               href="/how-it-works"

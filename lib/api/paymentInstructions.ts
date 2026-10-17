@@ -57,6 +57,13 @@ export interface PaymentVendor {
   businessIds?: number[];
   acceptsCash: boolean;
   acceptsBankTransfer: boolean;
+  /**
+   * WP39 / FLAGGED-050 (additive): the rails the customer can REALLY use with this venue (cash, bank_transfer, jazzcash, easypaisa),
+   * from what it accepts AND has published. Absent on an older server: the form then offers every method as before.
+   */
+  methods?: string[];
+  /** WP39: the venue takes transfers but has published no account to pay into (it is told once; the customer should contact it). */
+  detailsMissing?: boolean;
   whatsappNumber: string | null;
   /**
    * Only accounts the vendor has PUBLISHED — opted in and active. Bank first,

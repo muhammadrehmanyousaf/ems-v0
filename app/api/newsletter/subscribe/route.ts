@@ -81,12 +81,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true })
   }
 
-  // Forward to backend for persistence + double-opt-in. The backend endpoint
-  // does not exist yet (TODO); for now we log + 200 so the UX doesn't lie.
-  // When the backend is ready, drop the try/catch and let the response shape
-  // come straight through.
+  // Forward to the backend for persistence + double-opt-in.
+  //
+  // WP39 / PUBLIC-019: this used to log and answer 200 whatever happened, so the footer told every visitor "you are subscribed" while
+  // the address was dropped (no backend endpoint exists). It now answers the truth: success ONLY when the backend accepted it; a
+  // missing endpoint (404/405), an error or an unreachable backend is a 503 the footer shows as "not available yet". When the backend
+  // endpoint ships, nothing here changes.
+  const unavailable = () =>
+    NextResponse.json(
+      { ok: false, error: "Newsletter signup is not available yet — please check back soon." },
+      { status: 503 },
+    )
   try {
-    await fetch(`${BACKEND_URL}api/v1/newsletter/subscribe`, {
+    const upstream = await fetch(`${BACKEND_URL}api/v1/newsletter/subscribe`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -94,13 +101,17 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({ email }),
       // Don't block the user response on backend latency.
-      signal: AbortSignal.timeout(2000),
+      signal: AbortSignal.timeout(4000),
     })
+    if (!upstream.ok) {
+      // eslint-disable-next-line no-console
+      console.info("[newsletter] backend did not accept the subscription:", upstream.status)
+      return unavailable()
+    }
   } catch (err) {
-    // Backend not yet wired or unreachable. Log and continue — we'll
-    // capture intent in server logs until persistence lands.
     // eslint-disable-next-line no-console
-    console.info("[newsletter] subscribe (backend pending):", email, ip)
+    console.info("[newsletter] backend unreachable:", (err as Error)?.message)
+    return unavailable()
   }
 
   return NextResponse.json({ ok: true })

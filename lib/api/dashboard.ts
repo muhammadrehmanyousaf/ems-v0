@@ -879,6 +879,8 @@ export interface ApiCustomer {
   total_booking: number;
   last_booking: string;
   first_booking?: string;
+  /** WP39 / LEADS-021: when the customer entered the book (Customer.firstSeenAt), NOT the first event date (first_booking). */
+  first_seen?: string;
 }
 
 export interface CustomerProfileBooking {
@@ -1153,6 +1155,7 @@ export class CustomersAPI {
         total_booking: Number(c.totalBookings) || 0,
         last_booking: (c.lastBookingAt as string) ?? "",
         first_booking: (c.firstBookingAt as string) ?? undefined,
+        first_seen: (c.firstSeenAt as string) ?? undefined,
       }));
       return {
         customers,
@@ -1172,6 +1175,23 @@ export class CustomersAPI {
   }
 
   /**
+   * WP39 / LEADS-026: the WHOLE customer book. The screen asked for one page of 200 while the server caps a page at 100, so a vendor
+   * with more than 100 customers saw 100 and a "Kul customers" tile that agreed with the truncation. Pages of 100 are read until
+   * `totalPages` (bounded), and `total` is the server's own figure.
+   */
+  static async getEvery(maxPages = 50): Promise<{ customers: ApiCustomer[]; total: number }> {
+    const first = await CustomersAPI.getAll(1, 100);
+    const customers = [...first.customers];
+    const pages = Math.min(Math.max(first.pagination.totalPages || 1, 1), maxPages);
+    for (let p = 2; p <= pages; p += 1) {
+      const next = await CustomersAPI.getAll(p, 100);
+      if (!next.customers.length) break;
+      customers.push(...next.customers);
+    }
+    return { customers, total: Math.max(first.pagination.total || 0, customers.length) };
+  }
+
+  /**
    * Customer 360 — single-customer aggregate (bookings + function
    * sheets + leads + stats). The listing's `_id` is either the
    * customer's email or `offline_<id>`; pass it via the matching
@@ -1187,10 +1207,16 @@ export class CustomersAPI {
     if (params.phone) qs.set("phone", params.phone);
     if (params.offlineId != null) qs.set("offlineId", String(params.offlineId));
     if (qs.toString() === "") return null;
-    const res = await axiosInstance.get(
-      `/api/v1/analytics/customers/profile?${qs.toString()}`,
-    );
-    return res.data?.data ?? null;
+    try {
+      const res = await axiosInstance.get(
+        `/api/v1/analytics/customers/profile?${qs.toString()}`,
+      );
+      return res.data?.data ?? null;
+    } catch (err) {
+      // WP39 / LEADS-022: the server now answers 404 for a number / address nobody has; that is "not found", not a failure to retry
+      if ((err as { response?: { status?: number } })?.response?.status === 404) return null;
+      throw err;
+    }
   }
 
   /**

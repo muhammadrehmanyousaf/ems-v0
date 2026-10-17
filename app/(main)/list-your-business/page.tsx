@@ -32,8 +32,8 @@ const BENEFITS = [
   },
   {
     Icon: Wallet,
-    title: "Deposits held until you confirm",
-    body: "When a customer books you, the deposit is held by Wedding Wala — released to you when you confirm. If you can't take the date, the customer is refunded automatically and we don't charge a fee. No payment chasing, no awkward conversations.",
+    title: "Customers pay you directly",
+    body: "When a customer books you and you confirm, they pay the deposit straight into the account you publish. Wedding Wala records every payment against the booking, so you are not chasing or guessing who paid what. We never hold your money and take no commission.",
   },
   {
     Icon: Calendar,
@@ -140,7 +140,7 @@ export default function ListYourBusinessPage() {
             Build your wedding business on Pakistan&apos;s trust-first marketplace.
           </h1>
           <p className="mt-5 font-bridal text-[16px] text-bridal-text leading-relaxed">
-            Real bookings, verified reviews, deposits held until you confirm.
+            Real bookings, verified reviews, payments recorded on every booking.
             No fake leads, no chargeback drama, no spammy WhatsApp messages
             — just couples ready to book and a platform that protects both
             of you.

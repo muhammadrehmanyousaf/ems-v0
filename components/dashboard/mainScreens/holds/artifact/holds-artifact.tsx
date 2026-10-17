@@ -11,6 +11,7 @@ import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { VendorHoldsAPI, type VendorHold } from "@/lib/api/vendorHolds"
+import { placeHold, holdErrorText } from "@/lib/hold-place"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useArtifactShell, escHtml, initTablePager, errorBannerHtml, openDrawer, closeDrawer } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { openBookingForm } from "@/components/dashboard/mainScreens/artifact/booking-form"
@@ -127,8 +128,8 @@ export function HoldsArtifact() {
         const time = rawTime.length === 5 ? rawTime + ":00" : rawTime
         if (!date || !time) { toast.error("Date aur waqt chunein"); return }
         const btn = ext as HTMLButtonElement; const o = btn.innerHTML; btn.disabled = true; btn.textContent = "…"
-        try { await VendorHoldsAPI.place({ holdDate: date, holdTime: time, businessId: Number(ext.dataset.heBiz) || bizRef.current || undefined }); toast.success("Waqt barha diya — hold aur der ke liye mehfooz"); refetch() }
-        catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Extend nahi hua"); btn.disabled = false; btn.innerHTML = o }
+        try { const r = await placeHold({ holdDate: date, holdTime: time, businessId: Number(ext.dataset.heBiz) || bizRef.current || undefined }); toast.success(r.queuedOffline ? "Offline hold queue ho gaya — network aate hi sync hoga" : "Waqt barha diya — hold aur der ke liye mehfooz"); refetch() }
+        catch (err: unknown) { toast.error(holdErrorText(err, "Extend nahi hua")); btn.disabled = false; btn.innerHTML = o }
         return
       }
       const rel = t.closest("[data-release]") as HTMLElement | null
@@ -138,8 +139,8 @@ export function HoldsArtifact() {
         const time = (s.getElementById("h-time") as HTMLInputElement | null)?.value
         if (!date || !time) { toast.error("Date aur waqt chunein"); return }
         const btn = s.getElementById("h-save") as HTMLButtonElement | null; const o = btn?.innerHTML; if (btn) { btn.disabled = true; btn.textContent = "…" }
-        try { const r = await VendorHoldsAPI.place({ holdDate: date, holdTime: time.length === 5 ? time + ":00" : time, businessId: bizRef.current ?? undefined }); toast.success(r.alreadyHeld ? "Ye slot pehle se roka hua tha" : "Hold lag gaya"); closeDrawer(s); refetch() }
-        catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Ye slot pehle se booked/held hai"); if (btn) { btn.disabled = false; if (o != null) btn.innerHTML = o } }
+        try { const r = await placeHold({ holdDate: date, holdTime: time.length === 5 ? time + ":00" : time, businessId: bizRef.current ?? undefined }); toast.success(r.queuedOffline ? "Offline hold queue ho gaya — network aate hi sync hoga" : r.alreadyHeld ? "Ye slot pehle se roka hua tha" : "Hold lag gaya"); closeDrawer(s); refetch() }
+        catch (err: unknown) { toast.error(holdErrorText(err, "Ye slot pehle se booked/held hai")); if (btn) { btn.disabled = false; if (o != null) btn.innerHTML = o } }
         return
       }
     })

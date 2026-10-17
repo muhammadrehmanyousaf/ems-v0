@@ -1269,8 +1269,11 @@ export default function BookingDetailPage() {
                   </>
                 ) : (
                   <p>
-                    This action cannot be undone. Any payments made may be
-                    subject to the vendor&apos;s refund policy.
+                    This action cannot be undone.
+                    {/* WP39 / CUSTOMER-062: the refund-policy sentence only when money actually went in */}
+                    {Number(booking.downPayment) > 0 || ["Paid", "Partial"].includes(booking.paymentStatus)
+                      ? <> Any payments made may be subject to the vendor&apos;s refund policy.</>
+                      : <> You have not paid anything on this booking.</>}
                   </p>
                 )}
                 {/* QA #4 — show the actual refund per the vendor's policy so the

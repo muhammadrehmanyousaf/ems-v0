@@ -50,10 +50,32 @@ const EXTRA_CSS = String.raw`
 .loadwrap{ display:grid; place-items:center; padding:80px 16px; color:var(--ink-3); font-size:13px; }
 `
 
-function buildContent(list: Notification[], filter: string): string {
-  const unread = list.filter((n) => !n.isRead).length
+/**
+ * WP39 / LEADS-036 + SETUP-043: the feed used to be ONE page of 50 and the header, the tabs and "anpadhi" were counted from those
+ * 50 rows, so a vendor with 114 unread saw "50". The pages are now read through (bounded), the TOTAL is the server's figure and the
+ * unread count comes from the unread-count endpoint, so the header is true however many rows are loaded.
+ */
+const PAGE = 50
+const MAX_PAGES = 10
+async function loadFeed(): Promise<{ notifications: Notification[]; total: number; truncated: boolean }> {
+  const first = await NotificationAPI.getNotifications(1, PAGE, false)
+  const all = [...first.notifications]
+  let more = !!first.hasMore
+  let p = 1
+  while (more && p < MAX_PAGES) {
+    p += 1
+    const next = await NotificationAPI.getNotifications(p, PAGE, false)
+    all.push(...next.notifications)
+    more = !!next.hasMore
+  }
+  return { notifications: all, total: Number(first.total) || all.length, truncated: more }
+}
+
+function buildContent(list: Notification[], filter: string, meta: { total: number; unread: number | null; truncated: boolean }): string {
+  const unread = meta.unread != null ? meta.unread : list.filter((n) => !n.isRead).length
+  const total = Math.max(meta.total, list.length)
   const toolbar = `<div class="toolbar"><div class="tabs" id="tabs">
-    <button class="tab${filter === "all" ? " on" : ""}" data-f="all">Sab <span class="cnt">${list.length}</span></button>
+    <button class="tab${filter === "all" ? " on" : ""}" data-f="all">Sab <span class="cnt">${total}</span></button>
     <button class="tab${filter === "unread" ? " on" : ""}" data-f="unread">Anpadhe <span class="cnt">${unread}</span></button>
     </div><div class="filters">${unread > 0 ? `<button class="btn btn-ghost" id="markall">${svg(IC.checkAll)} Sab read karein</button>` : ""}</div></div>`
   const rows = list.filter((n) => filter === "all" || !n.isRead)
@@ -79,7 +101,7 @@ function buildContent(list: Notification[], filter: string): string {
     </div>`
   }).join("")}</div></div>` : `<div class="card"><div class="empty">${filter === "unread" ? "Koi anpadhi notification nahi 🎉" : "Abhi koi notification nahi."}</div></div>`
   return `
-  <div class="head"><div><h1>Notifications</h1><div class="sub">${unread > 0 ? `<b>${unread}</b> anpadhi` : "Sab padh li"} · ${list.length} total.</div></div></div>
+  <div class="head"><div><h1>Notifications</h1><div class="sub">${unread > 0 ? `<b>${unread}</b> anpadhi` : "Sab padh li"} · ${total} total.${meta.truncated ? ` Pichli ${list.length} dikh rahi hain.` : ""}</div></div></div>
   ${toolbar}${feed}
   <div class="foot">WeddingWala vendor console · Notifications</div>`
 }
@@ -90,7 +112,8 @@ export function NotificationsArtifact() {
     activeHref: "/dashboard/notifications", crumbBold: "Ops", crumbSub: "Notifications", extraCss: EXTRA_CSS,
   })
   const qc = useQueryClient()
-  const { data, isError } = useQuery({ queryKey: ["notifs-art"], queryFn: () => NotificationAPI.getNotifications(1, 50, false) })
+  const { data, isError } = useQuery({ queryKey: ["notifs-art"], queryFn: loadFeed })
+  const unreadQ = useQuery({ queryKey: ["notifs-art-unread"], queryFn: () => NotificationAPI.getUnreadCount() })
   const list = React.useMemo(() => (data?.notifications ?? []) as Notification[], [data])
   const [filter, setFilter] = React.useState(() => loadPref("tab:notifications", "all"))
 
@@ -100,17 +123,17 @@ export function NotificationsArtifact() {
     const wwc = s.getElementById("wwc"); if (!wwc) return
     if (isError) { wwc.innerHTML = `<div class="head"><div><h1>Notifications</h1></div></div>${errorBannerHtml()}`; return }
     if (!data) { wwc.innerHTML = `<div class="loadwrap">Notifications load ho rahi hain…</div>`; return }
-    wwc.innerHTML = buildContent(list, filter)
+    wwc.innerHTML = buildContent(list, filter, { total: data.total, unread: unreadQ.data ?? null, truncated: data.truncated })
     initTablePager(s, { rows: ".nrow", pageSize: 20, noun: "ittilaat" })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, data, filter, isError])
+  }, [ready, data, filter, isError, unreadQ.data])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
     const s = shadowRef.current
     if (!s || !ready || bound.current) return
     bound.current = true
-    const refetch = () => qc.invalidateQueries({ queryKey: ["notifs-art"] })
+    const refetch = () => { qc.invalidateQueries({ queryKey: ["notifs-art"] }); qc.invalidateQueries({ queryKey: ["notifs-art-unread"] }) }
     s.addEventListener("click", async (e) => {
       const t = e.target as HTMLElement
       if (t.closest("[data-retry]")) { qc.invalidateQueries({ queryKey: ["notifs-art"] }); return }

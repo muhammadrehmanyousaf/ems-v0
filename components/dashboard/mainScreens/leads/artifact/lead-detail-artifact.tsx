@@ -21,11 +21,13 @@ import { toast } from "sonner"
 import {
   LeadAPI, type Lead, type LeadStatus, type LeadSource, type LeadEventType,
 } from "@/lib/api/leads"
-import { waDigits, logContact } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
+import { waDigits, logContact, lostReasonFormHtml, lostReasonText } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
+import { nextStageOf } from "@/lib/lead-stage"
+import { callNumber, waNumber } from "@/lib/lead-tail"
 import { openBookingForm, bookingIdFromSaved } from "@/components/dashboard/mainScreens/artifact/booking-form"
 import { useBusiness } from "@/context/BusinessContext"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
-import { useArtifactShell, pkNum, escHtml, initialsOf, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, pkNum, escHtml, initialsOf, errorBannerHtml, openDrawer, closeDrawer } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 /* ── label maps (Urdu, matching the leads list) ──────────────── */
 const STAGE_UI: Record<LeadStatus, { label: string; tone: string }> = {
@@ -48,12 +50,15 @@ const stageUi = (s?: LeadStatus) => STAGE_UI[s || "new"] || STAGE_UI.new
 const sourceUi = (s?: LeadSource) => SOURCE_UI[s || "other"] || "Other"
 const eventUi = (t?: LeadEventType | null) => (t ? EVENT_UI[t] || "Event" : "—")
 
-/* pipeline order (display), + rank of each real status onto it */
+/* pipeline order (display), + rank of each real status onto it.
+ * WP39 / LEADS-010: the SAME order as the server's transition map and the list (lib/lead-stage.ts LEAD_FLOW):
+ * new > contacted > qualified (Visit) > quoted (Quote) > booked. It used to show Quote before Visit, so "next" from Visit proposed
+ * Booked (refused without a booking) and from Quote proposed Visit (a step back). */
 const PIPE: Array<{ key: LeadStatus; label: string }> = [
   { key: "new", label: "Naya" }, { key: "contacted", label: "Raabta hua" },
-  { key: "quoted", label: "Quote" }, { key: "qualified", label: "Visit" }, { key: "booked", label: "Jeeta" },
+  { key: "qualified", label: "Visit" }, { key: "quoted", label: "Quote" }, { key: "booked", label: "Jeeta" },
 ]
-const RANK: Partial<Record<LeadStatus, number>> = { new: 0, contacted: 1, quoted: 2, qualified: 3, booked: 4 }
+const RANK: Partial<Record<LeadStatus, number>> = { new: 0, contacted: 1, qualified: 2, quoted: 3, booked: 4 }
 
 /* ── formatting ──────────────────────────────────────────────── */
 function fmtDate(iso?: string | null) {
@@ -162,10 +167,17 @@ function buildDetail(lead: Lead): string {
   const budget = numOr(lead.estimatedBudget)
   const guests = lead.estimatedGuests ?? null
   const hot = budget >= 1000000
-  const phone = lead.contactPhone || ""
-  const waP = waDigits(phone)
-  const nextStage = cur >= 0 && cur < PIPE.length - 1 ? PIPE[cur + 1] : null
+  // WP39 / LEADS-013: a WhatsApp-only lead still has a number to ring / message
+  const phone = callNumber(lead)
+  const waPhone = waNumber(lead)
+  const waP = waDigits(waPhone)
+  // WP39 / LEADS-010: the plain one-tap step (never "booked"); at Quote the next step is the convert-to-booking flow instead
+  const nextKey = nextStageOf(lead.status)
+  const nextStage = nextKey ? PIPE.find((p) => p.key === nextKey) || null : null
+  const atQuote = lead.status === "quoted"
   const terminal = lead.status === "booked" || lead.status === "lost" || lead.status === "archived"
+  const canReopen = lead.status === "lost" || lead.status === "archived" // WP39 / LEADS-011
+  const bookAttrs = `data-lead-book data-lb-name="${escHtml(lead.contactName || "Lead")}" data-lb-phone="${escHtml(phone)}" data-lb-email="${escHtml(lead.contactEmail || "")}" data-lb-date="${escHtml(lead.eventDate || "")}" data-lb-guests="${lead.estimatedGuests ?? ""}" data-lb-biz="${lead.businessId ?? ""}" data-lb-sub="${(lead as { subVenueId?: number }).subVenueId ?? ""}"`
 
   /* stepper */
   const steps = PIPE.map((p, i) => {
@@ -182,11 +194,11 @@ function buildDetail(lead: Lead): string {
 
   const nextText = lead.status === "booked" ? "Ye lead jeet li gayi 🎉 — booking ban chuki."
     : lead.status === "lost" ? "Ye lead khoyi hui hai. Dobara koshish karni ho to raabta karein."
-      : nextStage?.key === "quoted" ? `${sourceUi(lead.source)} se aaya${budget ? `, ~${pkNum(budget)} budget` : ""}. ${eventUi(lead.eventType)} ka package quote taiyar karke bhej dein.`
-        : nextStage?.key === "qualified" ? "Venue visit tay karein — customer ko hall dikhayein."
-          : nextStage?.key === "booked" ? "Deal final karein aur booking bana dein."
+      : atQuote ? "Deal final karein aur booking bana dein."
+        : nextStage?.key === "quoted" ? `${sourceUi(lead.source)} se aaya${budget ? `, ~${pkNum(budget)} budget` : ""}. ${eventUi(lead.eventType)} ka package quote taiyar karke bhej dein.`
+          : nextStage?.key === "qualified" ? "Venue visit tay karein — customer ko hall dikhayein."
             : "Customer se raabta karke requirement confirm karein."
-  const nextTitle = lead.status === "booked" ? "Jeeta" : lead.status === "lost" ? "Khoya" : `Agla kadam — ${nextStage?.label || "Follow up"}`
+  const nextTitle = lead.status === "booked" ? "Jeeta" : lead.status === "lost" ? "Khoya" : atQuote ? "Agla kadam — Booking" : `Agla kadam — ${nextStage?.label || "Follow up"}`
 
   /* honest conversation timeline (no per-lead activity API) */
   const tl: string[] = []
@@ -197,7 +209,7 @@ function buildDetail(lead: Lead): string {
 
   const custActions = `<div class="cust-actions">
     <button class="cact" ${phone ? `data-tel="${escHtml(phone)}"` : "disabled"}>${svg(I.phone)} Call</button>
-    <button class="cact wa" ${waP ? `data-wa="${escHtml(phone)}"` : "disabled"}>${svg(I.wa)} WhatsApp</button>
+    <button class="cact wa" ${waP ? `data-wa="${escHtml(waPhone)}"` : "disabled"}>${svg(I.wa)} WhatsApp</button>
     <button class="cact" data-nav-btn="/dashboard/chat">${svg(I.chat)} Message</button></div>`
 
   return `
@@ -213,7 +225,7 @@ function buildDetail(lead: Lead): string {
     </div>
     <div class="dhead-actions">
       <button class="btn btn-ghost icon" ${phone ? `data-tel="${escHtml(phone)}"` : "disabled"} aria-label="Call">${svg(I.phone)}</button>
-      <button class="btn btn-ghost icon" ${waP ? `data-wa="${escHtml(phone)}"` : "disabled"} aria-label="WhatsApp">${svg(I.wa)}</button>
+      <button class="btn btn-ghost icon" ${waP ? `data-wa="${escHtml(waPhone)}"` : "disabled"} aria-label="WhatsApp">${svg(I.wa)}</button>
       <button class="btn btn-primary" data-nav-btn="/dashboard/quotes?leadId=${lead.id}">${svg(I.quote)} Quote bhejein</button>
     </div>
   </div>
@@ -232,6 +244,8 @@ function buildDetail(lead: Lead): string {
         <div class="stepper">${steps}</div>
         <div class="next-step">${svg(I.bolt)}<div><div class="ns-t">${escHtml(nextTitle)}</div><div class="ns-s">${escHtml(nextText)}</div></div></div>
         ${nextStage ? `<div class="ns-acts"><button class="btn btn-primary" data-adv-status="${nextStage.key}">${svg(I.check, 2.4)} ${escHtml(nextStage.label)} mark karein</button><button class="btn btn-ghost danger" data-adv-status="lost">${svg(I.x)} Khoya</button></div>` : ""}
+        ${atQuote && !lead.bookingId ? `<div class="ns-acts"><button class="btn btn-primary" ${bookAttrs}>${svg(I.check, 2.4)} Booking mein badlein</button><button class="btn btn-ghost danger" data-adv-status="lost">${svg(I.x)} Khoya</button></div>` : ""}
+        ${canReopen ? `<div class="ns-acts"><button class="btn btn-primary" data-adv-status="new">${svg(I.check, 2.4)} Dobara kholein</button></div>` : ""}
       </div>
 
       <div class="card">
@@ -282,7 +296,7 @@ function buildDetail(lead: Lead): string {
         <div class="qa">
           <button class="btn btn-primary" data-nav-btn="/dashboard/quotes?leadId=${lead.id}">${svg(I.quote)} Quote bhejein</button>
           <button class="btn btn-ghost" data-nav-btn="/dashboard/calendar">${svg(I.cal)} Visit schedule karein</button>
-          ${lead.bookingId ? `<button class="btn btn-ghost" data-nav-btn="/dashboard/bookings/${lead.bookingId}">${svg(I.check)} Booking dekhein</button>` : `<button class="btn btn-ghost" data-lead-book data-lb-name="${escHtml(name)}" data-lb-phone="${escHtml(phone)}" data-lb-email="${escHtml(lead.contactEmail || "")}" data-lb-date="${escHtml(lead.eventDate || "")}" data-lb-guests="${guests ?? ""}" data-lb-biz="${lead.businessId ?? ""}" data-lb-sub="${(lead as { subVenueId?: number }).subVenueId ?? ""}">${svg(I.check)} Booking mein badlein</button>`}
+          ${lead.bookingId ? `<button class="btn btn-ghost" data-nav-btn="/dashboard/bookings/${lead.bookingId}">${svg(I.check)} Booking dekhein</button>`   : `<button class="btn btn-ghost" ${bookAttrs}>${svg(I.check)} Booking mein badlein</button>`}
           ${terminal ? "" : `<button class="btn btn-ghost danger" data-adv-status="lost">${svg(I.x)} Khoya mark karein</button>`}
         </div>
       </div>
@@ -337,9 +351,19 @@ export function LeadDetailArtifact({ leadId }: { leadId: number }) {
       // advance the lead's stage in place
       const adv = t.closest("[data-adv-status]") as HTMLButtonElement | null
       if (adv?.dataset.advStatus) {
+        // WP39 / LEADS-011: Khoya asks why first (one deliberate step, the reason is stored)
+        if (adv.dataset.advStatus === "lost") { openDrawer(s, "Lead khoya mark karein", lostReasonFormHtml(leadId)); return }
         adv.disabled = true; const o = adv.innerHTML; adv.textContent = "Ho raha…"
-        try { await LeadAPI.transition(leadId, { to: adv.dataset.advStatus as LeadStatus }); toast.success("Status aage barh gaya"); qc.invalidateQueries({ queryKey: ["lead-detail", leadId] }) }
+        try { await LeadAPI.transition(leadId, { to: adv.dataset.advStatus as LeadStatus }); toast.success(adv.dataset.advStatus === "new" ? "Lead dobara khul gayi" : "Status aage barh gaya"); qc.invalidateQueries({ queryKey: ["lead-detail", leadId] }) }
         catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua"); adv.disabled = false; adv.innerHTML = o }
+        return
+      }
+      const lostGo = t.closest("[data-lead-lost-go]") as HTMLButtonElement | null
+      if (lostGo) {
+        const val = (id: string) => (s.getElementById(id) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null)?.value?.trim() ?? ""
+        lostGo.disabled = true
+        try { await LeadAPI.transition(leadId, { to: "lost", statusReason: lostReasonText(val("lost-reason"), val("lost-note")) }); toast.success("Status: Khoya"); closeDrawer(s); qc.invalidateQueries({ queryKey: ["lead-detail", leadId] }) }
+        catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua"); lostGo.disabled = false }
         return
       }
       // convert to a booking in place (shared prefilled form), mark won on save

@@ -11,6 +11,7 @@
  * routing, and the sidebar shows the real business + user.
  */
 
+import { foldText } from "@/lib/text-normalise"
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
@@ -277,14 +278,14 @@ let ACTIVE_CONTENT_SHADOW: ShadowRoot | null = null
 export function applyContentSearch(q: string) {
   const shadow = ACTIVE_CONTENT_SHADOW
   if (!shadow) return
-  const query = q.trim().toLowerCase()
+  const query = foldText(q) // WP39 / ACCESS-020: spelling-insensitive (Urdu keyboards)
   const st = PAGERS.get(shadow)
   if (st) { st.search = query; st.page = 0; pagerRender(st); return }
   const wwc = shadow.getElementById("wwc"); if (!wwc) return
   const rows = wwc.querySelectorAll("tbody tr")
   if (!rows.length) return
   let n = 0
-  rows.forEach((tr) => { const el = tr as HTMLElement; const show = !query || (el.textContent || "").toLowerCase().includes(query); el.hidden = !show; if (show) n++ })
+  rows.forEach((tr) => { const el = tr as HTMLElement; const show = !query || foldText(el.textContent).includes(query); el.hidden = !show; if (show) n++ })
   const rc = wwc.querySelector("#rowcount"); if (rc) rc.textContent = `${n} entries`
 }
 
@@ -361,7 +362,7 @@ function pagerButtons(page: number, pages: number): string {
 }
 function pagerRender(st: PagerState) {
   const q = st.search
-  const matched = st.rows.filter((tr) => st.filter(tr) && (!q || (tr.textContent || "").toLowerCase().includes(q)))
+  const matched = st.rows.filter((tr) => st.filter(tr) && (!q || foldText(tr.textContent).includes(q)))
   const total = matched.length
   const pages = Math.max(1, Math.ceil(total / st.pageSize))
   st.page = Math.min(Math.max(0, st.page), pages - 1)
@@ -883,7 +884,7 @@ export function useArtifactShell(hostRef: React.RefObject<HTMLDivElement | null>
     const onInput = (e: Event) => {
       const inp = e.target as HTMLInputElement
       if (!inp.closest(".search") && !inp.closest(".f-search")) return
-      const q = inp.value.trim().toLowerCase()
+      const q = foldText(inp.value)
       // If this screen opted into the shared paginator, drive it (keeps filter +
       // search + paging consistent). Otherwise fall back to a plain hide-filter.
       const st = PAGERS.get(shadow)
@@ -892,7 +893,7 @@ export function useArtifactShell(hostRef: React.RefObject<HTMLDivElement | null>
       const rows = wwc.querySelectorAll("tbody tr")
       if (!rows.length) return
       let n = 0
-      rows.forEach((tr) => { const el = tr as HTMLElement; const show = !q || (el.textContent || "").toLowerCase().includes(q); el.hidden = !show; if (show) n++ })
+      rows.forEach((tr) => { const el = tr as HTMLElement; const show = !q || foldText(el.textContent).includes(q); el.hidden = !show; if (show) n++ })
       const rc = wwc.querySelector("#rowcount"); if (rc) rc.textContent = `${n} entries`
     }
     shadow.addEventListener("click", onClick)

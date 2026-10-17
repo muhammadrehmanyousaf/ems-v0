@@ -175,7 +175,7 @@ export async function BestVendorListiclePage({ slug }: { slug: string }) {
     },
     {
       question: `How do I book a ${vt.singular.toLowerCase()} in ${city.name}?`,
-      answer: `Open any vendor below, compare packages and real reviews, then request a date on ${SITE_NAME}. Your deposit is held until the vendor confirms — refund-protected if they cancel.`,
+      answer: `Open any vendor below, compare packages and real reviews, then request a date on ${SITE_NAME}. You pay the vendor directly once they confirm, and the payment is recorded on your booking.`,
     },
     {
       question: `How many ${vt.plural.toLowerCase()} are listed in ${city.name}?`,

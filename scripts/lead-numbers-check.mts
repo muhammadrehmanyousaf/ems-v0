@@ -65,7 +65,7 @@ const dialog = src("components/dashboard/mainScreens/leads/redesigned/lead-form-
 check("drawer imports lib/lead-numbers", drawer.includes('from "@/lib/lead-numbers"'));
 check("dialog imports lib/lead-numbers", dialog.includes('from "@/lib/lead-numbers"'));
 const iCheck = drawer.indexOf("if (leadNumberProblem(s,");
-const iSend = drawer.indexOf("LeadAPI.create(");
+const iSend = drawer.indexOf("LeadAPI.createWithMeta("); // WP39: the create call that also returns the duplicate warning
 check("drawer validates budget/guests before the create call", iCheck > 0 && iSend > 0 && iCheck < iSend, `check@${iCheck} create@${iSend}`);
 check("drawer budget input has min=1", /id="ld-budget"/.test(drawer) && /type="number" min="1" id="ld-budget"/.test(drawer));
 check("drawer guests input has min=1", /type="number" min="1" step="1" id="ld-guests"/.test(drawer));

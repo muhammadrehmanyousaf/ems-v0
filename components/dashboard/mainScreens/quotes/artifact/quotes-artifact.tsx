@@ -18,7 +18,7 @@ import { useBusiness } from "@/context/BusinessContext"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useRouter } from "next/navigation"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
-import { useArtifactShell, pkNum, escHtml, initialsOf, initTablePager, loadPref, savePref, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, pkNum, escHtml, initialsOf, initTablePager, loadPref, savePref, errorBannerHtml, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const STATUS_UI: Record<QuoteStatus, { label: string; tone: string }> = {
   inquiry: { label: "Naya", tone: "info" },
@@ -66,6 +66,11 @@ const EXTRA_CSS = String.raw`
 .loadwrap{ display:grid; place-items:center; padding:80px 16px; color:var(--ink-3); font-size:13px; }
 `
 
+/** WP39: the server's own sentence for a refused move ("turn to move", "already accepted"), else the fixed fallback. */
+function errMsg(err: unknown, fallback: string): string {
+  return (err as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback
+}
+
 function quoteCard(q: Quote): string {
   const s = su(q.status)
   const name = q.customer?.fullName || "Customer"
@@ -84,13 +89,22 @@ function quoteCard(q: Quote): string {
     : ""
   let primary = ""
   if (q.status === "inquiry") primary = `<button class="btn btn-primary sm" data-resp="${q.id}">${svg(IC.send)} Rate bhejein</button>`
-  else if (q.status === "quoted" || q.status === "countered") primary = `<button class="btn btn-ghost sm" data-resp="${q.id}">Naya rate</button><button class="btn btn-primary sm" data-accept="${q.id}">${svg(IC.check)} Accept</button>`
+  else if (q.status === "quoted") {
+    // WP39 / FLAGGED-013: the vendor's OWN standing rate is not the vendor's to accept (the server answers 409): say whose turn it is,
+    // and let the vendor revise it ("Naya rate" calls respond, which the server now allows from "quoted")
+    primary = `<span class="qm" title="Customer ka jawab baaki hai">${svg(IC.clock)} Customer ka jawab intezar</span><button class="btn btn-ghost sm" data-resp="${q.id}">Naya rate</button>`
+  } else if (q.status === "countered") {
+    // Accept only the CUSTOMER's counter; if the vendor countered last it is the customer's turn
+    primary = q.lastCounterBy === "customer"
+      ? `<button class="btn btn-ghost sm" data-resp="${q.id}">Naya rate</button><button class="btn btn-primary sm" data-accept="${q.id}">${svg(IC.check)} Accept</button>`
+      : `<span class="qm" title="Customer ka jawab baaki hai">${svg(IC.clock)} Customer ka jawab intezar</span><button class="btn btn-ghost sm" data-resp="${q.id}">Naya rate</button>`
+  }
   else if (q.status === "accepted" && q.bookingId) primary = `<button class="btn btn-primary sm" data-nav-btn="/dashboard/bookings/${q.bookingId}">Booking dekhein</button>`
 
   const responder = (q.status !== "accepted" && q.status !== "declined")
-    ? `<div class="qc-resp" id="resp-${q.id}"><div class="rr"><div class="suffix"><span class="rs">Rs</span><input type="number" id="price-${q.id}" placeholder="rate likhein"/></div>
+    ? `<div class="qc-resp" id="resp-${q.id}"><div class="rr"><div class="suffix"><span class="rs">Rs</span><input type="number" id="price-${q.id}" min="1" max="500000000" step="1" placeholder="rate likhein"/></div>
         <button class="btn btn-primary sm" data-send="${q.id}">${svg(IC.send)} Bhejein</button>
-        ${q.status !== "inquiry" ? `<button class="iconbtn" data-decline="${q.id}" title="Decline">${svg(IC.x)}</button>` : ""}</div>
+        <button class="iconbtn" data-decline="${q.id}" title="Decline">${svg(IC.x)}</button></div>
         <div class="rhint">Customer ko rate bheja jaayega — wo accept ya counter kar sakta hai.</div></div>`
     : ""
 
@@ -142,7 +156,9 @@ export function QuotesArtifact() {
   const { business } = useBusiness()
   const activeBusinessId = useActiveBusinessId()
   const bizId = activeBusinessId ?? (business as { id?: number } | null)?.id ?? null
-  const { data, isError } = useQuery({ queryKey: ["quotes-art", bizId], enabled: !!bizId, queryFn: () => QuotesAPI.listForBusiness(Number(bizId)) })
+  const { data, isError, error } = useQuery({ queryKey: ["quotes-art", bizId], enabled: !!bizId, queryFn: () => QuotesAPI.listForBusiness(Number(bizId)) })
+  // WP39 / LEADS-042: the whole surface is dark (404 "Quotes are not enabled") until FEAT_QUOTE_NEGOTIATION is on for the venue: say so
+  const quotesOff = isError && (error as { response?: { status?: number } } | null)?.response?.status === 404
   const quotes = React.useMemo(() => (data ?? []) as Quote[], [data])
   const [filter, setFilter] = React.useState(() => loadPref("tab:quotes", "all"))
 
@@ -151,12 +167,13 @@ export function QuotesArtifact() {
     if (!s || !ready) return
     const wwc = s.getElementById("wwc"); if (!wwc) return
     if (!bizId) { wwc.innerHTML = `<div class="loadwrap">Pehle ek business select karein.</div>`; return }
+    if (quotesOff) { wwc.innerHTML = `<div class="head"><div><h1>Quote requests</h1></div></div><div class="loadwrap">Quotes abhi is business ke liye chalu nahi hain.</div>`; return }
     if (isError) { wwc.innerHTML = `<div class="head"><div><h1>Quote requests</h1></div></div>${errorBannerHtml()}`; return }
     if (!data) { wwc.innerHTML = `<div class="loadwrap">Quotes load ho rahe hain…</div>`; return }
     wwc.innerHTML = buildContent(quotes, filter)
     initTablePager(s, { rows: ".qcard", pageSize: 12, noun: "quotes" })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, data, filter, bizId, isError])
+  }, [ready, data, filter, bizId, isError, quotesOff])
 
   const refetch = () => qc.invalidateQueries({ queryKey: ["quotes-art", bizId] })
   const api = React.useRef({ refetch })
@@ -184,36 +201,54 @@ export function QuotesArtifact() {
         const id = Number(send.dataset.send)
         const inp = s.getElementById(`price-${id}`) as HTMLInputElement | null
         const price = Number(inp?.value)
-        if (!price || price <= 0) { toast.error("Sahi rate likhein"); return }
+        if (!price || price <= 0 || price > 500000000) { toast.error("Sahi rate likhein (1 se 50 crore ke darmiyan)"); return }
         const q = quotesRef.current.find((x) => x.id === id)
         const btn = send as HTMLButtonElement; const o = btn.innerHTML; btn.disabled = true; btn.textContent = "…"
         try {
-          if (q?.status === "inquiry") await QuotesAPI.respond(id, price)
+          // inquiry: first rate; quoted: the vendor revises its own rate (respond); countered: answer the customer's counter
+          if (q?.status === "inquiry" || q?.status === "quoted") await QuotesAPI.respond(id, price)
           else await QuotesAPI.counter(id, price)
           toast.success("Rate customer ko bhej diya"); api.current.refetch()
-        } catch { toast.error("Nahi bheja — dobara koshish karein"); btn.disabled = false; btn.innerHTML = o }
+        } catch (err: unknown) { toast.error(errMsg(err, "Nahi bheja — dobara koshish karein")); btn.disabled = false; btn.innerHTML = o }
         return
       }
       const acc = t.closest("[data-accept]") as HTMLElement | null
       if (acc?.dataset.accept) {
         const id = Number(acc.dataset.accept)
-        const btn = acc as HTMLButtonElement; const o = btn.innerHTML; btn.disabled = true; btn.textContent = "…"
-        try {
-          const r = await QuotesAPI.accept(id); toast.success("Accept ho gaya — booking ban gayi"); api.current.refetch()
-          // PAY-UI_VENDOR-001 — accepting a quote creates a booking: the Bookings list, Khata and
-          // the Overview totals must see it without a reload.
-          void invalidateMoney({ bookingId: r?.bookingId ?? null })
-          if (r?.bookingId) router.push(`/dashboard/bookings/${r.bookingId}`)
-        }
-        catch { toast.error("Accept nahi hua"); btn.disabled = false; btn.innerHTML = o }
+        const qa = quotesRef.current.find((x) => x.id === id)
+        // WP39 / FLAGGED-055 / LEADS-042: accepting creates a booking at this rate: one deliberate step first
+        openConfirm(s, {
+          title: "Ye rate accept karein?",
+          message: `${money(qa?.quotedPrice) > 0 ? `Rs ${pkNum(money(qa?.quotedPrice))} par ` : ""}accept karne se booking ban jayegi aur date lag jayegi.`,
+          confirmLabel: "Haan, accept karein", danger: false,
+          onConfirm: async () => {
+            const btn = acc as HTMLButtonElement; const o = btn.innerHTML; btn.disabled = true; btn.textContent = "…"
+            try {
+              const r = await QuotesAPI.accept(id); toast.success("Accept ho gaya — booking ban gayi"); api.current.refetch()
+              // PAY-UI_VENDOR-001 — accepting a quote creates a booking: the Bookings list, Khata and
+              // the Overview totals must see it without a reload.
+              void invalidateMoney({ bookingId: r?.bookingId ?? null })
+              if (r?.bookingId) router.push(`/dashboard/bookings/${r.bookingId}`)
+            }
+            catch (err: unknown) { toast.error(errMsg(err, "Accept nahi hua")); btn.disabled = false; btn.innerHTML = o; api.current.refetch() }
+          },
+        })
         return
       }
       const dec = t.closest("[data-decline]") as HTMLElement | null
       if (dec?.dataset.decline) {
         const id = Number(dec.dataset.decline)
-        const btn = dec as HTMLButtonElement; const o = btn.innerHTML; btn.disabled = true; btn.textContent = "…"
-        try { await QuotesAPI.decline(id); toast.success("Quote decline kar diya"); api.current.refetch() }
-        catch { toast.error("Nahi hua"); btn.disabled = false; btn.innerHTML = o }
+        // WP39 / FLAGGED-014 / FLAGGED-055: decline is available on a new request too, and is one deliberate step
+        openConfirm(s, {
+          title: "Quote decline karein?",
+          message: "Customer ko bata diya jayega ke aap ye quote nahi de rahe.",
+          confirmLabel: "Haan, decline karein",
+          onConfirm: async () => {
+            const btn = dec as HTMLButtonElement; const o = btn.innerHTML; btn.disabled = true; btn.textContent = "…"
+            try { await QuotesAPI.decline(id); toast.success("Quote decline kar diya"); api.current.refetch() }
+            catch (err: unknown) { toast.error(errMsg(err, "Nahi hua")); btn.disabled = false; btn.innerHTML = o; api.current.refetch() }
+          },
+        })
         return
       }
       const visit = t.closest("[data-visit]") as HTMLElement | null
@@ -227,7 +262,7 @@ export function QuotesArtifact() {
           await QuotesAPI.siteVisit(id, act, at)
           toast.success(act === "propose" ? "Visit propose kar diya — waqt WhatsApp par tay karein" : act === "confirm" ? "Visit pakki ho gayi" : "Visit mukammal")
           api.current.refetch()
-        } catch { toast.error("Visit update nahi hua"); btn.disabled = false; btn.innerHTML = o }
+        } catch (err: unknown) { toast.error(errMsg(err, "Visit update nahi hua")); btn.disabled = false; btn.innerHTML = o }
         return
       }
     })

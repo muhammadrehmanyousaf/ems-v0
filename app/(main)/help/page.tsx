@@ -47,7 +47,7 @@ const FAQ_CATEGORIES: FaqCategory[] = [
     items: [
       {
         q: "How do I book a vendor on Wedding Wala?",
-        a: `Browse vendors, pick one, choose your event date, and click "Check availability". You enter the booking details, pay the deposit, and the vendor confirms within 24 hours. ${SITE_NAME} holds the deposit until the vendor accepts — if they decline, you're refunded in full automatically.`,
+        a: `Browse vendors, pick one, choose your event date, and click "Check availability". You enter the booking details, the vendor confirms within 24 hours, and then you pay the deposit directly to the vendor (${SITE_NAME} never takes or holds your money). If the vendor declines, nothing is owed.`,
       },
       {
         q: "Can I book multiple vendors for one wedding?",

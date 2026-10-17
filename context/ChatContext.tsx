@@ -96,6 +96,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [onlineStatuses, setOnlineStatuses] = useState<OnlineStatuses>({});
   const [typingUsers, setTypingUsers] = useState<Record<number, string>>({});
   const socketRef = useRef<Socket | null>(null);
+  // WP39 / LEADS-063: the room the user is looking at, readable from socket callbacks (they outlive a render)
+  const activeConversationIdRef = useRef<number | null>(null);
+  activeConversationIdRef.current = activeConversationId;
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isTypingRef = useRef(false);
 
@@ -135,6 +138,14 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     });
 
     socketRef.current = socket;
+
+    // WP39 / LEADS-063: join the open conversation's room on EVERY connect, including a reconnect. The join used to be emitted only
+    // from setActiveConversation and only if the socket was already connected: the auto-selected first conversation (chosen before the
+    // socket connected) and every thread after a dropped connection never joined its room, so live messages did not arrive.
+    socket.on("connect", () => {
+      const id = activeConversationIdRef.current;
+      if (id) socket.emit("chat:join", { conversationId: id });
+    });
 
     // === CHAT EVENTS ===
 

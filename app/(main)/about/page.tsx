@@ -116,7 +116,7 @@ export default function AboutPage() {
             <p>
               {SITE_NAME} brings every decision into one place. Real reviews from
               verified bookings. Transparent PKR pricing. A booking flow that
-              actually holds your deposit until the vendor confirms. A team you
+              records every payment against your booking. A team you
               can call when something goes wrong.
             </p>
             <p>

@@ -19,6 +19,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { LeadAPI, type Lead, type LeadEventType, type LeadSource, type LeadStatus, type CreateLeadInput } from "@/lib/api/leads"
 import { VendorHoldsAPI, type VendorHold } from "@/lib/api/vendorHolds"
+import { placeHold, holdErrorText } from "@/lib/hold-place"
 import { ReceiptsAPI } from "@/lib/api/paymentReceipts"
 import { ExpensesAPI } from "@/lib/api/vendorExpenses"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
@@ -230,11 +231,11 @@ export function FieldArtifact() {
       if (!date || !time) { toast.error("Date aur waqt chunein"); return }
       const btn = s.querySelector("[data-fh-save]") as HTMLButtonElement | null; if (btn) { btn.disabled = true; btn.textContent = "Darj ho raha…" }
       try {
-        const r = await VendorHoldsAPI.place({ holdDate: date, holdTime: time.length === 5 ? time + ":00" : time, businessId: bizRef.current ?? undefined })
-        toast.success(r.alreadyHeld ? "Ye slot pehle se roka hua tha" : "Hold lag gaya"); closeDrawer(s)
+        const r = await placeHold({ holdDate: date, holdTime: time.length === 5 ? time + ":00" : time, businessId: bizRef.current ?? undefined })
+        toast.success(r.queuedOffline ? "Offline hold queue ho gaya — network aate hi sync hoga" : r.alreadyHeld ? "Ye slot pehle se roka hua tha" : "Hold lag gaya"); closeDrawer(s)
         qc.invalidateQueries({ queryKey: ["field-holds", bizRef.current] })
       } catch (err: unknown) {
-        toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Ye slot pehle se booked/held hai")
+        toast.error(holdErrorText(err, "Ye slot pehle se booked/held hai"))
         if (btn) { btn.disabled = false; btn.textContent = "Hold lagayein" }
       }
     }

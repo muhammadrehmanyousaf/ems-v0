@@ -16,6 +16,7 @@ import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useBusiness } from "@/context/BusinessContext"
 import { useArtifactShell, escHtml, initialsOf, initTablePager, setPagerFilter, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { openBookingForm } from "@/components/dashboard/mainScreens/artifact/booking-form"
+import { foldText } from "@/lib/text-normalise"
 
 function fmtDate(s?: string | null) { if (!s) return "—"; const d = new Date(s); return isNaN(d.getTime()) ? String(s) : d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) }
 const svg = (p: string, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}">${p}</svg>`
@@ -39,6 +40,14 @@ const EXTRA_CSS = String.raw`
 /* the search is capped at 340px inline for desktop; on a phone it should run the full width like every other list screen */
 @media (max-width:520px){ .toolbar .f-search{ max-width:none !important; } }
 `
+
+/** True when `iso` falls in the CURRENT month in Karachi (the book's calendar). */
+function isThisMonthInKarachi(iso?: string | null): boolean {
+  if (!iso) return false
+  const d = new Date(iso); if (isNaN(d.getTime())) return false
+  const ym = (x: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi", year: "numeric", month: "2-digit" }).format(x)
+  return ym(d) === ym(new Date())
+}
 
 function rowHtml(c: ApiCustomer): string {
   const name = c.name || "Customer"
@@ -64,19 +73,20 @@ function rowHtml(c: ApiCustomer): string {
 }
 
 /** Booking-create form prefilled from a known customer (name/phone/email). */
-function buildContent(list: ApiCustomer[]): string {
+function buildContent(list: ApiCustomer[], total: number = list.length): string {
   const repeatCount = list.filter((c) => Number(c.total_booking) > 1).length
-  const now = new Date(); const mo = now.getMonth(); const yr = now.getFullYear()
-  const newThisMonth = list.filter((c) => { const d = c.first_booking ? new Date(c.first_booking) : null; return d && !isNaN(d.getTime()) && d.getMonth() === mo && d.getFullYear() === yr }).length
+  // WP39 / LEADS-021: "new this month" is when the customer ENTERED the book (first_seen), not the date of their first event
+  // (first_booking): a customer added today for a 2029 wedding is new; an old customer with an event this month is not.
+  const newThisMonth = list.filter((c) => isThisMonthInKarachi(c.first_seen)).length
   const tiles = `<div class="cust-tiles">
-    <div class="tile hl"><div class="t-cap">${svg(IC.users, 1.9)} Kul customers</div><div class="t-val tnum">${list.length}</div><div class="t-sub">aapke customer book mein</div></div>
+    <div class="tile hl"><div class="t-cap">${svg(IC.users, 1.9)} Kul customers</div><div class="t-val tnum">${total}</div><div class="t-sub">aapke customer book mein</div></div>
     <div class="tile"><div class="t-cap">${svg(IC.repeat, 1.9)} Repeat customers</div><div class="t-val tnum">${repeatCount}</div><div class="t-sub">${list.length ? Math.round((repeatCount / list.length) * 100) : 0}% dobara aaye</div></div>
-    <div class="tile"><div class="t-cap">${svg(IC.star, 1.9)} Naye is mahine</div><div class="t-val tnum">${newThisMonth}</div><div class="t-sub">${now.toLocaleDateString("en-PK", { month: "long" })}</div></div>
+    <div class="tile"><div class="t-cap">${svg(IC.star, 1.9)} Naye is mahine</div><div class="t-val tnum">${newThisMonth}</div><div class="t-sub">${new Date().toLocaleDateString("en-PK", { month: "long" })}</div></div>
   </div>`
   const toolbar = `<div class="toolbar"><div class="filters" style="margin-left:0;width:100%"><label class="f-search" style="width:100%;max-width:340px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="csearch" placeholder="Naam, number ya email dhoondein…"/></label></div></div>`
   const body = list.map(rowHtml).join("")
   return `
-  <div class="head"><div><h1>Customers</h1><div class="sub">Aapka customer book — <b>${list.length}</b> log, <b>${repeatCount}</b> repeat.</div></div><div class="head-actions"><button class="btn btn-primary" data-cust-book>+ Nayi booking</button></div></div>
+  <div class="head"><div><h1>Customers</h1><div class="sub">Aapka customer book — <b>${total}</b> log, <b>${repeatCount}</b> repeat.</div></div><div class="head-actions"><button class="btn btn-primary" data-cust-book>+ Nayi booking</button></div></div>
   ${tiles}${toolbar}
   <div class="card"><div class="tbl-wrap"><table class="tbl">
     <thead><tr><th>Customer</th><th>Phone</th><th>Bookings</th><th>Pehli</th><th>Aakhri</th><th></th></tr></thead>
@@ -90,7 +100,7 @@ export function CustomersArtifact() {
   const { shadowRef, ready } = useArtifactShell(hostRef, {
     activeHref: "/dashboard/customers", crumbBold: "Log", crumbSub: "Customers", extraCss: EXTRA_CSS,
   })
-  const { data, isError } = useQuery({ queryKey: ["customers-art"], queryFn: () => CustomersAPI.getAll(1, 200) })
+  const { data, isError } = useQuery({ queryKey: ["customers-art"], queryFn: () => CustomersAPI.getEvery() })
   const list = React.useMemo(() => (data?.customers ?? []) as ApiCustomer[], [data])
   const qc = useQueryClient()
   const { business, businesses } = useBusiness()
@@ -106,7 +116,7 @@ export function CustomersArtifact() {
     const wwc = s.getElementById("wwc"); if (!wwc) return
     if (isError) { wwc.innerHTML = `<div class="head"><div><h1>Customers</h1></div></div>${errorBannerHtml()}`; return }
     if (!data) { wwc.innerHTML = `<div class="loadwrap">Customers load ho rahe hain…</div>`; return }
-    wwc.innerHTML = buildContent(list)
+    wwc.innerHTML = buildContent(list, data.total)
     initTablePager(s, { pageSize: 25, noun: "customers" })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, data, isError])
@@ -131,9 +141,9 @@ export function CustomersArtifact() {
     s.addEventListener("input", (e) => {
       const t = e.target as HTMLElement
       if (t.id !== "csearch") return
-      const q = (t as HTMLInputElement).value.trim().toLowerCase()
+      const q = foldText((t as HTMLInputElement).value) // WP39 / ACCESS-020
       // route the custom name/phone/email search through the shared paginator
-      setPagerFilter(s, (tr) => !q || (tr.dataset.key || "").includes(q))
+      setPagerFilter(s, (tr) => !q || foldText(tr.dataset.key).includes(q))
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready])

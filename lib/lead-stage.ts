@@ -31,6 +31,26 @@ export const LEAD_STAGE: Record<LeadStageKey, LeadStage> = {
   archived: { label: "Archive", tone: "mut", tab: "archived" },
 };
 
+/**
+ * WP39 / LEADS-010: the ONE pipeline order, shared by the list and the detail page. The detail page ran
+ * new > contacted > quoted > qualified > booked while the server's transition map (and the list) run
+ * new > contacted > qualified > quoted > booked: "next" from Visit tay proposed Booked (the server refuses it without a booking)
+ * and from Quote bheja proposed Visit tay (a step BACK).
+ */
+export const LEAD_FLOW: LeadStageKey[] = ["new", "contacted", "qualified", "quoted", "booked"]
+export const LEAD_CLOSED: LeadStageKey[] = ["booked", "lost", "archived"]
+
+/**
+ * The next stage a plain one-tap transition may move to, or null. "booked" is never offered here: it needs a booking, so the last
+ * open stage (quoted) hands over to the convert-to-booking flow instead of a bare transition the server would refuse.
+ */
+export function nextStageOf(s?: string | null): LeadStageKey | null {
+  const i = LEAD_FLOW.indexOf((s || "new") as LeadStageKey)
+  if (i < 0 || i >= LEAD_FLOW.length - 1) return null
+  const nx = LEAD_FLOW[i + 1]
+  return nx === "booked" ? null : nx
+}
+
 /** Unknown / missing stage reads as a new enquiry, exactly as the Leads screen does. */
 export function leadStageOf(status?: string | null): LeadStage {
   return LEAD_STAGE[(status || "new") as LeadStageKey] || LEAD_STAGE.new;

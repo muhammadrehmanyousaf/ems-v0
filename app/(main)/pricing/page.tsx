@@ -170,7 +170,7 @@ const FAQS = [
   },
   {
     question: "What happens to the customer's deposit?",
-    answer: `${SITE_NAME} holds the deposit a customer pays when they book you, and releases it to you in full once the function is delivered and the booking is marked complete. We deduct nothing from it. Holding it protects both sides: the customer knows the money is not gone if you cannot take the date, and you know the date is backed by real money.`,
+    answer: `The customer pays you directly — into the bank or wallet account you publish on your bookings — and ${SITE_NAME} records the payment. We never take, hold or deduct anything from what your customers pay you, and the money does not pass through us.`,
   },
   {
     question: "Is there a setup fee, a listing fee or a contract?",
@@ -242,8 +242,8 @@ export default function PricingPage() {
         </h1>
         <p className="mt-5 max-w-2xl font-bridal text-[15.5px] leading-relaxed text-bridal-text-soft">
           {SITE_NAME} charges vendors a subscription to the vendor portal — and that is our only
-          charge. We take no commission on what your customers pay you. The deposit a customer places
-          against a booking is held until the function is delivered, then released to you in full.
+          charge. We take no commission on what your customers pay you. Customers pay you
+          directly; we record the payment and never hold or deduct from it.
         </p>
         <div className="mt-7 flex flex-wrap items-center gap-3">
           <Link
