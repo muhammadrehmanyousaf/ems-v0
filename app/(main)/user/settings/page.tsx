@@ -31,6 +31,7 @@ import {
   Edit3,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { passwordProblem } from "@/lib/validation/password"
 
 import {
   PageContainer,
@@ -193,10 +194,11 @@ export default function UserSettingsPage() {
       toast({ title: "Passwords don't match", variant: "destructive" })
       return
     }
-    if (passwords.newPassword.length < 8) {
+    const pwProblem = passwordProblem(passwords.newPassword)
+    if (pwProblem) {
       toast({
-        title: "Password too short",
-        description: "Use at least 8 characters.",
+        title: "Choose a stronger password",
+        description: pwProblem,
         variant: "destructive",
       })
       return

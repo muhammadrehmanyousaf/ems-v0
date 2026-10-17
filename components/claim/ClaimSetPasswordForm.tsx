@@ -28,13 +28,17 @@ import { BridalButton } from "@/components/bridal/bridal-button"
 import { BridalField, BridalInput } from "@/components/bridal/bridal-input"
 import { BridalCrown, BridalTitle } from "@/components/bridal/bridal-card"
 import { FloralDivider } from "@/components/bridal/floral-divider"
+import { passwordProblem, PASSWORD_MIN_LENGTH } from "@/lib/validation/password"
 import { AuthShell, AuthAsideChecklist } from "@/components/bridal/auth-shell"
 
 const formSchema = z
   .object({
-    password: z
-      .string()
-      .min(8, { message: "Password must be at least 8 characters" }),
+    // WP34 (PUBLIC-006): this form posts to /auth/reset-password, whose server rule
+    // is the 10-character policy; mirror it (lib/validation/password).
+    password: z.string().superRefine((v, ctx) => {
+      const problem = passwordProblem(v)
+      if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, message: problem })
+    }),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -47,7 +51,7 @@ type FormData = z.infer<typeof formSchema>
 function strengthScore(p: string): number {
   if (!p) return 0
   let s = 0
-  if (p.length >= 8) s++
+  if (p.length >= PASSWORD_MIN_LENGTH) s++
   if (p.length >= 12) s++
   if (/[a-z]/.test(p) && /[A-Z]/.test(p)) s++
   if (/\d/.test(p)) s++
@@ -112,9 +116,9 @@ export function ClaimSetPasswordForm() {
   }
 
   const checklistItems = [
-    { icon: <CheckCircle2 className="w-4 h-4" />, label: "8+ characters" },
-    { icon: <CheckCircle2 className="w-4 h-4" />, label: "Letters & numbers" },
-    { icon: <CheckCircle2 className="w-4 h-4" />, label: "Mix the case" },
+    { icon: <CheckCircle2 className="w-4 h-4" />, label: "10+ characters" },
+    { icon: <CheckCircle2 className="w-4 h-4" />, label: "A lowercase letter" },
+    { icon: <CheckCircle2 className="w-4 h-4" />, label: "An uppercase letter or a number" },
     { icon: <CheckCircle2 className="w-4 h-4" />, label: "A symbol or two" },
   ]
 

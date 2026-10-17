@@ -89,7 +89,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if ((pathname === '/login' || pathname === '/register') && isAuthenticated) {
+  // WP34 (SETUP-035, BOOKINGS-075, MONEY-069): /login?reason=expired is where the
+  // browser sends someone whose session was REJECTED by the API. The cookies may
+  // still be present (that is the whole point: the server said no, this edge
+  // cannot tell), and bouncing them to /dashboard is the blank-page loop. Let the
+  // page load; the login form clears the stale cookies itself.
+  const sessionEnded = pathname === '/login' && request.nextUrl.searchParams.get('reason') === 'expired';
+
+  if ((pathname === '/login' || pathname === '/register') && isAuthenticated && !sessionEnded) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 

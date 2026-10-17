@@ -136,7 +136,7 @@ export default function StaffTodayPage() {
         </p>
       )}
 
-      <ShiftGroup title="Today" shifts={todays} busyId={busyId} onAct={act} emphasise />
+      <ShiftGroup title="Today" shifts={todays} busyId={busyId} onAct={act} emphasise canCheckIn />
       <ShiftGroup title="Upcoming" shifts={upcoming} busyId={busyId} onAct={act} />
       <ShiftGroup title="Past" shifts={past} busyId={busyId} onAct={act} muted />
 
@@ -156,6 +156,7 @@ function ShiftGroup({
   onAct,
   emphasise,
   muted,
+  canCheckIn,
 }: {
   title: string;
   shifts: MyShift[];
@@ -163,6 +164,8 @@ function ShiftGroup({
   onAct: (s: MyShift, kind: "in" | "out") => void;
   emphasise?: boolean;
   muted?: boolean;
+  /** WP34 (PUBLIC-016): "Check in" is offered on today's shifts only; the server enforces the same rule. */
+  canCheckIn?: boolean;
 }) {
   if (shifts.length === 0) return null;
   return (
@@ -184,8 +187,8 @@ function ShiftGroup({
                 </p>
               </div>
               <span className="rounded-full bg-bridal-cream/60 px-2.5 py-1 text-xs text-bridal-gold-dark">
-                {ATT_LABEL[s.attendanceStatus] || s.attendanceStatus}
-                {s.paymentStatus === "paid"
+                {s.paymentStatus === "void" ? "Cancelled" : ATT_LABEL[s.attendanceStatus] || s.attendanceStatus}
+                {s.paymentStatus === "void" ? "" : s.paymentStatus === "paid"
                   ? " · Paid"
                   : s.paymentStatus === "partial"
                     ? " · Partly paid"
@@ -193,7 +196,7 @@ function ShiftGroup({
               </span>
             </div>
 
-            {s.attendanceStatus === "scheduled" && (
+            {s.paymentStatus !== "void" && canCheckIn && s.attendanceStatus === "scheduled" && (
               <Button
                 className="mt-3 h-12 w-full text-base"
                 disabled={busyId === s.id}
@@ -202,7 +205,7 @@ function ShiftGroup({
                 {busyId === s.id ? "…" : "Check in"}
               </Button>
             )}
-            {s.attendanceStatus === "checked_in" && (
+            {s.paymentStatus !== "void" && s.attendanceStatus === "checked_in" && (
               <Button
                 variant="secondary"
                 className="mt-3 h-12 w-full text-base"

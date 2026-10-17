@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { getLoggedInUser } from "@/lib/authFunction";
 import Cookies from "js-cookie";
+import axiosInstance from "@/lib/axiosConfig";
+import { clearAuthStorage } from "@/lib/auth/session";
 
 interface User {
   id: string;
@@ -44,7 +46,7 @@ interface UserContextType {
    * keep working.
    */
   login: (userData: User, token: string, extras?: { jti?: string; flags?: AuthFlags }) => void;
-  logout: () => void;
+  logout: () => void | Promise<void>;
   refreshUser: () => Promise<void>;
   /** Mutate the cached flags after an OTP verification succeeds. */
   setFlags: (patch: Partial<AuthFlags>) => void;
@@ -90,12 +92,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const clearAuthData = () => {
-    Object.values(STORAGE_KEYS).forEach(key => {
-      localStorage.removeItem(key);
-    });
-    Object.values(STORAGE_KEYS).forEach(key => {
-      Cookies.remove(key);
-    });
+    // WP34: one shared clear (lib/auth/session) so Sign-out, the 401 handler and
+    // the cross-tab logout remove the SAME keys from storage AND cookies, and the
+    // per-account active-venue scope (SETUP-039) goes with them.
+    clearAuthStorage();
     setUser(null);
     setIsAuthenticated(false);
     setFlagsState(null);
@@ -257,7 +257,28 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // WP34 (SETUP-036): revoke the session on the server BEFORE the token is
+    // forgotten, so a token copied off a shared phone or out of a log stops
+    // working the moment the vendor signs out (it used to stay valid until its
+    // natural expiry). Non-blocking by design: a slow or failed revoke (offline,
+    // already revoked, 401) never keeps the person from signing out; the wait is
+    // capped at 2.5 s. skipAuthRedirect keeps a 401 here from hijacking the
+    // sign-out into the "session expired" path.
+    try {
+      const jtiToRevoke = localStorage.getItem(STORAGE_KEYS.JTI) || Cookies.get(STORAGE_KEYS.JTI);
+      if (jtiToRevoke) {
+        await Promise.race([
+          axiosInstance
+            .post(`/api/v1/auth/sessions/${encodeURIComponent(jtiToRevoke)}/revoke`, null, {
+              skipAuthRedirect: true,
+              timeout: 2500,
+            } as any)
+            .catch(() => null),
+          new Promise((resolve) => setTimeout(resolve, 2500)),
+        ]);
+      }
+    } catch { /* never block sign-out */ }
     clearAuthData();
     window.dispatchEvent(new CustomEvent('userLogout'));
     window.dispatchEvent(new CustomEvent('user-logout'));

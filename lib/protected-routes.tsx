@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 import { useUser } from "@/context/UserContext";
+import { clearAuthStorage, expiredLoginUrl } from "@/lib/auth/session";
 
 const ProtectedRoutes = ({ children }: { children: React.ReactNode }) => {
   const { user, isAuthenticated, isLoading } = useUser();
@@ -12,12 +14,24 @@ const ProtectedRoutes = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (isLoading) return;
 
-    const token = localStorage.getItem("auth_token");
-    const userData = localStorage.getItem("user_data");
+    const token = localStorage.getItem("auth_token") || Cookies.get("auth_token");
+    const userData = localStorage.getItem("user_data") || Cookies.get("user_data");
 
     if (!token || !userData || !isAuthenticated || !user) {
       setIsAuthorized(false);
-      router.replace("/login");
+      // WP34 (SETUP-035): the auth COOKIES are what middleware.ts reads as
+      // "signed in". If we got here they are stale (the context could not build a
+      // session from them), so sending the browser to a bare /login makes the
+      // middleware bounce it straight back to /dashboard, which rendered nothing:
+      // a loop with no way out. Remove them first, then go with a way back.
+      const here = `${window.location.pathname}${window.location.search}`;
+      if (token || userData) {
+        clearAuthStorage();
+        router.replace(expiredLoginUrl(here));
+      } else {
+        // Nothing to clean up: a plain sign-out, or a visitor who never signed in.
+        router.replace("/login");
+      }
       return;
     }
 
@@ -49,7 +63,16 @@ const ProtectedRoutes = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  return isAuthorized ? <>{children}</> : null;
+  if (!isAuthorized) {
+    // Never an empty page: say where the person is going.
+    return (
+      <div className="flex items-center justify-center min-h-screen text-sm text-muted-foreground" role="status">
+        Redirecting…
+      </div>
+    );
+  }
+
+  return <>{children}</>;
 };
 
 export default ProtectedRoutes;

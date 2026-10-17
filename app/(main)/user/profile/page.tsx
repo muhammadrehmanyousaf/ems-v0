@@ -27,6 +27,7 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import axiosInstance from "@/lib/axiosConfig";
 import { BACKEND_URL } from "@/lib/backend-url";
+import { passwordProblem } from "@/lib/validation/password";
 
 import {
   PageContainer,
@@ -212,6 +213,13 @@ const ProfilePage = () => {
           description: "New passwords do not match.",
           variant: "destructive",
         });
+        return;
+      }
+      // WP34 (CUSTOMER-026): this screen only checked that the two boxes matched, so
+      // a 6-character password was sent and accepted. Same rule as the server.
+      const pwProblem = passwordProblem(passwordForm.newPassword);
+      if (pwProblem) {
+        toast({ title: "Choose a stronger password", description: pwProblem, variant: "destructive" });
         return;
       }
       setIsPasswordChanging(true);
@@ -584,7 +592,7 @@ const ProfilePage = () => {
                 onChange={(e) =>
                   setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))
                 }
-                placeholder="Enter new password"
+                placeholder="Min 10 characters"
                 className="pr-10"
               />
               <button

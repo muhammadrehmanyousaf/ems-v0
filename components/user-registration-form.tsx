@@ -32,6 +32,7 @@ import { BridalButton } from "@/components/bridal/bridal-button"
 import { BridalField, BridalInput } from "@/components/bridal/bridal-input"
 import { BridalCrown, BridalTitle } from "@/components/bridal/bridal-card"
 import { FloralDivider } from "@/components/bridal/floral-divider"
+import { passwordProblem } from "@/lib/validation/password"
 import {
   AuthShell,
   AuthAsideStatTiles,
@@ -74,9 +75,14 @@ const formSchema = z
         (v) => /^(?:\+92|92|0)3\d{9}$/.test(v.replace(/[\s\-()./]/g, "")),
         { message: "Enter a valid Pakistani mobile number, e.g. 0300 1234567" },
       ),
-    password: z
-      .string()
-      .min(8, { message: "Password must be at least 8 characters" }),
+    // WP34 (PUBLIC-006): the screen used to promise "Min 8 characters" while the
+    // server (utils/passwordPolicy) demanded 10 + a lowercase + an upper/digit/symbol,
+    // so an 8-9 character password passed this form and failed after submit. One
+    // mirrored rule (lib/validation/password), same wording as the server.
+    password: z.string().superRefine((v, ctx) => {
+      const problem = passwordProblem(v)
+      if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, message: problem })
+    }),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -351,7 +357,7 @@ export function UserRegistrationForm() {
               type={showPassword ? "text" : "password"}
               autoCapitalize="none"
               autoComplete="new-password"
-              placeholder="Min 8 characters"
+              placeholder="Min 10 characters"
               leadingIcon={<Lock className="w-4 h-4" />}
               invalid={!!errors.password}
               trailing={

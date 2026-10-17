@@ -43,8 +43,8 @@ export default function OnboardingPage() {
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
-    if (!name.trim() || !fullName.trim() || !phone.trim() || !email.trim() || password.length < 6) {
-      toast.error("Sab khaane bharein (password kam se kam 6 characters)");
+    if (!name.trim() || !fullName.trim() || !phone.trim() || !email.trim() || password.length < 8) {
+      toast.error("Sab khaane bharein (password kam se kam 8 characters)");
       return;
     }
     setBusy(true);
@@ -108,7 +108,7 @@ export default function OnboardingPage() {
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Email"><Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" inputMode="email" /></Field>
-            <Field label="Password"><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="6+ characters" /></Field>
+            <Field label="Password"><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="8+ characters" /></Field>
           </div>
 
           {/* T6.2 — the one familiarity question, sets the nav register */}
