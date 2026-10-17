@@ -52,7 +52,7 @@ const EXTRA_CSS = String.raw`
 function holdFormBody(): string {
   return `
   <div class="dfield row2">
-    <div><label class="dlabel">Kaunsi date <span class="req">*</span></label><input type="date" id="h-date" value="${todayIso()}"/></div>
+    <div><label class="dlabel">Kaunsi date <span class="req">*</span></label><input type="date" id="h-date" min="${todayIso()}" value="${todayIso()}"/></div>
     <div><label class="dlabel">Waqt <span class="req">*</span></label><input type="time" id="h-time" value="20:00"/></div>
   </div>
   <div class="ww-dfoot"><button class="btn btn-ghost" type="button" data-drawer-close>Cancel</button><button class="btn btn-primary" type="button" id="h-save">Hold lagayein</button></div>`

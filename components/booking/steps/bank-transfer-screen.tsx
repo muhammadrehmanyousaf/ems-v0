@@ -41,6 +41,7 @@ import {
 } from "@/lib/api/paymentInstructions"
 import { venueClaimShares } from "@/lib/payment-status"
 import { BridalButton } from "@/components/bridal/bridal-button"
+import { proofFileIssue } from "@/lib/proof-file"
 
 interface BankTransferScreenProps {
   bookingId: number
@@ -118,6 +119,11 @@ export default function BankTransferScreen({
   const [venueId, setVenueId] = useState<number | null>(null)
   const [reports, setReports] = useState<Array<{ key: string; name: string | null; existing: boolean; claim?: Partial<PaymentClaim> }>>([])
   const [proofFile, setProofFile] = useState<File | null>(null)
+  // WP33 / CUSTOMER-008: the file is checked (8 MB, image or PDF) before upload, and a screenshot that failed to attach can be
+  // sent again against the report that was already filed.
+  const [proofError, setProofError] = useState<string | null>(null)
+  const [retryClaimId, setRetryClaimId] = useState<number | null>(null)
+  const [retrying, setRetrying] = useState(false)
   // Surfaced on the success screen: the report succeeded, only the image didn't.
   const [proofWarning, setProofWarning] = useState<string | null>(null)
 
@@ -169,6 +175,7 @@ export default function BankTransferScreen({
             errorMessage(e, "We couldn't attach your screenshot") +
             " — your payment report went through, so the venue can still find it by reference.",
           )
+          setRetryClaimId(claim.id)
         }
       }
       markReported({ key: selected ? String(selected.businessId) : "all", name: selected?.name ?? null, existing: false, claim })
@@ -505,12 +512,21 @@ export default function BankTransferScreen({
                 id="bank-claim-proof"
                 type="file"
                 accept="image/*,application/pdf"
-                onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+                onChange={(e) => {
+                  const f = e.target.files?.[0] ?? null
+                  const issue = proofFileIssue(f)
+                  if (issue) { setProofError(issue); setProofFile(null); e.target.value = ""; return }
+                  setProofError(null)
+                  setProofFile(f)
+                }}
                 className={`block w-full font-bridal text-[13px] leading-[18px] text-bridal-text file:mr-3 file:h-11 file:rounded-[4px] file:border file:border-bridal-beige file:bg-white file:px-3 file:font-bridal file:text-[12px] file:text-bridal-charcoal hover:file:border-bridal-gold-dark ${FOCUS}`}
               />
               <p className="mt-1 font-bridal text-[12px] leading-[16px] text-bridal-text-soft">
                 {proofFile ? `Attached: ${proofFile.name}` : "Helps the venue confirm faster. Max 8 MB."}
               </p>
+              {proofError && (
+                <p className="mt-1 font-bridal text-[12px] leading-[16px] text-rose-800" role="alert">{proofError}</p>
+              )}
             </div>
 
             <div>
@@ -574,9 +590,38 @@ export default function BankTransferScreen({
         </div>
       ))}
       {proofWarning && (
-        <p className={`mt-1 w-full ${cap} font-bridal text-[12px] leading-[16px] text-bridal-text-soft`}>
-          {proofWarning}
-        </p>
+        <div className={`mt-1 w-full ${cap}`}>
+          <p className="font-bridal text-[12px] leading-[16px] text-bridal-text-soft">{proofWarning}</p>
+          {retryClaimId != null && (
+            <div className="mt-2">
+              <label htmlFor="bank-claim-proof-retry" className={`mb-1 block ${LABEL}`}>Try the screenshot again</label>
+              <input
+                id="bank-claim-proof-retry"
+                type="file"
+                accept="image/*,application/pdf"
+                disabled={retrying}
+                onChange={async (e) => {
+                  const f = e.target.files?.[0] ?? null
+                  const issue = proofFileIssue(f)
+                  if (issue) { setProofWarning(issue); e.target.value = ""; return }
+                  if (!f) return
+                  setRetrying(true)
+                  try {
+                    await PaymentInstructionsAPI.attachProof(bookingId, retryClaimId, f)
+                    setProofWarning(null)
+                    setRetryClaimId(null)
+                  } catch (err) {
+                    setProofWarning(errorMessage(err, "We couldn't attach your screenshot") + " — your payment report went through.")
+                    e.target.value = ""
+                  } finally {
+                    setRetrying(false)
+                  }
+                }}
+                className={`block w-full font-bridal text-[13px] leading-[18px] text-bridal-text ${FOCUS}`}
+              />
+            </div>
+          )}
+        </div>
       )}
 
       {/* Honest disclosure. The previous copy claimed Wedding Wala holds the

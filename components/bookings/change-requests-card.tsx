@@ -304,9 +304,11 @@ function CreateChangeRequestForm({
     let diff: Record<string, unknown> = {};
     if (changeType === "guest_count") {
       const n = parseInt(guestCount, 10);
-      if (!Number.isFinite(n) || n <= 0) {
+      // WP33 / CUSTOMER-041: a whole number only - 12.5 was silently cut to 12 and sent
+      if (!Number.isFinite(n) || n <= 0 || String(n) !== guestCount.trim()) {
         toast({
           title: "Enter a valid guest count",
+          description: "Use a whole number, e.g. 350.",
           variant: "destructive",
         });
         return;
@@ -346,9 +348,15 @@ function CreateChangeRequestForm({
       onCreated();
       onClose();
     } catch (e: any) {
+      // WP33: the server's reason is a sentence (data.reason: "X holds at most 1000 guests."), its message is only the machine code
+      const body = e?.response?.data;
+      const code: string = body?.data?.code ?? body?.message ?? "";
       toast({
         title: "Couldn't send request",
-        description: e?.response?.data?.message ?? "Unknown error",
+        description:
+          code === "duplicate_pending_request"
+            ? "A guest-count request for this booking is already waiting for the vendor."
+            : body?.data?.reason ?? body?.message ?? "Unknown error",
         variant: "destructive",
       });
     } finally {
@@ -380,13 +388,16 @@ function CreateChangeRequestForm({
       </div>
       {changeType === "guest_count" ? (
         <div className="grid gap-2">
-          <Label className="text-[12px]">New guest count</Label>
+          <Label htmlFor="cr-guest-count" className="text-[12px]">New guest count</Label>
           <Input
+            id="cr-guest-count"
             type="number"
+            inputMode="numeric"
             value={guestCount}
             onChange={(e) => setGuestCount(e.target.value)}
             placeholder="e.g. 350"
             min={1}
+            step={1}
           />
         </div>
       ) : null}

@@ -319,6 +319,9 @@ const CarDetailsStep = ({ errors, setErrors }: CarDetailsStepProps) => {
                                 maxLength={4}
                                 onChange={(e) => updateCar(index, 'year', e.target.value.replace(/\D/g, ''))}
                             />
+                            {errors[`packages[${index}].year`] && (
+                                <p className="text-red-500 text-xs">{errors[`packages[${index}].year`]}</p>
+                            )}
                         </div>
                     </div>
                     {errors[`packages[${index}].name`] && (
@@ -366,6 +369,9 @@ const CarDetailsStep = ({ errors, setErrors }: CarDetailsStepProps) => {
                                 }}
                                 onChange={(e) => updateCar(index, 'seatingCapacity', e.target.value)}
                             />
+                            {errors[`packages[${index}].seatingCapacity`] && (
+                                <p className="text-red-500 text-xs">{errors[`packages[${index}].seatingCapacity`]}</p>
+                            )}
                         </div>
                     </div>
 
@@ -402,6 +408,9 @@ const CarDetailsStep = ({ errors, setErrors }: CarDetailsStepProps) => {
                                 }}
                                 onChange={(e) => updateCar(index, 'unitsAvailable', e.target.value)}
                             />
+                            {errors[`packages[${index}].unitsAvailable`] && (
+                                <p className="text-red-500 text-xs">{errors[`packages[${index}].unitsAvailable`]}</p>
+                            )}
                         </div>
                     </div>
 

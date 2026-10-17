@@ -100,6 +100,9 @@ export const vanueValidations = ({currentStep, formData, currentErrors }: Valida
           }
           if (!pkg.price || isNaN(Number(pkg.price))) {
             currentErrors[`packages[${index}].price`] = "Package price is required";
+          } else if (Number(pkg.price) <= 0) {
+            // WP33 / VENDORTYPES-035: a negative price made an unbookable listing
+            currentErrors[`packages[${index}].price`] = "Package price must be more than zero";
           }
           if (pkg.features && typeof pkg.features === "object" && !Array.isArray(pkg.features)) {
             Object.keys(pkg.features).forEach((feature) => {
