@@ -179,7 +179,7 @@ function buildContent(receipts: PaymentReceipt[], rec: ReceivablesData | null | 
   const tiles = `<div class="sumrow">
     <div class="sumtile in"><div class="l"><i></i> Kul aya (is saal)</div><div class="v tnum"><span class="rs">Rs</span> ${pkNum(kulAya)}</div><div class="d">1 Jan se aaj tak · wapsi alag</div></div>
     <div class="sumtile due"><div class="l"><i></i> Baqaya</div><div class="v tnum"><span class="rs">Rs</span> ${pkNum(num(rec?.totals?.grandOutstanding))}</div><div class="d"><b>${num(rec?.totals?.customerCount)}</b> customers par</div></div>
-    <div class="sumtile out"><div class="l"><i></i> Wapsi (di gayi)</div><div class="v tnum"><span class="rs">Rs</span> ${pkNum(wapsiTotal)}</div><div class="d">${wapsiCount} refund${wapsiCount === 1 ? "" : "s"}</div></div>
+    <div class="sumtile out"><div class="l"><i></i> Wapsi (record ho gayi)</div><div class="v tnum"><span class="rs">Rs</span> ${pkNum(wapsiTotal)}</div><div class="d">${wapsiCount} refund${wapsiCount === 1 ? "" : "s"}</div></div>
     <div class="sumtile mon"><div class="l"><i></i> Is mahine</div><div class="v tnum"><span class="rs">Rs</span> ${pkNum(monthTotal)}</div><div class="d">${monthCount} payments</div></div>
   </div>`
 

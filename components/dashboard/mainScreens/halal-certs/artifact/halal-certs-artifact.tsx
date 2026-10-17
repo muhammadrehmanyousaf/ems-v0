@@ -13,12 +13,13 @@ import { HalalCertAPI, type HalalCert, type CertStatus, type CreateCertInput, ty
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useScopedBusinessId } from "@/hooks/use-scoped-business-id"
 import { useArtifactShell, escHtml, initTablePager, loadPref, savePref, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 const ST_LABEL: Record<CertStatus, string> = { active: "Active", expiring_soon: "Jald khatam", expired: "Khatam", revoked: "Radd", pending_renewal: "Renewal baaki" }
 const ST_TONE: Record<CertStatus, string> = { active: "ok", expiring_soon: "warn", expired: "bad", revoked: "bad", pending_renewal: "warn" }
 const STATUSES: CertStatus[] = ["active", "expiring_soon", "pending_renewal", "expired", "revoked"]
 function fmtDate(s?: string | null) { if (!s) return "—"; const d = new Date(s); return isNaN(d.getTime()) ? String(s) : d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) }
-const todayIso = () => new Date().toISOString().slice(0, 10)
+const todayIso = () => todayInKarachi() // WP37 (MONEY-014): the Pakistan day; the UTC day is yesterday until 05:00 PKT
 const svg = (p: string, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}">${p}</svg>`
 const IC = { plus: '<path d="M12 5v14M5 12h14"/>', trash: '<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>', cert: '<path d="M12 15a5 5 0 1 0 0-10 5 5 0 0 0 0 10z"/><path d="M8.5 13.5 7 22l5-3 5 3-1.5-8.5"/>', check: '<path d="M20 6 9 17l-5-5"/>', warn: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>' }
 

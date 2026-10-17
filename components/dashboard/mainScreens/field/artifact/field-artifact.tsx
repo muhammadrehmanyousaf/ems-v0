@@ -26,6 +26,7 @@ import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useBusiness } from "@/context/BusinessContext"
 import { holdSlotText } from "@/lib/booking/slot-vocabulary"
 import { useArtifactShell, pkNum, escHtml, errorBannerHtml, openDrawer, closeDrawer } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 const svg = (p: string, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}">${p}</svg>`
 const IC = {
@@ -38,7 +39,7 @@ const IC = {
   wifiOff: '<path d="M2 9a15 15 0 0 1 5-3.3M22 9a15 15 0 0 0-4-2.7M8.5 16a5 5 0 0 1 5.6-.9M12 20h.01M2 2l20 20"/>',
   cal: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>',
 }
-const todayIso = () => new Date().toISOString().slice(0, 10)
+const todayIso = () => todayInKarachi() // WP37 (MONEY-014): the Pakistan day; the UTC day is yesterday until 05:00 PKT
 const isToday = (s?: string | null) => !!s && String(s).slice(0, 10) === todayIso()
 const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
 function relTime(s?: string | null) {

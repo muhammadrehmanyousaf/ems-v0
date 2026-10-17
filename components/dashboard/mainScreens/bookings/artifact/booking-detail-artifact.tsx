@@ -18,7 +18,8 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { listRefundRequests, decideRefundRequest, applyRefundRequest, markRefundPaid } from "@/lib/api/bookingOrder"
+import { listRefundRequests, decideRefundRequest, applyRefundRequest, markRefundPaid, getRefundPreview, recordCashRefund } from "@/lib/api/bookingOrder"
+import { PaymentInstructionsAPI, type PaymentClaim } from "@/lib/api/paymentInstructions"
 import { toast } from "sonner"
 import { BookingAPI, type BookingSchedule, type SettlementPreview, type DepositPosition, type BookingChangeRequest } from "@/lib/api/bookings"
 import { BookingsAPI, BlockedDatesAPI } from "@/lib/api/dashboard"
@@ -36,7 +37,8 @@ import { bookedOn, receivedOn, outstandingOn } from "@/lib/utils/booking-money"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
 import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { paymentsCardHtml, handleQistClick, QIST_CSS } from "./qist-payments"
-import { phantomPanelHtml, wirePhantomButtons } from "@/components/dashboard/mainScreens/artifact/phantom-advance"
+import { phantomPanelHtml, wirePhantomButtons, openPhantomDrawer, phantomCtxFrom } from "@/components/dashboard/mainScreens/artifact/phantom-advance"
+import { unledgered409 } from "@/lib/utils/phantom-advance"
 import { moneyOf } from "@/lib/utils/qist"
 import { fmtYmd, ymdOf, ymdToUtcDate } from "@/lib/utils/ymd"
 import { bookingSlotText } from "@/lib/booking/slot-vocabulary"
@@ -318,7 +320,7 @@ function depositCard(pos: DepositPosition | null): string {
     ? `<div class="settle-actions"><span class="dep-done">${svg(I.check, 2.4)} Deposit ${st === "forfeited" ? "zabt ho gaya" : "handle ho chuka"}</span></div>`
     : `<div class="settle-actions">
         <button class="btn btn-primary" data-dep-return="${pos.bookingId}" ${hasLiveClaims ? "disabled title='Pehle claims settle/withdraw karein'" : ""}>${svg(I.money)} Deposit wapas karein</button>
-        <button class="btn btn-ghost" data-dep-claim="${pos.bookingId}" data-dep-returnable="${Math.round(pos.returnable)}">${svg(I.minus)} Nuqsan claim karein</button>
+        ${DAMAGE_CLAIM_BUTTON ? `<button class="btn btn-ghost" data-dep-claim="${pos.bookingId}" data-dep-returnable="${Math.round(pos.returnable)}">${svg(I.minus)} Nuqsan claim karein</button>` : ""}
       </div>${hasLiveClaims ? `<div class="bf-hint" style="padding:0 16px 12px">Deposit wapas karne se pehle khuli claims settle ya chhorें.</div>` : ""}`
   return `<div class="card">
       <div class="card-h"><div><h2>Security deposit</h2><div class="sub">Rakha → nuqsan kaat → wapas</div></div><span class="st ${tone}"><i></i> ${label}</span></div>
@@ -359,6 +361,77 @@ function refundPaidDrawerBody(id: number, amount: number): string {
   </div>
   <div class="dfield"><label class="dlabel">Reference</label><input id="rr-ref" type="text" placeholder="e.g. transfer id, cheque no, ya 'haath mein diya'"/></div>
   <div class="ww-dfoot"><button class="btn btn-ghost" type="button" data-drawer-close>Waapas</button><button class="btn btn-primary" type="button" data-rr-paid-save="${id}">Mark karein</button></div>`
+}
+
+/**
+ * WP37 (FLAGGED-047 / MONEY-025): the customer's "I have sent the payment" reports, on the booking page.
+ *
+ * The only vendor surface for a report used to be a bell notification: the claim could not be confirmed or
+ * rejected from the booking, so it stayed pending for ever. Confirming IS recording the payment (the same
+ * record-payment door, which closes the claim, keeps the customer's reference on the receipt and links the two);
+ * rejecting needs a reason. Pending reports only; the same card language as the refund request card above it.
+ */
+/**
+ * WP37 (LOGIC-029, owner decision): the vendor can OPEN a damage claim, but the customer has no screen to accept or
+ * dispute it and the admin none to settle it, so an open claim blocks the deposit return with no way out except
+ * withdrawing. The button stays hidden until those screens exist (the server door and the claim list are untouched,
+ * so claims already open can still be withdrawn or settled).
+ */
+const DAMAGE_CLAIM_BUTTON = false
+
+const CLAIM_METHOD: Record<string, string> = {
+  bank_transfer: "Bank transfer", raast: "Raast", ibft: "IBFT", jazzcash: "JazzCash", easypaisa: "Easypaisa", cash: "Cash",
+}
+function paymentClaimsCard(claims: PaymentClaim[]): string {
+  const pending = (claims || []).filter((c) => c.status === "pending")
+  if (!pending.length) return ""
+  const rows = pending.map((c) => {
+    const amt = Number(c.amount) || 0
+    const method = CLAIM_METHOD[String(c.method)] || String(c.method || "").replace(/_/g, " ")
+    return `<div class="inst-row" style="align-items:flex-start" data-pc-row="${c.id}">
+      <div class="ir-l">
+        <div class="ir-nm">${rs(amt)} <span style="color:var(--ink-4);font-weight:400">· ${escHtml(method)}</span></div>
+        <div class="ir-d">Customer ne paisa bhejne ki ittila di hai${c.claimedAt ? ` · ${fmtDateShort(c.claimedAt)}` : ""}</div>
+        ${c.transactionRef ? `<div class="ir-d"><b>Reference:</b> ${escHtml(c.transactionRef)}</div>` : ""}
+        ${c.notes ? `<div class="ir-d">&ldquo;${escHtml(c.notes)}&rdquo;</div>` : ""}
+        ${c.proofUrl ? `<div class="ir-d"><a href="${escHtml(c.proofUrl)}" target="_blank" rel="noopener noreferrer">Saboot dekhein</a></div>` : ""}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-primary" data-pc-confirm="${c.id}" data-pc-type="${escHtml(String(c.paymentType || "down_payment"))}" style="height:30px;padding:0 12px;font-size:12px">Paisa mil gaya</button>
+        <button class="btn btn-ghost" data-pc-reject="${c.id}" style="height:30px;padding:0 12px;font-size:12px">Paisa nahi aaya</button>
+      </div>
+    </div>`
+  }).join("")
+  return `<div class="card" data-pc-card>
+      <div class="card-h"><div><h2>Customer ne paisa bheja</h2><div class="sub">Apne account mein dekh kar tasdeeq karein</div></div><span class="st warn"><i></i> ${pending.length} baaki</span></div>
+      <div style="padding:2px 16px 12px">${rows}</div>
+    </div>`
+}
+
+function claimRejectDrawerBody(id: number): string {
+  return `
+  <div class="settle-note">Customer ko wajah dikhayi jayegi. Agar paisa baad mein aa jaye to aap payment khud record kar sakte hain.</div>
+  <div class="dfield"><label class="dlabel">Wajah <span class="req">*</span></label><textarea id="pc-reason" placeholder="e.g. abhi tak account mein nahi aaya"></textarea></div>
+  <div class="ww-dfoot"><button class="btn btn-ghost" type="button" data-drawer-close>Waapas</button><button class="btn btn-primary" type="button" data-pc-reject-save="${id}" style="background:var(--bad);border-color:transparent">Reject karein</button></div>`
+}
+
+/** WP37 (MONEY-022): hand back an over-payment - the "Refund" the overpaid note always told the vendor to write. */
+function overpaidRefundDrawerBody(bookingId: number, amount: number): string {
+  return `
+  <div class="settle-note">Customer ne <b>${rs(amount)}</b> zyada diya hai. Wapas karne par ye raqam booking ke khate se kam hogi aur Khata mein "Wapsi" mein dikhegi.</div>
+  <div class="dfield"><label class="dlabel">Kitna wapas <span class="req">*</span></label><input id="ov-amount" type="number" min="1" step="1" value="${Math.round(amount)}"/></div>
+  <div class="dfield"><label class="dlabel">Kaise <span class="req">*</span></label>
+    <select id="ov-method">
+      <option value="cash">Cash</option>
+      <option value="bank_transfer">Bank transfer</option>
+      <option value="jazzcash">JazzCash</option>
+      <option value="easypaisa">Easypaisa</option>
+      <option value="cheque">Cheque</option>
+      <option value="other">Aur koi tareeqa</option>
+    </select>
+  </div>
+  <div class="dfield"><label class="dlabel">Wajah</label><input id="ov-reason" type="text" placeholder="Optional - e.g. zyada transfer ho gaya tha"/></div>
+  <div class="ww-dfoot"><button class="btn btn-ghost" type="button" data-drawer-close>Waapas</button><button class="btn btn-primary" type="button" data-ov-refund-save="${bookingId}">Refund record karein</button></div>`
 }
 
 type CashRefundOwed = { id: number; amount: number; reason: string | null; owedSince: string }
@@ -488,7 +561,7 @@ function refundOwedCard(refunds: CashRefundOwed[], payout: RefundPayout = null):
     </div>`
 }
 
-function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmount?: number; remainingAmount?: number; cashRefundOwedTotal?: number; cashRefundsOwed?: CashRefundOwed[]; refundPayout?: RefundPayout } | null, history: any[], sheets: FunctionSheet[], schedule: BookingSchedule | null, scheduleFailed: boolean, settlement: SettlementPreview | null, deposit: DepositPosition | null, refundReqs: RefundReq[] = [], changeReqs: BookingChangeRequest[] = [], dispute: { status?: string | null } | null = null): string {
+function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmount?: number; remainingAmount?: number; cashRefundOwedTotal?: number; cashRefundsOwed?: CashRefundOwed[]; refundPayout?: RefundPayout } | null, history: any[], sheets: FunctionSheet[], schedule: BookingSchedule | null, scheduleFailed: boolean, settlement: SettlementPreview | null, deposit: DepositPosition | null, refundReqs: RefundReq[] = [], changeReqs: BookingChangeRequest[] = [], dispute: { status?: string | null } | null = null, claims: PaymentClaim[] = []): string {
   const statusLabel = bookingStatusLabel(booking) || "Booking"
   const tone = toneOf(statusLabel)
   const st = (booking.status || "").toLowerCase()
@@ -665,6 +738,8 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
   <div class="two">
     <div class="col-stack">
       ${paymentsCardHtml(schedule, { failed: scheduleFailed })}
+
+      ${paymentClaimsCard(claims)}
 
       ${changeRequestsCard(booking.id, changeReqs)}
 
@@ -941,6 +1016,7 @@ function priceEditWarn(s: ShadowRoot, paid: number): void {
 /** WP31: a booking whose received figure no receipt backs: cancelling it would price the refund on the receipts only. Say so, with the two taps. */
 function cancelBookingHtml(id: number, unledgered = 0): string {
   return `${unledgered > 0 ? phantomPanelHtml({ unledgered }) : ""}<div style="font-size:12px;color:var(--bad);background:var(--bad-wash);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.5">⚠️ Cancel karne par cancellation policy ke mutabiq refund ban sakta hai. Ye amal wapas nahi hoga.</div>
+    <div id="bc-preview" data-bc-preview style="font-size:12.5px;color:var(--ink-2);background:var(--surface-2);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.5">Refund ka hisaab dekh rahe hain…</div>
     <div class="dfield"><label class="dlabel">Cancel ki wajah</label><textarea id="bc-reason" placeholder="Optional — record ke liye"></textarea></div>
     <div class="ww-dfoot"><button class="btn btn-ghost" data-drawer-close type="button">Waapas</button><button class="btn btn-primary" data-bk-cancel-save="${id}" type="button" style="background:var(--bad);border-color:transparent">Haan, cancel karein</button></div>`
 }
@@ -979,6 +1055,8 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
    * request a customer sent simply expired unanswered. Four had, on the test
    * account alone, all of them asking to change the guest count.
    */
+  // WP37 (FLAGGED-047 / MONEY-025): the customer's payment reports for the claims card
+  const claimsQ = useQuery({ queryKey: ["bk-detail-claims", bookingId], queryFn: () => PaymentInstructionsAPI.list(bookingId).catch(() => [] as PaymentClaim[]), enabled: valid })
   const crQ = useQuery({ queryKey: ["bk-detail-cr", bookingId], queryFn: () => BookingAPI.getChangeRequests(bookingId).then((r) => r?.requests ?? []).catch(() => [] as BookingChangeRequest[]), enabled: valid })
   // WP26 / V4-8: the sweeper also holds a booking for an open dispute. Asked only where the answer can matter (a Confirmed
   // booking whose event day has passed); 404 = no dispute, a normal answer, not an error.
@@ -1019,6 +1097,7 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
       (refundQ.data?.requests ?? []) as unknown as RefundReq[],
       crQ.data ?? [],
       disputeQ.data ?? null,
+      claimsQ.data ?? [],
     )
     // restore the vendor's private per-booking note (persisted locally)
     const vn = s.getElementById("vendor-note") as HTMLTextAreaElement | null
@@ -1026,7 +1105,7 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
     // update the crumb with the real customer name
     const crumb = s.querySelector(".crumb b"); if (crumb) crumb.textContent = booking.customerName || "Booking"
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, bookingQ.data, bookingQ.isLoading, bookingQ.isError, payQ.data, histQ.data, sheetsQ.data, scheduleQ.data, scheduleQ.isError, settleQ.data, depQ.data, refundQ.data, crQ.data, disputeQ.data])
+  }, [ready, bookingQ.data, bookingQ.isLoading, bookingQ.isError, payQ.data, histQ.data, sheetsQ.data, scheduleQ.data, scheduleQ.isError, settleQ.data, depQ.data, refundQ.data, crQ.data, disputeQ.data, claimsQ.data])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
@@ -1303,6 +1382,22 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
         const m = scheduleRef.current?.money
         const gap = m && !m.cancelled ? moneyOf(m.unledgered) : 0
         openDrawer(s, "Booking cancel karein", cancelBookingHtml(Number(cx.dataset.bkCancel), gap))
+        // WP37 (MONEY-024): say what the cancellation will cost BEFORE the vendor confirms. A venue's own cancel refunds
+        // everything received (the vendor-cancel path); with the refund engine off the answer is the manual refund.
+        void getRefundPreview(bookingId).then((p) => {
+          const el = s.getElementById("bc-preview"); if (!el) return
+          const received = Number(p?.totalPaid ?? moneyOf(m?.received))
+          if (!p) {
+            el.innerHTML = received > 0 || moneyOf(m?.received) > 0
+              ? `Refund ka hisaab abhi is account par band hai. Jo paisa mil chuka hai (Rs ${pkNum(moneyOf(m?.received))}) wo cancel ke baad customer ko khud wapas karna hoga &mdash; booking page par "Refund" se likhein.`
+              : "Is booking par abhi tak koi paisa nahi mila - wapas karne ko kuch nahi."
+            return
+          }
+          const full = Number(p.ifVenueAgrees?.refund ?? p.totalPaid ?? 0)
+          el.innerHTML = full > 0
+            ? `Aap cancel karenge to customer ko <b>Rs ${pkNum(full)}</b> (jo mil chuka hai, poora) wapas karna hoga.`
+            : "Is booking par abhi tak koi paisa nahi mila - wapas karne ko kuch nahi."
+        }).catch(() => { const el = s.getElementById("bc-preview"); if (el) el.textContent = "Refund ka hisaab abhi nahi dikha sake - cancel ke baad booking page par refund dekhein." })
         if (gap > 0 && m) {
           const body = s.getElementById("ww-drawer-body")
           if (body) wirePhantomButtons(s, body, {
@@ -1412,6 +1507,67 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
         catch (err: unknown) {
           if (!lostAnswer(err, "Cash settle", "settle-cash")) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua")
           scs.disabled = false; scs.textContent = "Haan, cash mila"
+        }
+        return
+      }
+      // ── WP37: the customer's "I have sent the payment" reports ────────
+      const pcConfirm = t.closest("[data-pc-confirm]") as HTMLButtonElement | null
+      if (pcConfirm?.dataset.pcConfirm) {
+        const claimId = Number(pcConfirm.dataset.pcConfirm)
+        const ptype = (pcConfirm.dataset.pcType || "down_payment") as never
+        pcConfirm.disabled = true; const o = pcConfirm.textContent; pcConfirm.textContent = "Ho raha…"
+        try {
+          // confirming a report IS recording the payment: the server closes the claim, keeps the customer's reference
+          // on the receipt and links the two. No payment method is sent: the report's own method is used.
+          const out = await BookingsAPI.recordPayment(bookingId, ptype, "", claimId, { idempotencyKey: keyFor(`claim-confirm:${claimId}`, [claimId, ptype]) })
+          rotateKey(`claim-confirm:${claimId}`)
+          toast.success(out?.data?.id ? "Payment record ho gayi" : (out?.message || "Payment record ho gayi")); invalidateAll()
+        } catch (err: unknown) {
+          // a booking whose advance no receipt backs: the same two explicit taps every money screen offers (PAY-RECEIPTS-001)
+          const ph = unledgered409(err)
+          if (ph) {
+            openPhantomDrawer(s, phantomCtxFrom(ph, { bookingId, customerName: custRef.current, onSettled: invalidateAll, onStale: invalidateAll }))
+            pcConfirm.disabled = false; if (o) pcConfirm.textContent = o
+            return
+          }
+          if (!lostAnswer(err, "Payment", `claim-confirm:${claimId}`)) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua")
+          pcConfirm.disabled = false; if (o) pcConfirm.textContent = o
+        }
+        return
+      }
+      const pcReject = t.closest("[data-pc-reject]") as HTMLButtonElement | null
+      if (pcReject?.dataset.pcReject) { openDrawer(s, "Paisa nahi aaya", claimRejectDrawerBody(Number(pcReject.dataset.pcReject))); return }
+      const pcRejectSave = t.closest("[data-pc-reject-save]") as HTMLButtonElement | null
+      if (pcRejectSave?.dataset.pcRejectSave) {
+        const reason = (s.getElementById("pc-reason") as HTMLTextAreaElement | null)?.value?.trim() || ""
+        if (reason.length < 3) { toast.error("Wajah likhein"); return }
+        pcRejectSave.disabled = true; const o = pcRejectSave.textContent; pcRejectSave.textContent = "Ho raha…"
+        try { await PaymentInstructionsAPI.reject(Number(pcRejectSave.dataset.pcRejectSave), reason); toast.success("Report reject ho gayi"); closeDrawer(s); invalidateAll() }
+        catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua"); pcRejectSave.disabled = false; if (o) pcRejectSave.textContent = o }
+        return
+      }
+      // ── WP37 (MONEY-022): hand back an over-payment ───────────────────
+      const ovOpen = t.closest("[data-q-refund-over]") as HTMLElement | null
+      if (ovOpen?.dataset.qRefundOver) {
+        freshKey("overpaid-refund")
+        openDrawer(s, "Zyada mila hua paisa wapas", overpaidRefundDrawerBody(bookingId, Number(ovOpen.dataset.qRefundOver) || 0))
+        return
+      }
+      const ovSave = t.closest("[data-ov-refund-save]") as HTMLButtonElement | null
+      if (ovSave?.dataset.ovRefundSave) {
+        const amount = Number((s.getElementById("ov-amount") as HTMLInputElement | null)?.value)
+        const refundMethod = (s.getElementById("ov-method") as HTMLSelectElement | null)?.value || "cash"
+        const reason = (s.getElementById("ov-reason") as HTMLInputElement | null)?.value?.trim() || undefined
+        if (!Number.isFinite(amount) || amount <= 0) { toast.error("Sahi raqam likhein"); return }
+        ovSave.disabled = true; const o = ovSave.textContent; ovSave.textContent = "Ho raha…"
+        try {
+          const body = { amount, refundMethod, reason }
+          await recordCashRefund(bookingId, body, { idempotencyKey: keyFor("overpaid-refund", body) })
+          rotateKey("overpaid-refund")
+          toast.success("Refund record ho gaya"); closeDrawer(s); invalidateAll()
+        } catch (err: unknown) {
+          if (!lostAnswer(err, "Refund", "overpaid-refund")) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Refund nahi hua")
+          ovSave.disabled = false; if (o) ovSave.textContent = o
         }
         return
       }

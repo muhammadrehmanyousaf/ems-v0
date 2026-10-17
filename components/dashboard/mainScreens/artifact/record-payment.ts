@@ -44,12 +44,13 @@ import { invalidateMoney } from "@/lib/query/money-keys"
 import { SubmitKey, isAmbiguousFailure, isRetrySameKey, checkPaymentLanded } from "@/lib/utils/idempotency"
 import { unledgered409 } from "@/lib/utils/phantom-advance"
 import { phantomPanelHtml, wirePhantomButtons } from "./phantom-advance"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 const METHODS: { v: ReceiptMethod; l: string }[] = [
   { v: "cash", l: "Cash" }, { v: "bank_transfer", l: "Bank transfer" }, { v: "jazzcash", l: "JazzCash" },
   { v: "easypaisa", l: "EasyPaisa" }, { v: "raast", l: "Raast" }, { v: "ibft", l: "IBFT" }, { v: "other", l: "Other" },
 ]
-const todayStr = () => new Date().toISOString().slice(0, 10)
+const todayStr = () => todayInKarachi() // WP37 (MONEY-014): the Pakistan day; the UTC day is yesterday until 05:00 PKT
 
 export interface RecordPaymentOpts {
   bookingId: number

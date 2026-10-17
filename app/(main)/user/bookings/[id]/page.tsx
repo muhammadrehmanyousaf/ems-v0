@@ -278,6 +278,8 @@ export default function BookingDetailPage() {
   const [dueState, setDueState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
   // PAY-UI_CUSTOMER-010: set when the server's figure is only the NEXT qist, not due yet (a venue that asks no advance).
   const [nextPayment, setNextPayment] = useState<{ amount: number; dueDate: string | null } | null>(null);
+  // WP37 (CUSTOMER-007): the venue has not accepted the request yet, so nothing is due (the pay page says the same)
+  const [awaitingApproval, setAwaitingApproval] = useState(false);
   useEffect(() => {
     if (!booking) return;
     if (isClosedBookingStatus((booking.status || "").toLowerCase()) || bookingMoney(booking as never).outstanding <= 0) {
@@ -289,6 +291,7 @@ export default function BookingDetailPage() {
       .then((d) => {
         if (!live) return;
         const notYet = paymentNotDueYet(d);
+        setAwaitingApproval(!!d?.awaitingVendorApproval);
         setNextPayment(notYet);
         setDueNow(notYet ? 0 : Number(d?.amountDue ?? 0));
         setDueState("ready");
@@ -657,6 +660,9 @@ export default function BookingDetailPage() {
   const showPayCta =
     !isClosedStatus &&
     !isFullyPaid &&
+    // WP37 (CUSTOMER-029): "until the vendor accepts there is nothing to pay into" - a part-paid PENDING booking
+    // (its header total was never written) used to show "Pay remaining" next to "Nothing is due right now".
+    statusKey !== "pending" &&
     outstanding > 0 &&
     (PAYABLE_STATUSES.includes(statusKey) || isPartiallyPaid);
   // Nothing is due right now when the server says so (for example the advance is waived), even though a balance
@@ -1055,7 +1061,8 @@ export default function BookingDetailPage() {
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Total amount</span>
                 <span className="font-medium text-foreground tabular-nums">
-                  {fmt(booking.totalAmount)}
+                  {/* WP37 (CUSTOMER-029): the same figure Paid / Remaining are worked from (final bill, header, or the lines) */}
+                  {fmt(money.booked)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -1106,7 +1113,9 @@ export default function BookingDetailPage() {
 
             {showPayCta && nothingDueNow ? (
               <div className="mt-4 pt-4 border-t border-border/60 text-[12.5px] leading-snug text-muted-foreground">
-                {nextPayment ? (
+                {awaitingApproval ? (
+                  <>The venue is reviewing your request. Nothing is due, and nothing has been charged, until they accept it. We will ask for the advance then.</>
+                ) : nextPayment ? (
                   <>
                     Nothing is due right now. Your next payment, <span className="font-medium text-foreground tabular-nums">{fmt(nextPayment.amount)}</span>
                     {nextPayment.dueDate ? <> is due on {dayTextCustomer(nextPayment.dueDate)}.</> : <> is due later.</>}
@@ -1176,12 +1185,15 @@ export default function BookingDetailPage() {
               DISPUTE_ENGINE_ENABLED is globally enabled in production — so the
               build-time flag that hid this card has been removed. Raising a request
               moves NO money: it freezes the calculation for the vendor to decide.
-              Shown only where sensible: an active booking with money paid. */}
+              WP37 (FLAGGED-069): shown only for a CANCELLED booking that holds money. A cancellation-policy
+              refund requested on a booking that stays live refunded the money while the date stayed booked
+              (the server now answers 409 BOOKING_NOT_CANCELLED); an active booking cancels through
+              "Cancel booking" above, which works the refund out as part of the cancellation. */}
           <RefundRequestCard
             bookingId={booking.id}
             canRequest={
-              !["cancelled", "completed"].includes(statusKey) &&
-              ["paid", "partial"].includes(paymentKey)
+              statusKey === "cancelled" &&
+              (["paid", "partial"].includes(paymentKey) || money.received > 0)
             }
           />
 
@@ -1320,6 +1332,10 @@ export default function BookingDetailPage() {
                     {Number(booking.downPayment) > 0 || ["Paid", "Partial"].includes(booking.paymentStatus)
                       ? <> Any payments made may be subject to the vendor&apos;s refund policy.</>
                       : <> You have not paid anything on this booking.</>}
+                    {/* WP37 (CUSTOMER-034): when no refund figure could be worked out, still say what has been paid and who decides */}
+                    {!refundPreviewLoading && !refundPreview && money.received > 0 ? (
+                      <> You have paid {fmt(money.received)} so far; the venue decides how much of it comes back, and you will be told here.</>
+                    ) : null}
                   </p>
                 )}
                 {/* QA #4 — show the actual refund per the vendor's policy so the
@@ -1328,7 +1344,20 @@ export default function BookingDetailPage() {
                 {refundPreviewLoading && (
                   <p className="text-xs text-bridal-text-soft">Checking your refund…</p>
                 )}
-                {refundPreview && (refundPreview.totalPaid > 0 || (refundPreview.unledgeredAdvance ?? 0) > 0 || refundParts(refundPreview).hasExtras) && (
+                {/* WP37 (FLAGGED-063): inside the notice window the customer only ASKS the venue, and a venue that agrees
+                    refunds in full: say that, not the policy forfeit ("You'll get back Rs 0") that applies to a cancel the venue refused. */}
+                {windowClosed && refundPreview?.ifVenueAgrees && refundPreview.totalPaid > 0 && (
+                  <div className="rounded-md border border-bridal-gold/45 bg-bridal-cream p-3 text-sm" data-venue-agrees>
+                    <div className="flex items-center justify-between">
+                      <span className="text-bridal-charcoal">If the venue agrees to cancel</span>
+                      <span className="font-semibold text-status-success">{fmt(refundParts(refundPreview).total - refundParts(refundPreview).policy + refundPreview.ifVenueAgrees.refund)}</span>
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-bridal-text-soft leading-relaxed">
+                      The venue decides. If it does not agree, your booking stays and the cancellation policy applies.
+                    </p>
+                  </div>
+                )}
+                {refundPreview && !(windowClosed && refundPreview.ifVenueAgrees) && (refundPreview.totalPaid > 0 || (refundPreview.unledgeredAdvance ?? 0) > 0 || refundParts(refundPreview).hasExtras) && (
                   <div className="rounded-md border border-bridal-gold/45 bg-bridal-cream p-3 text-sm">
                     <div className="flex items-center justify-between">
                       <span className="text-bridal-charcoal">You&apos;ll get back</span>

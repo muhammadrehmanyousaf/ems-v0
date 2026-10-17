@@ -225,7 +225,7 @@ export function PlanItemRow({ planId, eventId, item, onChanged }: PlanItemRowPro
                   min={0}
                   autoFocus
                   className="h-8 w-32 text-sm"
-                  placeholder="Agreed amount"
+                  placeholder="Your budget for this line"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   disabled={saving}
@@ -263,7 +263,10 @@ export function PlanItemRow({ planId, eventId, item, onChanged }: PlanItemRowPro
                 className="inline-flex items-center gap-1.5 text-sm text-bridal-charcoal disabled:cursor-default group"
               >
                 <span className="font-medium tabular-nums">
-                  {item.agreedAmount != null ? fmtPKR(item.agreedAmount) : "Set price"}
+                  {/* WP37 (FLAGGED-024): a booked line shows what it was BOOKED at (the venue's price), not the number typed as a budget */}
+                  {booked && item.bookedAmount != null
+                    ? fmtPKR(item.bookedAmount)
+                    : item.agreedAmount != null ? fmtPKR(item.agreedAmount) : "Set your budget"}
                 </span>
                 {!booked && (
                   <Pencil className="h-3 w-3 text-bridal-text-soft group-hover:text-bridal-gold-dark" />

@@ -722,6 +722,9 @@ export interface ReceivablesInstallment {
 
 export interface ReceivablesBooking {
   bookingId: number;
+  /** WP37 (MONEY-020, additive): who is behind THIS booking (a row pools customers that share a phone / e-mail / account). */
+  customerName?: string | null;
+  customerPhone?: string | null;
   bookingDate: string;
   bookingTime: string;
   status: string;
@@ -738,6 +741,8 @@ export interface ReceivablesCustomer {
   oldestDaysOverdue: number;
   bookingCount: number;
   bookings: ReceivablesBooking[];
+  /** WP37 (MONEY-020, additive): the distinct names pooled into this row. */
+  customerNames?: string[];
   bucket: ReceivablesBucketKey;
 }
 
@@ -750,6 +755,9 @@ export interface ReceivablesData {
     oldestDaysOverdue: number;
   };
   customers: ReceivablesCustomer[];
+  /** WP37 (LOGIC-012, additive): damage a security deposit could not cover - a debt kept apart from the booking money. */
+  depositShortfalls?: { bookingId: number; customerName: string | null; bookingDate: string | null; shortfall: number }[];
+  depositShortfallTotal?: number;
   generatedAt: string;
 }
 

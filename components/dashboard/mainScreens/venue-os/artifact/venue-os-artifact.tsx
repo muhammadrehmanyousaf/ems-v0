@@ -12,6 +12,7 @@ import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { AnalyticsAPI } from "@/lib/api/analytics"
 import { ExpensesAPI } from "@/lib/api/vendorExpenses"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 import { useArtifactShell, pkNum, escHtml, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
@@ -142,7 +143,10 @@ export function VenueOsArtifact() {
   const { shadowRef, ready } = useArtifactShell(hostRef, { activeHref: "/dashboard/venue-os", crumbBold: "Ops", crumbSub: "Venue OS", extraCss: EXTRA_CSS })
   const qc = useQueryClient()
   const revQ = useQuery({ queryKey: ["vos-rev"], queryFn: () => AnalyticsAPI.getRevenueBreakdowns("this_year") })
-  const expQ = useQuery({ queryKey: ["vos-exp"], queryFn: () => ExpensesAPI.list({}) })
+  // WP37 (OPS-012): the expenses are THIS year's (the Pakistan year), like the cash and the booked figures beside them;
+  // with no window the card subtracted every expense ever entered from this year's cash.
+  const year = todayInKarachi().slice(0, 4)
+  const expQ = useQuery({ queryKey: ["vos-exp", year], queryFn: () => ExpensesAPI.list({ from: `${year}-01-01`, to: `${year}-12-31` }) })
   // Cash actually received this year. The breakdown above is contract value;
   // profit has to be computed on money that arrived.
   const kpiQ = useQuery({ queryKey: ["vos-kpi"], queryFn: () => AnalyticsAPI.getDashboardKpis("this_year").catch(() => null) })

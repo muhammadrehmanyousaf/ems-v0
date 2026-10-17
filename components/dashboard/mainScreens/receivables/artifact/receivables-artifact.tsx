@@ -57,10 +57,15 @@ function rowHtml(c: ReceivablesCustomer): string {
   const bkDue = firstBk ? num(firstBk.totalOutstanding) || due : due
   const nav = bkId ? `/dashboard/bookings/${bkId}` : ""
   const recBtn = bkId ? `<button class="rc-rec" data-rec="${bkId}" data-rec-name="${escHtml(name)}" data-rec-due="${Math.round(bkDue)}" title="Payment record karein">${svg(IC.plus, 2.4)} Record</button>` : ""
-  const waBtn = phone ? `<button class="iconbtn wa" data-remind="${escHtml(phone)}" data-rn="${escHtml(name)}" data-rd="${Math.round(due)}" title="WhatsApp yaad-dahani">${svg(IC.wa, 1.9)}</button>` : ""
+  // WP37 (MONEY-020): a row that pools several people (one phone / e-mail) must not send the POOLED total to that phone
+  // under one person's name. The reminder names the booking it is about and quotes that booking's own balance.
+  const pooled = (c.customerNames?.length ?? 0) > 1
+  const rmName = pooled ? (firstBk?.customerName || name) : name
+  const rmDue = pooled ? bkDue : due
+  const waBtn = phone ? `<button class="iconbtn wa" data-remind="${escHtml(phone)}" data-rn="${escHtml(rmName)}" data-rd="${Math.round(rmDue)}"${pooled && bkId ? ` data-rb="${bkId}"` : ""} title="WhatsApp yaad-dahani">${svg(IC.wa, 1.9)}</button>` : ""
   const odCls = days > 60 ? "bad" : days > 30 ? "warn" : ""
   return `<tr data-aging="${ak}"${nav ? ` data-nav-btn="${nav}"` : ""}>
-    <td><div class="c-couple"><span class="ava">${escHtml(initialsOf(name))}</span><div><div class="cc-nm">${escHtml(name)}</div><div class="cc-ev">${escHtml(phone || c.customerEmail || "—")}</div></div></div></td>
+    <td><div class="c-couple"><span class="ava">${escHtml(initialsOf(name))}</span><div><div class="cc-nm">${escHtml(name)}</div><div class="cc-ev">${escHtml(phone || c.customerEmail || "—")}${pooled ? ` · ${c.customerNames!.length} naam` : ""}</div></div></div></td>
     <td class="td-guests tnum">${num(c.bookingCount)}</td>
     <td><span class="od ${odCls}">${days > 0 ? `${days} din` : "—"}</span></td>
     <td class="r td-amt tnum"><span style="color:var(--warn)"><span class="rs">Rs</span> ${pkNum(due)}</span></td>
@@ -134,7 +139,7 @@ export function ReceivablesArtifact() {
       const rm = t.closest("[data-remind]") as HTMLElement | null
       if (rm?.dataset.remind) {
         const p = waDigits(rm.dataset.remind); if (!p) return
-        const msg = `Assalam-o-Alaikum ${rm.dataset.rn || ""}! Aap ki booking ka baqaya Rs ${pkNum(Number(rm.dataset.rd) || 0)} hai. Meherbani farma kar ada kar dein. Shukriya.`
+        const msg = `Assalam-o-Alaikum ${rm.dataset.rn || ""}! Aap ki booking${rm.dataset.rb ? ` #${rm.dataset.rb}` : ""} ka baqaya Rs ${pkNum(Number(rm.dataset.rd) || 0)} hai. Meherbani farma kar ada kar dein. Shukriya.`
         window.open(`https://wa.me/${p}?text=${encodeURIComponent(msg)}`, "_blank", "noopener")
         toast.success("WhatsApp khul gaya")
         return

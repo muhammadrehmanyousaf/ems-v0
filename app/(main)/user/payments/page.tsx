@@ -95,7 +95,8 @@ function figuresOf(booking: any): { total: number; received: number; outstanding
     return { total: n(v.total), received: n(v.received), outstanding: n(v.outstanding) };
   }
   const m = bookingMoney(booking);
-  return { total: Number(booking?.totalAmount || 0), received: m.received, outstanding: m.outstanding };
+  // WP37 (CUSTOMER-029): the booking's worth is the final bill / the lines when the header was never written.
+  return { total: m.booked, received: m.received, outstanding: m.outstanding };
 }
 
 export default function PaymentsPage() {
@@ -120,6 +121,8 @@ function PaymentsPageContent() {
 
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  // WP37 (MONEY-026): a failed load is an error state, never "All caught up".
+  const [loadFailed, setLoadFailed] = useState(false);
   const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
 
   /**
@@ -143,6 +146,7 @@ function PaymentsPageContent() {
 
   const fetchBookings = async () => {
     setLoading(true);
+    setLoadFailed(false);
     try {
       const res = await PaymentAPI.getUserBookings();
       const all = [
@@ -157,6 +161,7 @@ function PaymentsPageContent() {
       ];
       setBookings(all);
     } catch {
+      setLoadFailed(true);
       toast({
         title: "Error",
         description: "Failed to fetch payments.",
@@ -320,7 +325,15 @@ function PaymentsPageContent() {
         </TabsList>
       </Tabs>
 
-      {activeTab === "pending" &&
+      {loadFailed && (
+        <EmptyState
+          icon={<Clock className="size-6" />}
+          title="Couldn't load your payments"
+          description="Your payments could not be loaded, so nothing is shown. Please refresh the page to try again."
+        />
+      )}
+
+      {!loadFailed && activeTab === "pending" &&
         (pending.length === 0 ? (
           <EmptyState
             icon={<CheckCircle2 className="size-6" />}
@@ -464,7 +477,7 @@ function PaymentsPageContent() {
           </div>
         ))}
 
-      {activeTab === "history" &&
+      {!loadFailed && activeTab === "history" &&
         (history.length === 0 ? (
           <EmptyState
             icon={<Clock className="size-6" />}

@@ -13,6 +13,7 @@ import { DroneNocAPI, type DroneNOC, type PermitStatus, type PermitType, type Is
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useScopedBusinessId } from "@/hooks/use-scoped-business-id"
 import { useArtifactShell, escHtml, initTablePager, loadPref, savePref, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 const ST_LABEL: Record<PermitStatus, string> = { pending: "Zeer-e-ghaur", approved: "Manzoor", rejected: "Radd", cancelled: "Cancel", expired: "Khatam", expiring_soon: "Jald khatam" }
 const ST_TONE: Record<PermitStatus, string> = { pending: "warn", approved: "ok", rejected: "bad", cancelled: "mut", expired: "mut", expiring_soon: "warn" }
@@ -22,7 +23,7 @@ const AUTHS = Object.keys(AUTH_LABEL) as IssuingAuthority[]
 const TYPES = Object.keys(TYPE_LABEL) as PermitType[]
 const STATUSES: PermitStatus[] = ["pending", "approved", "expiring_soon", "expired", "rejected", "cancelled"]
 function fmtDate(s?: string | null) { if (!s) return "—"; const d = new Date(s); return isNaN(d.getTime()) ? String(s) : d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) }
-const todayIso = () => new Date().toISOString().slice(0, 10)
+const todayIso = () => todayInKarachi() // WP37 (MONEY-014): the Pakistan day; the UTC day is yesterday until 05:00 PKT
 const svg = (p: string, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}">${p}</svg>`
 const IC = { plus: '<path d="M12 5v14M5 12h14"/>', trash: '<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>', drone: '<path d="M4 4l4 4M20 4l-4 4M4 20l4-4M20 20l-4-4"/><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><rect x="9" y="9" width="6" height="6" rx="1"/>', check: '<path d="M20 6 9 17l-5-5"/>', x: '<path d="M18 6 6 18M6 6l12 12"/>', warn: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>' }
 function transBtns(status: string, id: number): string {
