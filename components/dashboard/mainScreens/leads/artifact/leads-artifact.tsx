@@ -19,6 +19,8 @@ import { openBookingForm, bookingIdFromSaved } from "@/components/dashboard/main
 import { StaffAPI } from "@/lib/api/staff"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useBusiness } from "@/context/BusinessContext"
+import { useUser } from "@/context/UserContext"
+import { safeDateValue, assignableReps } from "@/lib/lead-form-safety"
 import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, initTablePager, setPagerFilter, restoreTab, savePref, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
@@ -231,7 +233,7 @@ type BizLite = { id: number; name?: string | null }
 
 /** Fill the dependent Hall/space + Assign-to selects for the chosen venue.
  * Backend-ready: venueSpacesApi.getTree + StaffAPI.listMembers. */
-async function populateLeadDeps(s: ShadowRoot, businessId: number, selSub?: number | null, selRep?: number | null) {
+async function populateLeadDeps(s: ShadowRoot, businessId: number, selSub?: number | null, selRep?: number | null, me?: { id: number; name?: string | null } | null) {
   const subSel = s.getElementById("ld-subvenue") as HTMLSelectElement | null
   const repSel = s.getElementById("ld-rep") as HTMLSelectElement | null
   if (subSel) subSel.innerHTML = `<option value="">— poora venue —</option>`
@@ -246,10 +248,14 @@ async function populateLeadDeps(s: ShadowRoot, businessId: number, selSub?: numb
       flat.map((n) => `<option value="${n.id}"${n.id === selSub ? " selected" : ""}>${"— ".repeat(Math.max(0, n.depth))}${escHtml(n.name)}</option>`).join("")
   } catch { /* venue may have no spaces yet */ }
   try {
-    const st = await StaffAPI.listMembers({ businessId }) as unknown as { members?: { id: number; fullName?: string; name?: string }[] } | { id: number; fullName?: string; name?: string }[]
+    const st = await StaffAPI.listMembers({ businessId }) as unknown as { members?: { id: number; userId?: number | null; fullName?: string; name?: string }[] } | { id: number; userId?: number | null; fullName?: string; name?: string }[]
     const members = (Array.isArray(st) ? st : st?.members) || []
+    // WP33 / LEADS-061: the option value is a USER id (Lead.assignedToUserId is a Users FK), never the StaffMember id; only people
+    // who can act on the lead (the owner, and staff with a login) are offered. The roster used to be mapped straight into the
+    // options, so picking "Ahmed (waiter)" assigned the lead to whichever stranger owned that user id.
+    const reps = assignableReps(members, me ?? null)
     if (repSel) repSel.innerHTML = `<option value="">— koi nahi —</option>` +
-      members.map((m) => `<option value="${m.id}"${m.id === selRep ? " selected" : ""}>${escHtml(m.fullName || m.name || `Staff #${m.id}`)}</option>`).join("")
+      reps.map((r) => `<option value="${r.userId}"${r.userId === selRep ? " selected" : ""}>${escHtml(r.label)}</option>`).join("")
   } catch { /* no staff module for this venue */ }
 }
 
@@ -259,7 +265,9 @@ function leadFormHtml(l?: Lead, prefillDate?: string, businesses?: BizLite[], cu
   const evOpts = EVENT_TYPES.map((e) => `<option value="${e}"${l?.eventType === e ? " selected" : ""}>${cap(e)}</option>`).join("")
   const srcOpts = (Object.keys(SOURCE) as LeadSource[]).map((k) => `<option value="${k}"${l?.source === k ? " selected" : ""}>${SOURCE[k].label}</option>`).join("")
   const stOpts = (Object.keys(STAGE) as LeadStatus[]).map((k) => `<option value="${k}"${(l?.status || "new") === k ? " selected" : ""}>${STAGE[k].label}</option>`).join("")
-  const dateVal = l?.eventDate ? String(l.eventDate).slice(0, 10) : (prefillDate || "")
+  // WP33 / LEADS-060: ?new= is attacker-controllable (a link in WhatsApp / e-mail) and was written raw into value="..." and then
+  // innerHTML: a reflected DOM XSS in the vendor's session. Only a real YYYY-MM-DD survives, and it is attribute-escaped anyway.
+  const dateVal = escHtml(l?.eventDate ? String(l.eventDate).slice(0, 10) : safeDateValue(prefillDate))
   const selBiz = lx.businessId ?? curBiz ?? (businesses && businesses[0]?.id) ?? ""
   const bizOpts = (businesses || []).map((b) => `<option value="${b.id}"${b.id === selBiz ? " selected" : ""}>${escHtml(b.name || `Venue #${b.id}`)}</option>`).join("")
   const fuVal = lx.nextFollowUpAt ? String(lx.nextFollowUpAt).slice(0, 16) : ""
@@ -310,6 +318,9 @@ export function LeadsArtifact() {
   const leads = data?.leads ?? []
   const leadsRef = React.useRef(leads); leadsRef.current = leads
   const searchParams = useSearchParams()
+  const { user: me } = useUser()
+  const meRef = React.useRef<{ id: number; name?: string | null } | null>(null)
+  meRef.current = me ? { id: Number(me.id), name: (me as { fullName?: string | null }).fullName } : null
 
   // calendar "+" deep-link: /dashboard/leads?new=YYYY-MM-DD opens the create
   // drawer prefilled with that date.
@@ -318,7 +329,7 @@ export function LeadsArtifact() {
     const s = shadowRef.current
     if (!s || !ready || autoOpened.current) return
     const nd = searchParams?.get("new")
-    if (nd) { autoOpened.current = true; openDrawer(s, "Naya lead", leadFormHtml(undefined, nd, bizListRef.current, bizRef.current)); populateLeadDeps(s, Number(bizRef.current)) }
+    if (nd) { autoOpened.current = true; openDrawer(s, "Naya lead", leadFormHtml(undefined, nd, bizListRef.current, bizRef.current)); populateLeadDeps(s, Number(bizRef.current), undefined, undefined, meRef.current) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, searchParams])
 
@@ -351,7 +362,7 @@ export function LeadsArtifact() {
         // quick-view drawer (row click)
         const lv = t.closest("[data-lead-view]") as HTMLElement | null
         if (lv?.dataset.leadView) { const l = leadsRef.current.find((x) => x.id === Number(lv.dataset.leadView)); if (l) openDrawer(s, l.contactName || "Lead", leadQuickViewHtml(l, bizListRef.current)); return }
-        if (t.closest("[data-lead-new]")) { openDrawer(s, "Naya lead", leadFormHtml(undefined, undefined, bizListRef.current, bizRef.current)); populateLeadDeps(s, Number(bizRef.current)); return }
+        if (t.closest("[data-lead-new]")) { openDrawer(s, "Naya lead", leadFormHtml(undefined, undefined, bizListRef.current, bizRef.current)); populateLeadDeps(s, Number(bizRef.current), undefined, undefined, meRef.current); return }
         // one-tap pipeline stage-advance (contacted/qualified/quoted) or mark lost
         const adv = t.closest("[data-lead-adv]") as HTMLElement | null
         if (adv?.dataset.leadAdv) {
@@ -362,7 +373,7 @@ export function LeadsArtifact() {
           return
         }
         const led = t.closest("[data-lead-edit]") as HTMLElement | null
-        if (led?.dataset.leadEdit) { const l = leadsRef.current.find((x) => x.id === Number(led.dataset.leadEdit)); if (l) { const lx = l as unknown as LeadExtra; openDrawer(s, "Lead edit karein", leadFormHtml(l, undefined, bizListRef.current, bizRef.current)); populateLeadDeps(s, Number(lx.businessId ?? bizRef.current), lx.subVenueId, lx.assignedToUserId) } return }
+        if (led?.dataset.leadEdit) { const l = leadsRef.current.find((x) => x.id === Number(led.dataset.leadEdit)); if (l) { const lx = l as unknown as LeadExtra; openDrawer(s, "Lead edit karein", leadFormHtml(l, undefined, bizListRef.current, bizRef.current)); populateLeadDeps(s, Number(lx.businessId ?? bizRef.current), lx.subVenueId, lx.assignedToUserId, meRef.current) } return }
         // lead → booking — shared BookingForm, prefilled; marks the lead won on save
         const lbk = t.closest("[data-lead-book]") as HTMLElement | null
         if (lbk?.dataset.leadBook) {
@@ -426,7 +437,7 @@ export function LeadsArtifact() {
       // venue change → refill dependent Hall/space + Assign-to selects
       s.addEventListener("change", (e) => {
         const t = e.target as HTMLElement
-        if (t.id === "ld-biz") populateLeadDeps(s, Number((t as HTMLSelectElement).value))
+        if (t.id === "ld-biz") populateLeadDeps(s, Number((t as HTMLSelectElement).value), undefined, undefined, meRef.current)
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

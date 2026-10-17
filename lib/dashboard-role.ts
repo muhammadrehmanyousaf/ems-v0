@@ -12,7 +12,11 @@ interface UserLike {
   roles?: RoleLike[];
 }
 
-const ADMIN_ROLE_NAMES = new Set(["admin", "administrator", "platform admin"]);
+// WP33 / ACCESS-015: there is NO server role that these names map to. Every admin route is guarded by superAdminMiddleware, which
+// accepts only "super admin", so a custom role named "admin" (anyone with the Roles screen can create one) used to get the full
+// admin sidebar and then be refused on every screen ("Admin only", an empty vendor queue). Only a super admin gets admin chrome.
+// The set is kept (empty) so getDashboardRole's "admin" return type and isAdminLike stay valid for a future real admin role.
+const ADMIN_ROLE_NAMES = new Set<string>();
 
 // Canonical role-table ids (Roles table): 1 = super admin, 2 = Vendor,
 // 3 = User. NEVER treat id 2 as admin — id 2 is a VENDOR. Doing so flagged

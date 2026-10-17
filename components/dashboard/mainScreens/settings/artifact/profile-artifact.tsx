@@ -18,6 +18,7 @@ import { useUser } from "@/context/UserContext"
 import { CITIES } from "@/lib/seo/constants"
 import { validatePkPhone, normalizePkPhone, validateEmail, normalizeEmail } from "@/lib/validation/pk-fields"
 import { passwordProblem } from "@/lib/validation/password"
+import { profileIssue, serverMessageOf } from "@/lib/profile-input"
 import { useArtifactShell, escHtml, initialsOf, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const STR_FIELDS = ["fullName", "phoneNumber", "city", "subArea", "bookingEmail", "primaryContactNumber", "secondaryContactNumber", "website", "officeAddress"] as const
@@ -178,6 +179,8 @@ export function ProfileArtifact() {
       const patch: Record<string, string> = {}
       s.querySelectorAll("[data-field]").forEach((el) => { const f = (el as HTMLElement).dataset.field!; const v = (el as HTMLInputElement).value; if (v !== (baseline.current[f] ?? "")) patch[f] = v })
       if (!Object.keys(patch).length) return
+      // WP33 / SETUP-056: name required, numbers shaped like phones, website http(s) only (the server judges the same)
+      { const issue = profileIssue(patch); if (issue) { toast.error(issue.message); return } }
       if (patch.phoneNumber?.trim()) { const p = validatePkPhone(patch.phoneNumber); if (p) { toast.error(p); return } patch.phoneNumber = normalizePkPhone(patch.phoneNumber) }
       if (patch.bookingEmail?.trim()) { const e = validateEmail(patch.bookingEmail, { label: "Booking email" }); if (e) { toast.error(e); return } patch.bookingEmail = normalizeEmail(patch.bookingEmail) }
       const btn = s.getElementById("sbsave") as HTMLButtonElement | null
@@ -189,7 +192,7 @@ export function ProfileArtifact() {
         qc.invalidateQueries({ queryKey: myProfileKey })
         await refreshUser()
         refreshDirty()
-      } catch { toast.error("Save nahi hua — dobara koshish karein") }
+      } catch (err) { toast.error(serverMessageOf(err, "Save nahi hua — dobara koshish karein")) } // WP33: the server's reason, when it gave one
       finally { if (btn) { btn.disabled = false; btn.textContent = "Save changes" } }
     }
     const doPassword = async () => {
@@ -208,11 +211,7 @@ export function ProfileArtifact() {
         toast.success("Password badal gaya")
         ;["pw-cur", "pw-new", "pw-conf"].forEach((id) => { const el = s.getElementById(id) as HTMLInputElement | null; if (el) el.value = "" })
         s.getElementById("pwform")?.classList.remove("on")
-      } catch (e) {
-        // The server says WHY (wrong current password, too weak, same as current): show it.
-        const why = (e as any)?.response?.data?.message
-        toast.error(typeof why === "string" && why ? why : "Password nahi badla — mojooda password check karein")
-      }
+      } catch (err) { toast.error(serverMessageOf(err, "Password nahi badla — mojooda password check karein")) } // WP33: not every failure is a wrong current password
       finally { if (btn) { btn.disabled = false; btn.textContent = "Password update karein" } }
     }
 
