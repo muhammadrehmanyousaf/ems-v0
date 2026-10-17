@@ -35,6 +35,7 @@ import { useUser } from "@/context/UserContext"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { passwordProblem } from "@/lib/validation/password"
 
 function errMsg(err: unknown, fallback: string): string {
   return (
@@ -286,8 +287,9 @@ function ChangePasswordDialog({
       toast.error("New passwords do not match")
       return
     }
-    if (pw.newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters")
+    const pwProblem = passwordProblem(pw.newPassword)
+    if (pwProblem) {
+      toast.error(pwProblem)
       return
     }
     mutation.mutate()
@@ -307,7 +309,7 @@ function ChangePasswordDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="rsa-new">New password</Label>
-            <Input id="rsa-new" type="password" value={pw.newPassword} onChange={set("newPassword")} placeholder="Min 6 characters" />
+            <Input id="rsa-new" type="password" value={pw.newPassword} onChange={set("newPassword")} placeholder="Min 10 characters" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="rsa-conf">Confirm new password</Label>

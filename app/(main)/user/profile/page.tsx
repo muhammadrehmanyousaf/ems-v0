@@ -27,6 +27,7 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import axiosInstance from "@/lib/axiosConfig";
 import { BACKEND_URL } from "@/lib/backend-url";
+import { passwordProblem } from "@/lib/validation/password";
 
 import {
   PageContainer,
@@ -214,6 +215,13 @@ const ProfilePage = () => {
         });
         return;
       }
+      // WP34 (CUSTOMER-026): this screen only checked that the two boxes matched, so
+      // a 6-character password was sent and accepted. Same rule as the server.
+      const pwProblem = passwordProblem(passwordForm.newPassword);
+      if (pwProblem) {
+        toast({ title: "Choose a stronger password", description: pwProblem, variant: "destructive" });
+        return;
+      }
       setIsPasswordChanging(true);
       if (!user || !user.id) throw new Error("User ID not found");
       await axiosInstance.patch(`${BACKEND_URL}api/v1/users/change-password`, {
@@ -294,7 +302,7 @@ const ProfilePage = () => {
   const getPasswordStrength = (password: string) => {
     if (!password) return { score: 0, label: "", color: "" };
     let score = 0;
-    if (password.length >= 8) score++;
+    if (password.length >= 10) score++;
     if (password.length >= 12) score++;
     if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
     if (/\d/.test(password)) score++;
@@ -584,7 +592,7 @@ const ProfilePage = () => {
                 onChange={(e) =>
                   setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))
                 }
-                placeholder="Enter new password"
+                placeholder="Min 10 characters"
                 className="pr-10"
               />
               <button

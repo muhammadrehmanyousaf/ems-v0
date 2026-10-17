@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { PHONE_OTP_AVAILABLE } from "@/lib/auth/phone-otp"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -17,6 +17,7 @@ import { useUser } from "@/context/UserContext"
 import { loginErrorMessage, loginErrorCode, requestPhoneOtp, verifyPhoneOtp } from "@/lib/api/auth"
 // FEAT_PHONE_OTP — additional phone+OTP sign-in path (email/password unchanged).
 import { safeRedirect } from "@/lib/auth/safe-redirect"
+import { clearAuthStorage } from "@/lib/auth/session"
 
 import { BridalButton } from "@/components/bridal/bridal-button"
 import { BridalField, BridalInput } from "@/components/bridal/bridal-input"
@@ -27,7 +28,11 @@ import { AuthShell } from "@/components/bridal/auth-shell"
 // ── Validation (unchanged) ─────────────────────────────────────────────────
 const formSchema = z.object({
   email: z.string().email({ message: "Enter a valid email address" }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+  // WP34 (SETUP-001): sign-in must accept ANY password an account was ever given.
+  // Accounts exist with 6-7 character passwords (the profile screen used to allow
+  // them) and a length rule HERE locked them out before the server even looked.
+  // Strength rules belong to the screens that SET a password (lib/validation/password).
+  password: z.string().min(1, { message: "Enter your password" }),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -61,6 +66,20 @@ export function LoginForm() {
   // always set it; nothing read it until now, so booking intent was dropped at
   // the login screen. See lib/auth/safe-redirect.
   const nextPath = safeRedirect(searchParams?.get("redirect"))
+
+  // WP34 (SETUP-035, BOOKINGS-075, MONEY-069): arriving with ?reason=expired means
+  // the session was ended (401 / revoked / password changed elsewhere). Say so, and
+  // make sure no auth cookie is left behind to bounce this page back to /dashboard.
+  const sessionEnded = searchParams?.get("reason") === "expired"
+  useEffect(() => {
+    if (!sessionEnded) return
+    clearAuthStorage()
+    toast({
+      title: "Your session has ended",
+      description: "Please sign in again to continue.",
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionEnded])
 
   // Shared post-login routing (used by both email + phone flows).
   const routeAfterLogin = (user: any) => {

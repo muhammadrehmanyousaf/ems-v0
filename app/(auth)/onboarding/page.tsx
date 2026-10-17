@@ -46,8 +46,8 @@ export default function OnboardingPage() {
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
-    if (!name.trim() || !fullName.trim() || !phone.trim() || !email.trim() || password.length < 6) {
-      toast.error("Sab khaane bharein (password kam se kam 6 characters)");
+    if (!name.trim() || !fullName.trim() || !phone.trim() || !email.trim() || password.length < 8) {
+      toast.error("Sab khaane bharein (password kam se kam 8 characters)");
       return;
     }
     setBusy(true);
@@ -133,7 +133,7 @@ export default function OnboardingPage() {
                 <BridalInput id="onb-email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" inputMode="email" />
               </BridalField>
               <BridalField id="onb-password" label="Password">
-                <BridalInput id="onb-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="6+ characters" />
+                <BridalInput id="onb-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="8+ characters" />
               </BridalField>
             </div>
 

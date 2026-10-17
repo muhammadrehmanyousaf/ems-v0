@@ -31,6 +31,7 @@ import {
   Edit3,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { passwordProblem } from "@/lib/validation/password"
 
 import {
   PageContainer,
@@ -56,7 +57,7 @@ type Section = "profile" | "security"
 function PasswordStrengthBar({ password }: { password: string }) {
   if (!password) return null
   let score = 0
-  if (password.length >= 8) score++
+  if (password.length >= 10) score++
   if (password.length >= 12) score++
   if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++
   if (/\d/.test(password)) score++
@@ -193,10 +194,11 @@ export default function UserSettingsPage() {
       toast({ title: "Passwords don't match", variant: "destructive" })
       return
     }
-    if (passwords.newPassword.length < 8) {
+    const pwProblem = passwordProblem(passwords.newPassword)
+    if (pwProblem) {
       toast({
-        title: "Password too short",
-        description: "Use at least 8 characters.",
+        title: "Choose a stronger password",
+        description: pwProblem,
         variant: "destructive",
       })
       return
