@@ -39,13 +39,9 @@
     "guard:slot-label": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/slot-label-check.mts",
     "guard:event-day": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/event-day-check.mts",
     "guard:brand-colour": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/brand-colour-check.mts",
-<<<<<<< HEAD
     "guard:settings": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/settings-integrity-check.mts",
-    "guard:phantom": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/phantom-advance-check.mts"
-=======
     "guard:phantom": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/phantom-advance-check.mts",
     "guard:availability": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/availability-check.mts"
->>>>>>> fix/payments-integration
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
