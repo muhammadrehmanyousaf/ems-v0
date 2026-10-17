@@ -20,6 +20,7 @@ export const WALL_EXEMPT_PREFIXES: readonly string[] = [
   "/dashboard/billing", // plan & billing, the checkout return, receipts (/dashboard/billing/receipt/...)
   "/dashboard/profile", // the account
   "/dashboard/business/new", // adding the first business must stay possible (the trial starts on it)
+  "/staff/login", // a staff member must be able to sign in and out (the Wall appears after, from the first 402)
 ]
 
 export function isWallExempt(pathname: string): boolean {

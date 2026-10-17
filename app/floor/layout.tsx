@@ -6,6 +6,7 @@
 
 import type { Metadata, Viewport } from 'next';
 import ProtectedRoutes from '@/lib/protected-routes';
+import { AccessGate } from '@/components/dashboard/plans/access-gate';
 
 export const metadata: Metadata = {
   title: 'Wedding Wala — Floor',
@@ -27,7 +28,9 @@ export default function FloorLayout({
 }) {
   return (
     <ProtectedRoutes>
-      <div className="min-h-[100dvh] bg-bridal-cream">{children}</div>
+      <AccessGate>
+        <div className="min-h-[100dvh] bg-bridal-cream">{children}</div>
+      </AccessGate>
     </ProtectedRoutes>
   );
 }

@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import { isLockedState, type Access } from "./access"
+import { isLockedState, lockFromError, type Access } from "./access"
 
 /**
  * The access store: the ONE place the portal keeps "may this viewer use the console, and if not why".
@@ -51,6 +51,19 @@ export const useAccessStore = create<AccessStore>((set, get) => ({
   releaseLock: () => set((s) => ({ access: s.access && s.access.source === "402" ? null : s.access, lockedByRequestAt: 0, version: s.version + 1 })),
   reset: () => set((s) => ({ access: null, lockedByRequestAt: 0, version: s.version + 1 })),
 }))
+
+/**
+ * The ONE place a 402 SUBSCRIPTION_REQUIRED from any HTTP client becomes state. Both axios instances (the vendor one in
+ * lib/axiosConfig.js and the staff portal's) call it from their response interceptor. `staff` marks a client that only
+ * staff use: it can never pay, whatever the body says. Returns the lock it recorded, or null for any other error.
+ */
+export function noteLock(error: unknown, opts: { staff?: boolean } = {}): Access | null {
+  const lock = lockFromError(error)
+  if (!lock) return null
+  const a: Access = opts.staff ? { ...lock, staff: true, canPay: false } : lock
+  useAccessStore.getState().applyLock(a)
+  return a
+}
 
 /** Non-React read, for the axios layer and tests. */
 export const accessNow = (): Access | null => useAccessStore.getState().access

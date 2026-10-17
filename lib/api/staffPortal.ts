@@ -6,6 +6,7 @@
 // browser, and a staff token only ever unlocks /staff/* calls.
 import axios from "axios";
 import { BACKEND_URL } from "@/lib/backend-url";
+import { noteLock } from "@/lib/plans/access-store";
 
 const STAFF_TOKEN_KEY = "staff_auth_token";
 
@@ -22,6 +23,8 @@ staffAxios.interceptors.request.use((config) => {
 staffAxios.interceptors.response.use(
   (r) => r,
   (error) => {
+    // The owner's plan is over (402 SUBSCRIPTION_REQUIRED): the staff Wall takes over (components/dashboard/plans/access-gate.tsx).
+    noteLock(error, { staff: true });
     if (
       error?.response?.status === 401 &&
       typeof window !== "undefined" &&

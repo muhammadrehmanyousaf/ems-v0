@@ -16,7 +16,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { CreditCard, FileText, Loader2, Lock, LogOut, Mail, MessageCircle, Phone, ShieldCheck, UserRound } from "lucide-react"
@@ -27,6 +27,7 @@ import type { Access } from "@/lib/plans/access"
 import { wallModel, wallVars } from "@/lib/plans/wall-model"
 import { fill, firstFilled, say, type CopyKey, type Lang } from "@/lib/plans/copy"
 import { SubscriptionAPI } from "@/lib/api/subscription"
+import { clearStaffToken } from "@/lib/api/staffPortal"
 import { getObligations, isNotThere } from "@/lib/api/billing"
 import { BILLING_STATUS_KEY } from "@/hooks/use-billing-status"
 import { SUPPORT_EMAIL, SUPPORT_PHONE_DISPLAY, SUPPORT_PHONE_TEL, SUPPORT_PHONE_WHATSAPP } from "@/lib/seo/constants"
@@ -42,8 +43,13 @@ const LANGS: { k: LangPref; label: CopyKey }[] = [
 
 export function AccessWall({ access }: { access: Access }) {
   const router = useRouter()
+  const pathname = usePathname() || ""
+  // The staff app and the floor app have their own sign-out (a separate staff token) and no account page that works while locked.
+  const inStaffApp = pathname.startsWith("/staff") || pathname.startsWith("/floor")
+  const accountHref = "/dashboard/profile"
   const qc = useQueryClient()
   const { logout } = useUser()
+  const signOut = () => { if (pathname.startsWith("/staff")) { clearStaffToken(); window.location.href = "/staff/login" } else { void logout() } }
   const mode = useResolvedThemeMode()
   const [pref, setPref] = useLangPref()
   const model = React.useMemo(() => wallModel(access), [access])
@@ -106,8 +112,8 @@ export function AccessWall({ access }: { access: Access }) {
               <Link className="wwp-link" href="/dashboard/billing#history"><FileText aria-hidden /><span className="t">{say("wall.link.receipts", one)}</span></Link>
             </>
           )}
-          <Link className="wwp-link" href="/dashboard/profile"><UserRound aria-hidden /><span className="t">{say("wall.link.account", one)}</span></Link>
-          <button type="button" className="wwp-link" onClick={() => { void logout() }} data-testid="wall-logout"><LogOut aria-hidden /><span className="t">{say("wall.link.logout", one)}</span></button>
+          {!inStaffApp && <Link className="wwp-link" href={accountHref}><UserRound aria-hidden /><span className="t">{say("wall.link.account", one)}</span></Link>}
+          <button type="button" className="wwp-link" onClick={signOut} data-testid="wall-logout"><LogOut aria-hidden /><span className="t">{say("wall.link.logout", one)}</span></button>
         </nav>
       </header>
 
