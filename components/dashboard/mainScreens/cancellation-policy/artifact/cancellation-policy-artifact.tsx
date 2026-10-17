@@ -12,8 +12,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { getCancellationPolicy, saveCancellationPolicy, type CancellationPolicyState, type ActivePolicy, type PolicyTemplate, type PolicySlab } from "@/lib/api/bookingOrder"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
-import { useArtifactShell, escHtml, errorBannerHtml, openDrawer, closeDrawer } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
-import { PARTIAL_PERCENT_MAX, PARTIAL_PERCENT_MIN, shapeOfSlabs, validatePartialRefund } from "@/lib/cancellation-policy"
+import { useArtifactShell, escHtml, errorBannerHtml, openDrawer, closeDrawer, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { PARTIAL_PERCENT_MAX, PARTIAL_PERCENT_MIN, shapeOfSlabs, slabRangeLabel, validatePartialRefund } from "@/lib/cancellation-policy"
 
 const svg = (p: string, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}">${p}</svg>`
 const IC = {
@@ -25,13 +25,11 @@ function slabLadder(slabs: PolicySlab[]): string {
   const sorted = [...(slabs || [])].sort((a, b) => b.daysToEvent - a.daysToEvent)
   if (!sorted.length) return `<div style="padding:12px 16px;color:var(--ink-3);font-size:12px">Koi slab nahi.</div>`
   return `<div class="ladder">${sorted.map((s, i) => {
-    const next = sorted[i + 1]
     // one band from day 0 (a flat cut, e.g. a venue's "Partially Refundable") applies on every day
     // WP29: the engine's own bands. A slab {daysToEvent: 15} applies from 15 days out until the previous (higher) slab starts, and the
     // LAST slab also covers everything closer to the event; the rows used to read the slab as an UPPER bound (8 to 15 days for the 15-day slab),
     // which contradicted both the engine and the plain-words line above them.
-    const upper = i > 0 ? sorted[i - 1].daysToEvent - 1 : 0
-    const range = sorted.length === 1 && s.daysToEvent === 0 ? "Kisi bhi din" : i === 0 ? `${s.daysToEvent}+ din pehle` : !next ? `${upper} din ya kam pehle` : s.daysToEvent === upper ? `${s.daysToEvent} din pehle` : `${s.daysToEvent}–${upper} din pehle`
+    const range = slabRangeLabel(sorted, i)
     const pct = Number(s.pctForfeit) || 0
     // WP20: a flat amount the venue keeps ("PKR 20,000 kata") has no percentage to draw, so no bar and the amount in words
     const fixed = Number(s.venueKeepsFixed) || 0
@@ -127,6 +125,9 @@ export function CancellationPolicyArtifact() {
     // A failed request rendered as an empty screen, which reads as
     // "you have no data" rather than "we could not load it".
     if (isError) { wwc.innerHTML = errorBannerHtml("Cancellation policy load nahi hui."); return }
+    // SETUP-011 - a 404 (the engine is off for this account) resolves to null; that is a
+    // state to explain, not a loading line to wait on forever. Only `undefined` is "loading".
+    if (data === null) { wwc.innerHTML = `<div class="head"><div><h1>Cancellation policy</h1></div></div><div class="card"><div class="empty" data-policy-disabled>Cancellation policy abhi aap ke account ke liye enable nahi hai. Jab enable hogi, yahan ready-made policies nazar aayengi.</div></div>`; return }
     if (!data) { wwc.innerHTML = `<div class="loadwrap">Policy load ho rahi hai…</div>`; return }
     wwc.innerHTML = buildContent(data)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -174,15 +175,25 @@ export function CancellationPolicyArtifact() {
       if (!ap?.dataset.apply) return
       const tpl = templatesRef.current.find((t) => t.key === ap.dataset.apply)
       if (!tpl) return
-      const btn = ap as HTMLButtonElement; btn.disabled = true; btn.textContent = "Lag rahi…"
-      try {
-        await saveCancellationPolicy({ name: tpl.name, slabs: tpl.slabs, forceMajeureRule: tpl.forceMajeureRule, businessId: bizRef.current })
-        toast.success("Policy laagu ho gayi")
-        qc.invalidateQueries({ queryKey: ["cancelpolicy-art", bizRef.current] })
-      } catch (err: unknown) {
-        toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi lagi — dobara koshish karein")
-        btn.disabled = false; btn.textContent = "Ye policy lagayein"
-      }
+      const btn = ap as HTMLButtonElement
+      // FLAGGED-070 - this changes the live policy for every NEW booking, so it asks first and says what it does
+      // to the bookings that already exist.
+      openConfirm(s as unknown as ShadowRoot, {
+        title: `"${tpl.labelEn || tpl.name}" policy lagayein?`,
+        message: `Naye bookings is policy par chalengi${tpl.minNoticeHours ? ` (online cancel ke liye kam az kam ${tpl.minNoticeHours} ghante ka notice)` : ""}. Jo bookings pehle ho chuki hain wo wahi policy rakhengi jo customer ne qabool ki thi.`,
+        onConfirm: async () => {
+          btn.disabled = true; btn.textContent = "Lag rahi…"
+          try {
+            // The template's notice window travels with it (it used to be dropped, so the preset's cutoff never applied).
+            await saveCancellationPolicy({ name: tpl.name, slabs: tpl.slabs, forceMajeureRule: tpl.forceMajeureRule, businessId: bizRef.current, ...(tpl.minNoticeHours != null ? { minNoticeHours: tpl.minNoticeHours } : {}) })
+            toast.success("Policy laagu ho gayi")
+            qc.invalidateQueries({ queryKey: ["cancelpolicy-art", bizRef.current] })
+          } catch (err: unknown) {
+            toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi lagi — dobara koshish karein")
+            btn.disabled = false; btn.textContent = "Ye policy lagayein"
+          }
+        },
+      })
     })
     // the drawer's type select re-labels the value field (Venue Keeps (%) / (PKR)), as on registration step 4
     s.addEventListener("change", (e) => {
