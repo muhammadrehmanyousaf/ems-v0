@@ -17,6 +17,7 @@ import { useBusiness } from "@/context/BusinessContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { STATUS_SOFT_BG, STATUS_TEXT } from "@/components/ui/status-tones";
 import { shareCard, type ShareRow } from "@/lib/whatsappShare";
 
 const PKR = (n: number | null | undefined) => "Rs " + Math.round(Number(n) || 0).toLocaleString("en-PK");
@@ -36,9 +37,9 @@ function costCategory(name: string): "Catering" | "Staff" | "Utility" | "Other" 
 }
 
 const CAT_STYLE: Record<string, string> = {
-  Catering: "bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300",
-  Staff: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
-  Utility: "bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-300",
+  Catering: `${STATUS_SOFT_BG.warning} ${STATUS_TEXT.warning}`,
+  Staff: `${STATUS_SOFT_BG.info} ${STATUS_TEXT.info}`,
+  Utility: `${STATUS_SOFT_BG.success} ${STATUS_TEXT.success}`,
   Other: "bg-muted text-muted-foreground",
 };
 

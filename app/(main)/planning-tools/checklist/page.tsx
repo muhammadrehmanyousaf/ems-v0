@@ -32,9 +32,9 @@ const categories = [
 ];
 
 const priorities = [
-  { value: 'low', label: 'Low', color: 'bg-green-100 text-green-700' },
-  { value: 'medium', label: 'Medium', color: 'bg-yellow-100 text-yellow-700' },
-  { value: 'high', label: 'High', color: 'bg-red-100 text-red-700' }
+  { value: 'low', label: 'Low', color: 'bg-status-success-soft text-status-success' },
+  { value: 'medium', label: 'Medium', color: 'bg-status-warning-soft text-status-warning' },
+  { value: 'high', label: 'High', color: 'bg-status-danger-soft text-status-danger' }
 ];
 
 export default function ChecklistPage() {
@@ -298,7 +298,7 @@ export default function ChecklistPage() {
                   className="flex-shrink-0 mt-1"
                 >
                   {item.completed ? (
-                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <CheckCircle className="w-5 h-5 text-status-success" />
                   ) : (
                     <Circle className="w-5 h-5 text-neutral-400 hover:text-bridal-gold transition-colors" />
                   )}
@@ -329,7 +329,7 @@ export default function ChecklistPage() {
                     <button
                       onClick={() => deleteItem(item.id)}
                       aria-label={`Delete ${item.title}`}
-                      className="flex-shrink-0 p-1 text-neutral-400 hover:text-red-500 transition-colors"
+                      className="flex-shrink-0 p-1 text-neutral-400 hover:text-status-danger transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

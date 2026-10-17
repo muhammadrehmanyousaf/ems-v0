@@ -219,8 +219,8 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                         {imgs.length > 0 ? (
                           <Image src={imgs[0]} alt={pkg.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
                         ) : (
-                          <div className="absolute inset-0 flex items-center justify-center bg-blue-50">
-                            <Car className="w-12 h-12 text-blue-200" />
+                          <div className="absolute inset-0 flex items-center justify-center bg-bridal-cream">
+                            <Car className="w-12 h-12 text-bridal-beige" />
                           </div>
                         )}
                         {vehicleType && (
@@ -261,9 +261,9 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                         </div>
                         {(withDriver || hasAC || hasDecor) && (
                           <div className="flex flex-wrap gap-1 pt-1 border-t border-bridal-beige/70">
-                            {withDriver && <span className="text-[11px] bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-0.5 rounded-full">With Driver</span>}
-                            {hasAC && <span className="text-[11px] bg-sky-50 text-sky-700 border border-sky-100 px-2 py-0.5 rounded-full">AC</span>}
-                            {hasDecor && <span className="text-[11px] bg-pink-50 text-pink-700 border border-pink-100 px-2 py-0.5 rounded-full">Decoration</span>}
+                            {withDriver && <span className="text-[11px] bg-status-info-soft text-status-info border border-status-info-line px-2 py-0.5 rounded-full">With Driver</span>}
+                            {hasAC && <span className="text-[11px] bg-status-neutral-soft text-status-neutral border border-status-neutral-line px-2 py-0.5 rounded-full">AC</span>}
+                            {hasDecor && <span className="text-[11px] bg-bridal-blush text-bridal-mauve border border-bridal-rose/50 px-2 py-0.5 rounded-full">Decoration</span>}
                           </div>
                         )}
 

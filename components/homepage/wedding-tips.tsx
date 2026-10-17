@@ -56,7 +56,7 @@ const tips = [
     description: "How to create the perfect schedule for your big day",
     color: "text-green-600",
     bgColor: "bg-green-50",
-    gradient: "from-green-500 to-emerald-600",
+    gradient: "from-status-success-solid to-status-success",
     content: {
       timeline: [
         { time: "6:00 AM", event: "Bride & Bridesmaids Hair & Makeup", duration: "3 hours", notes: "Start early to avoid stress" },
@@ -91,9 +91,9 @@ const tips = [
     icon: Users,
     title: "Guest List Tips",
     description: "Managing your guest list and seating arrangements",
-    color: "text-blue-600",
-    bgColor: "bg-blue-50",
-    gradient: "from-blue-500 to-indigo-600",
+    color: "text-status-info",
+    bgColor: "bg-status-info-soft",
+    gradient: "from-bridal-mauve to-status-info",
     content: {
       categories: [
         { name: "Family", percentage: 40, description: "Immediate and extended family members" },
@@ -241,8 +241,8 @@ function TipDetailModal({ tip }: { tip: any }) {
                 <h3 className="text-xl font-bold text-neutral-900">Pro Tips</h3>
                 <div className="space-y-4">
                   {tip.content.tips.map((tipText: string, index: number) => (
-                    <div key={index} className="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
-                      <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <div key={index} className="flex items-start gap-3 p-4 bg-gradient-to-r from-status-info-soft to-bridal-cream rounded-xl">
+                      <Info className="w-5 h-5 text-status-info mt-0.5" />
                       <span className="font-medium text-neutral-900">{tipText}</span>
                     </div>
                   ))}
@@ -336,8 +336,8 @@ function TipDetailModal({ tip }: { tip: any }) {
                 <h3 className="text-xl font-bold text-neutral-900">Guest List Tips</h3>
                 <div className="space-y-4">
                   {tip.content.tips.map((tipText: string, index: number) => (
-                    <div key={index} className="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
-                      <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <div key={index} className="flex items-start gap-3 p-4 bg-gradient-to-r from-status-info-soft to-bridal-cream rounded-xl">
+                      <Info className="w-5 h-5 text-status-info mt-0.5" />
                       <span className="font-medium text-neutral-900">{tipText}</span>
                     </div>
                   ))}
@@ -400,7 +400,7 @@ function TipDetailModal({ tip }: { tip: any }) {
                 <h3 className="text-xl font-bold text-neutral-900">Essential Shots</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {tip.content.shots.map((shot: string, index: number) => (
-                    <div key={index} className="flex items-center gap-3 p-3 bg-gradient-to-r from-bridal-cream to-violet-50 rounded-lg">
+                    <div key={index} className="flex items-center gap-3 p-3 bg-gradient-to-r from-bridal-cream to-status-info-soft rounded-lg">
                       <Camera className="w-4 h-4 text-bridal-gold-dark" />
                       <span className="font-medium text-neutral-900">{shot}</span>
                     </div>
@@ -412,8 +412,8 @@ function TipDetailModal({ tip }: { tip: any }) {
                 <h3 className="text-xl font-bold text-neutral-900">Photography Tips</h3>
                 <div className="space-y-4">
                   {tip.content.tips.map((tipText: string, index: number) => (
-                    <div key={index} className="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
-                      <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <div key={index} className="flex items-start gap-3 p-4 bg-gradient-to-r from-status-info-soft to-bridal-cream rounded-xl">
+                      <Info className="w-5 h-5 text-status-info mt-0.5" />
                       <span className="font-medium text-neutral-900">{tipText}</span>
                     </div>
                   ))}

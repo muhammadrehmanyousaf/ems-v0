@@ -362,10 +362,10 @@ function Tile({
     tone === 'gold'
       ? 'bg-bridal-gold/10 text-bridal-gold-dark'
       : tone === 'blue'
-        ? 'bg-blue-50 text-blue-800'
+        ? 'bg-status-neutral-soft text-status-neutral'
         : tone === 'emerald'
-          ? 'bg-emerald-50 text-emerald-800'
-          : 'bg-violet-50 text-violet-800';
+          ? 'bg-status-success-soft text-status-success'
+          : 'bg-status-info-soft text-status-info';
   return (
     <div className={cn('rounded-xl p-2 text-center', toneClass)}>
       <div className="text-xl font-bold tabular-nums leading-tight">

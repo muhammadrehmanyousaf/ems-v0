@@ -33,6 +33,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { STATUS_TEXT, STATUS_SOFT_BG } from "@/components/ui/status-tones";
 
 import {
   PageContainer,
@@ -47,47 +48,47 @@ const NOTIFICATION_CONFIG: Record<
 > = {
   booking_created: {
     icon: CalendarCheck,
-    tone: "bg-bridal-cream text-bridal-gold-dark",
+    tone: `${STATUS_SOFT_BG.info} ${STATUS_TEXT.info}`,
     label: "Booking",
   },
   booking_approved: {
     icon: CalendarCheck,
-    tone: "bg-bridal-sage/15 text-[#3F6B43]",
+    tone: `${STATUS_SOFT_BG.success} ${STATUS_TEXT.success}`,
     label: "Approved",
   },
   booking_rejected: {
     icon: CalendarX,
-    tone: "bg-bridal-coral/12 text-bridal-coral",
+    tone: `${STATUS_SOFT_BG.danger} ${STATUS_TEXT.danger}`,
     label: "Rejected",
   },
   booking_cancelled: {
     icon: CalendarX,
-    tone: "bg-bridal-gold/12 text-bridal-gold-dark",
+    tone: `${STATUS_SOFT_BG.danger} ${STATUS_TEXT.danger}`,
     label: "Cancelled",
   },
   payment_received: {
     icon: CreditCard,
-    tone: "bg-bridal-sage/15 text-[#3F6B43]",
+    tone: `${STATUS_SOFT_BG.success} ${STATUS_TEXT.success}`,
     label: "Payment",
   },
   payment_failed: {
     icon: AlertCircle,
-    tone: "bg-bridal-coral/12 text-bridal-coral",
+    tone: `${STATUS_SOFT_BG.danger} ${STATUS_TEXT.danger}`,
     label: "Failed",
   },
   payment_refunded: {
     icon: RefreshCcw,
-    tone: "bg-bridal-gold/12 text-bridal-gold-dark",
+    tone: `${STATUS_SOFT_BG.warning} ${STATUS_TEXT.warning}`,
     label: "Refund",
   },
   payout_processed: {
     icon: Wallet,
-    tone: "bg-bridal-sage/15 text-[#3F6B43]",
+    tone: `${STATUS_SOFT_BG.success} ${STATUS_TEXT.success}`,
     label: "Payout",
   },
   new_review: {
     icon: Star,
-    tone: "bg-bridal-gold/12 text-bridal-gold-dark",
+    tone: `${STATUS_SOFT_BG.warning} ${STATUS_TEXT.warning}`,
     label: "Review",
   },
   welcome: {
@@ -97,7 +98,7 @@ const NOTIFICATION_CONFIG: Record<
   },
   system: {
     icon: Info,
-    tone: "bg-muted text-muted-foreground",
+    tone: `${STATUS_SOFT_BG.neutral} ${STATUS_TEXT.neutral}`,
     label: "System",
   },
 };
@@ -233,7 +234,7 @@ function NotificationRow({
               e.stopPropagation();
               onDeleteRequest(notification.id);
             }}
-            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md text-muted-foreground hover:text-bridal-coral hover:bg-bridal-coral/10 transition-all"
+            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md text-muted-foreground hover:text-status-danger hover:bg-status-danger-soft transition-all"
             title="Delete notification"
           >
             <Trash2 className="size-4" />
@@ -325,7 +326,7 @@ export default function UserNotificationsPage() {
             <span
               className={cn(
                 "inline-flex items-center gap-1 text-[10.5px] uppercase tracking-[0.18em] font-medium",
-                isConnected ? "text-[#3F6B43]" : "text-muted-foreground",
+                isConnected ? STATUS_TEXT.success : "text-muted-foreground",
               )}
               title={isConnected ? "Live updates active" : "Connecting…"}
             >

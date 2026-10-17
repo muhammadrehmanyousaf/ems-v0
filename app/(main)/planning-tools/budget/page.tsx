@@ -35,9 +35,9 @@ const categories = [
 ];
 
 const priorities = [
-  { value: 'low', label: 'Low', color: 'bg-green-100 text-green-700' },
-  { value: 'medium', label: 'Medium', color: 'bg-yellow-100 text-yellow-700' },
-  { value: 'high', label: 'High', color: 'bg-red-100 text-red-700' }
+  { value: 'low', label: 'Low', color: 'bg-status-success-soft text-status-success' },
+  { value: 'medium', label: 'Medium', color: 'bg-status-warning-soft text-status-warning' },
+  { value: 'high', label: 'High', color: 'bg-status-danger-soft text-status-danger' }
 ];
 
 export default function BudgetPage() {
@@ -182,8 +182,8 @@ export default function BudgetPage() {
         </Link>
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-6">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-50 rounded-2xl flex items-center justify-center shadow-lg">
-            <Calculator className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
+          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-status-success-soft rounded-2xl flex items-center justify-center shadow-lg">
+            <Calculator className="w-6 h-6 sm:w-8 sm:h-8 text-status-success" />
           </div>
           <div className="flex-1">
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900 mb-2">Budget Calculator</h1>
@@ -211,31 +211,31 @@ export default function BudgetPage() {
         transition={{ delay: 0.1 }}
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8"
       >
-        <Card className="bg-gradient-to-br from-green-500 to-emerald-600 text-white border-0">
+        <Card className="bg-gradient-to-br from-status-success-solid to-status-success text-white border-0">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-100 mb-1">Total Budget</p>
+                <p className="text-sm font-medium text-white mb-1">Total Budget</p>
                 <p className="text-2xl sm:text-3xl font-bold">Rs. {totalBudget.toLocaleString()}</p>
               </div>
-              <DollarSign className="w-8 h-8 text-green-200" />
+              <DollarSign className="w-8 h-8 text-white/80" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-0">
+        <Card className="bg-gradient-to-br from-bridal-mauve to-status-info text-white border-0">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-100 mb-1">Estimated</p>
+                <p className="text-sm font-medium text-white mb-1">Estimated</p>
                 <p className="text-2xl sm:text-3xl font-bold">Rs. {totalEstimated.toLocaleString()}</p>
               </div>
-              <TrendingUp className="w-8 h-8 text-blue-200" />
+              <TrendingUp className="w-8 h-8 text-white/80" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white border-0">
+        <Card className="bg-gradient-to-br from-bridal-gold-dark to-bridal-gold-deep text-white border-0">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -247,7 +247,7 @@ export default function BudgetPage() {
           </CardContent>
         </Card>
 
-        <Card className={`text-white border-0 ${overBudget ? 'bg-gradient-to-br from-red-500 to-bridal-gold-dark' : 'bg-gradient-to-br from-orange-500 to-amber-600'}`}>
+        <Card className={`text-white border-0 ${overBudget ? 'bg-gradient-to-br from-bridal-coral-dark to-bridal-gold-deep' : 'bg-gradient-to-br from-bridal-text to-bridal-text-soft'}`}>
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -345,7 +345,7 @@ export default function BudgetPage() {
                     <button
                       onClick={() => deleteItem(item.id)}
                       aria-label={`Delete ${item.item}`}
-                      className="flex-shrink-0 p-1 text-neutral-400 hover:text-red-500 transition-colors"
+                      className="flex-shrink-0 p-1 text-neutral-400 hover:text-status-danger transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -385,9 +385,9 @@ export default function BudgetPage() {
                     <label className="text-xs text-neutral-500 mb-1">Difference</label>
                     <div className={`w-24 h-8 flex items-center justify-center text-sm font-medium rounded-md ${
                       item.actual - item.estimated > 0 
-                        ? 'bg-red-100 text-red-700' 
+                        ? 'bg-status-danger-soft text-status-danger' 
                         : item.actual - item.estimated < 0 
-                        ? 'bg-green-100 text-green-700'
+                        ? 'bg-status-success-soft text-status-success'
                         : 'bg-neutral-100 text-neutral-700'
                     }`}>
                       Rs. {item.actual - item.estimated}

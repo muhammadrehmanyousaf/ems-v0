@@ -40,6 +40,22 @@ const config: Config = {
   				'text-soft': '#7A5040',
   				'text-label': '#955E39',
   			},
+  			// ── Semantic status set (WP30) ───────────────────────────────
+  			// ONE definition of success / warning / danger / info / neutral for every
+  			// customer and public screen, built from the bridal palette: sage, gold,
+  			// coral-dark, mauve and a warm neutral. Use text-status-<tone> on
+  			// bg-status-<tone>-soft with border-status-<tone>-line (all >= 4.5:1 for
+  			// the text on the soft fill), or bg-status-<tone>-solid for a dot, icon or
+  			// white-label fill (>= 3:1 as a graphic, 4.5:1 under white text, except
+  			// where noted in scripts/brand-colour-check.mts). Prefer the helpers in
+  			// components/ui/status-tones.ts over writing these classes by hand.
+  			status: {
+  				success: { DEFAULT: '#3B6B3F', soft: '#EEF4EC', line: '#BBD3B6', solid: '#4F7F52' },
+  				warning: { DEFAULT: '#7E5630', soft: '#FBF1DE', line: '#E3C28E', solid: '#916539' },
+  				danger: { DEFAULT: '#B6462B', soft: '#FCEEEA', line: '#EDB4A5', solid: '#B6462B' },
+  				info: { DEFAULT: '#7C4D65', soft: '#F7EEF2', line: '#D9BACB', solid: '#8B5A72' },
+  				neutral: { DEFAULT: '#5C3D2E', soft: '#F5F0EA', line: '#E0D3C6', solid: '#7A5040' },
+  			},
   			gold: {
   				50: '#FFFDF5',
   				100: '#FFF9E6',

@@ -369,7 +369,7 @@ html[data-locale="ur"] body {
   }
 
   .glass-dark {
-    @apply bg-purple-950/60 backdrop-blur-xl border border-bridal-gold-dark/20;
+    @apply bg-bridal-charcoal/60 backdrop-blur-xl border border-bridal-gold-dark/20;
   }
 
   /* 3D perspective card container */
@@ -378,9 +378,9 @@ html[data-locale="ur"] body {
     transform-style: preserve-3d;
   }
 
-  /* Purple-to-gold gradient text */
+  /* Mauve-to-gold gradient text (the brand mauve; class names kept, unused by any screen) */
   .text-gradient-purple-gold {
-    background: linear-gradient(135deg, #7C3AED 0%, #D4AF37 100%);
+    background: linear-gradient(135deg, #8B5A72 0%, #D4AF37 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -398,7 +398,7 @@ html[data-locale="ur"] body {
     inset: 0;
     padding: 2px;
     border-radius: inherit;
-    background: linear-gradient(135deg, #7C3AED, #D4AF37, #7C3AED);
+    background: linear-gradient(135deg, #8B5A72, #D4AF37, #8B5A72);
     background-size: 300% 300%;
     animation: gradient-shift 6s ease infinite;
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -413,9 +413,9 @@ html[data-locale="ur"] body {
     box-shadow: 0 4px 24px rgba(212, 175, 55, 0.15);
   }
 
-  /* Purple glow shadow */
+  /* Mauve glow shadow */
   .shadow-purple {
-    box-shadow: 0 4px 24px rgba(124, 58, 237, 0.15);
+    box-shadow: 0 4px 24px rgba(139, 90, 114, 0.15);
   }
 }
 
@@ -454,11 +454,11 @@ html[data-locale="ur"] body {
     --gold: 46 65% 52%;
     --gold-foreground: 46 80% 15%;
     --gold-muted: 46 30% 90%;
-    --chart-1: 263 84% 57%;
+    --chart-1: 30 44% 40%;
     --chart-2: 46 65% 52%;
-    --chart-3: 263 60% 40%;
+    --chart-3: 330 22% 44%;
     --chart-4: 46 75% 65%;
-    --chart-5: 280 50% 50%;
+    --chart-5: 110 22% 45%;
     --radius: 0.5rem;
     /* Bridal sidebar — soft ivory surface, charcoal text, gold for active.
        Light, editorial, calm. Tuned to feel like printed stationery. */

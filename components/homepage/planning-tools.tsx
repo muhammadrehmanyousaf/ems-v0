@@ -56,7 +56,7 @@ const tools = [
     title: "Wedding Checklist",
     description: "Stay organized with our comprehensive wedding planning checklist",
     icon: CalendarDays,
-    gradient: "from-bridal-gold via-bridal-gold-dark to-violet-800",
+    gradient: "from-bridal-gold via-bridal-gold-dark to-bridal-mauve",
     accentColor: "text-bridal-gold",
     step: "01",
   },
@@ -73,7 +73,7 @@ const tools = [
     description: "Organize your guest list and track RSVPs in one place",
     icon: Users,
     gradient: "from-bridal-gold via-bridal-gold-dark to-bridal-charcoal",
-    accentColor: "text-indigo-200",
+    accentColor: "text-bridal-rose",
     step: "03",
   },
   {
@@ -266,15 +266,15 @@ function BudgetCalculator() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-6 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl text-white shadow-lg">
-          <h4 className="font-semibold text-green-100">Total Budget</h4>
+        <div className="p-6 bg-gradient-to-br from-status-success-solid to-status-success rounded-xl text-white shadow-lg">
+          <h4 className="font-semibold text-white">Total Budget</h4>
           <p className="text-3xl font-bold">Rs. {totalBudget.toLocaleString()}</p>
         </div>
-        <div className="p-6 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl text-white shadow-lg">
-          <h4 className="font-semibold text-blue-100">Estimated</h4>
+        <div className="p-6 bg-gradient-to-br from-bridal-mauve to-status-info rounded-xl text-white shadow-lg">
+          <h4 className="font-semibold text-white">Estimated</h4>
           <p className="text-3xl font-bold">Rs. {totalEstimated.toLocaleString()}</p>
         </div>
-        <div className={`p-6 rounded-xl text-white shadow-lg ${overBudget ? 'bg-gradient-to-br from-red-500 to-red-600' : 'bg-gradient-to-br from-orange-500 to-amber-600'}`}>
+        <div className={`p-6 rounded-xl text-white shadow-lg ${overBudget ? 'bg-gradient-to-br from-bridal-coral-dark to-bridal-coral-dark' : 'bg-gradient-to-br from-bridal-text to-bridal-text-soft'}`}>
           <h4 className="font-semibold">Remaining</h4>
           <p className="text-3xl font-bold">Rs. {remaining.toLocaleString()}</p>
         </div>
@@ -434,15 +434,15 @@ function GuestListManager() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl text-white text-center shadow-lg">
+        <div className="p-4 bg-gradient-to-br from-status-success-solid to-status-success rounded-xl text-white text-center shadow-lg">
           <p className="text-3xl font-bold">{rsvpStats.confirmed}</p>
-          <p className="text-sm text-green-100">Confirmed</p>
+          <p className="text-sm text-white">Confirmed</p>
         </div>
         <div className="p-4 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-xl text-white text-center shadow-lg">
           <p className="text-3xl font-bold">{rsvpStats.pending}</p>
           <p className="text-sm text-yellow-100">Pending</p>
         </div>
-        <div className="p-4 bg-gradient-to-br from-red-500 to-red-600 rounded-xl text-white text-center shadow-lg">
+        <div className="p-4 bg-gradient-to-br from-bridal-coral-dark to-bridal-coral-dark rounded-xl text-white text-center shadow-lg">
           <p className="text-3xl font-bold">{rsvpStats.declined}</p>
           <p className="text-sm text-red-100">Declined</p>
         </div>

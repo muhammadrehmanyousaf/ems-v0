@@ -19,8 +19,9 @@
  */
 
 import * as React from "react";
-import { Crown, ShieldCheck, Award, Sparkles, Zap, Star, Verified } from "lucide-react";
+import { Crown, ShieldCheck, Award, Sparkles, Zap, Star, BadgeCheck, TrendingUp, Gem, Sprout } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { STATUS_CHIP } from "@/components/ui/status-tones";
 
 interface VendorTrustBadgesProps {
   badges?: string[];
@@ -43,6 +44,9 @@ interface BadgeMeta {
 }
 
 const BADGE_META: Record<string, BadgeMeta> = {
+  // Brand palette only (WP30). Each badge keeps its own icon and a shade of its own:
+  // gold = recognition (Top Vendor, Established), sage = verification and clean
+  // record, mauve = volume, stone = speed. Text is >= 4.5:1 on its tint.
   top_vendor: {
     label: "Top Vendor",
     Icon: Crown,
@@ -52,51 +56,53 @@ const BADGE_META: Record<string, BadgeMeta> = {
   },
   verified: {
     label: "Verified",
-    Icon: Verified,
-    className: "border-blue-300 bg-blue-50 text-blue-700",
+    Icon: BadgeCheck,
+    className: STATUS_CHIP.success,
     title: "Email and phone verified",
   },
   tier3_verified: {
     label: "ID Verified",
     Icon: ShieldCheck,
-    className: "border-emerald-400 bg-emerald-50 text-emerald-700",
+    // Same family as Verified, one step stronger: a filled sage pill, white label.
+    className: "border-status-success-solid bg-status-success-solid text-white",
     title: "CNIC verified by Wedding Wala",
   },
   established: {
     label: "Established",
     Icon: Award,
-    className: "border-amber-400 bg-amber-50 text-amber-700",
+    className: "border-bridal-gold-dark/40 bg-bridal-sand text-bridal-gold-deep",
     title: "3+ years in business with 20+ weddings completed",
   },
   dispute_free: {
     label: "Dispute-free",
     Icon: Sparkles,
-    className: "border-emerald-300 bg-emerald-50 text-emerald-700",
+    className: "border-status-success-line bg-bridal-cream text-status-success",
     title: "5+ reviews with zero disputes filed",
   },
   high_volume: {
     label: "High volume",
     Icon: Star,
-    className: "border-purple-300 bg-purple-50 text-purple-700",
+    className: STATUS_CHIP.info,
     title: "25 or more reviews",
   },
   quick_responder: {
     label: "Quick Responder",
     Icon: Zap,
-    className: "border-orange-300 bg-orange-50 text-orange-700",
+    className: STATUS_CHIP.neutral,
     title: "Responds to inquiries within 1 hour",
   },
 };
 
 const TIER_META: Record<
   NonNullable<VendorTrustBadgesProps["tier"]>,
-  { label: string; className: string }
+  { label: string; Icon: React.ElementType; className: string }
 > = {
-  newcomer: { label: "New", className: "border-neutral-200 bg-neutral-50 text-neutral-600" },
-  rising: { label: "Rising", className: "border-blue-200 bg-blue-50 text-blue-700" },
-  trusted: { label: "Trusted", className: "border-emerald-200 bg-emerald-50 text-emerald-700" },
-  premium: { label: "Premium", className: "border-bridal-gold/55 bg-bridal-cream text-bridal-gold-dark" },
-  elite: { label: "Elite", className: "border-purple-300 bg-purple-50 text-purple-700" },
+  newcomer: { label: "New", Icon: Sprout, className: STATUS_CHIP.neutral },
+  // Tiers climb in strength: stone -> sage -> gold -> filled mauve, each with its own icon.
+  rising: { label: "Rising", Icon: TrendingUp, className: "border-bridal-gold-dark/40 bg-bridal-sand text-bridal-gold-deep" },
+  trusted: { label: "Trusted", Icon: BadgeCheck, className: STATUS_CHIP.success },
+  premium: { label: "Premium", Icon: Gem, className: "border-bridal-gold/55 bg-bridal-cream text-bridal-gold-dark" },
+  elite: { label: "Elite", Icon: Crown, className: "border-status-info-solid bg-status-info text-white" },
 };
 
 export function VendorTrustBadges({
@@ -142,6 +148,7 @@ export function VendorTrustBadges({
           )}
           title={`Vendor tier: ${TIER_META[tier].label}`}
         >
+          {React.createElement(TIER_META[tier].Icon, { className: "h-3 w-3", "aria-hidden": true })}
           {TIER_META[tier].label}
         </span>
       )}
@@ -167,7 +174,7 @@ export function VendorTrustBadges({
       })}
       {overflow > 0 && (
         <span
-          className="inline-flex items-center rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[10px] font-medium text-neutral-500"
+          className="inline-flex items-center rounded-full border border-status-neutral-line bg-status-neutral-soft px-2 py-0.5 text-[10px] font-medium text-status-neutral"
           title={`${overflow} more badge${overflow === 1 ? "" : "s"}`}
         >
           +{overflow}

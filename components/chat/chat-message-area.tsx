@@ -88,7 +88,7 @@ function MessageStatus({ message, isOwn }: { message: ChatMessageItem; isOwn: bo
     return <Clock className="h-3 w-3 text-gray-400" />;
   }
   if (message.isRead) {
-    return <CheckCheck className="h-3.5 w-3.5 text-blue-500" />;
+    return <CheckCheck className="h-3.5 w-3.5 text-status-success-solid" />;
   }
   return <Check className="h-3.5 w-3.5 text-gray-400" />;
 }

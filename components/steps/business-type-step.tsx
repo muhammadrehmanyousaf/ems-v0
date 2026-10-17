@@ -36,96 +36,106 @@ import { cn } from "@/lib/utils";
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 
+// Brand palette only (WP30): five families built from the bridal tokens, so the tiles stay
+// distinguishable by icon and name (23 categories cannot each own a hue) without a single
+// blue, violet, indigo or rainbow tile. Icon tiles carry a white glyph, so every gradient
+// stop is dark enough for it (>= 4.5:1 under white, >= 3:1 as a graphic at worst).
+const TONES = {
+  gold: {
+    color: "from-bridal-gold-dark to-bridal-gold-deep",
+    bgColor: "from-bridal-cream to-bridal-sand",
+    borderColor: "border-bridal-gold/45",
+    textColor: "text-bridal-gold-dark",
+  },
+  sage: {
+    color: "from-status-success-solid to-status-success",
+    bgColor: "from-status-success-soft to-bridal-cream",
+    borderColor: "border-status-success-line",
+    textColor: "text-status-success",
+  },
+  mauve: {
+    color: "from-bridal-mauve to-status-info",
+    bgColor: "from-status-info-soft to-bridal-cream",
+    borderColor: "border-status-info-line",
+    textColor: "text-status-info",
+  },
+  coral: {
+    color: "from-bridal-coral-dark to-bridal-coral-dark",
+    bgColor: "from-status-danger-soft to-bridal-cream",
+    borderColor: "border-status-danger-line",
+    textColor: "text-status-danger",
+  },
+  stone: {
+    color: "from-bridal-text to-bridal-text-soft",
+    bgColor: "from-status-neutral-soft to-bridal-cream",
+    borderColor: "border-status-neutral-line",
+    textColor: "text-status-neutral",
+  },
+} as const;
+
 const businessTypes = [
   {
     id: "Photographer",
     title: "Photographer",
     subtitle: "Professional Photography Services",
     icon: Camera,
-    color: "from-blue-500 to-indigo-600",
-    bgColor: "from-blue-50 to-indigo-50",
-    borderColor: "border-blue-200",
-    textColor: "text-blue-600",
+    ...TONES.mauve,
   },
   {
     id: "Makeup artist",
     title: "Makeup Artist",
     subtitle: "Beauty & Styling Services",
     icon: Heart,
-    color: "from-bridal-gold to-bridal-gold-dark",
-    bgColor: "from-bridal-cream to-bridal-cream/80",
-    borderColor: "border-bridal-gold/45",
-    textColor: "text-bridal-gold-dark",
+    ...TONES.gold,
   },
   {
     id: "Wedding venue",
     title: "Wedding Venue",
     subtitle: "Event Spaces & Locations",
     icon: Home,
-    color: "from-green-500 to-emerald-600",
-    bgColor: "from-green-50 to-emerald-50",
-    borderColor: "border-green-200",
-    textColor: "text-green-600",
+    ...TONES.sage,
   },
   {
     id: "Henna artist",
     title: "Henna Artist",
     subtitle: "Traditional Art & Design",
     icon: Palette,
-    color: "from-orange-500 to-amber-600",
-    bgColor: "from-orange-50 to-amber-50",
-    borderColor: "border-orange-200",
-    textColor: "text-orange-600",
+    ...TONES.coral,
   },
   {
     id: "Decorator",
     title: "Decorator",
     subtitle: "Event Decoration & Design",
     icon: Gift,
-    color: "from-bridal-gold to-bridal-gold-dark",
-    bgColor: "from-bridal-cream to-violet-50",
-    borderColor: "border-bridal-gold/45",
-    textColor: "text-bridal-gold-dark",
+    ...TONES.gold,
   },
   {
     id: "Catering",
     title: "Catering",
     subtitle: "Food & Beverage Services",
     icon: Utensils,
-    color: "from-red-500 to-red-600",
-    bgColor: "from-red-50 to-red-50",
-    borderColor: "border-red-200",
-    textColor: "text-red-600",
+    ...TONES.coral,
   },
   {
     id: "Car rental",
     title: "Car Rental",
     subtitle: "Transportation Services",
     icon: Car,
-    color: "from-gray-500 to-slate-600",
-    bgColor: "from-gray-50 to-slate-50",
-    borderColor: "border-gray-200",
-    textColor: "text-gray-600",
+    ...TONES.stone,
   },
   {
     id: "Bridal wearing",
     title: "Bridal Wear",
     subtitle: "Wedding Attire & Fashion",
     icon: Crown,
-    color: "from-yellow-500 to-amber-600",
-    bgColor: "from-yellow-50 to-amber-50",
-    borderColor: "border-yellow-200",
-    textColor: "text-yellow-600",
+    ...TONES.gold,
   },
   {
     id: "Wedding Invitations and Stationery",
     title: "Wedding Stationery",
     subtitle: "Invitations, Bid Boxes & More",
     icon: Mail,
-    color: "from-rose-500 to-pink-600",
-    bgColor: "from-rose-50 to-pink-50",
-    borderColor: "border-rose-200",
-    textColor: "text-rose-600",
+    ...TONES.mauve,
   },
   // ── BK-100.55 Layer 2 — 14 new Pakistani vendor categories ──
   // All route to the same `GenericSteps` flow (see
@@ -136,140 +146,98 @@ const businessTypes = [
     title: "Nikahkhwan",
     subtitle: "Certified Officiant for Islamic Ceremony",
     icon: BookOpen,
-    color: "from-emerald-500 to-green-600",
-    bgColor: "from-emerald-50 to-green-50",
-    borderColor: "border-emerald-200",
-    textColor: "text-emerald-600",
+    ...TONES.sage,
   },
   {
     id: "Choreographer",
     title: "Choreographer",
     subtitle: "Mehndi & Sangeet Dance Practice",
     icon: Sparkle,
-    color: "from-fuchsia-500 to-pink-600",
-    bgColor: "from-fuchsia-50 to-pink-50",
-    borderColor: "border-fuchsia-200",
-    textColor: "text-fuchsia-600",
+    ...TONES.mauve,
   },
   {
     id: "Dhol player",
     title: "Dhol Players",
     subtitle: "Traditional Drums for Mehndi & Baraat",
     icon: Drum,
-    color: "from-orange-500 to-amber-600",
-    bgColor: "from-orange-50 to-amber-50",
-    borderColor: "border-orange-200",
-    textColor: "text-orange-600",
+    ...TONES.coral,
   },
   {
     id: "Event host",
     title: "Event Host / MC",
     subtitle: "Stage Anchors & Wedding MCs",
     icon: Megaphone,
-    color: "from-indigo-500 to-purple-600",
-    bgColor: "from-indigo-50 to-purple-50",
-    borderColor: "border-indigo-200",
-    textColor: "text-indigo-600",
+    ...TONES.mauve,
   },
   {
     id: "Live streaming",
     title: "Live Streaming",
     subtitle: "Broadcast to Overseas Family",
     icon: Radio,
-    color: "from-sky-500 to-blue-600",
-    bgColor: "from-sky-50 to-blue-50",
-    borderColor: "border-sky-200",
-    textColor: "text-sky-600",
+    ...TONES.stone,
   },
   {
     id: "Generator rental",
     title: "Generator Rental",
     subtitle: "Load-shedding Backup Power",
     icon: Zap,
-    color: "from-yellow-500 to-orange-600",
-    bgColor: "from-yellow-50 to-orange-50",
-    borderColor: "border-yellow-200",
-    textColor: "text-yellow-700",
+    ...TONES.stone,
   },
   {
     id: "Marquee rental",
     title: "Marquee & Tents",
     subtitle: "Custom Setups for Home Weddings",
     icon: Tent,
-    color: "from-stone-500 to-amber-700",
-    bgColor: "from-stone-50 to-amber-50",
-    borderColor: "border-stone-200",
-    textColor: "text-stone-700",
+    ...TONES.gold,
   },
   {
     id: "Furniture rental",
     title: "Furniture Rental",
     subtitle: "Chairs, Tables, Sofas, Mandap",
     icon: Sofa,
-    color: "from-amber-500 to-yellow-600",
-    bgColor: "from-amber-50 to-yellow-50",
-    borderColor: "border-amber-200",
-    textColor: "text-amber-700",
+    ...TONES.stone,
   },
   {
     id: "Florist",
     title: "Florists",
     subtitle: "Fresh & Imported Flowers",
     icon: Flower2,
-    color: "from-pink-500 to-rose-600",
-    bgColor: "from-pink-50 to-rose-50",
-    borderColor: "border-pink-200",
-    textColor: "text-pink-600",
+    ...TONES.sage,
   },
   {
     id: "Wedding cakes",
     title: "Wedding Cakes",
     subtitle: "Tiered, Themed, Custom Designs",
     icon: Cake,
-    color: "from-pink-400 to-fuchsia-500",
-    bgColor: "from-pink-50 to-fuchsia-50",
-    borderColor: "border-pink-200",
-    textColor: "text-pink-600",
+    ...TONES.coral,
   },
   {
     id: "Mithai and sweets",
     title: "Mithai & Sweets",
     subtitle: "Traditional Sweets for Distribution",
     icon: Cookie,
-    color: "from-amber-500 to-orange-600",
-    bgColor: "from-amber-50 to-orange-50",
-    borderColor: "border-amber-200",
-    textColor: "text-amber-700",
+    ...TONES.gold,
   },
   {
     id: "Live cooking stall",
     title: "Live Cooking",
     subtitle: "Tandoor, Chaat, Paan, Juice Stations",
     icon: ChefHat,
-    color: "from-red-500 to-orange-600",
-    bgColor: "from-red-50 to-orange-50",
-    borderColor: "border-red-200",
-    textColor: "text-red-600",
+    ...TONES.coral,
   },
   {
     id: "Sound system rental",
     title: "Sound System Rental",
     subtitle: "Speakers, Mics, Stage Lighting",
     icon: Volume2,
-    color: "from-slate-500 to-zinc-600",
-    bgColor: "from-slate-50 to-zinc-50",
-    borderColor: "border-slate-200",
-    textColor: "text-slate-700",
+    ...TONES.stone,
   },
   {
     id: "Qawwali and Naat",
     title: "Qawwali & Naat",
     subtitle: "Spiritual Wedding Evenings",
     icon: Mic,
-    color: "from-teal-500 to-emerald-600",
-    bgColor: "from-teal-50 to-emerald-50",
-    borderColor: "border-teal-200",
-    textColor: "text-teal-600",
+    ...TONES.sage,
   },
 ];
 
@@ -339,8 +307,8 @@ export function BusinessTypeStep({
 
                   {businessType === type.id && (
                     <div className="flex items-center gap-2 pt-1 sm:pt-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-xs font-medium text-green-600">
+                      <div className="w-2 h-2 bg-status-success-solid rounded-full animate-pulse"></div>
+                      <span className="text-xs font-medium text-status-success">
                         Selected
                       </span>
                     </div>
@@ -348,7 +316,7 @@ export function BusinessTypeStep({
                 </div>
 
                 {businessType === type.id && (
-                  <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 bg-status-success-solid rounded-full flex items-center justify-center flex-shrink-0">
                     <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
                   </div>
                 )}
@@ -378,14 +346,14 @@ export function BusinessTypeStep({
         </Card>
       )}{" "}
       {!businessType && Object.keys(errors || {}).length > 0 && (
-        <Card className="bg-gradient-to-r from-bridal-cream to-red-50/80 border-bridal-gold/45">
+        <Card className="bg-gradient-to-r from-bridal-cream to-status-danger-soft border-bridal-gold/45">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-bridal-gold to-red-700 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-bridal-gold to-bridal-coral-dark rounded-full flex items-center justify-center flex-shrink-0">
                 <MailWarning className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-red-900">
+                <p className="text-xs sm:text-sm font-medium text-status-danger">
                   You have not selected any business yet! Please select at least
                   one business type to proceed.
                 </p>

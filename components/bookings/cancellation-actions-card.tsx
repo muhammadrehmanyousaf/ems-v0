@@ -22,6 +22,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { STATUS_SOFT_BG, STATUS_TEXT } from "@/components/ui/status-tones";
 
 const rs = (n: number) => "Rs " + Math.round(n || 0).toLocaleString("en-PK");
 const REASONS: { value: string; label: string }[] = [
@@ -38,12 +39,14 @@ const REASONS: { value: string; label: string }[] = [
  * ACKNOWLEDGED - the customer confirming they got the money - is green.
  */
 const STATE_STYLE: Record<RefundState, string> = {
-  RAISED: "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
-  APPROVED: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
-  APPLIED: "bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300",
-  PAID_BY_VENDOR: "bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300",
-  ACKNOWLEDGED: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
-  DISPUTED: "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300",
+  // Semantic set (components/ui/status-tones.ts): new = gold, approved = mauve, owed = coral,
+  // waiting on the customer = stone, confirmed = sage, disputed = coral.
+  RAISED: `${STATUS_SOFT_BG.warning} ${STATUS_TEXT.warning}`,
+  APPROVED: `${STATUS_SOFT_BG.info} ${STATUS_TEXT.info}`,
+  APPLIED: `${STATUS_SOFT_BG.danger} ${STATUS_TEXT.danger}`,
+  PAID_BY_VENDOR: `${STATUS_SOFT_BG.neutral} ${STATUS_TEXT.neutral}`,
+  ACKNOWLEDGED: `${STATUS_SOFT_BG.success} ${STATUS_TEXT.success}`,
+  DISPUTED: `${STATUS_SOFT_BG.danger} ${STATUS_TEXT.danger}`,
   REJECTED: "bg-muted text-muted-foreground",
   WITHDRAWN: "bg-muted text-muted-foreground",
 };

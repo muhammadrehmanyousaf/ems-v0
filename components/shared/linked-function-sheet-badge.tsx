@@ -192,8 +192,8 @@ export function LinkedFunctionSheetBadge({
 
   const className =
     variant === 'inline'
-      ? 'inline-flex items-center gap-1 text-[10px] text-blue-700 hover:underline'
-      : 'inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] text-blue-800 hover:bg-blue-100';
+      ? 'inline-flex items-center gap-1 text-[10px] text-status-info hover:underline'
+      : 'inline-flex items-center gap-1 rounded-full border border-status-info-line bg-status-info-soft px-2 py-0.5 text-[10px] text-status-info hover:bg-status-info-line/50';
 
   return (
     <Link
@@ -209,7 +209,7 @@ export function LinkedFunctionSheetBadge({
       <FileText className="h-3 w-3" />
       <span className="truncate">{truncatedTitle}</span>
       {more > 0 && (
-        <span className="rounded bg-blue-200 px-1 text-[9px] text-blue-900">
+        <span className="rounded bg-status-info-line px-1 text-[9px] text-status-info">
           +{more}
         </span>
       )}

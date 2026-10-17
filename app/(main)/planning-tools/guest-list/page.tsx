@@ -179,9 +179,9 @@ export default function GuestListPage() {
 
   const getRsvpColor = (rsvp: string) => {
     switch (rsvp) {
-      case 'confirmed': return 'bg-green-100 text-green-700';
-      case 'declined': return 'bg-red-100 text-red-700';
-      default: return 'bg-yellow-100 text-yellow-700';
+      case 'confirmed': return 'bg-status-success-soft text-status-success';
+      case 'declined': return 'bg-status-danger-soft text-status-danger';
+      default: return 'bg-status-warning-soft text-status-warning';
     }
   };
 
@@ -207,8 +207,8 @@ export default function GuestListPage() {
         </Link>
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-6">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-50 rounded-2xl flex items-center justify-center shadow-lg">
-            <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
+          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-status-info-soft rounded-2xl flex items-center justify-center shadow-lg">
+            <Users className="w-6 h-6 sm:w-8 sm:h-8 text-status-info" />
           </div>
           <div className="flex-1">
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900 mb-2">Guest List Manager</h1>
@@ -236,43 +236,43 @@ export default function GuestListPage() {
         transition={{ delay: 0.1 }}
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8"
       >
-        <Card className="bg-gradient-to-br from-green-500 to-emerald-600 text-white border-0">
+        <Card className="bg-gradient-to-br from-status-success-solid to-status-success text-white border-0">
           <CardContent className="p-4 sm:p-6 text-center">
             <div className="flex items-center justify-center mb-2">
               <UserCheck className="w-6 h-6 mr-2" />
               <p className="text-2xl sm:text-3xl font-bold">{rsvpStats.confirmed}</p>
             </div>
-            <p className="text-sm text-green-100">Confirmed</p>
+            <p className="text-sm text-white">Confirmed</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-yellow-500 to-orange-600 text-white border-0">
+        <Card className="bg-gradient-to-br from-bridal-gold-dark to-bridal-gold-deep text-white border-0">
           <CardContent className="p-4 sm:p-6 text-center">
             <div className="flex items-center justify-center mb-2">
               <Clock className="w-6 h-6 mr-2" />
               <p className="text-2xl sm:text-3xl font-bold">{rsvpStats.pending}</p>
             </div>
-            <p className="text-sm text-yellow-100">Pending</p>
+            <p className="text-sm text-white">Pending</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-red-500 to-bridal-gold-dark text-white border-0">
+        <Card className="bg-gradient-to-br from-bridal-coral-dark to-bridal-gold-deep text-white border-0">
           <CardContent className="p-4 sm:p-6 text-center">
             <div className="flex items-center justify-center mb-2">
               <UserX className="w-6 h-6 mr-2" />
               <p className="text-2xl sm:text-3xl font-bold">{rsvpStats.declined}</p>
             </div>
-            <p className="text-sm text-red-100">Declined</p>
+            <p className="text-sm text-white">Declined</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-0">
+        <Card className="bg-gradient-to-br from-bridal-mauve to-status-info text-white border-0">
           <CardContent className="p-4 sm:p-6 text-center">
             <div className="flex items-center justify-center mb-2">
               <Users className="w-6 h-6 mr-2" />
               <p className="text-2xl sm:text-3xl font-bold">{totalGuests}</p>
             </div>
-            <p className="text-sm text-blue-100">Total Guests</p>
+            <p className="text-sm text-white">Total Guests</p>
           </CardContent>
         </Card>
       </motion.div>
@@ -450,7 +450,7 @@ export default function GuestListPage() {
                     <button
                       onClick={() => deleteGuest(guest.id)}
                       aria-label={`Delete ${guest.name}`}
-                      className="flex-shrink-0 p-1 text-neutral-400 hover:text-red-500 transition-colors"
+                      className="flex-shrink-0 p-1 text-neutral-400 hover:text-status-danger transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

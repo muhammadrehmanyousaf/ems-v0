@@ -34,6 +34,7 @@ import {
   Heart,
 } from 'lucide-react';
 import { BACKEND_URL } from '@/lib/backend-url';
+import { STATUS_CHIP } from '@/components/ui/status-tones';
 
 interface Vendor {
   id: number;
@@ -285,12 +286,12 @@ export default function Page({ params }: PageProps) {
                       className={
                         'text-[10px] px-2 py-0.5 rounded-full border ' +
                         (b.status === 'Completed'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          ? STATUS_CHIP.success
                           : b.status === 'Confirmed'
-                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            ? STATUS_CHIP.info
                             : b.status === 'Cancelled'
-                              ? 'bg-rose-50 text-rose-700 border-rose-200'
-                              : 'bg-amber-50 text-amber-800 border-amber-200')
+                              ? STATUS_CHIP.danger
+                              : STATUS_CHIP.warning)
                       }
                     >
                       {b.status}
@@ -370,10 +371,10 @@ export default function Page({ params }: PageProps) {
                                 className={
                                   'text-[10px] px-1.5 py-0 rounded border ' +
                                   (s.state === 'paid'
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    ? STATUS_CHIP.success
                                     : s.state === 'signed' || s.state === 'beo_ready' || s.state === 'invoiced'
-                                      ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                      : 'bg-neutral-100 text-neutral-700 border-neutral-200')
+                                      ? STATUS_CHIP.info
+                                      : STATUS_CHIP.neutral)
                                 }
                               >
                                 {s.state.replace(/_/g, ' ')}

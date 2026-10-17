@@ -41,11 +41,11 @@ export function FavoritesPreloader({ children }: FavoritesPreloaderProps) {
                 </h1>
                 <p className="text-gray-600 dark:text-neutral-400 mt-2">
                   {favorites.length} {favorites.length === 1 ? 'vendor' : 'vendors'} saved
-                  <span className="ml-2 text-sm text-blue-600">(Loading vendor details...)</span>
+                  <span className="ml-2 text-sm text-bridal-gold-dark">(Loading vendor details...)</span>
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                <Loader2 className="w-4 h-4 animate-spin text-bridal-gold" />
                 <span className="text-sm text-gray-500">Loading...</span>
               </div>
             </div>
@@ -56,7 +56,7 @@ export function FavoritesPreloader({ children }: FavoritesPreloaderProps) {
         <div className="container mx-auto px-4 py-6">
           <Card className="text-center py-12 dark:bg-neutral-900 dark:border-neutral-800">
             <CardContent>
-              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
+              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-bridal-gold" />
               <h3 className="text-lg font-semibold text-gray-900 dark:text-neutral-100 mb-2">Loading vendor details...</h3>
               <p className="text-gray-600 dark:text-neutral-400">
                 Found {favorites.length} favorites, loading vendor information...

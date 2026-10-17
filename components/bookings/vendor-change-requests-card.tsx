@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { STATUS_CHIP } from "@/components/ui/status-tones";
 import {
   BookingAPI,
   type BookingChangeRequest,
@@ -247,17 +248,17 @@ function VendorChangeRequestRow({
             </Badge>
             {/* BK-054-TOPUP — sub-state when row is awaiting / receiving / received customer top-up. */}
             {topUpState === "awaiting" ? (
-              <Badge variant="outline" className="text-[10.5px] border-amber-300 text-amber-700">
+              <Badge variant="outline" className={`text-[10.5px] ${STATUS_CHIP.warning}`}>
                 Awaiting customer payment
               </Badge>
             ) : null}
             {topUpState === "paying" ? (
-              <Badge variant="outline" className="text-[10.5px] border-blue-300 text-blue-700">
+              <Badge variant="outline" className={`text-[10.5px] ${STATUS_CHIP.info}`}>
                 Customer paying…
               </Badge>
             ) : null}
             {topUpState === "paid" ? (
-              <Badge variant="outline" className="text-[10.5px] border-emerald-300 text-emerald-700">
+              <Badge variant="outline" className={`text-[10.5px] ${STATUS_CHIP.success}`}>
                 Top-up paid · finalising
               </Badge>
             ) : null}

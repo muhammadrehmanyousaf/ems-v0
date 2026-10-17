@@ -388,7 +388,7 @@ export default function PublicSignPage() {
               </div>
             )}
             {Number(sheet.taxAmount) > 0 && (
-              <div className="flex items-center justify-between text-blue-700">
+              <div className="flex items-center justify-between text-status-info">
                 <span>+ Sales tax</span>
                 <span>{fmtPKR(sheet.taxAmount)}</span>
               </div>
