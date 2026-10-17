@@ -130,6 +130,8 @@ export interface InstallmentsResponse {
     eventDate: string | null;
     createdDate: string | null;
   };
+  /** WP36 / MONEY-046: on a cart, the CALLER's own part (vendor view only). `money` stays the whole booking. */
+  slice?: { businessIds: number[]; lineCount: number; total: number; received: number; outstanding: number; overpaid: number; share: number; wholeBookingTotal: number; wholeBookingReceived: number };
   nextDue?: { installmentId: number | null; title: string; remaining: number; dueDate: string; state: QistState; daysOverdue: number } | null;
   /** What to collect now: everything due or overdue, else the next qist. */
   amountDue?: { amount: number; basis: "due_now" | "next_qist" | "nothing_due"; installmentIds: (number | null)[]; nextInstallmentId: number | null; nextDueDate: string | null; overdueAmount: number };

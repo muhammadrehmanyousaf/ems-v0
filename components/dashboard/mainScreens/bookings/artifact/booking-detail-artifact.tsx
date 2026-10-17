@@ -510,11 +510,12 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
   // customer's page can never show three different numbers. The shared util stays
   // as the fallback while it loads (or if it failed), exactly as before.
   const m = schedule?.money
-  const total = m ? m.total : bookedOn(booking) || Number(booking.totalAmount ?? 0)
-  const paid = m ? m.received : receivedOn(booking)
-  const due = m ? m.outstanding : outstandingOn(booking) // already 0 for cancelled
+  const sl = schedule?.slice // WP36 / MONEY-046: this vendor's own part of a multi-vendor booking
+  const total = sl ? sl.total : m ? m.total : bookedOn(booking) || Number(booking.totalAmount ?? 0)
+  const paid = sl ? sl.received : m ? m.received : receivedOn(booking)
+  const due = m ? (sl ? (m.cancelled ? 0 : sl.outstanding) : m.outstanding) : outstandingOn(booking) // already 0 for cancelled
   const refundOwed = Number(pay?.cashRefundOwedTotal ?? 0)
-  const pct = m ? m.percentPaid : total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0
+  const pct = sl ? (sl.total > 0 ? Math.min(100, Math.round((sl.received / sl.total) * 100)) : 0) : m ? m.percentPaid : total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0
   const ev = eventWhen(booking.bookingDate)
 
   const recAttrs = `data-rec="${booking.id}" data-rec-name="${escHtml(booking.customerName || "")}" data-rec-due="${Math.round(due)}"`
