@@ -63,6 +63,11 @@ export const COPY = {
     en: "Welcome back. Everything is exactly as you left it.",
     ru: "Dobara khush aamdeed. Sab kuch bilkul waisa hi hai jaisa aap chor kar gaye the.",
   },
+  "unstarted.banner": {
+    en: "Add your business to start your free month. No card needed.",
+    ru: "Apna business add karein, aap ka muft mahina shuru ho jayega. Card ki zaroorat nahi.",
+  },
+  "banner.cta.add": { en: "Add your business", ru: "Business add karein" },
   "banner.cta.choose": { en: "Choose a plan", ru: "Plan chunein" },
   "banner.cta.pay": { en: "Pay now", ru: "Abhi pay karein" },
   "banner.cta.resume": { en: "Resume plan", ru: "Plan dobara chalu karein" },

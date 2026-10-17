@@ -16,10 +16,21 @@
  * shared secret: we ask the backend which businesses this token owns, and
  * revalidate only those. A shared secret in the browser bundle would let anyone
  * evict cache entries at will, which is a cheap way to hammer the backend.
+ *
+ * PLANS (PL-A hook). The backend itself calls this route, server to server, when a
+ * vendor's plan locks or unlocks, so a paused venue shows its "not taking
+ * enquiries" notice (and drops out of the lists) at once instead of up to an hour
+ * later. That caller has no vendor session, so it proves itself with the shared
+ * secret PUBLIC_REVALIDATE_SECRET (never in a browser bundle: it is a server env
+ * var, and this route only ever evicts cache entries, it returns nothing private):
+ *
+ *   POST { secret, event: "vendor_listing_changed", reason: "locked" | "unlocked",
+ *          userId, businesses: [{ id, slug, city }] }
  */
 
 import { NextResponse } from "next/server"
-import { revalidateTag } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
+import { timingSafeEqual } from "node:crypto"
 import { BACKEND_URL } from "@/lib/backend-url"
 import { vendorCacheTag } from "@/lib/seo/fetch-vendor"
 
@@ -27,10 +38,39 @@ export const runtime = "nodejs"
 // This route must never itself be cached.
 export const dynamic = "force-dynamic"
 
+const safeEqual = (a: string, b: string) => {
+  const x = Buffer.from(a), y = Buffer.from(b)
+  return x.length === y.length && timingSafeEqual(x, y)
+}
+const slug = (v: unknown) => String(v ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+
+/** The backend's lock/unlock hook: evict every cached page that shows these venues (their pages and the lists). */
+function handleBackendHook(body: { secret?: unknown; businesses?: unknown }) {
+  const expected = process.env.PUBLIC_REVALIDATE_SECRET
+  if (!expected) return NextResponse.json({ ok: false, message: "Not configured" }, { status: 503 })
+  if (typeof body.secret !== "string" || !safeEqual(body.secret, expected)) {
+    return NextResponse.json({ ok: false, message: "Forbidden" }, { status: 403 })
+  }
+  const list = (Array.isArray(body.businesses) ? body.businesses : []).slice(0, 50) as Array<{ id?: unknown; slug?: unknown; city?: unknown }>
+  const tags: string[] = []
+  const paths = new Set<string>(["/", "/venues", "/search", "/wedding-venues"])
+  for (const b of list) {
+    const id = Number(b?.id)
+    if (!Number.isFinite(id) || id <= 0) continue
+    tags.push(vendorCacheTag(id))
+    revalidateTag(vendorCacheTag(id))
+    const city = slug(b?.city)
+    if (city) paths.add(`/wedding-venues/${city}`)
+  }
+  for (const pth of paths) revalidatePath(pth)
+  return NextResponse.json({ ok: true, revalidated: tags, paths: [...paths] })
+}
+
 export async function POST(req: Request) {
   let businessId: number
   try {
-    const body = (await req.json()) as { businessId?: number | string }
+    const body = (await req.json()) as { businessId?: number | string; secret?: unknown; businesses?: unknown }
+    if (body && typeof body === "object" && "secret" in body) return handleBackendHook(body)
     businessId = Number(body?.businessId)
   } catch {
     return NextResponse.json({ ok: false, message: "Invalid body" }, { status: 400 })

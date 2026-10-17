@@ -9,7 +9,7 @@
  */
 
 import { useAccessStore } from "@/lib/plans/access-store"
-import { isLockedState, type Access } from "@/lib/plans/access"
+import { isWalled, type Access } from "@/lib/plans/access"
 
 export interface AccessView {
   known: boolean
@@ -27,7 +27,7 @@ export function useAccess(): AccessView {
   return {
     known: access !== null,
     access,
-    locked: isLockedState(state),
+    locked: isWalled(access),
     staff: access?.staff === true,
     trialing: state === "trialing",
     pastDue: state === "past_due",

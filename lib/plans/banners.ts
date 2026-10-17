@@ -11,14 +11,14 @@
  * and the quiet chip for a trial / past due / cancelling is always there (chipFor).
  */
 
-import { daysLeftOf, fmtPkDate, fmtPkDateTime, fmtPkDateTimeRu, isLockedState, type Access } from "./access"
+import { daysLeftOf, fmtPkDate, fmtPkDateTime, fmtPkDateTimeRu, isLockedState, isWalled, type Access } from "./access"
 import type { CopyKey, CopyVars } from "./copy"
 
 export type BannerTone = "info" | "accent" | "warn" | "bad" | "ok"
-export type BannerCta = "choose" | "pay" | "resume" | "renew" | "over"
+export type BannerCta = "choose" | "pay" | "resume" | "renew" | "over" | "add_business"
 
 export interface BannerSpec {
-  kind: "trial_welcome" | "trial_t7" | "trial_t3" | "trial_t1" | "trial_today" | "past_due" | "cancelling" | "comp_end" | "locked_here" | "reactivated" | "over_limit"
+  kind: "trial_welcome" | "trial_t7" | "trial_t3" | "trial_t1" | "trial_today" | "past_due" | "cancelling" | "comp_end" | "locked_here" | "reactivated" | "over_limit" | "unstarted"
   tone: BannerTone
   /** Copy ladder (first with all placeholders filled wins) and the values, per language (dates are spoken per language). */
   keys: CopyKey[]
@@ -40,7 +40,7 @@ type BannerOpts = { welcomeSeen?: boolean; onPaymentPage?: boolean; wasLocked?: 
 /** The banner for the plan state, else (lowest priority) the over-the-limit one. */
 export function bannerFor(a: Access | null, now: Date = new Date(), opts: BannerOpts = {}): BannerSpec | null {
   const s = stateBanner(a, now, opts)
-  if (s || !a || a.staff || isLockedState(a.state)) return s
+  if (s || !a || a.staff || isLockedState(a.state) || a.state === "unstarted") return s
   return opts.overLimit && !opts.onPaymentPage ? { kind: "over_limit", tone: "warn", keys: ["over.banner"], vars: () => ({}), cta: "over", dismiss: "day" } : null
 }
 
@@ -71,7 +71,13 @@ function stateBanner(a: Access | null, now: Date, opts: BannerOpts): BannerSpec 
     if (days !== null && days <= 7) return { kind: "comp_end", tone: days <= 1 ? "warn" : "info", keys: ["comp.banner"], vars: () => ({ date: fmtPkDate(a.endsAt) || null }), cta: "choose", dismiss: days <= 1 ? null : "day" }
     return null
   }
+  if (a.state === "unstarted") {
+    // Nothing to lock yet: the free month starts with the first business.
+    return { kind: "unstarted", tone: "accent", keys: ["unstarted.banner"], vars: () => ({}), cta: "add_business", dismiss: "day" }
+  }
   if (isLockedState(a.state)) {
+    // In shadow mode the state is only logged: say nothing.
+    if (!isWalled(a)) return null
     // Only reachable on the pages that stay open while locked (billing, account). The billing page says it itself, in a card.
     if (opts.onPaymentPage) return null
     return { kind: "locked_here", tone: "bad", keys: ["banner.locked_here"], vars: () => ({}), cta: a.canPay ? "renew" : null, dismiss: null }

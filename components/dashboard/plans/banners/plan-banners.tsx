@@ -23,7 +23,7 @@ import { useResolvedThemeMode } from "@/lib/store/theme-prefs"
 import { PLAN_UI_CSS, WALL_TOKENS_CSS } from "../plan-ui-css"
 import { useOne, useBi } from "../bilingual"
 
-const ICON = { trial_welcome: Sparkles, trial_t7: Clock, trial_t3: Clock, trial_t1: AlertTriangle, trial_today: AlertTriangle, past_due: AlertTriangle, cancelling: Clock, comp_end: Clock, locked_here: Lock, reactivated: CheckCircle2, over_limit: AlertTriangle } as const
+const ICON = { unstarted: Sparkles, trial_welcome: Sparkles, trial_t7: Clock, trial_t3: Clock, trial_t1: AlertTriangle, trial_today: AlertTriangle, past_due: AlertTriangle, cancelling: Clock, comp_end: Clock, locked_here: Lock, reactivated: CheckCircle2, over_limit: AlertTriangle } as const
 
 function store(): Storage | null { try { return window.localStorage } catch { return null } }
 /** Pakistan calendar date, YYYY-MM-DD: "hide for today" ends at midnight Pakistan time. */
@@ -73,10 +73,10 @@ export function PlanBanners() {
   if (!spec || hidden) return null
   const Icon = ICON[spec.kind]
   const tx = (lang: "en" | "ru") => firstFilled(spec.keys, lang, spec.vars(lang))
-  const ctaKey = spec.cta === "over" ? "banner.cta.over" : spec.cta === "pay" ? "banner.cta.pay" : spec.cta === "resume" ? "banner.cta.resume" : spec.cta === "renew" ? "banner.cta.renew" : "banner.cta.choose"
+  const ctaKey = spec.cta === "add_business" ? "banner.cta.add" : spec.cta === "over" ? "banner.cta.over" : spec.cta === "pay" ? "banner.cta.pay" : spec.cta === "resume" ? "banner.cta.resume" : spec.cta === "renew" ? "banner.cta.renew" : "banner.cta.choose"
   const href = spec.cta === "pay" || spec.cta === "resume" || spec.cta === "renew"
     ? `/dashboard/billing?renew=1${access?.plan ? `&plan=${encodeURIComponent(access.plan)}` : ""}`
-    : spec.cta === "over" ? "/dashboard/billing#over" : "/dashboard/billing"
+    : spec.cta === "over" ? "/dashboard/billing#over" : spec.cta === "add_business" ? "/dashboard/business/new" : "/dashboard/billing"
   const dismissLabel = say(spec.dismiss === "once" ? "banner.dismiss_welcome" : "banner.dismiss", one.lang)
 
   return (

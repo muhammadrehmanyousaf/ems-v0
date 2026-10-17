@@ -34,6 +34,14 @@ export function isLockedState(s: AccessStateKey | null | undefined): boolean {
   return !!s && LOCKED_STATES.includes(s)
 }
 
+/**
+ * Is the Wall to be SHOWN for this access? A locked state is shown only when the server says it is real. In shadow mode
+ * (BILLING_ENFORCE=shadow) the state is computed so it can be logged, and nothing changes for the vendor.
+ */
+export function isWalled(a: Access | null | undefined): boolean {
+  return !!a && isLockedState(a.state) && a.enforced !== false
+}
+
 export interface Access {
   state: AccessStateKey
   /** Internal tier key of the plan in force or the last plan (pro | premium | elite), or null. */
@@ -56,6 +64,12 @@ export interface Access {
   renewUrl: string | null
   /** Whole days left in the trial / grace / cancelled period, as the server counts them. */
   daysLeft: number | null
+  /**
+   * The server says the Wall is real for this account (BILLING_ENFORCE=on, and past BILLING_ENFORCE_NEW_FROM). false = shadow
+   * or off: the state is only computed and logged, nothing is locked. null = the server did not say (an older build): a 402
+   * from a request still locks; a status of "locked" is then taken at its word.
+   */
+  enforced: boolean | null
   /** The viewer is a staff member of the vendor, not the owner. */
   staff: boolean
   /** The owner's phone, already masked by the server, shown to staff. */
@@ -90,6 +104,7 @@ function build(raw: Rec, source: Access["source"], staffDefault = false): Access
     // The server's word wins; absent, a staff member and a suspended account cannot pay, everyone else can.
     canPay: typeof raw.canPay === "boolean" ? raw.canPay && !staff : !staff && state !== "suspended_admin",
     canStartTrial: raw.canStartTrial === true,
+    enforced: typeof raw.enforced === "boolean" ? raw.enforced : null,
     renewUrl: str(raw.renewUrl),
     daysLeft: int(raw.daysLeft),
     staff,
@@ -114,7 +129,7 @@ export function lockFromError(error: unknown): Access | null {
   const d = isRec(body.data) ? body.data : null
   if (!d || str(d.code) !== "SUBSCRIPTION_REQUIRED") return null
   // The contract always names a state; if it ever does not, the 402 itself means "locked".
-  const a = build({ ...d, state: isState(d.state) ? d.state : "locked" }, "402")
+  const a = build({ ...d, state: isState(d.state) ? d.state : "locked", enforced: true }, "402")
   return a
 }
 
@@ -144,6 +159,7 @@ export function accessFromLegacy(raw: unknown): Access | null {
     lockReason: state === "locked" ? (sub ? "plan_ended" : "no_plan") : null,
     canPay: true,
     canStartTrial: false,
+    enforced,
     renewUrl: null,
     daysLeft: null,
     staff: false,

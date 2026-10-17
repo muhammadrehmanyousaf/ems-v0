@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import { isLockedState, lockFromError, type Access } from "./access"
+import { isWalled, lockFromError, type Access } from "./access"
 
 /**
  * The access store: the ONE place the portal keeps "may this viewer use the console, and if not why".
@@ -36,14 +36,14 @@ export const useAccessStore = create<AccessStore>((set, get) => ({
   applyStatus: (a) => {
     const cur = get()
     if (a === null) return // an unreadable status never changes what we know
-    const openNow = !isLockedState(a.state)
-    if (openNow && cur.lockedByRequestAt && Date.now() - cur.lockedByRequestAt < STALE_OPEN_MS && isLockedState(cur.access?.state)) return
+    const openNow = !isWalled(a)
+    if (openNow && cur.lockedByRequestAt && Date.now() - cur.lockedByRequestAt < STALE_OPEN_MS && isWalled(cur.access)) return
     set({ access: a, lockedByRequestAt: 0, version: cur.version + 1 })
   },
   applyLock: (a) => {
     const cur = get().access
     // Keep what /status already told us about the plan (name, dates) when it is the same lock; a 402 is short on detail.
-    const merged: Access = cur && isLockedState(cur.state) && !a.staff
+    const merged: Access = cur && isWalled(cur) && !a.staff
       ? { ...cur, ...Object.fromEntries(Object.entries(a).filter(([, v]) => v !== null && v !== undefined)) } as Access
       : a
     set((s) => ({ access: { ...merged, source: "402" }, lockedByRequestAt: Date.now(), version: s.version + 1 }))

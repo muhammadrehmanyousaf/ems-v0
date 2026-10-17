@@ -8,7 +8,7 @@
 import * as React from "react"
 import { useUser } from "@/context/UserContext"
 import { useBillingStatus } from "@/hooks/use-billing-status"
-import { accessFromStatus } from "@/lib/plans/access"
+import { accessFromStatus, isLockedState } from "@/lib/plans/access"
 import { useAccessStore } from "@/lib/plans/access-store"
 
 export function useIsVendorViewer(): boolean {
@@ -30,9 +30,17 @@ export function AccessSync() {
     if (lastUser.current !== userId) { useAccessStore.getState().reset(); lastUser.current = userId }
   }, [userId])
 
+  const loggedShadow = React.useRef<string | null>(null)
   React.useEffect(() => {
     if (!q.data) return
-    useAccessStore.getState().applyStatus(accessFromStatus(q.data))
+    const a = accessFromStatus(q.data)
+    useAccessStore.getState().applyStatus(a)
+    // Shadow mode (BILLING_ENFORCE=shadow): the server computed that this account WOULD be locked; nothing changes for the
+    // vendor, we only leave a trace for the rollout review.
+    if (a && isLockedState(a.state) && a.enforced === false && loggedShadow.current !== a.state) {
+      loggedShadow.current = a.state
+      console.info(`[plans] shadow: this account would be locked (${a.state}, ${a.lockReason ?? "no reason"}); not enforced`)
+    }
   }, [q.data, q.dataUpdatedAt])
 
   return null

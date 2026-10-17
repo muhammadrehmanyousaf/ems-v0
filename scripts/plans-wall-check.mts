@@ -24,7 +24,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 import {
-  ACCESS_STATES, LOCKED_STATES, isLockedState, parseAccess, accessFromStatus, lockFromError, legacyAccessWord,
+  ACCESS_STATES, LOCKED_STATES, isLockedState, isWalled, parseAccess, accessFromStatus, lockFromError, legacyAccessWord,
   fmtPkDate, fmtPkDateTime, fmtPkDateTimeRu, daysUntilPk, internalPath, type Access, type AccessStateKey,
 } from "../lib/plans/access.ts";
 import { COPY, fill, say, firstFilled, placeholdersOf, type CopyKey } from "../lib/plans/copy.ts";
@@ -58,7 +58,7 @@ const stripComments = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(
 /* ───────────────────────── fixtures ───────────────────────── */
 const A = (state: AccessStateKey, o: Partial<Access> = {}): Access => ({
   state, plan: "premium", planName: "Pro", trialEndsAt: null, graceEndsAt: null, endsAt: null, lockedAt: null, retainUntil: null, lockReason: null,
-  canPay: true, canStartTrial: false, renewUrl: null, daysLeft: null, staff: false, ownerMasked: null, source: "status", ...o,
+  canPay: true, canStartTrial: false, enforced: true, renewUrl: null, daysLeft: null, staff: false, ownerMasked: null, source: "status", ...o,
 });
 // 23:59:59 Asia/Karachi = 18:59:59Z
 const PKT_EOD = (ymd: string) => `${ymd}T18:59:59.000Z`;
@@ -248,6 +248,32 @@ await check("a 402 SUBSCRIPTION_REQUIRED is a lock; any other 402 / 403 / 409 is
   eq(lockFromError(e402({ code: "SUBSCRIPTION_REQUIRED" }, 409)), null);
   eq(lockFromError(new Error("Network Error")), null);
   eq(lockFromError(null), null);
+});
+
+console.log("\nshadow mode: computed, logged, never shown");
+await check("a locked state is walled only when the server says the Wall is real (enforced), and a 402 always is", () => {
+  eq([isWalled(A("locked", { enforced: true })), isWalled(A("locked", { enforced: null })), isWalled(A("locked", { enforced: false }))], [true, true, false]);
+  eq([isWalled(A("dormant", { enforced: false })), isWalled(A("suspended_admin", { enforced: false })), isWalled(null)], [false, false, false]);
+  eq(isWalled(A("active", { enforced: true })), false);
+  const shadow = accessFromStatus({ access: "none", accessState: { state: "locked", lockReason: "no_plan", enforced: false } })!;
+  eq([shadow.state, shadow.enforced, isWalled(shadow)], ["locked", false, false]);
+  eq(lockFromError(e402({ code: "SUBSCRIPTION_REQUIRED", state: "locked" }))!.enforced, true);
+  eq(accessFromStatus({ access: "none", accessState: { state: "locked", lockReason: "no_plan" } })!.enforced, null, "an older build that does not say: taken at its word");
+});
+await check("shadow: no banner for a would-lock account; the store does not hold it as a lock", () => {
+  eq(bannerFor(A("locked", { enforced: false }), NOW), null);
+  eq(bannerFor(A("locked", { enforced: false }), NOW, { overLimit: true }), null);
+  const st = useAccessStore; st.getState().reset();
+  st.getState().applyStatus(A("locked", { enforced: false }));
+  eq(isWalled(st.getState().access), false);
+  st.getState().reset();
+});
+await check("unstarted (no business yet) is open and gets one gentle banner that points at adding the business, none for staff", () => {
+  const b = bannerFor(A("unstarted", { plan: null, planName: null }), NOW)!;
+  eq([b.kind, b.cta, b.dismiss], ["unstarted", "add_business", "day"]);
+  eq(bannerFor(A("unstarted", { staff: true }), NOW), null);
+  eq(chipFor(A("unstarted"), NOW), null);
+  eq(bannerFor(A("unstarted"), NOW, { overLimit: true })!.kind, "unstarted");
 });
 
 console.log("\nthe access store");
@@ -463,6 +489,16 @@ await check("the public venue page, the legacy page and the booking funnel all r
   ok(/venueUnavailableFromError/.test(read("components/RequestQuoteDialog.tsx")), "quote dialog");
   ok(/handleVenueUnavailable/.test(read("lib/axiosConfig.js")), "axios layer");
   ok(/<VenueUnavailableHost\s*\/>/.test(read("app/(main)/layout.tsx")), "the public layout must mount the dialog host");
+});
+
+console.log("\nthe backend's lock/unlock hook");
+await check("the frontend has a secret-protected /api/revalidate branch for PL-A's hook (timing-safe, 503 when unconfigured, no secret = 403)", () => {
+  const src = read("app/api/revalidate/route.ts");
+  ok(/PUBLIC_REVALIDATE_SECRET/.test(src) && /timingSafeEqual/.test(src), "secret check");
+  ok(/status: 503/.test(src) && /status: 403/.test(src), "503 when unset, 403 when wrong");
+  ok(/revalidateTag\(vendorCacheTag\(id\)\)/.test(src) && /revalidatePath\(/.test(src), "evicts the venue's tag and the lists");
+  ok(/businesses/.test(src) && /slice\(0, 50\)/.test(src), "bounded list");
+  ok(/Authorization|authorization/.test(src), "the session-based path for vendors is still there");
 });
 
 console.log("\nthis guard is wired into the build");
