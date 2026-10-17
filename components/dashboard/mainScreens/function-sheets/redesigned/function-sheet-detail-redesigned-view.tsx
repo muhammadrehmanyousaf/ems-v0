@@ -8,6 +8,7 @@
  * untouched. Route /dashboard/function-sheets/[id]. Token-only (themes).
  */
 
+import { pickDefaultSheet } from "@/lib/function-sheets/default-sheet"
 import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import * as React from "react"
 import { BookingReceiptsCard, BookingDisputesCard } from "@/components/bookings/booking-related-lists"
@@ -94,7 +95,7 @@ export function FunctionSheetDetailRedesignedView({ id }: { id?: number } = {}) 
           : resolvedId
       if (idParam != null && idParam !== "" && !Number.isNaN(Number(idParam))) return FunctionSheetAPI.get(Number(idParam))
       const list = await FunctionSheetAPI.list()
-      const first = list?.functionSheets?.[0]
+      const first = pickDefaultSheet(list?.functionSheets)
       return first ? FunctionSheetAPI.get(first.id) : null
     },
   })

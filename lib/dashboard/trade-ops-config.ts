@@ -27,6 +27,8 @@ export interface TradeOpsColumn {
 
 export interface TradeOpsSection {
   key: string
+  /** An older key this section's rows used to live under (OPS-067: the run sheet shared `timeline` with the BEO drawer). */
+  legacyKey?: string
   label: string
   icon: IconName
   desc: string
@@ -105,7 +107,8 @@ export const TRADE_OPS: TradeOpsTrade[] = [
         ]
       },
       {
-        "key": "timeline",
+        "key": "runOfShow",
+        "legacyKey": "timeline",
         "label": "Run of show",
         "icon": "Clock",
         "desc": "Minute-by-minute cue sheet from guest entry through baraat, dinner, stage and rukhsati.",
@@ -1777,3 +1780,18 @@ export const TRADE_OPS: TradeOpsTrade[] = [
 
 export const getTrade = (key?: string | null): TradeOpsTrade | undefined =>
   TRADE_OPS.find((t) => t.trade === key) ?? TRADE_OPS[0]
+
+/**
+ * The stored rows of one section. A section renamed to avoid a collision still reads rows saved under its
+ * legacy key, but only rows of its own shape (the BEO drawer also wrote `timeline`, as {time, activity}).
+ */
+export function storedSectionRows(stored: Record<string, unknown> | null | undefined, sec: TradeOpsSection): Record<string, unknown>[] {
+  const own = stored?.[sec.key]
+  if (Array.isArray(own)) return own as Record<string, unknown>[]
+  if (sec.legacyKey) {
+    const old = stored?.[sec.legacyKey]
+    const mine = new Set(sec.columns.map((c) => c.key))
+    if (Array.isArray(old)) return (old as Record<string, unknown>[]).filter((r) => r && typeof r === "object" && Object.keys(r).some((k) => mine.has(k)))
+  }
+  return []
+}
