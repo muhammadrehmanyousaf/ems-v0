@@ -340,7 +340,7 @@ function buildContent(d: MyPlanData, status: BillingStatus | null, mode: ReturnM
   const stateCard = access?.state === "trialing" ? trialCardHtml(access) : statusCard(status)
   const lockedCard = access && isLockedState(access.state) ? lockedCardHtml(access) : ""
   const planNameOfTier = (t: string) => tierName(t as SubscriptionTier)
-  const manualCard = st?.manual && st.manual !== "absent" ? manualCardHtml(st.manual, planNameOfTier, access?.canPay !== false) : st?.askedManual ? manualUnavailableHtml() : ""
+  const manualCard = st?.manual && st.manual !== "absent" ? manualCardHtml(st.manual, planNameOfTier, access?.canPay !== false, !!access && !isLockedState(access.state) && access.state !== "past_due") : st?.askedManual ? manualUnavailableHtml() : ""
   const overCard = st && st.overRows.length ? overLimitCardHtml({ planName: access?.planName || curPlan?.name || "your", rows: st.overRows, venues: st.venues, canChoose: st.canChooseVenues, venueLimit: st.venueLimit }) : ""
   return `
   <div class="head"><div><h1>Plan & billing</h1><div class="sub">Apna plan chunein — payment Safepay par hoti hai aur har mahina khud renew hoti hai.</div></div></div>

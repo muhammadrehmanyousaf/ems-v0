@@ -95,7 +95,11 @@ export function lockedCardHtml(a: Access): string {
 
 const METHOD_LABEL: Record<string, string> = { bank: "Bank transfer", jazzcash: "JazzCash", easypaisa: "Easypaisa" }
 
-export function manualCardHtml(info: ManualPaymentInfo | null, planName: (tier: string) => string, canPay: boolean): string {
+/**
+ * `settled`: the vendor is open and nothing is owed (the server says so). An old APPROVED proof is only good news while that holds;
+ * once the plan lapsed again (locked, or past due) it must not hide the upload button, or the vendor could never renew by this route.
+ */
+export function manualCardHtml(info: ManualPaymentInfo | null, planName: (tier: string) => string, canPay: boolean, settled = true): string {
   if (!canPay) return ""
   if (!info || !info.enabled) {
     // The route is not open on this server: say so only when the vendor came here to use it (?pay=manual), see billing-artifact.
@@ -111,7 +115,7 @@ export function manualCardHtml(info: ManualPaymentInfo | null, planName: (tier: 
       <div class="sp-t">${bi("manual.pending.title")}</div>
       <div class="sp-s">${bi("manual.pending.body", (l) => ({ date: (l === "ru" ? fmtPkDateTimeRu(cur.submittedAt) : fmt(cur.submittedAt)) || null }))}</div>${summary}</div></div>`
   }
-  if (cur?.status === "approved") {
+  if (cur?.status === "approved" && settled) {
     return `<div class="sp ok" role="status" data-testid="manual-approved">${svg(IC.check, 2.4)}<div style="flex:1;min-width:0">
       <div class="sp-t">${bi("manual.approved.title")}</div><div class="sp-s">${bi("manual.approved.body")}</div>${summary}</div></div>`
   }
