@@ -609,6 +609,12 @@ export default function BookingForm() {
       payload.dropoffAddress = currentForm.dropoffAddress.trim();
     }
 
+    // WP36 / VENDORTYPES-049: which function this booking is for (Barat, Walima, Mehndi ...), so the vendor can see it.
+    // A label for the vendor only; the server trims it and never lets it change a rule.
+    if (typeof currentForm.eventType === "string" && currentForm.eventType.trim()) {
+      payload.eventType = currentForm.eventType.trim().slice(0, 40);
+    }
+
     try {
       setIsSubmitting(true)
       setSlotConflict(null)
