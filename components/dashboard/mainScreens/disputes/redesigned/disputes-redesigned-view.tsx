@@ -58,7 +58,20 @@ export function DisputesRedesignedView() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["disputes-redesigned"],
-    queryFn: () => listAdminDisputes({}),
+    // FLAGGED-043 - the server defaults to status=open when no status is sent, so Total / Resolved could
+    // never be anything but the open list and a resolved dispute was invisible. Ask for all of them, page by
+    // page (100 is the server cap) until the reported count is reached.
+    queryFn: async () => {
+      const first = await listAdminDisputes({ status: "all", limit: 100, page: 1 })
+      let rows = [...(first.rows ?? [])]
+      const count = Number(first.count) || rows.length
+      for (let page = 2; rows.length < count && page <= 50; page++) {
+        const next = await listAdminDisputes({ status: "all", limit: 100, page })
+        if (!next.rows?.length) break
+        rows = rows.concat(next.rows)
+      }
+      return { ...first, rows, count: Math.max(count, rows.length) }
+    },
   })
 
   const all = data?.rows ?? []

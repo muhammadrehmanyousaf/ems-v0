@@ -151,7 +151,39 @@ export async function listAuditLogs(filters: {
   action?: string
   limit?: number
   offset?: number
-} = {}): Promise<{ count: number; logs: AuditLog[] }> {
+  /** PUBLIC-046 (additive): date window on `at` (YYYY-MM-DD in Pakistan time, or a timestamp), inclusive. */
+  from?: string
+  to?: string
+  /** Hide the sign-in noise (session rows). */
+  hideSessions?: boolean
+} = {}): Promise<AuditLogList> {
   const res = await axiosInstance.get(`/api/v1/admin/audit-logs`, { params: filters })
-  return unwrap<{ count: number; logs: AuditLog[] }>(res) ?? { count: 0, logs: [] }
+  return unwrap<AuditLogList>(res) ?? { count: 0, logs: [] }
+}
+
+export interface AuditLogList {
+  count: number
+  logs: AuditLog[]
+  /** user id -> display name for the actors on this page (older servers omit these). */
+  actorNames?: Record<string, string>
+  /** "business:12" / "user:7" -> name for the targets on this page. */
+  targetNames?: Record<string, string>
+  /** Counts over the WHOLE filtered set, not just the page. */
+  summary?: { total: number; today: number; distinctActions: number; distinctActors: number }
+}
+
+/** Every page (500 a row batch, up to 20 batches) so search, export and the cards cover the full log. */
+export async function listAllAuditLogs(filters: Parameters<typeof listAuditLogs>[0] = {}, pageSize = 500, maxPages = 20): Promise<AuditLogList> {
+  const first = await listAuditLogs({ ...filters, limit: pageSize, offset: 0 })
+  const logs = [...first.logs]
+  const actorNames = { ...(first.actorNames ?? {}) }
+  const targetNames = { ...(first.targetNames ?? {}) }
+  for (let page = 1; logs.length < first.count && page < maxPages; page++) {
+    const next = await listAuditLogs({ ...filters, limit: pageSize, offset: page * pageSize })
+    if (!next.logs.length) break
+    logs.push(...next.logs)
+    Object.assign(actorNames, next.actorNames ?? {})
+    Object.assign(targetNames, next.targetNames ?? {})
+  }
+  return { ...first, logs, actorNames, targetNames }
 }

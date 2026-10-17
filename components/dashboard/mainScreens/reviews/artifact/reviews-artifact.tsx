@@ -11,6 +11,7 @@ import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { ReviewsAPI, type ApiReviewRow } from "@/lib/api/dashboard"
+import { walkPages } from "@/lib/query/walk-pages"
 import { useArtifactShell, escHtml, initialsOf, initTablePager, errorBannerHtml, loadPref, savePref, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
 
@@ -89,7 +90,11 @@ export function ReviewsArtifact() {
     activeHref: "/dashboard/reviews", crumbBold: "Grow", crumbSub: "Reviews", extraCss: EXTRA_CSS,
   })
   const qc = useQueryClient()
-  const { data, isError } = useQuery({ queryKey: ["reviews-art"], queryFn: () => ReviewsAPI.getAll(1, 100) })
+  const { data, isError } = useQuery({ queryKey: ["reviews-art"], queryFn: async () => {
+    // CONCURRENCY-015 - 131 reviews showed as "100 reviews"; walk every page.
+    const all = await walkPages((page) => ReviewsAPI.getAll(page, 100).then((r) => ({ items: r.reviews, pagination: r.pagination })))
+    return { reviews: all.items, total: all.total }
+  } })
   const list = React.useMemo(() => (data?.reviews ?? []) as ApiReviewRow[], [data])
   const [filter, setFilter] = React.useState(() => loadPref("tab:reviews", "all"))
 

@@ -40,6 +40,8 @@ import { phantomPanelHtml, wirePhantomButtons } from "@/components/dashboard/mai
 import { moneyOf } from "@/lib/utils/qist"
 import { fmtYmd, ymdOf, ymdToUtcDate } from "@/lib/utils/ymd"
 import { bookingSlotText } from "@/lib/booking/slot-vocabulary"
+import { historyRows } from "@/lib/bookings/history-rows"
+import { approvalToast } from "@/lib/bookings/approval-toast"
 import { slotPickerField, bindSlotPicker, loadSlotPicker, refreshPicker, recheckPicker, pickerChoice } from "@/components/dashboard/mainScreens/artifact/slot-picker"
 
 /* ── formatting ──────────────────────────────────────────────── */
@@ -490,7 +492,9 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
   const statusLabel = bookingStatusLabel(booking) || "Booking"
   const tone = toneOf(statusLabel)
   const st = (booking.status || "").toLowerCase()
-  const isPending = /await|pending|request/.test(st)
+  // BOOKINGS-029 - "waiting on the vendor" is NOT the same as an Awaiting-payment status: once the vendor has
+  // approved (vendorApprovedAt set) the booking is waiting on the CUSTOMER's advance and Confirm/Reject must go.
+  const isPending = /await|pending|request/.test(st) && !(/await/.test(st) && (booking as { vendorApprovedAt?: string | null }).vendorApprovedAt)
   const isClosed = /cancel|complete|done|reject/.test(st)
   // A dead booking — money can no longer be collected on it (the backend refuses
   // with BOOKING_CANCELLED), so every payment CTA is hidden here too.
@@ -498,6 +502,14 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
   const service = booking.bookingDetails?.[0]?.package?.name || booking.bookingDetails?.[0]?.business?.name || "Booking"
   const space = spaceNameOf(booking)
   const guests = booking.guestCount ?? null
+  // WP36 / VENDORTYPES-049 + 024: the function the customer named, and the "Quantity: 3 vehicles" the booking form writes
+  // into the request text (the server keeps no separate column for it)
+  const eventTypeText = String((booking as { eventType?: string | null }).eventType || "").trim()
+  const quantityText = (() => {
+    const hay = [booking.additionalRequests, ...(booking.bookingDetails || []).map((d) => (d as { specialRequests?: string | null }).specialRequests)].filter(Boolean).join(" ")
+    const m = /Quantity:\s*(\d+)\s*([A-Za-z ]{0,30})/.exec(hay)
+    return m ? `${m[1]}${m[2] ? ` ${m[2].trim()}` : ""}` : ""
+  })()
 
   // WW money-truth: read the amount columns through the shared util, NOT the
   // legacy /payments/booking-status endpoint. That endpoint reports paid=0 /
@@ -510,11 +522,12 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
   // customer's page can never show three different numbers. The shared util stays
   // as the fallback while it loads (or if it failed), exactly as before.
   const m = schedule?.money
-  const total = m ? m.total : bookedOn(booking) || Number(booking.totalAmount ?? 0)
-  const paid = m ? m.received : receivedOn(booking)
-  const due = m ? m.outstanding : outstandingOn(booking) // already 0 for cancelled
+  const sl = schedule?.slice // WP36 / MONEY-046: this vendor's own part of a multi-vendor booking
+  const total = sl ? sl.total : m ? m.total : bookedOn(booking) || Number(booking.totalAmount ?? 0)
+  const paid = sl ? sl.received : m ? m.received : receivedOn(booking)
+  const due = m ? (sl ? (m.cancelled ? 0 : sl.outstanding) : m.outstanding) : outstandingOn(booking) // already 0 for cancelled
   const refundOwed = Number(pay?.cashRefundOwedTotal ?? 0)
-  const pct = m ? m.percentPaid : total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0
+  const pct = sl ? (sl.total > 0 ? Math.min(100, Math.round((sl.received / sl.total) * 100)) : 0) : m ? m.percentPaid : total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0
   const ev = eventWhen(booking.bookingDate)
 
   const recAttrs = `data-rec="${booking.id}" data-rec-name="${escHtml(booking.customerName || "")}" data-rec-due="${Math.round(due)}"`
@@ -592,9 +605,10 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
   const actItems = (history || []).slice(0, 8).map((h) => {
     const from = h.fromStatus, to = h.toStatus
     const title = to ? `Status: ${escHtml(from || "—")} → ${escHtml(to)}` : escHtml(h.reason || "Update")
-    const when = fmtDateShort(h.changedAt || h.createdAt)
+    const when = fmtDateShort(h.at || h.changedAt || h.createdAt)
+    const who = h.actorRole || h.changedByRole
     return `<div class="tl-item done"><span class="tl-dot">${svg(I.check)}</span>
-      <div class="tl-body"><div class="tl-title" style="font-weight:500">${title}</div><div class="tl-meta">${when}${h.changedByRole ? ` · ${escHtml(h.changedByRole)}` : ""}</div></div></div>`
+      <div class="tl-body"><div class="tl-title" style="font-weight:500">${title}</div><div class="tl-meta">${when}${who ? ` · ${escHtml(who)}` : ""}</div></div></div>`
   }).join("")
   const createdItem = `<div class="tl-item"><span class="tl-dot">${svg(I.cal)}</span>
     <div class="tl-body"><div class="tl-title" style="font-weight:500">Booking banai gayi</div><div class="tl-meta">${fmtDateShort(booking.createdAt)}</div></div></div>`
@@ -694,6 +708,8 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
           <div class="dl-row"><span class="k">Service</span><span class="v">${escHtml(service)}</span></div>
           <div class="dl-row"><span class="k">Taareekh</span><span class="v">${escHtml(fmtYmd(booking.bookingDate, "weekday"))}</span></div>
           <div class="dl-row"><span class="k">Waqt</span><span class="v">${escHtml(bookingSlotText(booking, "vendor"))}</span></div>
+          ${eventTypeText ? `<div class="dl-row"><span class="k">Function</span><span class="v">${escHtml(eventTypeText)}</span></div>` : ""}
+          ${quantityText ? `<div class="dl-row"><span class="k">Quantity</span><span class="v tnum">${escHtml(quantityText)}</span></div>` : ""}
           <div class="dl-row"><span class="k">Hall</span><span class="v">${escHtml(space || "—")}</span></div>
           <div class="dl-row"><span class="k">Mehmaan</span><span class="v tnum">${guests != null ? guests : "—"}</span></div>
           ${booking.serviceLocationAddress ? `<div class="dl-row"><span class="k">${svg(I.pin)} Jagah</span><span class="v">${escHtml(booking.serviceLocationAddress)}</span></div>` : ""}
@@ -994,7 +1010,7 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
     wwc.innerHTML = buildDetail(
       booking,
       payQ.data ?? null,
-      Array.isArray(histQ.data) ? histQ.data : [],
+      historyRows(histQ.data),
       sheetsQ.data ?? [],
       scheduleQ.data ?? null,
       scheduleQ.isError,
@@ -1097,7 +1113,7 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
       const ap = t.closest("[data-bk-approve]") as HTMLButtonElement | null
       if (ap?.dataset.bkApprove) {
         ap.disabled = true; const o = ap.innerHTML; ap.textContent = "Confirm ho raha…"
-        try { await BookingsAPI.approveBooking(Number(ap.dataset.bkApprove)); toast.success("Booking confirm ho gayi"); invalidateAll() }
+        try { const res = await BookingsAPI.approveBooking(Number(ap.dataset.bkApprove)); toast.success(approvalToast(res)); invalidateAll() }
         catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Confirm nahi hui"); ap.disabled = false; ap.innerHTML = o }
         return
       }

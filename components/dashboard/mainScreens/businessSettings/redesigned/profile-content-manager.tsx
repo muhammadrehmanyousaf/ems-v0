@@ -30,6 +30,7 @@ import {
   validateEmail,
 } from "@/components/dashboard/primitives/field-error"
 import { VENUE_AMENITIES } from "@/lib/amenities"
+import { changedPatch, triFrom, type TriState } from "@/lib/settings/changed-patch"
 
 const inputCls =
   "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
@@ -89,15 +90,18 @@ export function ProfileContentManager({
   const [years, setYears] = React.useState(b.yearsInBusiness != null ? String(b.yearsInBusiness) : "")
   const [weddings, setWeddings] = React.useState(b.weddingsCompleted != null ? String(b.weddingsCompleted) : "")
   const [languages, setLanguages] = React.useState<string[]>(Array.isArray(b.languagesSpoken) ? b.languagesSpoken : [])
-  const [hasInsurance, setHasInsurance] = React.useState(Boolean(b.hasInsurance))
+  // SETUP-028 - the yes/no answers are tri-state: null = never answered. They used
+  // to load through Boolean(), so an unanswered question became an explicit "No"
+  // on the first save of any unrelated field.
+  const [hasInsurance, setHasInsurance] = React.useState<TriState>(triFrom(b.hasInsurance))
   const [backup, setBackup] = React.useState(b.backupArrangement ?? "")
   const [awards, setAwards] = React.useState<Award[]>(Array.isArray(b.awards) ? b.awards : [])
   const [press, setPress] = React.useState<PressItem[]>(Array.isArray(b.press) ? b.press : [])
   const [references, setReferences] = React.useState<Reference[]>(Array.isArray(b.references) ? b.references : [])
 
-  const [cash, setCash] = React.useState(Boolean(b.acceptsCash))
-  const [bank, setBank] = React.useState(Boolean(b.acceptsBankTransfer))
-  const [taxInvoice, setTaxInvoice] = React.useState(Boolean(b.providesTaxInvoice))
+  const [cash, setCash] = React.useState<TriState>(triFrom(b.acceptsCash))
+  const [bank, setBank] = React.useState<TriState>(triFrom(b.acceptsBankTransfer))
+  const [taxInvoice, setTaxInvoice] = React.useState<TriState>(triFrom(b.providesTaxInvoice))
   const [whatsapp, setWhatsapp] = React.useState(b.whatsappNumber ?? "")
 
   const [cities, setCities] = React.useState<string[]>(Array.isArray(b.cityCovered) ? b.cityCovered : [])
@@ -125,9 +129,9 @@ export function ProfileContentManager({
   const [legalCap, setLegalCap] = React.useState(b.legalGuestCap != null ? String(b.legalGuestCap) : "")
   const [closing, setClosing] = React.useState(b.eventClosingTime ?? "")
   const [oneDish, setOneDish] = React.useState(Boolean(b.oneDishPolicy))
-  const [outsideAllowed, setOutsideAllowed] = React.useState(Boolean(b.outsideVendorsAllowed))
+  const [outsideAllowed, setOutsideAllowed] = React.useState<TriState>(triFrom(b.outsideVendorsAllowed))
   const [outsideFee, setOutsideFee] = React.useState(b.outsideVendorFee != null ? String(b.outsideVendorFee) : "")
-  const [requiresPermit, setRequiresPermit] = React.useState(Boolean(b.requiresPermit))
+  const [requiresPermit, setRequiresPermit] = React.useState<TriState>(triFrom(b.requiresPermit))
   const [permitUrl, setPermitUrl] = React.useState(b.permitChecklistUrl ?? "")
 
   /**
@@ -191,74 +195,98 @@ export function ProfileContentManager({
   ])
   const savedSnapshot = React.useRef<string | null>(null)
   if (savedSnapshot.current === null) savedSnapshot.current = snapshot
+  /* What the server holds, in payload shape. A save sends only the keys that
+     differ from this (SETUP-028: a one-field edit used to answer thirty
+     questions), and a successful save re-bases it (SETUP-021). Seeded lazily
+     from the first payload, which is built from the loaded business. */
+  const savedPayload = React.useRef<Record<string, unknown> | null>(null)
   const dirty = snapshot !== savedSnapshot.current
   React.useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
   React.useEffect(() => () => onDirtyChange?.(false), [onDirtyChange])
 
-  const save = useMutation({
-    mutationFn: () => {
-      // Validate the shaped fields client-side (the server 400s otherwise).
-      const wh: Record<string, { open?: string; close?: string; closed?: boolean }> = {}
-      for (const [key] of DAYS) {
-        const d = hours[key]
-        if (d.closed) wh[key] = { closed: true }
-        else if (d.open || d.close) {
-          if (!isHHMM(d.open) || !isHHMM(d.close)) throw new Error(`Working hours for ${key.toUpperCase()} must be HH:MM (24-hour).`)
-          wh[key] = { open: d.open, close: d.close }
-        }
+  /** The full payload this screen owns, from what is on screen. Throws a readable Error on a bad time. */
+  const buildPayload = (): Partial<ApiBusiness> => {
+    // Validate the shaped fields client-side (the server 400s otherwise).
+    const wh: Record<string, { open?: string; close?: string; closed?: boolean }> = {}
+    for (const [key] of DAYS) {
+      const d = hours[key]
+      if (d.closed) wh[key] = { closed: true }
+      else if (d.open || d.close) {
+        if (!isHHMM(d.open) || !isHHMM(d.close)) throw new Error(`Working hours for ${key.toUpperCase()} must be HH:MM (24-hour).`)
+        wh[key] = { open: d.open, close: d.close }
       }
-      if (closing.trim() && !isHHMM(closing.trim())) throw new Error("Event closing time must be HH:MM (24-hour).")
+    }
+    if (closing.trim() && !isHHMM(closing.trim())) throw new Error("Event closing time must be HH:MM (24-hour).")
 
-      const payload: Partial<ApiBusiness> = {
-        ownerName: ownerName.trim() || null,
-        ownerBio: ownerBio.trim() || null,
-        backupArrangement: backup.trim() || null,
-        yearsInBusiness: numOrNull(years),
-        weddingsCompleted: numOrNull(weddings),
-        languagesSpoken: languages,
-        hasInsurance,
-        awards: awards.map((a) => ({ title: (a.title ?? "").trim(), year: a.year ?? null })).filter((a) => a.title),
-        press: press.map((p) => ({ title: (p.title ?? "").trim(), url: (p.url ?? "").trim() })).filter((p) => p.title),
-        /* Rows with neither a name nor a contact are dropped here rather than
-           sent — the server drops them anyway (validateReferences), and a row
-           that vanishes on save without explanation is worse than one that was
-           never sent. */
-        references: references
-          .map((r) => ({
-            customerName: (r.customerName ?? "").trim(),
-            weddingDate: (r.weddingDate ?? "") || null,
-            contact: (r.contact ?? "").trim(),
-          }))
-          .filter((r) => r.customerName || r.contact)
-          .slice(0, MAX_REFERENCES),
-        acceptsCash: cash,
-        acceptsBankTransfer: bank,
-        providesTaxInvoice: taxInvoice,
-        whatsappNumber: whatsapp.trim() || null,
-        cityCovered: cities,
-        guestCountLabel: guestLabel.trim() || null,
-        dietaryOptions: dietary,
-        workingHours: Object.keys(wh).length ? wh : null,
-        venueType,
-        comfortCapacity: numOrNull(caps.comfortCapacity),
-        seatedCapacity: numOrNull(caps.seatedCapacity),
-        standingCapacity: numOrNull(caps.standingCapacity),
-        indoorCapacity: numOrNull(caps.indoorCapacity),
-        outdoorCapacity: numOrNull(caps.outdoorCapacity),
-        amenitiesJson: amenities,
-        legalGuestCap: numOrNull(legalCap),
-        eventClosingTime: closing.trim() || null,
-        oneDishPolicy: oneDish,
-        outsideVendorsAllowed: outsideAllowed,
-        outsideVendorFee: numOrNull(outsideFee),
-        requiresPermit,
-        permitChecklistUrl: permitUrl.trim() || null,
+    const payload: Partial<ApiBusiness> = {
+      ownerName: ownerName.trim() || null,
+      ownerBio: ownerBio.trim() || null,
+      backupArrangement: backup.trim() || null,
+      yearsInBusiness: numOrNull(years),
+      weddingsCompleted: numOrNull(weddings),
+      languagesSpoken: languages,
+      hasInsurance,
+      awards: awards.map((a) => ({ title: (a.title ?? "").trim(), year: a.year ?? null })).filter((a) => a.title),
+      press: press.map((p) => ({ title: (p.title ?? "").trim(), url: (p.url ?? "").trim() })).filter((p) => p.title),
+      /* Rows with neither a name nor a contact are dropped here rather than
+         sent — the server drops them anyway (validateReferences), and a row
+         that vanishes on save without explanation is worse than one that was
+         never sent. */
+      references: references
+        .map((r) => ({
+          customerName: (r.customerName ?? "").trim(),
+          weddingDate: (r.weddingDate ?? "") || null,
+          contact: (r.contact ?? "").trim(),
+        }))
+        .filter((r) => r.customerName || r.contact)
+        .slice(0, MAX_REFERENCES),
+      acceptsCash: cash,
+      acceptsBankTransfer: bank,
+      providesTaxInvoice: taxInvoice,
+      whatsappNumber: whatsapp.trim() || null,
+      cityCovered: cities,
+      guestCountLabel: guestLabel.trim() || null,
+      dietaryOptions: dietary,
+      workingHours: Object.keys(wh).length ? wh : null,
+      venueType,
+      comfortCapacity: numOrNull(caps.comfortCapacity),
+      seatedCapacity: numOrNull(caps.seatedCapacity),
+      standingCapacity: numOrNull(caps.standingCapacity),
+      indoorCapacity: numOrNull(caps.indoorCapacity),
+      outdoorCapacity: numOrNull(caps.outdoorCapacity),
+      amenitiesJson: amenities,
+      legalGuestCap: numOrNull(legalCap),
+      eventClosingTime: closing.trim() || null,
+      oneDishPolicy: oneDish,
+      outsideVendorsAllowed: outsideAllowed,
+      outsideVendorFee: numOrNull(outsideFee),
+      requiresPermit,
+      permitChecklistUrl: permitUrl.trim() || null,
+    }
+    return payload
+  }
+
+  /* The payload as loaded (SETUP-021/028): built once from the loaded business. */
+  if (savedPayload.current === null) {
+    try { savedPayload.current = buildPayload() as Record<string, unknown> } catch { savedPayload.current = {} }
+  }
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const full = buildPayload()
+      // Only what the vendor moved (SETUP-028). Anything else - including every
+      // yes/no they never answered - is left exactly as the record has it.
+      const patch = changedPatch(full as Record<string, unknown>, savedPayload.current ?? {})
+      if (Object.keys(patch).length > 0) {
+        await BusinessesAPI.update(b.id, patch as Partial<ApiBusiness>)
       }
-      return BusinessesAPI.update(b.id, payload)
+      return { full, snap: snapshot }
     },
-    onSuccess: () => {
-      // What is on screen is now what is stored, so the guard should stand down.
-      savedSnapshot.current = snapshot
+    onSuccess: ({ full, snap }) => {
+      // What is on screen is now what is stored, so the guard should stand down,
+      // and the next save diffs against THIS, not against the page-load values.
+      savedPayload.current = full as Record<string, unknown>
+      savedSnapshot.current = snap
       onDirtyChange?.(false)
       toast.success("Listing content saved")
       onSaved?.()
@@ -585,11 +613,15 @@ function Field({ id, label, hint, help, group, children }: {
   )
 }
 
-function SwitchRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+function SwitchRow({ label, checked, onChange }: { label: string; checked: boolean | null; onChange: (v: boolean) => void }) {
   return (
     <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2.5 hover:bg-accent/50">
-      <span className="text-sm font-medium">{label}</span>
-      <Switch checked={checked} onCheckedChange={onChange} aria-label={label} />
+      <span className="text-sm font-medium">
+        {label}
+        {/* SETUP-028 read side: an unanswered question is not a "No". */}
+        {checked === null && <span className="ml-2 text-[11px] font-normal text-muted-foreground" data-testid="unanswered">Not answered yet</span>}
+      </span>
+      <Switch checked={checked === true} onCheckedChange={onChange} aria-label={label} />
     </label>
   )
 }

@@ -114,14 +114,12 @@ has("the duplicate warning is shown", "components/dashboard/mainScreens/leads/ar
 has("create goes through createWithMeta", "components/dashboard/mainScreens/leads/artifact/leads-artifact.tsx", "LeadAPI.createWithMeta(");
 
 // ── LEADS-021 / 026 / 036, SETUP-043 ──
-has("customer book reads every page", "components/dashboard/mainScreens/customers/artifact/customers-artifact.tsx", "CustomersAPI.getEvery()");
+has("customer book reads every page of 100 (CONCURRENCY-015 walker, merged)", "components/dashboard/mainScreens/customers/artifact/customers-artifact.tsx", "CustomersAPI.getAll(page, 100)");
 has("customer tile uses the server total", "components/dashboard/mainScreens/customers/artifact/customers-artifact.tsx", "buildContent(list, data.total)");
 has("'new this month' is first_seen", "components/dashboard/mainScreens/customers/artifact/customers-artifact.tsx", "isThisMonthInKarachi(c.first_seen)");
 has("API maps firstSeenAt", "lib/api/dashboard.ts", "first_seen: (c.firstSeenAt as string)");
-has("getEvery pages of 100", "lib/api/dashboard.ts", "CustomersAPI.getAll(p, 100)");
 has("an unknown customer is 'not found', not an error banner", "lib/api/dashboard.ts", "=== 404) return null");
-has("notifications read every page", "components/dashboard/mainScreens/notifications/artifact/notifications-artifact.tsx", "while (more && p < MAX_PAGES)");
-has("notifications unread count is the server's", "components/dashboard/mainScreens/notifications/artifact/notifications-artifact.tsx", "NotificationAPI.getUnreadCount()");
+has("notifications read every page and keep the server total (CONCURRENCY-015 walker, merged)", "components/dashboard/mainScreens/notifications/artifact/notifications-artifact.tsx", "serverTotal");
 
 // ── LEADS-040 / FLAGGED-013/014/055 / LEADS-042 ──
 {
@@ -199,7 +197,7 @@ eq("fold: tatweel / zero-width / bidi", foldText("عـل‌ی‏"), ALI);
 eq("fold: Latin only lower-cased", foldText("  Ali KHAN "), "ali khan");
 eq("fold: null", foldText(null), "");
 has("shell search folds", "components/dashboard/mainScreens/artifact/artifact-shell.tsx", "foldText(el.textContent).includes(query)");
-has("pager search folds", "components/dashboard/mainScreens/artifact/artifact-shell.tsx", "foldText(tr.textContent).includes(q)");
+has("pager search folds", "components/dashboard/mainScreens/artifact/artifact-shell.tsx", "foldText((tr.textContent || \"\") + \" \" + (tr.dataset.search || \"\")).includes(q)");
 has("customers search folds", "components/dashboard/mainScreens/customers/artifact/customers-artifact.tsx", "foldText(tr.dataset.key).includes(q)");
 
 // ── CUSTOMER-062 ──

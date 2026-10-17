@@ -15,6 +15,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { FunctionSheetAPI, variantsAvailable, type FunctionSheet, type FunctionSheetState, type PdfVariant, type BeoData, type BeoTimelineRow, STATE_LABELS } from "@/lib/api/functionSheets"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
+import { useScopedBusinessId } from "@/hooks/use-scoped-business-id"
 import { useArtifactShell, pkNum, escHtml, initialsOf, initTablePager, loadPref, savePref, openDrawer, closeDrawer, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
 import { BookingAPI } from "@/lib/api/bookings"
@@ -133,7 +134,8 @@ function readBeo(s: ShadowRoot): BeoData {
   })).filter((r) => r.time || r.activity)
   return {
     spaces: val("beo-spaces") || undefined,
-    guaranteedHeadcount: headRaw ? Number(headRaw) : null,
+    // OPS-067: a typed -20 passed the input's min and was saved; a headcount is a whole number >= 0
+    guaranteedHeadcount: headRaw && Number.isFinite(Number(headRaw)) ? Math.max(0, Math.floor(Number(headRaw))) : null,
     setupTime: val("beo-setup") || undefined,
     teardownTime: val("beo-teardown") || undefined,
     timeline,
@@ -200,7 +202,8 @@ export function FunctionSheetsArtifact() {
   const qc = useQueryClient()
   const router = useRouter()
   const activeBusinessId = useActiveBusinessId()
-  const bizRef = React.useRef(activeBusinessId); bizRef.current = activeBusinessId
+  const scopedBusinessId = useScopedBusinessId()
+  const bizRef = React.useRef(scopedBusinessId); bizRef.current = scopedBusinessId
   const { data, isError } = useQuery({ queryKey: ["fsheets-art"], queryFn: () => FunctionSheetAPI.list({}) })
   const list = React.useMemo(() => (data?.functionSheets ?? []) as FunctionSheet[], [data])
   const summary = data?.summary ?? { byState: {}, totalGrand: 0 }

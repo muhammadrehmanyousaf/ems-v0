@@ -33,6 +33,8 @@ export type MoneyRow = {
   bookingDetails?: Array<{
     totalAmount?: number | string | null;
     downPayment?: number | string | null;
+    /** WP36: the line's own state; a declined line is no longer part of what the booking is worth. */
+    status?: string | null;
   }> | null;
 };
 
@@ -68,7 +70,8 @@ export function bookedOn(row: MoneyRow | null | undefined): number {
     if (Number.isFinite(bill)) return Math.max(0, bill);
   }
   const lines = row.bookingDetails || [];
-  const fromLines = lines.reduce((sum, d) => sum + amount(d?.totalAmount), 0);
+  // WP36 / LOGIC-026: a DECLINED line left the booking (the server also reads it as 0); never add it back
+  const fromLines = lines.reduce((sum, d) => sum + (String(d?.status ?? '') === 'declined' ? 0 : amount(d?.totalAmount)), 0);
   return Math.max(0, fromLines > 0 ? fromLines : amount(row.totalAmount));
 }
 

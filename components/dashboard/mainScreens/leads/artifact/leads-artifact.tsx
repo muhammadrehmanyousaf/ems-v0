@@ -289,7 +289,7 @@ function leadFormHtml(l?: Lead, prefillDate?: string, businesses?: BizLite[], cu
   const bizOpts = (businesses || []).map((b) => `<option value="${b.id}"${b.id === selBiz ? " selected" : ""}>${escHtml(b.name || `Venue #${b.id}`)}</option>`).join("")
   // WP39 / LEADS-008: prefilled in Karachi wall time (the stored instant sliced as text was the UTC time, five hours early)
   const fuVal = followUpInputValue(lx.nextFollowUpAt)
-  return `<input type="hidden" id="ld-id" value="${l ? l.id : ""}"/>
+  return `<input type="hidden" id="ld-id" value="${l ? l.id : ""}"/><input type="hidden" id="ld-upd" value="${l ? escHtml(l.updatedAt || "") : ""}"/>
     <div class="dfield"><label class="dlabel">Naam <span class="req">*</span></label><input id="ld-name" value="${v(l?.contactName)}" placeholder="Customer ka naam"/></div>
     <div class="dfield row2"><div><label class="dlabel">Phone</label><input id="ld-phone" value="${v(l?.contactPhone)}" placeholder="0300…"/></div><div><label class="dlabel">WhatsApp</label><input id="ld-wa" value="${v(l?.contactWhatsapp)}" placeholder="agar alag ho"/></div></div>
     <div class="dfield"><label class="dlabel">Email</label><input id="ld-email" value="${v(l?.contactEmail)}" placeholder="optional"/></div>
@@ -332,7 +332,7 @@ export function LeadsArtifact() {
   const bizRef = React.useRef(bizId); bizRef.current = bizId
   const bizList = React.useMemo(() => ((businesses ?? []) as { id: number; name?: string | null }[]).map((b) => ({ id: b.id, name: b.name })), [businesses])
   const bizListRef = React.useRef(bizList); bizListRef.current = bizList
-  const { data, isError } = useQuery({ queryKey: ["leads-artifact"], queryFn: () => LeadAPI.list({}) })
+  const { data, isError } = useQuery({ queryKey: ["leads-artifact"], queryFn: () => LeadAPI.listAll({}) })
   const leads = data?.leads ?? []
   const leadsRef = React.useRef(leads); leadsRef.current = leads
   const searchParams = useSearchParams()
@@ -455,7 +455,8 @@ export function LeadsArtifact() {
               if (orig && !Object.keys(diff).length && !bizChanged) { toast.info("Kuch badla nahi"); closeDrawer(s); return }
               // a field the vendor emptied is CLEARED (null), not silently left out of the request
               for (const k of Object.keys(diff)) if ((diff as Record<string, unknown>)[k] === undefined) (diff as Record<string, unknown>)[k] = null
-              await LeadAPI.update(editId, { ...diff, ...(bizChanged ? { businessId: bizPick } : {}) } as UpdateLeadInput)
+              // CONCURRENCY-009: the updatedAt the drawer was opened on; the server refuses the save if the lead moved on
+              await LeadAPI.update(editId, { ...diff, ...(bizChanged ? { businessId: bizPick } : {}), ...(val("ld-upd") ? { expectedUpdatedAt: val("ld-upd") } : {}) } as UpdateLeadInput)
             } else {
               if (!bizPick) { toast.error("Venue select karein"); btn.disabled = false; return }
               const made = await LeadAPI.createWithMeta({ businessId: bizPick, ...common } as CreateLeadInput)
@@ -467,7 +468,7 @@ export function LeadsArtifact() {
             const elsewhere = bizPick && bizRef.current != null && Number(bizRef.current) !== bizPick
             if (dupWarn) toast.warning(`Is number ki lead pehle se khuli hai: ${dupWarn}. Dobara to nahi?`)
             toast.success(editId ? "Lead update ho gaya" : elsewhere ? `Naya lead ban gaya — ${bizListRef.current.find((b) => b.id === bizPick)?.name || "doosre venue"} mein (sidebar se wo venue chunein)` : "Naya lead ban gaya"); closeDrawer(s); qc.invalidateQueries({ queryKey: ["leads-artifact"] })
-          } catch (err: unknown) { if (!showLeadFieldError(s, err)) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua"); btn.disabled = false; btn.textContent = editId ? "Update karein" : "Lead add karein" }
+          } catch (err: unknown) { if (!showLeadFieldError(s, err)) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua"); if ((err as { response?: { status?: number } })?.response?.status === 409) qc.invalidateQueries({ queryKey: ["leads-artifact"] }); btn.disabled = false; btn.textContent = editId ? "Update karein" : "Lead add karein" }
           return
         }
         const btn = t.closest(".tab") as HTMLElement | null

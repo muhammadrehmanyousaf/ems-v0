@@ -13,6 +13,7 @@ import {
   packageIsAtMinGuarantee,
   packageIncludesFood,
 } from "@/lib/pricing/package"
+import { quantityBounds, clampQuantity } from "@/lib/booking/quantity-bounds"
 
 interface Props {
   formData: BookingFormData
@@ -132,8 +133,12 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
   const togglePkg = (id: string) =>
     updateFormData({ selectedPackage: selectedId === id ? "" : id })
 
+  // VENDORTYPES-022: the stepper stays inside what the vendor registered (a fleet of 3 cannot be asked for 5; a printer's
+  // minimum order is the floor). The server enforces the same ceiling (UNIT_STOCK_MODE).
+  const selectedPkgForQty = (venuePackages as any[]).find((p: any) => String(p.id) === selectedId)
+  const qtyBounds = quantityBounds(selectedPkgForQty, { isCarRental, minOrder: isWeddingStationery ? Number(venue?.minCapacity) || 0 : 0 })
   const adjustQty = (n: number) => {
-    const next = Math.max(1, qty + n)
+    const next = clampQuantity(qty + n, qtyBounds)
     updateFormData({ vehicleQuantity: next })
   }
 
@@ -271,7 +276,7 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
                     <Minus className="h-4 w-4" aria-hidden />
                   </button>
                   <span className="w-10 text-center font-bridal text-[15px] font-medium tabular-nums text-bridal-charcoal" aria-live="polite">{qty}</span>
-                  <button type="button" onClick={() => adjustQty(1)} aria-label="Increase" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-bridal-charcoal hover:bg-bridal-blush/45 motion-safe:active:scale-95">
+                  <button type="button" onClick={() => adjustQty(1)} disabled={qtyBounds.max != null && qty >= qtyBounds.max} aria-label="Increase" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-bridal-charcoal hover:bg-bridal-blush/45 motion-safe:active:scale-95">
                     <Plus className="h-4 w-4" aria-hidden />
                   </button>
                 </div>

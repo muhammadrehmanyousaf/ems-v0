@@ -35,6 +35,7 @@ import {
 import { slotText } from "@/lib/booking/slot-vocabulary"
 // WW-RATECARD 10.7 — a vendor whose rate card IS a unit (cars, chairs, cards).
 import { readUnitConfig, sellsByTheUnit, unitLineFor, describeUnitQty } from "@/lib/pricing/per-unit"
+import { venueOffersPerHeadPackage } from "@/lib/pricing/package"
 // WW-PRICING-OVERHAUL — single source for per-head menu math (must match server).
 import {
   menuChargeFor,
@@ -189,7 +190,7 @@ export default function ReviewStep({
     "Wedding venue", "Catering", "Mithai and sweets",
     "Wedding cakes", "Live cooking stall",
   ])
-  const showGuests = GUEST_COUNT_VENDOR_TYPES.has(venue?.vendor?.vendorType || "") && (venue?.maxCapacity || venue?.minCapacity)
+  const showGuests = (GUEST_COUNT_VENDOR_TYPES.has(venue?.vendor?.vendorType || "") && (venue?.maxCapacity || venue?.minCapacity)) || venueOffersPerHeadPackage(venue as any)
 
   // WW-PKG-UNIT — kept for the "Rs X per head/event" caption below; the money
   // itself now comes from `composeLineTotal`, never from this raw figure.

@@ -11,6 +11,8 @@
  * (optionally ?trade=kitchen&id=6). Loads the latest sheet (or ?id=).
  */
 
+import { storedSectionRows } from "@/lib/dashboard/trade-ops-config"
+import { pickDefaultSheet } from "@/lib/function-sheets/default-sheet"
 import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
@@ -61,7 +63,7 @@ function buildInitialState(sheet: FunctionSheet | null): RowState {
   for (const t of TRADE_OPS) {
     const field = (sheet?.[t.jsonField as keyof FunctionSheet] || {}) as any
     state[t.trade] = {}
-    for (const s of t.sections) state[t.trade][s.key] = (Array.isArray(field?.[s.key]) ? field[s.key] : []).map((r: any) => ({ ...r, _rid: newRid() }))
+    for (const s of t.sections) state[t.trade][s.key] = storedSectionRows(field, s).map((r: any) => ({ ...r, _rid: newRid() }))
   }
   return state
 }
@@ -74,7 +76,7 @@ export function TradeOperationsHubView() {
       const idParam = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("id") : null
       if (idParam) return FunctionSheetAPI.get(Number(idParam))
       const list = await FunctionSheetAPI.list()
-      const first = list?.functionSheets?.[0]
+      const first = pickDefaultSheet(list?.functionSheets)
       return first ? FunctionSheetAPI.get(first.id) : null
     },
   })

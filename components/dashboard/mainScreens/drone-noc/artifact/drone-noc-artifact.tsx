@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { DroneNocAPI, type DroneNOC, type PermitStatus, type PermitType, type IssuingAuthority, type CreatePermitInput } from "@/lib/api/droneNoc"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
+import { useScopedBusinessId } from "@/hooks/use-scoped-business-id"
 import { useArtifactShell, escHtml, initTablePager, loadPref, savePref, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const ST_LABEL: Record<PermitStatus, string> = { pending: "Zeer-e-ghaur", approved: "Manzoor", rejected: "Radd", cancelled: "Cancel", expired: "Khatam", expiring_soon: "Jald khatam" }
@@ -102,7 +103,8 @@ export function DroneNocArtifact() {
   const { shadowRef, ready } = useArtifactShell(hostRef, { activeHref: "/dashboard/drone-noc", crumbBold: "Compliance", crumbSub: "Drone NOC", extraCss: EXTRA_CSS })
   const qc = useQueryClient()
   const activeBusinessId = useActiveBusinessId()
-  const bizRef = React.useRef(activeBusinessId); bizRef.current = activeBusinessId
+  const scopedBusinessId = useScopedBusinessId()
+  const bizRef = React.useRef(scopedBusinessId); bizRef.current = scopedBusinessId
   const { data, isError, refetch } = useQuery({ queryKey: ["drone-art", activeBusinessId], queryFn: () => DroneNocAPI.list(activeBusinessId != null ? { businessId: activeBusinessId } : {}) })
   const list = React.useMemo(() => (data?.permits ?? []) as DroneNOC[], [data])
   const [filter, setFilter] = React.useState(() => loadPref("tab:drone-noc", "all"))

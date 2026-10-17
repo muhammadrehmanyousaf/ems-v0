@@ -73,11 +73,13 @@ import { RefundSettlementCard } from "@/components/bookings/refund-settlement-ca
 import { getRefundPreview, requestCancellation, type RefundPreview } from "@/lib/api/bookingOrder";
 import { refundParts, refundPin } from "@/lib/refund-total";
 import { bookingSlotText } from "@/lib/booking/slot-vocabulary";
+import { useLiveRefresh } from "@/lib/hooks/useLiveRefresh";
 import { bookingMoney } from "@/lib/utils/booking-money";
 import { PaymentInstructionsAPI } from "@/lib/api/paymentInstructions";
 import { paymentNotDueYet, customerDepositLine } from "@/lib/payment-status";
 import { BookingAPI, type DepositPosition } from "@/lib/api/bookings";
 import { dayTextCustomer } from "@/lib/utils/qist";
+import { loginUrl } from "@/lib/auth/go-login"
 import { cancelRouteFor, cancelErrorMessage, isPaymentAlreadyReceived, isClosedBookingStatus } from "@/lib/bookings/cancel-route";
 
 interface BookingDetail {
@@ -250,6 +252,8 @@ export default function BookingDetailPage() {
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [isLoadingBooking, setIsLoadingBooking] = useState(true);
+  // CUSTOMER-059 - "couldn't load" is not "not found".
+  const [loadFailed, setLoadFailed] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   // QA #4 — refund the customer would receive if they cancel now (per the
@@ -360,6 +364,17 @@ export default function BookingDetailPage() {
     };
   }, [user, bookingId]);
 
+  // CUSTOMER-036 - follow the venue's payment without a reload (socket + 60 s poll).
+  useLiveRefresh(() => {
+    axiosInstance
+      .get(`${BACKEND_URL}api/v1/bookings/simple-user-bookings`)
+      .then((res) => {
+        const found = (res.data?.data || []).find((b: Booking) => String(b.id) === String(bookingId));
+        if (found) setBooking(found);
+      })
+      .catch(() => { /* best-effort */ });
+  }, !!user && !!bookingId);
+
   const fetchBooking = async () => {
     setIsLoadingBooking(true);
     try {
@@ -369,9 +384,12 @@ export default function BookingDetailPage() {
       const found = (res.data?.data || []).find(
         (b: Booking) => String(b.id) === String(bookingId),
       );
+      setLoadFailed(false);
       if (found) setBooking(found);
-      else throw new Error("not found");
+      // else: the list loaded and this booking is not in it - that IS "not found".
     } catch {
+      // CUSTOMER-059 - a network blip / 5xx is not "this booking was removed".
+      setLoadFailed(true);
       toast({
         title: "Error",
         description: "Failed to load booking details.",
@@ -541,8 +559,25 @@ export default function BookingDetailPage() {
           title="Sign in required"
           description="Please log in to view booking details."
           action={
-            <Button onClick={() => router.push("/login")} size="sm">
+            <Button onClick={() => router.push(loginUrl())} size="sm">
               Log in
+            </Button>
+          }
+        />
+      </PageContainer>
+    );
+  }
+
+  if (!booking && loadFailed) {
+    return (
+      <PageContainer>
+        <EmptyState
+          icon={<AlertTriangle className="size-6" />}
+          title="We couldn't load this booking"
+          description="This looks like a connection problem, not a removed booking. Try again in a moment."
+          action={
+            <Button onClick={() => void fetchBooking()} size="sm" data-testid="booking-retry">
+              Try again
             </Button>
           }
         />
@@ -924,6 +959,11 @@ export default function BookingDetailPage() {
                         <p className="font-display italic text-[18px] text-foreground">
                           {detail.business?.name}
                         </p>
+                        {(detail as { status?: string }).status === "declined" ? (
+                          <p className="mt-1 inline-block rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
+                            Could not take your booking
+                          </p>
+                        ) : null}
                         {(detail.business?.city || detail.business?.subArea) ? (
                           <p className="inline-flex items-center gap-1 text-[11.5px] text-muted-foreground mt-0.5">
                             <MapPin className="size-3" />
@@ -934,8 +974,14 @@ export default function BookingDetailPage() {
                         ) : null}
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="font-display italic text-[18px] text-foreground tabular-nums leading-none">
-                          {fmt(detail.totalAmount)}
+                        <p
+                          className={`font-display italic text-[18px] text-foreground tabular-nums leading-none${
+                            (detail as { status?: string }).status === "declined" ? " line-through opacity-60" : ""
+                          }`}
+                        >
+                          {(detail as { status?: string }).status === "declined"
+                            ? fmt((detail as { declinedAmount?: number | string }).declinedAmount ?? 0)
+                            : fmt(detail.totalAmount)}
                         </p>
                         <p className="text-[11px] text-muted-foreground mt-1">
                           Down{" "}

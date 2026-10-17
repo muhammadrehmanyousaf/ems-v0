@@ -8,7 +8,7 @@
 
 import * as React from "react"
 import { useQuery } from "@tanstack/react-query"
-import { listAuditLogs, type AuditLog } from "@/lib/api/adminQueue"
+import { listAllAuditLogs, type AuditLog } from "@/lib/api/adminQueue"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
@@ -36,9 +36,15 @@ const isToday = (v?: string | null) => {
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
 }
 
-const actorLabel = (l: AuditLog) => (l.actorUserId != null ? `User #${l.actorUserId}` : "System")
-const targetLabel = (l: AuditLog) =>
-  l.targetType ? `${cap(l.targetType)}${l.targetId != null ? ` #${l.targetId}` : ""}` : "—"
+// PUBLIC-046 - names when the server sent them (it resolves them for the rows shown); ids otherwise.
+let ACTOR_NAMES: Record<string, string> = {}
+let TARGET_NAMES: Record<string, string> = {}
+const actorLabel = (l: AuditLog) => (l.actorUserId != null ? ACTOR_NAMES[String(l.actorUserId)] || `User #${l.actorUserId}` : "System")
+const targetLabel = (l: AuditLog) => {
+  if (!l.targetType) return "—"
+  const named = TARGET_NAMES[`${String(l.targetType).toLowerCase()}:${l.targetId}`]
+  return named ? `${cap(l.targetType)}: ${named}` : `${cap(l.targetType)}${l.targetId != null ? ` #${l.targetId}` : ""}`
+}
 
 export function AuditLogsRedesignedView() {
   const [search, setSearch] = React.useState("")
@@ -46,8 +52,11 @@ export function AuditLogsRedesignedView() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["audit-logs-redesigned"],
-    queryFn: () => listAuditLogs({}),
+    // The screen read ONE default page (newest 100): search, export and the cards covered only those rows.
+    queryFn: () => listAllAuditLogs({}),
   })
+  ACTOR_NAMES = data?.actorNames ?? {}
+  TARGET_NAMES = data?.targetNames ?? {}
 
   const all = data?.logs ?? []
   const rows = React.useMemo(() => {
@@ -58,10 +67,11 @@ export function AuditLogsRedesignedView() {
     )
   }, [all, search])
 
-  const total = num(data?.count) || all.length
-  const todayCount = all.filter((l) => isToday(l.at)).length
-  const distinctActions = new Set(all.map((l) => l.action).filter(Boolean)).size
-  const distinctActors = new Set(all.map((l) => (l.actorUserId != null ? l.actorUserId : "system"))).size
+  // Cards: the server's counts over the whole log when it sends them, else computed from every row loaded.
+  const total = num(data?.summary?.total) || num(data?.count) || all.length
+  const todayCount = data?.summary ? num(data.summary.today) : all.filter((l) => isToday(l.at)).length
+  const distinctActions = data?.summary ? num(data.summary.distinctActions) : new Set(all.map((l) => l.action).filter(Boolean)).size
+  const distinctActors = data?.summary ? num(data.summary.distinctActors) : new Set(all.map((l) => (l.actorUserId != null ? l.actorUserId : "system"))).size
 
   const columns: Column<AuditLog>[] = [
     {

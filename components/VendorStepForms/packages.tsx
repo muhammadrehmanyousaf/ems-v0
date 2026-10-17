@@ -56,6 +56,8 @@ const BUSINESS_CATEGORIES: Record<string, { id: string; label: string }[]> = {
 };
 
 const MENU_TYPES = ["Catering"];
+// WP36 / VENDORTYPES-002: what these types enter is a price PER HEAD (the server stores it as a per-head package)
+const PER_HEAD_TYPES = ["Catering", "Live cooking stall"];
 
 interface PackagesProps {
     setErrors: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
@@ -193,7 +195,7 @@ const Packages = ({ setErrors, errors }: PackagesProps) => {
                         </div>
                         <div className="space-y-1.5">
                             <FieldLabel help="packagePrice" className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">
-                                Price (Rs.)
+                                {PER_HEAD_TYPES.includes(businessType as string) ? "Price per head (Rs.)" : "Price (Rs.)"}
                             </FieldLabel>
                             <Input
                                 type="number"

@@ -10,6 +10,7 @@ import { useFormContext } from '@/lib/context/form-context'
 import React, { useEffect, useState } from 'react'
 import { BiFemale } from 'react-icons/bi'
 import { FaCircle, FaFemale, FaMale } from 'react-icons/fa'
+import MaxGuestsField from '@/components/VendorStepForms/components/max-guests-field'
 
 interface Errors {
     subBusinessType?: string;
@@ -154,6 +155,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                         />
                         {errors.description && <p className="text-bridal-coral-dark text-[12px] mt-1">{errors.description}</p>}
                     </div>
+                    <MaxGuestsField />
                 </div>
             </SectionCard>
 

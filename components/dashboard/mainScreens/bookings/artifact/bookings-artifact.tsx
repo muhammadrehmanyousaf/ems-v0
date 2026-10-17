@@ -9,10 +9,10 @@
 import * as React from "react"
 import { useSearchParams } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
-import { useFetchData } from "@/hooks/use-fetch-data"
+import { useFetchAllPages } from "@/hooks/use-fetch-all-pages"
 import { bookedOn, receivedOn, outstandingOn, isCancelledBooking } from "@/lib/utils/booking-money"
 import { spaceNameOf } from "@/lib/utils/booking-space"
-import { fmtYmd } from "@/lib/utils/ymd"
+import { fmtYmd, ymdOf } from "@/lib/utils/ymd"
 import { bookingSlotText } from "@/lib/booking/slot-vocabulary"
 import { bookingStatusLabel, bookingStatusTone as tone } from "@/lib/booking-status-label"
 import type { BookingData } from "@/lib/dashboard-types"
@@ -22,7 +22,7 @@ import { toast } from "sonner"
 import { BookingsAPI } from "@/lib/api/dashboard"
 import { invalidateMoney } from "@/lib/query/money-keys"
 import { canMarkCompleted, statusBucket } from "@/lib/utils/booking-completion"
-import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, openConfirm, initTablePager, setPagerFilter, restoreTab, savePref, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, openConfirm, initTablePager, setPagerFilter, restoreTab, savePref, errorBannerHtml, registerTableExport } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { openRecordPaymentDrawer } from "@/components/dashboard/mainScreens/artifact/record-payment"
 import { openBookingForm } from "@/components/dashboard/mainScreens/artifact/booking-form"
 
@@ -60,7 +60,8 @@ function rowHtml(b: BookingData): string {
       ? ""
       : (paid >= total && total > 0 ? `<span class="sub ok">poora mila</span>` : "")
   const bar = total > 0 ? `<div class="paybar"><span style="width:${Math.min(100, pct)}%"></span></div>` : `<div class="paybar"><span class="zero"></span></div>`
-  return `<tr data-nav-btn="/dashboard/bookings/${b.id}" data-status="${bkt}" data-due="${due}">
+  // BOOKINGS-011: the phone is searchable though it is not drawn in the row.
+  return `<tr data-nav-btn="/dashboard/bookings/${b.id}" data-bk-id="${b.id}" data-status="${bkt}" data-due="${due}" data-search="${escHtml(phone)}">
     <td><div class="c-couple"><span class="ava">${escHtml(initialsOf(b.customerName))}</span><div><div class="cc-nm">${escHtml(b.customerName || "—")}</div><div class="cc-ev">${escHtml(serviceLabel(b) || "Booking")} · #${b.id}</div></div></div></td>
     <td class="td-date">${escHtml(d.main)}${d.sub ? ` <div class="sub">${escHtml(d.sub)}</div>` : ""}</td>
     <td class="td-mut">${escHtml(hall)}</td>
@@ -71,6 +72,26 @@ function rowHtml(b: BookingData): string {
     <td><button class="rowmenu" aria-label="Actions" ${kebabAttrs}>${menuSvg}</button></td>
   </tr>`
 }
+
+/** Clean export columns from the data model, not the table's text (BOOKINGS-012). */
+export function bookingExportRow(b: BookingData): (string | number)[] {
+  const slot = bookingSlotText(b, "vendor")
+  return [
+    b.id,
+    b.customerName || "",
+    (b as { customerPhone?: string }).customerPhone || "",
+    serviceLabel(b),
+    ymdOf(b.bookingDate) || "",
+    slot || "",
+    spaceNameOf(b) || "",
+    b.guestCount ?? "",
+    Math.round(bookedOn(b)),
+    Math.round(receivedOn(b)),
+    Math.round(outstandingOn(b)),
+    bookingStatusLabel(b) || b.status || "",
+  ]
+}
+export const BOOKING_EXPORT_HEAD = ["Booking #", "Customer", "Phone", "Event", "Event date", "Slot", "Hall", "Guests", "Total", "Received", "Outstanding", "Status"]
 
 function buildContent(rows: BookingData[], total: number, truncated: boolean): string {
   const counts = { all: rows.length, confirmed: 0, pending: 0, due: 0, done: 0 }
@@ -83,7 +104,7 @@ function buildContent(rows: BookingData[], total: number, truncated: boolean): s
   const body = rows.length ? rows.map(rowHtml).join("") : ""
   return `
   <div class="head">
-    <div><h1>Bookings</h1><div class="sub">Saari shaadiyan aur events — <b>${total}</b> total${truncated ? " (pehle 50 dikhaye)" : ""}.</div></div>
+    <div><h1>Bookings</h1><div class="sub">Saari shaadiyan aur events — <b>${total}</b> total${truncated ? ` (pehle ${rows.length} dikhaye)` : ""}.</div></div>
     <div class="head-actions">
       <button class="btn btn-ghost" data-act="export-table"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Export</button>
       <button class="btn btn-primary" data-booking-new><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> Nayi booking</button>
@@ -121,14 +142,18 @@ export function BookingsArtifact() {
   const bizRef = React.useRef(bizId); bizRef.current = bizId
   const bizList = React.useMemo(() => ((businesses ?? []) as { id: number; name?: string | null }[]).map((b) => ({ id: b.id, name: b.name })), [businesses])
   const bizListRef = React.useRef(bizList); bizListRef.current = bizList
-  const { data, isError, isLoading } = useFetchData({
+  // BOOKINGS-008/010/011/012: every page, not the first 100 (the endpoint caps limit at 100). Same key head
+  // ("/api/v1/bookings") so invalidateMoney still refreshes it.
+  const { data, isError, isLoading } = useFetchAllPages<BookingData>({
     endpoint: "/api/v1/bookings",
     queryKey: ["bookings-artifact"],
-    Params: { page: 1, limit: 100, sortBy: "bookingDate", sortOrder: "desc" },
+    Params: { sortBy: "bookingDate", sortOrder: "desc" },
   })
-  const rows: BookingData[] = data?.data?.data ?? []
+  const rows: BookingData[] = React.useMemo(() => data?.data?.data ?? [], [data])
   const total: number = data?.data?.filters?.total ?? rows.length
   const truncated = total > rows.length
+  const rowsByIdRef = React.useRef(new Map<number, BookingData>())
+  rowsByIdRef.current = new Map(rows.map((b) => [Number(b.id), b]))
 
   // calendar "+" deep-link: /dashboard/bookings?new=YYYY-MM-DD opens the create
   // drawer prefilled with that date (so the clicked date isn't discarded).
@@ -161,6 +186,8 @@ export function BookingsArtifact() {
       } else {
         wwc.innerHTML = buildContent(rows, total, truncated)
         initTablePager(s, { pageSize: 25, noun: "bookings" })
+        // export = every booking the current tab + search select, one clean column per field
+        registerTableExport(s, (trs) => ({ head: BOOKING_EXPORT_HEAD, rows: trs.map((tr) => rowsByIdRef.current.get(Number(tr.dataset.bkId))).filter((b): b is BookingData => !!b).map(bookingExportRow) }))
         restoreTab(s, "tab:bookings", (f) => setPagerFilter(s, (tr) => f === "all" || (f === "due" ? tr.dataset.due === "1" : tr.dataset.status === f)))
       }
     }

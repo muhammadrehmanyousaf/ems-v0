@@ -211,7 +211,12 @@ export function paymentsCardHtml(view: BookingSchedule | null, opts: PaymentsCar
     if (opts.failed) return `<div class="card pay-card">${head("Load nahi hua")}${errorBannerHtml("Payments load nahi hue — ye missing hain, sifar nahi. Dobara koshish karein.")}</div>`
     return `<div class="card pay-card">${head("Load ho raha hai…")}<div class="q-empty">Payments load ho rahe hain…</div></div>`
   }
-  const m = view.money
+  // WP36 / MONEY-046: on a multi-vendor booking this card shows THIS vendor's part (the server's `slice`); the qists below
+  // are the booking's one shared plan.
+  const sl = view.slice
+  const m = sl
+    ? { ...view.money, total: sl.total, received: sl.received, outstanding: sl.outstanding, overpaid: sl.overpaid, percentPaid: sl.total > 0 ? Math.min(100, Math.round((sl.received / sl.total) * 100)) : 0 }
+    : view.money
   const cancelled = m.cancelled
   const live = view.installments.filter((q) => !q.waived)
   const open = live.filter((q) => moneyOf(q.remaining) > 0)
@@ -236,6 +241,9 @@ export function paymentsCardHtml(view: BookingSchedule | null, opts: PaymentsCar
   }
   if (moneyOf(m.waived) > 0) {
     notes.push(`<div class="q-note"><span>${rsText(m.waived)} maaf kiya ja chuka hai — Kul raqam usi hisaab se kam hai.</span></div>`)
+  }
+  if (sl) {
+    notes.push(`<div class="q-note info"><span>Is booking mein kai vendors hain: upar sirf aap ka hissa hai (poori booking ${rsText(sl.wholeBookingTotal)}). Qistein poori booking ki hain.</span></div>`)
   }
   if (cancelled) {
     notes.push(`<div class="q-note bad"><span>Ye booking cancel ho chuki hai. Mil chuka paisa refund/policy ke mutabiq dekhein.</span></div>`)

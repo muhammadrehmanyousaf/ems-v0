@@ -196,3 +196,11 @@ export function composeLineTotal(args: {
     baseTotal: packageCharge + effectiveMenu,
   };
 }
+
+/**
+ * WP36 / CUSTOMER-005 - does this venue sell any package priced PER HEAD? Then the guest count is part of the price and
+ * the booking flow must ask for it whatever the vendor type (a per-head package on "Marquee rental" read "FOR 1").
+ */
+export function venueOffersPerHeadPackage(venue: { packages?: PackageLike[] | null } | null | undefined): boolean {
+  return Array.isArray(venue?.packages) && (venue!.packages as PackageLike[]).some((p) => packageIsPerHead(p));
+}

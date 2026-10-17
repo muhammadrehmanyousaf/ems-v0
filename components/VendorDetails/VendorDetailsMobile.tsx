@@ -77,6 +77,7 @@ import { VendorBranches } from "@/components/VendorDetails/vendor-branches";
 import { AddToPlanButton } from "@/components/wedding-plan/add-to-plan-button";
 import { featureMap } from "@/lib/packages/features";
 import { cancellationDisplay } from "@/lib/cancellation-policy";
+import { loginUrl } from "@/lib/auth/go-login"
 
 interface VendorDetailsMobileProps {
   vendor: Vendor;
@@ -379,7 +380,7 @@ export default function VendorDetailsMobile({
 
   const handleMessageVendor = () => {
     if (!isAuthenticated) {
-      router.push("/login");
+      router.push(loginUrl());
       return;
     }
     if (!vendor.userId) {
@@ -515,7 +516,7 @@ export default function VendorDetailsMobile({
       localStorage.getItem("user_id") &&
       localStorage.getItem("auth_token");
     if (!isLoggedIn) {
-      router.push("/login");
+      router.push(loginUrl());
       return;
     }
     await toggleFavorite(vendor.id);
@@ -578,7 +579,7 @@ export default function VendorDetailsMobile({
     if (isLoggedIn) {
       router.push(`/${vendor.id}/booking`);
     } else {
-      router.push("/login");
+      router.push(loginUrl());
     }
   };
 
@@ -2218,7 +2219,11 @@ export default function VendorDetailsMobile({
                           formatPrice={formatPrice}
                           onBook={handleBookNow}
                           pricingLabel={
-                            vendor.type === "Catering" ? "per head"
+                            // WP36 / CUSTOMER-042: the package's OWN pricing unit wins; the type-based wording is only the fallback
+                            // for packages that never declared one
+                            (pkg as { pricingUnit?: string | null }).pricingUnit === "per_head" ? "per head"
+                            : (pkg as { pricingUnit?: string | null }).pricingUnit === "per_event" ? "per event"
+                            : vendor.type === "Catering" ? "per head"
                             : vendor.type === "Makeup artist" || vendor.type === "Henna artist" ? "per session"
                             : "per event"
                           }
@@ -2423,7 +2428,7 @@ export default function VendorDetailsMobile({
 
               {!isAuthenticated && (
                 <p className="text-sm text-bridal-text-soft text-center py-2 mb-4">
-                  <button onClick={() => router.push("/login")} className="text-bridal-gold-dark font-medium hover:underline">Log in</button> to leave a review after completing a booking.
+                  <button onClick={() => router.push(loginUrl())} className="text-bridal-gold-dark font-medium hover:underline">Log in</button> to leave a review after completing a booking.
                 </p>
               )}
 

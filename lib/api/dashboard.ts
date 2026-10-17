@@ -1175,23 +1175,6 @@ export class CustomersAPI {
   }
 
   /**
-   * WP39 / LEADS-026: the WHOLE customer book. The screen asked for one page of 200 while the server caps a page at 100, so a vendor
-   * with more than 100 customers saw 100 and a "Kul customers" tile that agreed with the truncation. Pages of 100 are read until
-   * `totalPages` (bounded), and `total` is the server's own figure.
-   */
-  static async getEvery(maxPages = 50): Promise<{ customers: ApiCustomer[]; total: number }> {
-    const first = await CustomersAPI.getAll(1, 100);
-    const customers = [...first.customers];
-    const pages = Math.min(Math.max(first.pagination.totalPages || 1, 1), maxPages);
-    for (let p = 2; p <= pages; p += 1) {
-      const next = await CustomersAPI.getAll(p, 100);
-      if (!next.customers.length) break;
-      customers.push(...next.customers);
-    }
-    return { customers, total: Math.max(first.pagination.total || 0, customers.length) };
-  }
-
-  /**
    * Customer 360 — single-customer aggregate (bookings + function
    * sheets + leads + stats). The listing's `_id` is either the
    * customer's email or `offline_<id>`; pass it via the matching
@@ -1694,7 +1677,7 @@ export class PackagesAPI {
 
   static async create(data: {
     name: string;
-    description?: string;
+    description?: string | null;
     price: number;
     features?: PackageFeatures;
     images?: string[];
@@ -1712,7 +1695,10 @@ export class PackagesAPI {
     id: number,
     data: {
       name?: string;
-      description?: string;
+      /** null clears it (an absent key leaves it alone) - SETUP-005. */
+      description?: string | null;
+      /** CONCURRENCY-009 (optional): the updatedAt this edit started from; the server answers 409 STALE_RECORD if it moved. */
+      expectedUpdatedAt?: string;
       price?: number;
       features?: PackageFeatures;
       images?: string[];

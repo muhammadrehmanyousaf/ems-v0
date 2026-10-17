@@ -9,7 +9,7 @@
  */
 
 import * as React from "react"
-import { useFetchData } from "@/hooks/use-fetch-data"
+import { useFetchAllPages } from "@/hooks/use-fetch-all-pages"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { spaceNameOf } from "@/lib/utils/booking-space"
 import { bookingStatusLabel } from "@/lib/booking-status-label"
@@ -128,8 +128,10 @@ function slotDrawerBody(k: string, slots: SlotAvailabilityRow[], blocks: SlotBlo
   const freeCount = runs.filter((s) => !(s.blocked || blockIdOf(s.slotTemplateId) != null) && s.used <= 0).length
   const dayRow = `<div class="sd-day ${wholeDayBlocked ? "on" : ""}">
     <span class="sd-dico">${banIcon}</span>
-    <div class="sd-dmain"><div class="sd-dt">${wholeDayBlocked ? "Poora din band hai" : "Poora din khula hai"}</div><div class="sd-dm">${wholeDayBlocked ? "Is din koi nayi booking nahi le sakti" : anyBooked ? "Purani bookings rahengi — sirf nayi rukengi" : "Neeche se ek ek slot band karein, ya poora din"}</div></div>
-    <button class="sd-act ${wholeDayBlocked ? "" : "danger"}" data-dayblock="${k}" data-dayblocked="${wholeDayBlocked ? "1" : "0"}">${wholeDayBlocked ? "Kholein" : "Poora din band"}</button>
+    <div class="sd-dmain"><div class="sd-dt">${wholeDayBlocked ? "Poora din band hai" : "Poora din khula hai"}</div><div class="sd-dm">${wholeDayBlocked ? "Is din koi nayi booking nahi le sakti" : anyBooked ? "Is din booking ya hold hai — poora din band nahi ho sakta" : "Neeche se ek ek slot band karein, ya poora din"}</div></div>
+    ${!wholeDayBlocked && anyBooked
+      ? `<button class="sd-act" disabled title="Pehle is din ki booking ko cancel ya move karein">Booking hai</button>`
+      : `<button class="sd-act ${wholeDayBlocked ? "" : "danger"}" data-dayblock="${k}" data-dayblocked="${wholeDayBlocked ? "1" : "0"}">${wholeDayBlocked ? "Kholein" : "Poora din band"}</button>`}
   </div>`
   const slotRows = runs.length
     ? runs.map((s) => {
@@ -155,7 +157,7 @@ function slotDrawerBody(k: string, slots: SlotAvailabilityRow[], blocks: SlotBlo
   const hint = wholeDayBlocked
     ? `Poora din band hai — kholne ke baad ek-ek slot manage kar saktay hain.`
     : anyBooked
-      ? `Jis slot par booking hai woh band nahi ho sakti — pehle us booking ko cancel ya move karein. ${freeCount > 0 ? "Baaqi khali slots band ho saktay hain." : ""} Poora din band karne se purani bookings rahengi, sirf nayi rukengi.`
+      ? `Jis slot par booking hai woh band nahi ho sakti — pehle us booking ko cancel ya move karein. ${freeCount > 0 ? "Baaqi khali slots band ho saktay hain." : ""} Poora din tab hi band hoga jab is din koi booking ya hold na ho.`
       : `Sirf khali slot band ho saktay hain. Booking wali slot band nahi hoti.`
   return `${venuePick}${dayRow}<div class="sd-note">Slots — ${longDate(k)}</div>${slotRows}<div class="sd-hint">${hint}</div>`
 }
@@ -167,7 +169,20 @@ export function CalendarArtifact() {
   const { businesses } = useBusiness()
   const bizList = React.useMemo(() => ((businesses ?? []) as { id: number; name?: string | null }[]).map((b) => ({ id: b.id, name: b.name })), [businesses])
   const qc = useQueryClient()
-  const { data, isError: bookingsErr } = useFetchData({ endpoint: "/api/v1/bookings", queryKey: ["cal-art-bookings"], Params: { page: 1, limit: 100, sortBy: "bookingDate", sortOrder: "ASC" } })
+  const today = parseKey(todayInKarachi()); const todayKey = keyOf(today) // the Pakistan day, whatever the browser zone is
+  const [offset, setOffset] = React.useState(0)
+  const [selKey, setSelKey] = React.useState(todayKey)
+  const [view, setView] = React.useState<"month" | "week" | "agenda">("month")
+  const [filter, setFilter] = React.useState("all")
+  const baseM = today.getMonth() + offset
+  const year = today.getFullYear() + Math.floor(baseM / 12); const month = ((baseM % 12) + 12) % 12
+  const stateRef = React.useRef({ offset, selKey, view, filter }); stateRef.current = { offset, selKey, view, filter }
+
+  // BOOKINGS-008 - the screen asked for the FIRST 100 bookings by date and never paged, so every booking after the
+  // 100th (the future ones) vanished: later months drew empty and said "0 Kul events". It now reads every page from
+  // two months before the earliest month on view (no upper bound: the agenda lists everything still to come).
+  const fromWindow = (() => { const d = new Date(today.getFullYear(), today.getMonth() + Math.min(0, offset) - 2, 1); return keyOf(d) })()
+  const { data, isError: bookingsErr } = useFetchAllPages<BookingData>({ endpoint: "/api/v1/bookings", queryKey: ["cal-art-bookings"], Params: { dateFrom: fromWindow, sortBy: "bookingDate", sortOrder: "ASC" } })
   const blockedQ = useQuery({ queryKey: ["cal-art-blocked", activeBusinessId], queryFn: () => BlockedDatesAPI.getAll(undefined, activeBusinessId) })
   const rows: BookingData[] = data?.data?.data ?? []
 
@@ -185,15 +200,6 @@ export function CalendarArtifact() {
   const bizListRef = React.useRef(bizList); bizListRef.current = bizList
   const slotDrawerDateRef = React.useRef<string>("")
   const slotDrawerVenueRef = React.useRef<number | null>(null)
-
-  const today = parseKey(todayInKarachi()); const todayKey = keyOf(today) // the Pakistan day, whatever the browser zone is
-  const [offset, setOffset] = React.useState(0)
-  const [selKey, setSelKey] = React.useState(todayKey)
-  const [view, setView] = React.useState<"month" | "week" | "agenda">("month")
-  const [filter, setFilter] = React.useState("all")
-  const baseM = today.getMonth() + offset
-  const year = today.getFullYear() + Math.floor(baseM / 12); const month = ((baseM % 12) + 12) % 12
-  const stateRef = React.useRef({ offset, selKey, view, filter }); stateRef.current = { offset, selKey, view, filter }
 
   const pass = (e: Evt) => filter === "all" || evtTone(e.status).tab === filter
 
@@ -298,6 +304,8 @@ export function CalendarArtifact() {
     }
     const conflictMsg = (err: unknown) => {
       const r = (err as { response?: { status?: number; data?: { message?: string } } })?.response
+      // BOOKINGS-054: a day with a live booking or hold cannot be closed whole (the server refuses it, BK-007)
+      if (r?.status === 409 && (r as { data?: { data?: { code?: string } } }).data?.data?.code === "block_conflicts_existing_holds_or_bookings") return "Is din booking ya hold hai — poora din band nahi ho sakta. Pehle us booking ko cancel ya move karein."
       if (r?.status === 409) return r.data?.message || "Is slot par pehle se booking/hold hai — band nahi kar sakte"
       return r?.data?.message || "Ye kaam nahi hua"
     }
@@ -361,6 +369,10 @@ export function CalendarArtifact() {
         if (blk) {
           e.stopPropagation(); closeMenu()
           const k = blk.dataset.block!
+          // BOOKINGS-039: with no venue chosen ("Sabhi venue") the server blocks / unblocks the day on EVERY venue the vendor
+          // owns. A multi-venue vendor therefore picks the venue first: the slot drawer has the venue select and a per-venue
+          // "Poora din band / Kholein". Never send a destructive call with no venue.
+          if (activeBizRef.current == null && bizListRef.current.length > 1) { void openSlotDrawer(k); return }
           const was = blockedSetRef.current.has(k)
           const p = was ? BlockedDatesAPI.unblock(k, activeBizRef.current) : BlockedDatesAPI.block(k, undefined, activeBizRef.current)
           Promise.resolve(p)

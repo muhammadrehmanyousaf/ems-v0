@@ -28,6 +28,7 @@ import {
 } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { ChampagneSidebar } from "./champagne-sidebar"
+import { LeaveGuardDialog } from "@/components/dashboard/shared/leave-guard"
 import { useUnreadCount } from "@/hooks/use-unread-count"
 
 /** React pages (non-artifact, e.g. the settings hub) call this to set the
@@ -262,6 +263,7 @@ export function ChampagneShell({
         {/* Primary rail — shadcn Sidebar, drill-down, champagne. Replaces the
             hand-rolled .side AND the Khata/Setup secondary panels (.sub-side). */}
         <ChampagneSidebar />
+        <LeaveGuardDialog />
         <SidebarInset className="cs-inset min-h-0 bg-background">
           <div className="cscroll"><div className="content">{children}</div></div>
         </SidebarInset>

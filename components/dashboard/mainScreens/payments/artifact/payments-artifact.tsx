@@ -50,7 +50,7 @@ function buildContent(d: VendorRevenueResponse, filter: string): string {
 
   const tiles = `<div class="pay-tiles">
     <div class="tile hl"><div class="t-cap">${svg(IC.billed, 1.9)} Kul billed</div><div class="t-val tnum"><span class="rs">Rs</span> ${pkNum(money(all.total))}</div><div class="t-sub">${all.count} bookings</div></div>
-    <div class="tile ok"><div class="t-cap">${svg(IC.in, 1.9)} Received</div><div class="t-val tnum"><span class="rs">Rs</span> ${pkNum(money(all.received))}</div><div class="t-sub">${pct}% mil chuka</div></div>
+    <div class="tile ok"><div class="t-cap">${svg(IC.in, 1.9)} Received (bookings par)</div><div class="t-val tnum"><span class="rs">Rs</span> ${pkNum(money(all.received))}</div><div class="t-sub">${pct}% mil chuka</div></div>
     <div class="tile warn"><div class="t-cap">${svg(IC.clock, 1.9)} Baqaya</div><div class="t-val tnum"><span class="rs">Rs</span> ${pkNum(money(all.due))}</div><div class="t-sub">abhi tak pending</div></div>
     <div class="tile"><div class="t-cap">${svg(IC.split, 1.9)} Online vs offline</div><div class="t-split"><span class="sp"><b class="tnum">${on.count}</b><span style="color:var(--info)">online</span></span><span class="sp"><b class="tnum">${off.count}</b><span style="color:var(--accent-ink)">offline</span></span></div></div>
   </div>`
