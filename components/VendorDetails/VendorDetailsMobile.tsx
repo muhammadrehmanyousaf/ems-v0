@@ -1044,8 +1044,9 @@ export default function VendorDetailsMobile({
 
   return (
     <div className="min-h-screen bg-bridal-ivory">
+      {/* pt-24: the site header is fixed over the top of this page */}
       {availabilityNotice && (
-        <div className="mx-auto max-w-3xl px-4 pt-4">
+        <div className="mx-auto max-w-3xl px-4 pb-4 pt-24">
           <VenueUnavailableNotice text={availabilityNotice.text} />
         </div>
       )}
