@@ -281,7 +281,7 @@ export const COPY = {
   },
 
   /* ───────────── customers ───────────── */
-  "cust.unavailable.title": { en: "Not taking enquiries right now", ru: "Abhi enquiries nahi le raha" },
+  "cust.unavailable.title": { en: "Enquiries are paused", ru: "Enquiries abhi band hain" },
   "cust.unavailable.body": {
     en: "This venue isn't taking new enquiries right now. Already booked? Your booking is unaffected.",
     ru: "Yeh venue abhi naye enquiries nahi le raha. Agar aap pehle se book kar chuke hain to aap ki booking par koi asar nahi.",

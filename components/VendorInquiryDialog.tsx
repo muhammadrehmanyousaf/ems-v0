@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { CheckCircle2, Loader2 } from "lucide-react"
+import { VenueUnavailableNotice } from "@/components/venue/venue-unavailable-notice"
 
 const EVENT_TYPES = [
   { value: "", label: "Not sure yet" },
@@ -58,6 +59,8 @@ export default function VendorInquiryDialog({
   const [submitting, setSubmitting] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // 409 VENUE_UNAVAILABLE: the venue is not taking new enquiries. Shown kindly, in place of the form.
+  const [unavailable, setUnavailable] = useState<string | null>(null)
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
   // Errors only after a field is touched, so opening the dialog doesn't
   // immediately scold the customer about the empty phone they're about to type.
@@ -122,7 +125,7 @@ export default function VendorInquiryDialog({
    */
   const [vendorOnPlatform, setVendorOnPlatform] = useState(true)
 
-  const reset = () => { setForm({ name: "", phone: "", email: "", eventType: "", eventDate: "", guests: "", message: "", website: "" }); setSent(false); setError(null); setVendorOnPlatform(true) }
+  const reset = () => { setForm({ name: "", phone: "", email: "", eventType: "", eventDate: "", guests: "", message: "", website: "" }); setSent(false); setError(null); setUnavailable(null); setVendorOnPlatform(true) }
 
   const submit = async () => {
     if (!canSend || submitting) return
@@ -144,6 +147,7 @@ export default function VendorInquiryDialog({
         }),
       })
       const json = await res.json().catch(() => ({}))
+      if (res.status === 409 && json?.data?.code === "VENUE_UNAVAILABLE") { setUnavailable(typeof json?.message === "string" ? json.message : ""); return }
       if (!res.ok) throw new Error(json?.message || "Couldn't send your inquiry")
       // Absent on an older backend deploy → assume the vendor is on the
       // platform, which is the behaviour that shipped before this field existed.
@@ -159,7 +163,15 @@ export default function VendorInquiryDialog({
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) setTimeout(reset, 200) }}>
       <DialogContent className="sm:max-w-md">
-        {sent ? (
+        {unavailable !== null ? (
+          <div className="space-y-4 py-2">
+            <DialogHeader>
+              <DialogTitle>{title ?? `Ask ${vendorName}`}</DialogTitle>
+            </DialogHeader>
+            <VenueUnavailableNotice text={unavailable || undefined} />
+            <Button variant="outline" className="w-full" onClick={() => onOpenChange(false)}>Close</Button>
+          </div>
+        ) : sent ? (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
               <CheckCircle2 className="h-8 w-8" />

@@ -43,6 +43,10 @@ import { VendorAPI } from "@/lib/api/vendors"
 // WW-PRICE0 — an unpriced vendor can't be booked (server 400s); offer the
 // inquiry instead of dead-ending the customer. This page is the choke point.
 import { isUnpricedVendor } from "@/lib/pricing/unpriced"
+// PLANS-SPEC contract 6: a venue whose plan is paused is not taking new bookings. Everything passes through this component
+// (see the note on the unpriced guard below), so the paused venue is guarded here too, not on each button.
+import { readAvailabilityNotice } from "@/lib/plans/venue-availability"
+import { VenueUnavailableNotice } from "@/components/venue/venue-unavailable-notice"
 import { menuChargeFor } from "@/lib/pricing/menu"
 // WW-PKG-UNIT — per-head packages + the includesFood rule. The step order below
 // and the submitted payload both derive from this, so a venue whose package
@@ -1284,7 +1288,15 @@ export default function BookingForm() {
    * already lands on, which exists and works.
    */
   const inquiryOnly = effectiveBookingMode(venue as any) === "inquiry_only"
-  const unpricedNode = !loading && venue && (isUnpricedVendor(venue as any) || wantsQuote || inquiryOnly) ? (
+  const pausedNotice = !loading && venue ? readAvailabilityNotice(venue as unknown) : null
+  const pausedNode = pausedNotice ? (
+      <div className="w-full">
+        <div className="mx-auto max-w-xl rounded-md bg-bridal-cream border border-bridal-beige p-6 sm:p-8 shadow-[0_18px_44px_-32px_rgba(176,125,84,0.4)]">
+          <VenueUnavailableNotice text={pausedNotice.text} />
+        </div>
+      </div>
+    ) : null
+  const unpricedNode = pausedNode ?? (!loading && venue && (isUnpricedVendor(venue as any) || wantsQuote || inquiryOnly) ? (
       <div className="w-full">
         <div className="mx-auto max-w-xl rounded-md bg-bridal-cream border border-bridal-beige p-6 sm:p-8 text-center shadow-[0_18px_44px_-32px_rgba(176,125,84,0.4)]">
           <h1 className="font-display italic text-[26px] sm:text-[30px] text-bridal-charcoal leading-tight">
@@ -1322,7 +1334,7 @@ export default function BookingForm() {
           onOpenChange={setInquiryOpen}
         />
       </div>
-    ) : null
+    ) : null)
 
   /* ── The shell ─────────────────────────────────────────────────────────
      Everything from here down is presentation. The Stage (venue + ledger)
