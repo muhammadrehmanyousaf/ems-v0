@@ -495,6 +495,7 @@ console.log("\nthe backend's lock/unlock hook");
 await check("the frontend has a secret-protected /api/revalidate branch for PL-A's hook (timing-safe, 503 when unconfigured, no secret = 403)", () => {
   const src = read("app/api/revalidate/route.ts");
   ok(/PUBLIC_REVALIDATE_SECRET/.test(src) && /timingSafeEqual/.test(src), "secret check");
+  ok(/typeof body\.secret !== "string" \|\| !safeEqual\(body\.secret, expected\)\) \{\s*return NextResponse\.json\([^)]*\{ status: 403 \}/.test(src), "a wrong or missing secret must answer 403");
   ok(/status: 503/.test(src) && /status: 403/.test(src), "503 when unset, 403 when wrong");
   ok(/revalidateTag\(vendorCacheTag\(id\)\)/.test(src) && /revalidatePath\(/.test(src), "evicts the venue's tag and the lists");
   ok(/businesses/.test(src) && /slice\(0, 50\)/.test(src), "bounded list");

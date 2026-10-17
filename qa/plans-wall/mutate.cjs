@@ -55,6 +55,7 @@ const base = run()
 if (base.code !== 0) { console.error("the guard is red BEFORE any mutation:\n" + base.out.split("\n").filter((l) => /FAIL|expected|got/.test(l)).slice(0, 6).join("\n")); process.exit(1) }
 console.log("baseline green; " + M.length + " mutations\n")
 for (const [name, rel, ...pairs] of M) {
+  if (process.env.ONLY && !new RegExp(process.env.ONLY, "i").test(name)) continue
   const file = path.join(ROOT, rel)
   const original = fs.readFileSync(file)
   let s = original.toString("utf8")
