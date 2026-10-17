@@ -75,7 +75,7 @@ import { VendorBranches } from "@/components/VendorDetails/vendor-branches";
 // null while the flag is off, so this vendor page stays byte-identical.
 import { AddToPlanButton } from "@/components/wedding-plan/add-to-plan-button";
 import { featureMap } from "@/lib/packages/features";
-import { cancellationLabel } from "@/lib/cancellation-policy";
+import { cancellationDisplay } from "@/lib/cancellation-policy";
 
 interface VendorDetailsMobileProps {
   vendor: Vendor;
@@ -723,7 +723,8 @@ export default function VendorDetailsMobile({
   };
 
   const vendorSpecificDetails = getVendorSpecificDetails();
-  const cancellationPolicy = cancellationLabel(vendor.cancelationPolicy || vendor.cancellationPolicy);
+  // WP29: the policy as the refund engine will apply it (the server's summary), not only the registration label
+  const cancelShown = cancellationDisplay(vendor);
 
   const BACKEND_BASE = BACKEND_URL.replace(/\/$/, "");
   const resolveImg = (url: string) => {
@@ -1315,14 +1316,14 @@ export default function VendorDetailsMobile({
                         value={vendor.downPaymentType === "Percentage" ? `${vendor.downPayment}%` : formatPrice(vendor.downPayment)}
                       />
                     )}
-                    {cancellationPolicy && (
+                    {cancelShown && (
                       <BridalStatTile
                         icon={<Clock className="w-4 h-4" />}
                         iconBg="bg-bridal-sage/25"
                         iconColor="text-[#3F6B43]"
                         label="Cancellation"
-                        value={cancellationPolicy}
-                        wide={cancellationPolicy.length > 20}
+                        value={cancelShown.headline}
+                        wide={cancelShown.headline.length > 20}
                       />
                     )}
                   </div>
@@ -1674,7 +1675,7 @@ export default function VendorDetailsMobile({
                   )}
 
                   {/* Booking Terms */}
-                  {(vendor.downPayment || cancellationPolicy) && (
+                  {(vendor.downPayment || cancelShown) && (
                     <div className="bg-bridal-cream rounded-md border border-bridal-beige shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] p-5">
                       <h3 className="font-display italic text-[20px] text-bridal-charcoal mb-4">
                         Booking Terms
@@ -1693,12 +1694,15 @@ export default function VendorDetailsMobile({
                             </div>
                           </div>
                         ) : null}
-                        {cancellationPolicy && (
+                        {cancelShown && (
                           <div className="flex items-center gap-3 p-3 bg-bridal-ivory rounded-md border border-bridal-beige">
                             <Clock className="w-4 h-4 text-[#3F6B43] flex-shrink-0" />
                             <div>
                               <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Cancellation Policy</p>
-                              <p className="font-bridal text-[13px] font-medium text-bridal-charcoal mt-0.5">{cancellationPolicy}</p>
+                              <p className="font-bridal text-[13px] font-medium text-bridal-charcoal mt-0.5">{cancelShown.headline}</p>
+                              {cancelShown.detail && (
+                                <p className="font-bridal text-[12px] leading-relaxed text-bridal-text-soft mt-1" data-cancellation-detail>{cancelShown.detail}</p>
+                              )}
                             </div>
                           </div>
                         )}

@@ -1,10 +1,11 @@
 "use client"
 
 /**
- * "Partially Refundable" needs a number: how much does the VENUE KEEP when a couple cancels?
+ * Under the Cancellation Policy control of every vendor registration form:
+ *   - Partially Refundable needs a number: how much does the VENUE KEEP when a couple cancels?
+ *   - Refundable / Non-Refundable (WP29) show one helper line saying what the answer means for a couple.
  *
- * Shown under the Cancellation Policy control of every vendor registration form, and only when
- * Partially Refundable is the chosen policy. Same shape as the Down Payment Type / Down Payment pair
+ * The number is shown only when Partially Refundable is the chosen policy. Same shape as the Down Payment Type / Down Payment pair
  * above it: a Fixed Amount | Percentage select, then the value. The rule (percentage 1-99, fixed
  * amount above 0 and not above the highest known price) is lib/cancellation-policy.ts, mirrored from
  * the server, which refuses a registration that breaks it.
@@ -18,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils"
 import { useFormContext } from "@/lib/context/form-context"
 import {
+  CANCELLATION_HELP,
   PARTIAL_PERCENT_MAX,
   PARTIAL_PERCENT_MIN,
   cancellationKey,
@@ -39,7 +41,17 @@ interface Props {
 
 export default function PartialRefundFields({ policy, errors, setErrors, labelClassName, errorClassName, inputClassName, triggerClassName }: Props) {
   const { formData, setFormData } = useFormContext()
-  if (cancellationKey(policy) !== "partially_refundable") return null
+  const policyKey = cancellationKey(policy)
+  // WP29: Refundable / Non-Refundable need no number, but the vendor must be told what the answer means for a couple
+  // (both are real policies now: the refund engine reads them). Same quiet helper style as the line under the value.
+  if (policyKey === "refundable" || policyKey === "non_refundable") {
+    return (
+      <p className="text-xs text-muted-foreground" data-testid="cancellation-policy-helper" data-policy={policyKey}>
+        {CANCELLATION_HELP[policyKey]}
+      </p>
+    )
+  }
+  if (policyKey !== "partially_refundable") return null
 
   const type = (formData.partialRefundType as string) || ""
   const value = formData.partialRefundValue === undefined || formData.partialRefundValue === null ? "" : String(formData.partialRefundValue)

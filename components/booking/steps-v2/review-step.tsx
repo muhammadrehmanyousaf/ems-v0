@@ -44,6 +44,7 @@ import {
 } from "@/lib/pricing/menu"
 // A17 — the deposit sentences, mirrored from the server and parity-guarded.
 import { describeDepositTerms } from "@/lib/booking/deposit-terms"
+import { cancellationDisplay } from "@/lib/cancellation-policy"
 // WW-PKG-UNIT — per-head packages + the includesFood rule. `composeLineTotal`
 // is the ONE place package and menu are added together, so this surface cannot
 // reintroduce the double-charge by adding them itself.
@@ -177,6 +178,7 @@ export default function ReviewStep({
     slotEndTime: formData.slotEndTime,
   }) || "—"
 
+  const cancelShown = cancellationDisplay(venue)
   const isCarRental = venue?.vendor?.vendorType === "Car rental"
   const isBridalWear = venue?.vendor?.vendorType === "Bridal wearing"
   const isWeddingStationery = venue?.vendor?.vendorType === "Wedding Invitations and Stationery"
@@ -997,6 +999,21 @@ export default function ReviewStep({
           <p className="font-display text-[18px] italic leading-[24px] tabular-nums text-bridal-charcoal">
             {formatPKR(depositAmount)}
           </p>
+        </section>
+      )}
+
+      {/* WP29 — the couple is told what a cancellation costs BEFORE they commit: the terms the refund engine will apply
+          (the server's summary of the venue's real policy, frozen onto the booking when it is made). Non-Refundable is
+          enforced now, so it must be visible at the moment of the booking, not only on the venue page. */}
+      {cancelShown && (
+        <section
+          aria-label="Cancellation policy"
+          className="grid min-h-[56px] items-center gap-1 rounded-[4px] border border-bridal-beige bg-white px-4 py-2 animate-stagger-fade-up"
+          style={stagger(sectionIndex++)}
+          data-cancellation-review
+        >
+          <p className={LABEL}>Cancellation · {cancelShown.headline}</p>
+          {cancelShown.detail && <p className="font-bridal text-[12px] leading-[16px] text-bridal-text-soft">{cancelShown.detail}</p>}
         </section>
       )}
 

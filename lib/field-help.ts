@@ -158,7 +158,7 @@ const FIELD_HELP_DATA = {
   },
   cancellationPolicy: {
     name: "cancellation policy",
-    text: "What happens to the advance if a couple cancels. Refundable: it is returned. Partially refundable: you keep a part (a fixed amount or a percentage, set next) and the rest is returned. Non-refundable: you keep all of it.",
+    text: "What happens to the money a couple paid if they cancel. Refundable: our standard schedule applies. Partially refundable: you keep a part (set next), the rest goes back. Non-refundable: you keep all they paid toward the booking.",
   },
   partialRefundType: {
     name: "what the venue keeps",
@@ -497,7 +497,7 @@ const FIELD_HELP_DATA = {
   },
   cancellationPolicyText: {
     name: "cancellation policy",
-    text: "Say in plain words what happens to the advance if a couple cancels, and how many days before the event each rule applies.",
+    text: "Say in plain words what happens to the advance if a couple cancels. Writing exactly Refundable or Non-Refundable switches the venue to that policy; other words are a note, the schedule is set on the Cancellation policy screen.",
     example: "Advance non-refundable within 30 days of the event.",
   },
   bookingMode: {

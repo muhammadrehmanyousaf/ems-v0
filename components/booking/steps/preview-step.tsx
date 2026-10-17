@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { slotText } from "@/lib/booking/slot-vocabulary"
-import { cancellationLabel } from "@/lib/cancellation-policy"
+import { cancellationDisplay } from "@/lib/cancellation-policy"
 
 interface PreviewStepProps {
   formData: BookingFormData;
@@ -165,14 +165,16 @@ export default function PreviewStep({
     }) || "Not selected";
 
   // Cancellation policies
-  const policies: { name: string; policy: string }[] = [];
-  if (venue?.cancelationPolicy) {
-    policies.push({ name: venue.name, policy: cancellationLabel(venue.cancelationPolicy) });
+  // WP29: what the refund engine will apply (the server's summary), in plain words, not only the registration label
+  const policies: { name: string; policy: string; detail: string }[] = [];
+  const venuePolicy = cancellationDisplay(venue);
+  if (venue && venuePolicy) {
+    policies.push({ name: venue.name, policy: venuePolicy.headline, detail: venuePolicy.detail });
   }
   vendorDetails.forEach((v) => {
-    const pol = cancellationLabel(v.cancellationPolicy || (v as any).cancelationPolicy);
-    if (pol && !policies.some((p) => p.policy === pol)) {
-      policies.push({ name: v.name, policy: pol });
+    const shown = cancellationDisplay(v);
+    if (shown && !policies.some((p) => p.policy === shown.headline && p.detail === shown.detail)) {
+      policies.push({ name: v.name, policy: shown.headline, detail: shown.detail });
     }
   });
 
@@ -393,6 +395,7 @@ export default function PreviewStep({
                     </p>
                   )}
                   <p className="font-bridal text-[12.5px] text-bridal-charcoal/85 leading-relaxed">{p.policy}</p>
+                  {p.detail && <p className="font-bridal text-[12px] text-bridal-charcoal/70 leading-relaxed mt-0.5" data-cancellation-detail>{p.detail}</p>}
                 </div>
               ))}
             </div>

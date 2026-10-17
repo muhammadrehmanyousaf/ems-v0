@@ -1324,6 +1324,15 @@ export default function BookingDetailPage() {
                         <span>{fmt(refundPreview.preview.forfeit)}</span>
                       </div>
                     )}
+                    {/* WP29: the policy in plain words (Non-Refundable / Partially Refundable / the standard schedule),
+                        from the same resolver that computed the figure above */}
+                    {refundPreview.policySummary?.detail && (
+                      <p className="mt-1.5 text-[11px] text-bridal-text-soft leading-relaxed" data-policy-summary>
+                        {/* the standard schedule's own sentence already names it; the others lead with their headline */}
+                        {refundPreview.policySummary.kind !== "standard" && <span className="font-medium">{refundPreview.policySummary.headline}. </span>}
+                        {refundPreview.policySummary.detail}
+                      </p>
+                    )}
                     <p className="mt-1.5 text-[11px] text-bridal-text-soft leading-relaxed">
                       {/* Whole days only. daysBefore arrives as an exact float
                           (19.40760377314815) and was rendered raw, on the screen
