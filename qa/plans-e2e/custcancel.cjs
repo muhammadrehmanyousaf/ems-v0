@@ -1,0 +1,21 @@
+/** The customer asks to cancel a booking at a locked venue: stored, and the web says the venue is offline. node custcancel.cjs <tag> <bookingId> */
+const L = require("./lib.cjs")
+;(async () => {
+  const [tag, id] = process.argv.slice(2)
+  const b = await L.launch()
+  const ctx = await L.uiLogin(b, L.K.CREDS.customer.email, { width: 1536, height: 864 }, L.K.CREDS.customer.password)
+  const page = await ctx.newPage()
+  const calls = []
+  page.on("response", async (r) => { const u = r.url(); if (u.includes(":5134/api/v1/") && r.request().method() !== "GET") calls.push(`${r.status()} ${r.request().method()} ${u.replace(/^.*\/api\/v1/, "").split("?")[0]} ${(await r.text().catch(() => "")).slice(0, 700)}`) })
+  await page.goto(`${L.BASE}/user/bookings/${id}`, { waitUntil: "domcontentloaded", timeout: 180000 })
+  await page.waitForTimeout(6000)
+  const ess = page.getByRole("button", { name: /essential only/i }).first(); if (await ess.count()) await ess.click().catch(() => {})
+  await page.getByRole("button", { name: /^Cancel$/ }).first().click()
+  await page.waitForTimeout(2500)
+  await L.shot(page, `${tag}-cancel-dialog`)
+  console.log("dialog:", (await page.evaluate(() => (document.querySelector("[role=dialog], [role=alertdialog]")?.innerText || "none").replace(/\s+/g, " ").slice(0, 500))))
+  const btns = await page.evaluate(() => Array.from(document.querySelectorAll("[role=dialog] button, [role=alertdialog] button")).map((x) => x.textContent.trim()))
+  console.log("buttons:", JSON.stringify(btns))
+  await b.close()
+  process.exit(0)
+})().catch((e) => { console.error("FAILED", e); process.exit(1) })

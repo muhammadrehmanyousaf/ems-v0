@@ -8,7 +8,7 @@ const K = L.K
   const slots = await K.q('select id,label,"startTime"::text st from "BusinessSlotTemplates" where "businessId"=7 and "isActive" order by id')
   console.log("venue 7 slots", JSON.stringify(slots))
   const slot = slots[0]
-  const date = K.addDays(K.pktToday(), 20)
+  const date = K.addDays(K.pktToday(), 60)
   const body = { customerName: "Customer Seven", customerPhone: "03001234500", customerEmail: K.CREDS.customer.email, bookingDate: date, bookingTime: slot.st.slice(0, 5), guestCount: 120, vendors: [{ businessId: 7, slotTemplateId: Number(slot.id) }], isOfflineBooking: false }
   const r = await K.api("customer", "POST", "/bookings", body)
   const id = r.body?.data?.booking?.id

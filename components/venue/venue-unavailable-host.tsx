@@ -9,12 +9,17 @@
 import * as React from "react"
 import Link from "next/link"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { onVenueUnavailable, type VenueUnavailable } from "@/lib/plans/venue-availability"
+import { toast } from "sonner"
+import { onVenueOffline, onVenueUnavailable, type VenueUnavailable } from "@/lib/plans/venue-availability"
 import { COPY } from "@/lib/plans/copy"
 
 export function VenueUnavailableHost() {
   const [v, setV] = React.useState<VenueUnavailable | null>(null)
   React.useEffect(() => onVenueUnavailable((x) => setV(x)), [])
+  // PL-E: a message / payment report to a booking at a locked venue is saved but not delivered live; say so (PL-B's venueNotice).
+  React.useEffect(() => onVenueOffline((n) => {
+    toast.message(n.text || COPY["cust.stored"].en, { description: n.textUr || COPY["cust.stored"].ru, duration: 12000, id: "venue-offline" })
+  }), [])
   return (
     <Dialog open={!!v} onOpenChange={(o) => { if (!o) setV(null) }}>
       <DialogContent className="max-w-md" data-testid="venue-unavailable-dialog">

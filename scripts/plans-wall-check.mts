@@ -31,7 +31,7 @@ import { COPY, fill, say, firstFilled, placeholdersOf, type CopyKey } from "../l
 import { wallModel, wallVars } from "../lib/plans/wall-model.ts";
 import { bannerFor, chipFor } from "../lib/plans/banners.ts";
 import { useAccessStore, noteLock } from "../lib/plans/access-store.ts";
-import { readAvailabilityNotice, venueUnavailableFromError, handleVenueUnavailable, claimVenueUnavailable, onVenueUnavailable } from "../lib/plans/venue-availability.ts";
+import { readAvailabilityNotice, venueUnavailableFromError, handleVenueUnavailable, claimVenueUnavailable, onVenueUnavailable, readVenueNotice, onVenueOffline, announceVenueOffline } from "../lib/plans/venue-availability.ts";
 import { parseObligations, parseManualPayment, parseLiveVenues } from "../lib/plans/billing-shapes.ts";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -489,6 +489,22 @@ await check("the public venue page, the legacy page and the booking funnel all r
   ok(/venueUnavailableFromError/.test(read("components/RequestQuoteDialog.tsx")), "quote dialog");
   ok(/handleVenueUnavailable/.test(read("lib/axiosConfig.js")), "axios layer");
   ok(/<VenueUnavailableHost\s*\/>/.test(read("app/(main)/layout.tsx")), "the public layout must mount the dialog host");
+});
+
+await check("an accepted request at a locked venue carries venueNotice (stored, not delivered live): it is read, shown once, and nothing else is mistaken for it", () => {
+  const n = { code: "VENUE_OFFLINE", text: "The venue is offline.", textUr: "Venue offline hai." };
+  eq(readVenueNotice({ venueNotice: n, claim: {} }), { text: "The venue is offline.", textUr: "Venue offline hai." });
+  eq(readVenueNotice({ venueNotice: { code: "OTHER", text: "x" } }), null, "another code is not an offline notice");
+  eq(readVenueNotice({ claim: {} }), null, "an open venue sends no notice");
+  eq(readVenueNotice(null), null);
+  const seen: string[] = [];
+  const off = onVenueOffline((x) => seen.push(x.text ?? ""));
+  announceVenueOffline({ text: "hello", textUr: null });
+  off();
+  announceVenueOffline({ text: "after unsubscribe", textUr: null });
+  eq(seen, ["hello"]);
+  ok(/readVenueNotice\(response\.data\.data\)/.test(read("lib/axiosConfig.js")) && /announceVenueOffline\(/.test(read("lib/axiosConfig.js")), "the axios layer must announce an accepted request's venueNotice");
+  ok(/onVenueOffline\(/.test(read("components/venue/venue-unavailable-host.tsx")), "the host in the public layout must show it");
 });
 
 console.log("\nthe backend's lock/unlock hook");
