@@ -53,7 +53,7 @@ async function uiLogin(browser, email, viewport = { width: 1536, height: 864 }, 
   if (await ess.count()) await ess.click().catch(() => {})
   await p.fill("input[type=email]", email)
   await p.fill("input[type=password]", password)
-  await p.getByRole("button", { name: /sign in/i }).first().click()
+  await p.press("input[type=password]", "Enter")
   await p.waitForFunction(() => !!localStorage.getItem("auth_token"), null, { timeout: 90000 })
   await p.waitForTimeout(1500)
   await p.close()

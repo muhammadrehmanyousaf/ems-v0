@@ -236,7 +236,7 @@ export default function AdminManualPaymentsView() {
                           <tr className="border-b bg-rose-50/40">
                             <td colSpan={8} className="px-2 py-2">
                               <div className="flex flex-wrap items-center gap-2">
-                                <Input className="h-8 max-w-sm text-xs" placeholder="Reason (the vendor reads this)" value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Reason for rejecting" />
+                                <Input className="h-8 min-w-[280px] max-w-xl flex-1 text-xs" placeholder="Reason (the vendor reads this)" value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Reason for rejecting" />
                                 <Button size="sm" className="h-8" disabled={busy || reason.trim().length < 3} onClick={() => reject(r)}>
                                   {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Confirm reject"}
                                 </Button>

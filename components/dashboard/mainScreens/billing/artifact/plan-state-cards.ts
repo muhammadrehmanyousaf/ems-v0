@@ -116,7 +116,7 @@ export function manualCardHtml(info: ManualPaymentInfo | null, planName: (tier: 
       <div class="sp-t">${bi("manual.approved.title")}</div><div class="sp-s">${bi("manual.approved.body")}</div>${summary}</div></div>`
   }
   const rejected = cur?.status === "rejected"
-    ? `<div class="sp bad" role="status" data-testid="manual-rejected" style="margin-bottom:10px">${svg(IC.alert)}<div style="flex:1;min-width:0"><div class="sp-t">${bi("manual.rejected.title")}</div><div class="sp-s">${bi(["manual.rejected.body", "manual.rejected.body_noreason"], { reason: cur.rejectionReason })}</div></div></div>`
+    ? `<div class="sp bad" role="status" data-testid="manual-rejected" style="margin-bottom:10px">${svg(IC.alert)}<div style="flex:1;min-width:0"><div class="sp-t">${bi("manual.rejected.title")}</div><div class="sp-s">${bi(["manual.rejected.body", "manual.rejected.body_noreason"], { reason: (cur.rejectionReason ?? "").replace(/[\s.!?;:,]+$/, "") })}</div></div></div>`
     : ""
   return `${rejected}<div class="card" style="margin-bottom:16px;padding:16px 18px;display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap" data-testid="manual-card" id="manual">
     <span class="cur-ic" style="flex:none">${svg(IC.upload, 1.8)}</span>
