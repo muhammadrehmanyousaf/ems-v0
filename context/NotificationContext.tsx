@@ -14,6 +14,8 @@ import { useUser } from "./UserContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { unreadCountKey } from "@/hooks/use-unread-count";
 import { invalidateMoney, invalidateMoneySoon, isMoneyNotification, notificationBookingId } from "@/lib/query/money-keys";
+import { liveKeysFor } from "@/lib/query/live-keys";
+import { MONEY_NOTIFICATION_EVENT } from "@/lib/hooks/useLiveRefresh";
 import {
   NotificationAPI,
   type Notification,
@@ -128,6 +130,13 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       // local money mutation calls refreshes the same keys.
       if (isMoneyNotification(notification)) {
         invalidateMoneySoon({ bookingId: notificationBookingId(notification) }, queryClient);
+        // CUSTOMER-036 - pages that hold their data in local state (the customer's booking
+        // list and detail) cannot be invalidated; they listen for this instead.
+        try { window.dispatchEvent(new CustomEvent(MONEY_NOTIFICATION_EVENT, { detail: { bookingId: notificationBookingId(notification) } })); } catch { /* non-browser */ }
+      }
+      // CONCURRENCY-021 - the non-money families (new lead, new review) too.
+      for (const key of liveKeysFor(notification)) {
+        queryClient.invalidateQueries({ queryKey: key as unknown as string[], refetchType: "all" });
       }
     });
 

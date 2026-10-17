@@ -744,7 +744,7 @@ export function BusinessSettingsHubView() {
       // save sent an empty patch, and the toast still said saved.
       setBaseline({ ...vars.snapshot })
       setDirty(false)
-      invalidateBusinessData(qc, biz.id)
+      invalidateBusinessData(qc, biz!.id)
       // The save has already committed; the verdict rides along with the reply.
       const c = res?.pricingCoherence ?? res?.data?.pricingCoherence ?? null
       setPricingCoherence(c && c.status !== "ok" ? c : null)

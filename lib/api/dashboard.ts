@@ -1686,7 +1686,8 @@ export class PackagesAPI {
     id: number,
     data: {
       name?: string;
-      description?: string;
+      /** null clears it (an absent key leaves it alone) - SETUP-005. */
+      description?: string | null;
       price?: number;
       features?: PackageFeatures;
       images?: string[];
