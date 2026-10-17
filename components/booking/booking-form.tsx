@@ -759,7 +759,15 @@ export default function BookingForm() {
   // ── Booking type detection (single source of truth) ──
   // Venue = has menus (banquet halls, wedding venues, restaurants)
   // Vendor = everything else (photographers, decorators, caterers, etc.)
-  const isVenueBooking = !!venue && Array.isArray((venue as any)?.menus) && ((venue as any)?.menus?.length ?? 0) > 0
+  // WP36 / VENDORTYPES-030: "has menus" is not "is a venue" - a caterer with one menu was routed into the venue flow (set-up
+  // questions, outside vendors) and a Wedding venue with no menu into the vendor flow. The vendor TYPE decides; the menu
+  // step still follows `hasMenus` below.
+  const FOOD_VENDOR_TYPES = ["Catering", "Mithai and sweets", "Wedding cakes", "Live cooking stall"]
+  const venueVendorType = String((venue as any)?.vendor?.vendorType || "")
+  const isVenueBooking =
+    !!venue &&
+    (venueVendorType === "Wedding venue" ||
+      (Array.isArray((venue as any)?.menus) && ((venue as any)?.menus?.length ?? 0) > 0 && !FOOD_VENDOR_TYPES.includes(venueVendorType)))
   const hasPackages = !!venue?.packages && Array.isArray(venue.packages) && venue.packages.length > 0
   // WW-PKG-UNIT — the Menu step's existence and its title are derived from
   // configuration rather than hardcoded into the venue flow.

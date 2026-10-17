@@ -2224,7 +2224,11 @@ export default function VendorDetailsMobile({
                           formatPrice={formatPrice}
                           onBook={handleBookNow}
                           pricingLabel={
-                            vendor.type === "Catering" ? "per head"
+                            // WP36 / CUSTOMER-042: the package's OWN pricing unit wins; the type-based wording is only the fallback
+                            // for packages that never declared one
+                            (pkg as { pricingUnit?: string | null }).pricingUnit === "per_head" ? "per head"
+                            : (pkg as { pricingUnit?: string | null }).pricingUnit === "per_event" ? "per event"
+                            : vendor.type === "Catering" ? "per head"
                             : vendor.type === "Makeup artist" || vendor.type === "Henna artist" ? "per session"
                             : "per event"
                           }

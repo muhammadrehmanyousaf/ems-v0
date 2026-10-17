@@ -33,6 +33,7 @@ import { LEGACY_PERIODS, formatSlotRange } from "@/lib/booking/slot-vocabulary"
 // vendor's Nayi booking form and reschedule dialog (lib/booking/slot-picker-model.ts).
 import { isSlotOpen } from "@/lib/booking/slot-picker-model"
 import { pktTodayCell } from "@/lib/utils/event-day"
+import { venueOffersPerHeadPackage } from "@/lib/pricing/package"
 // 10.13 / 10.16 — the arrangement a family needs, and rain on an open lawn.
 // A mirror of src/utils/spaceRequirements.js, held to it by
 // scripts/space-fit-parity.mts. The server re-runs the same check at booking
@@ -588,7 +589,8 @@ export default function DateTimeStep({
   const isCarRental = vendorTypeName === "Car rental"
   const isBridalWear = vendorTypeName === "Bridal wearing"
   const isWeddingStationery = vendorTypeName === "Wedding Invitations and Stationery"
-  const needsGuestCount = GUEST_COUNT_VENDOR_TYPES.has(vendorTypeName)
+  const perHeadOffered = venueOffersPerHeadPackage(venue as any) // WP36 / CUSTOMER-005
+  const needsGuestCount = GUEST_COUNT_VENDOR_TYPES.has(vendorTypeName) || perHeadOffered
   const enforceCapacity = !!venue?.maxCapacity || !!venue?.minCapacity
 
   /* ── 10.13 / 10.16 — the space, and what it can and can't do ───────────── */
@@ -775,7 +777,7 @@ export default function DateTimeStep({
 
   const showHall = subVenueSpaces.length >= 1
   const showSpace = spaces.length > 0 && subVenueSpaces.length === 0
-  const showGuests = needsGuestCount && enforceCapacity
+  const showGuests = needsGuestCount && (enforceCapacity || perHeadOffered)
   const showArrangement = vendorTypeName === "Wedding venue" || subVenueSpaces.length >= 1
   const hasStrip = showHall || showSpace || showGuests || showArrangement
 
