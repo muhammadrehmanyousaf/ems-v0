@@ -28,8 +28,17 @@ import {
   type SubscriptionPaymentRow,
 } from "@/lib/api/subscription"
 import { usePlan, type PlanApi } from "@/context/plan-context"
-import { LIMIT_NOUNS, planNameOf, type LimitKey } from "@/lib/plan-gate"
-import { useArtifactShell, pkNum, escHtml, errorBannerHtml, openConfirm, planMeterHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { LIMIT_NOUNS, type LimitKey } from "@/lib/plan-gate"
+import { useAccess } from "@/hooks/use-access"
+import { accessFromStatus, isLockedState, type Access } from "@/lib/plans/access"
+import { useBusiness } from "@/context/BusinessContext"
+import { getLiveVenues, getManualPayment, isNotThere, saveLiveVenues, submitManualPayment, type LiveVenues, type ManualMethodKey, type ManualPaymentInfo } from "@/lib/api/billing"
+import { say } from "@/lib/plans/copy"
+import {
+  STATE_CARDS_CSS, bi, liveVenuesDrawerHtml, lockedCardHtml, manualCardHtml, manualDrawerHtml, manualUnavailableHtml, overLimitCardHtml, trialCardHtml,
+  type OverLimitRow,
+} from "./plan-state-cards"
+import { useArtifactShell, pkNum, escHtml, errorBannerHtml, openConfirm, openDrawer, closeDrawer, planMeterHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const RANK: Record<string, number> = { free: 0, pro: 1, premium: 2, elite: 3 }
 function fmtDate(s?: string | null) { if (!s) return "—"; const d = new Date(s); return isNaN(d.getTime()) ? String(s) : d.toLocaleDateString("en-PK", { day: "numeric", month: "long", year: "numeric" }) }
@@ -82,7 +91,7 @@ const EXTRA_CSS = String.raw`
 .note{ padding:14px 16px; font-size:11.5px; color:var(--ink-3); line-height:1.6; } .note b{ color:var(--ink-2); font-weight:600; }
 .loadwrap{ display:grid; place-items:center; padding:80px 16px; color:var(--ink-3); font-size:13px; }
 @media (max-width:900px){ .plans{ grid-template-columns:1fr; } .sp-grid{ grid-template-columns:1fr 1fr; } }
-`
+${STATE_CARDS_CSS}`
 
 type ReturnMode = "return" | "cancel" | null
 
@@ -118,7 +127,10 @@ function isLive(status: BillingStatus | null): boolean {
 const priceBtn = (p: PlanCatalogEntry, cls: string, attr: string, label: string, aria: string, disabled = false) =>
   `<button class="btn ${cls}" ${attr} aria-label="${escHtml(aria)}"${disabled ? " disabled" : ""}>${disabled ? "" : svg(IC.card)} ${label} · <span class="rs">Rs</span> ${pkNum(p.pricePkrMonthly)} / mahina</button>`
 
-function planCard(p: PlanCatalogEntry, d: MyPlanData, view: PlanView): string {
+/** What the server's access object says the cards may offer: the automatic trial means no trial button except as a fallback. */
+interface CardCtx { canStartTrial: boolean; trialDays: number; renewTier: string | null }
+
+function planCard(p: PlanCatalogEntry, d: MyPlanData, view: PlanView, ctx: CardCtx): string {
   const highlights = (p.highlights || []).map((h) => `<div class="feat">${svg(IC.check, 2.4)} ${escHtml(h)}</div>`).join("")
   const caps = (p.caps || []).map((c) => `<div class="cap">${svg(IC.dash, 2)} ${escHtml(c)}</div>`).join("")
   const paid = p.pricePkrMonthly > 0
@@ -157,10 +169,12 @@ function planCard(p: PlanCatalogEntry, d: MyPlanData, view: PlanView): string {
       foot = `<div class="badge-inc">Aapka plan · cancel ho chuka${until ? ` · ${escHtml(until)} tak chalega` : ""}</div><div style="margin-top:8px">${priceBtn(p, "btn-primary", tierAttr, "Dobara chalu karein", `Resume ${p.name} for Rs ${pkNum(p.pricePkrMonthly)} a month with Safepay`)}</div>`
     else foot = priceBtn(p, "btn-ghost", tierAttr, `${escHtml(p.name)} lein`, `Take ${p.name} for Rs ${pkNum(p.pricePkrMonthly)} a month with Safepay`)
   } else {
-    const subscribeBtn = priceBtn(p, "btn-primary", `data-subscribe="${escHtml(p.tier)}"`, "Subscribe", `Subscribe to ${p.name} for Rs ${pkNum(p.pricePkrMonthly)} a month with Safepay`)
-    const days = d.trialDays || 0
-    // A vendor who never had a plan may start our free trial (no card) instead of paying today.
-    foot = d.trialEligible && days > 0
+    const renewing = ctx.renewTier === p.tier
+    const subscribeBtn = priceBtn(p, "btn-primary", `data-subscribe="${escHtml(p.tier)}"`, renewing ? "Renew" : "Subscribe", `${renewing ? "Renew" : "Subscribe to"} ${p.name} for Rs ${pkNum(p.pricePkrMonthly)} a month with Safepay`)
+    const days = ctx.trialDays || d.trialDays || 0
+    // The trial starts by itself when the first business is submitted. This button is only a fallback, and only when the
+    // server's access object says a trial can still be started by hand (canStartTrial); never from a local rule.
+    foot = ctx.canStartTrial && days > 0
       ? `<button class="btn btn-primary" data-trial="${escHtml(p.tier)}" data-trial-days="${days}" data-plan-name="${escHtml(p.name)}" aria-label="Start a ${days}-day free trial of ${escHtml(p.name)}">${svg(IC.check, 2.4)} ${days} din muft azmaayein</button><div style="margin-top:8px">${priceBtn(p, "btn-ghost", `data-subscribe="${escHtml(p.tier)}"`, "Ya abhi subscribe karein", `Subscribe to ${p.name} for Rs ${pkNum(p.pricePkrMonthly)} a month with Safepay`)}</div>`
       : subscribeBtn
   }
@@ -207,7 +221,7 @@ function statusCard(status: BillingStatus | null): string {
   else if (s.status === "active") [tone, label] = ["ok", "Active"]
   const extra =
     status.access === "past_due"
-      ? `<div class="sp-s" style="color:var(--warn)">Is mahine ki payment nahi hui. Safepay dobara koshish karega; portal ${escHtml(fmtDate(status.subscriptionEndsAt))} tak khula rahega. Apna card ya account check karein, ya "Card badlein" se naya card lagayein.</div>`
+      ? `<div class="sp-s" style="color:var(--warn)">Is mahine ki payment nahi hui. Safepay dobara koshish karega; portal ${escHtml(fmtDate(status.subscriptionEndsAt))} tak khula rahega. Apna card ya account check karein, ya "Card badlein" se naya card lagayein.</div><div style="margin-top:10px"><button class="btn btn-primary sm" data-change-plan="${escHtml(s.tier)}">Abhi pay karein</button></div>`
       : s.status === "cancelled"
         ? `<div class="sp-s">Subscription cancel ho chuki hai. ${accessEnded ? `${escHtml(fmtDate(status.subscriptionEndsAt))} ko access khatam ho gaya;` : `${escHtml(fmtDate(status.subscriptionEndsAt))} tak access rahegi;`} jab chahein neeche se dobara subscribe karein.</div>`
         : s.status === "paused"
@@ -235,7 +249,7 @@ function historyCard(payments: SubscriptionPaymentRow[] | undefined, planName: (
     <td style="font-variant-numeric:tabular-nums">${escHtml(r.receiptNo)}${r.refundedPaisas && r.refundedPaisas > 0 ? ` <span class="st warn" style="margin-left:6px">Refund <span class="rs">Rs</span> ${pkNum(Math.round(r.refundedPaisas / 100))}</span>` : ""}</td>
     <td style="text-align:right"><a class="btn btn-ghost sm" href="/dashboard/billing/receipt/${encodeURIComponent(r.receiptNo)}">Receipt</a></td>
   </tr>`).join("")
-  return `<div class="card" style="margin-bottom:16px"><div class="card-h" style="padding:14px 16px 6px"><div><h2 style="font-size:13.5px;font-weight:600">Billing history</h2><div class="sub">Har mahine ki payment aur uski receipt.</div></div></div>
+  return `<div class="card" id="history" style="margin-bottom:16px"><div class="card-h" style="padding:14px 16px 6px"><div><h2 style="font-size:13.5px;font-weight:600">Billing history</h2><div class="sub">Har mahine ki payment aur uski receipt.</div></div></div>
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Taareekh</th><th>Raqam</th><th>Plan</th><th>Period</th><th>Receipt no.</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`
 }
 
@@ -256,7 +270,17 @@ function usageCardHtml(plan: PlanApi): string {
   return `<div class="card usage-card" data-testid="usage-card" style="margin-bottom:16px"><div class="card-h" style="padding:14px 16px 6px"><div><h2 style="font-size:13.5px;font-weight:600">Aapka istemal</h2><div class="sub">${escHtml(sub)}</div></div></div><div class="us-grid">${rows}</div></div>`
 }
 
-function buildContent(d: MyPlanData, status: BillingStatus | null, mode: ReturnMode, waited: number, payments?: SubscriptionPaymentRow[], usageHtml = ""): string {
+interface PlanStateInput {
+  access: Access | null
+  manual: ManualPaymentInfo | null | "absent"
+  askedManual: boolean
+  overRows: OverLimitRow[]
+  venues: { id: number; name: string; city: string | null; live: boolean | null }[]
+  canChooseVenues: boolean
+  venueLimit: number | null
+}
+
+function buildContent(d: MyPlanData, status: BillingStatus | null, mode: ReturnMode, waited: number, payments?: SubscriptionPaymentRow[], usageHtml = "", st?: PlanStateInput): string {
   const paidActive = status?.access === "active" || status?.access === "past_due"
   // When Safepay says the plan is paid, the tier it reports is the truth.
   const effectiveTier = (paidActive && status?.tier ? status.tier : d.currentTier) as SubscriptionTier
@@ -284,28 +308,41 @@ function buildContent(d: MyPlanData, status: BillingStatus | null, mode: ReturnM
   const cur = `<div class="card cur-plan"><span class="cur-ic">${svg(TIER_ICON[effectiveTier] || IC.bolt, 1.8)}</span>
     <div class="cur-main"><div class="cur-t">Aapka plan: ${escHtml(paidActive ? curPlan?.name || tierName(effectiveTier) : "Koi plan nahi")}</div><div class="cur-s">${escHtml(endsLine)}${paidActive && curPlan?.tagline ? ` · ${escHtml(curPlan.tagline)}` : ""}</div></div>${pendingLine}</div>`
 
-  const plans = `<div class="plans">${d.plans.map((p) => planCard(p, d, view)).join("")}</div>`
+  const access = st?.access ?? null
+  const ctx: CardCtx = {
+    canStartTrial: !!access?.canStartTrial,
+    trialDays: d.trialDays || 0,
+    renewTier: access && isLockedState(access.state) && access.plan ? access.plan : null,
+  }
+  // There is no free vendor plan: a zero-price catalogue entry is never drawn.
+  const plans = `<div class="plans" id="plans">${d.plans.filter((p) => p.pricePkrMonthly > 0).map((p) => planCard(p, d, view, ctx)).join("")}</div>`
 
   // The numbers each plan allows, from the server's limits table (the same one the gates enforce).
   const limitCell = (n: number | null | undefined) => `<td class="tnum">${n === null ? "Unlimited" : n === undefined ? "—" : n}</td>`
-  const limitRows = (d.limitComparison || []).map((r) => `<tr><td>${escHtml(r.label.charAt(0).toUpperCase() + r.label.slice(1))}</td>${limitCell(r.free)}${limitCell(r.pro)}${limitCell(r.premium)}${limitCell(r.elite)}</tr>`).join("")
+  const limitRows = (d.limitComparison || []).map((r) => `<tr><td>${escHtml(r.label.charAt(0).toUpperCase() + r.label.slice(1))}</td>${limitCell(r.pro)}${limitCell(r.premium)}${limitCell(r.elite)}</tr>`).join("")
   const comparison = (d.comparison || []).length ? `<div class="card" style="margin-bottom:16px"><div class="card-h" style="padding:14px 16px 6px"><div><h2 style="font-size:13.5px;font-weight:600">Features ki tafseel</h2></div></div>
-    <div class="tbl-wrap"><table class="tbl cmp"><thead><tr><th>Feature</th><th>${escHtml(planNameOf("free"))}</th><th>${escHtml(tierName("pro"))}</th><th>${escHtml(tierName("premium"))}</th><th>${escHtml(tierName("elite" as SubscriptionTier))}</th></tr></thead>
+    <div class="tbl-wrap"><table class="tbl cmp"><thead><tr><th>Feature</th><th>${escHtml(tierName("pro"))}</th><th>${escHtml(tierName("premium"))}</th><th>${escHtml(tierName("elite" as SubscriptionTier))}</th></tr></thead>
     <tbody>${d.comparison!.map((r) => `<tr><td>${escHtml(r.label)}</td>
-      <td>${r.free ? `<span class="yes">${svg(IC.check, 2.4)}</span>` : `<span class="no">${svg(IC.dash, 2)}</span>`}</td>
       <td>${r.pro ? `<span class="yes">${svg(IC.check, 2.4)}</span>` : `<span class="no">${svg(IC.dash, 2)}</span>`}</td>
       <td>${r.premium ? `<span class="yes">${svg(IC.check, 2.4)}</span>` : `<span class="no">${svg(IC.dash, 2)}</span>`}</td>
       <td>${r.elite ? `<span class="yes">${svg(IC.check, 2.4)}</span>` : `<span class="no">${svg(IC.dash, 2)}</span>`}</td></tr>`).join("")}${limitRows}</tbody></table></div></div>` : ""
 
+  const honest = `<div class="card" style="margin-bottom:16px"><div class="note" data-testid="plans-honest"><b>${escHtml(say("bill.honest.title", "en"))}</b> ${bi("bill.honest.note")}</div></div>`
   const note = `<div class="card"><div class="note"><b>Payment Safepay ke zariye hoti hai</b> — card ki tafseel hum kabhi nahi dekhte na rakhte hain. Subscription har mahina khud renew hoti hai; jab chahein cancel kar sakte hain. ${escHtml(d.pricing?.taxNote || "")} <a href="/vendor-subscription-policy" target="_blank" rel="noopener" style="color:var(--accent-ink);text-decoration:underline">Subscription policy</a></div></div>`
 
   const declineLine = d.lastDecline && !d.pendingUpgradeTier
     ? `<div class="card" style="margin-bottom:16px;padding:12px 16px;display:flex;gap:10px;align-items:flex-start;background:var(--bad-wash);border-color:transparent"><span style="color:var(--bad);flex:none">${svg(IC.clock)}</span><div style="font-size:12.5px;color:var(--ink-2)"><b style="color:var(--bad)">Pichli upgrade request (${escHtml(d.lastDecline.tierName || tierName(d.lastDecline.tier))}) manzoor nahi hui${d.lastDecline.declinedAt ? ` · ${fmtDate(d.lastDecline.declinedAt)}` : ""}.</b>${d.lastDecline.reason ? `<div style="margin-top:3px">Wajah: ${escHtml(d.lastDecline.reason)}</div>` : ""}</div></div>`
     : ""
 
+  // One card says where the vendor stands: the trial countdown, "your plan is paused", or the Safepay status.
+  const stateCard = access?.state === "trialing" ? trialCardHtml(access) : statusCard(status)
+  const lockedCard = access && isLockedState(access.state) ? lockedCardHtml(access) : ""
+  const planNameOfTier = (t: string) => tierName(t as SubscriptionTier)
+  const manualCard = st?.manual && st.manual !== "absent" ? manualCardHtml(st.manual, planNameOfTier, access?.canPay !== false) : st?.askedManual ? manualUnavailableHtml() : ""
+  const overCard = st && st.overRows.length ? overLimitCardHtml({ planName: access?.planName || curPlan?.name || "your", rows: st.overRows, venues: st.venues, canChoose: st.canChooseVenues, venueLimit: st.venueLimit }) : ""
   return `
   <div class="head"><div><h1>Plan & billing</h1><div class="sub">Apna plan chunein — payment Safepay par hoti hai aur har mahina khud renew hoti hai.</div></div></div>
-  ${returnBanner(mode, status, waited)}${statusCard(status)}${cur}${usageHtml}${declineLine}${plans}${historyCard(payments, (t) => tierName(t as SubscriptionTier))}${comparison}${note}
+  ${returnBanner(mode, status, waited)}${lockedCard}${stateCard}${cur}${overCard}${usageHtml}${declineLine}${manualCard}${plans}${historyCard(payments, (t) => tierName(t as SubscriptionTier))}${comparison}${honest}${note}
   <div class="foot">WeddingWala vendor console · Billing</div>`
 }
 
@@ -338,6 +375,60 @@ export function BillingArtifact() {
   const { data, isError } = useQuery({ queryKey: ["billing-art"], queryFn: () => SubscriptionAPI.getMyPlan() })
   const plan = usePlan()
   const usageHtml = React.useMemo(() => usageCardHtml(plan), [plan])
+  // The server's access object, from the one access store (never derived here).
+  const { access } = useAccess()
+  const { businesses } = useBusiness()
+  const askedManual = params?.get("pay") === "manual"
+  const canPay = access ? access.canPay : true
+
+  // The manual proof route (bank / JazzCash / Easypaisa). A server that does not have it yet answers 404: no card.
+  const manualQ = useQuery({
+    queryKey: ["billing-manual"],
+    queryFn: async (): Promise<ManualPaymentInfo | "absent" | null> => {
+      try { return await getManualPayment() } catch (e) { if (isNotThere(e)) return "absent"; throw e }
+    },
+    enabled: canPay && !access?.staff,
+    retry: 0,
+    staleTime: 30_000,
+    refetchInterval: (q) => (q.state.data && q.state.data !== "absent" && q.state.data.current?.status === "pending" ? 30_000 : false),
+  })
+
+  // Over the plan's limit: which limits are exceeded (the server's numbers) and, for venues, which stay live.
+  const overRows: OverLimitRow[] = React.useMemo(() => {
+    const out: OverLimitRow[] = []
+    for (const k of ["businesses", "staff", "spaces", "images"] as LimitKey[]) {
+      const l = plan.limit(k)
+      if (l && l.enforced && l.max !== null && l.used !== null && l.used > l.max) {
+        out.push({ label: { businesses: "Businesses", staff: "Staff accounts", spaces: "Halls & spaces", images: "Photos" }[k], used: l.used, max: l.max, nouns: LIMIT_NOUNS[k] })
+      }
+    }
+    return out
+  }, [plan])
+  const venuesOver = overRows.some((x) => x.label === "Businesses")
+  const liveQ = useQuery({
+    queryKey: ["billing-live-venues"],
+    queryFn: async (): Promise<LiveVenues | "absent" | null> => {
+      try { return await getLiveVenues() } catch (e) { if (isNotThere(e)) return "absent"; throw e }
+    },
+    enabled: venuesOver,
+    retry: 0,
+    staleTime: 30_000,
+  })
+  const liveData = liveQ.data && liveQ.data !== "absent" ? liveQ.data : null
+  const venueList = React.useMemo(() => {
+    if (liveData) return liveData.venues.map((v) => ({ id: v.id, name: v.name, city: v.city, live: v.live as boolean | null }))
+    return ((businesses || []) as { id: number; name?: string; city?: string }[]).map((b) => ({ id: b.id, name: b.name || "Venue", city: b.city || null, live: null as boolean | null }))
+  }, [liveData, businesses])
+  const stateInput: PlanStateInput = React.useMemo(() => ({
+    access,
+    manual: manualQ.data ?? null,
+    askedManual,
+    overRows,
+    venues: venuesOver ? venueList : [],
+    canChooseVenues: !!liveData,
+    venueLimit: liveData?.limit ?? plan.limit("businesses")?.max ?? null,
+  }), [access, manualQ.data, askedManual, overRows, venuesOver, venueList, liveData, plan])
+  const planRef = React.useRef({ data: undefined as MyPlanData | undefined, state: stateInput, billing: undefined as BillingStatus | undefined })
   const billing = useQuery({
     queryKey: ["billing-status"],
     queryFn: () => SubscriptionAPI.getBillingStatus(),
@@ -375,6 +466,7 @@ export function BillingArtifact() {
 
   const pendingRef = React.useRef<SubscriptionTier | null>(null)
   pendingRef.current = data?.pendingUpgradeTier ?? null
+  planRef.current = { data, state: stateInput, billing: billing.data }
 
   React.useEffect(() => {
     const s = shadowRef.current
@@ -382,9 +474,33 @@ export function BillingArtifact() {
     const wwc = s.getElementById("wwc"); if (!wwc) return
     if (isError) { wwc.innerHTML = `<div class="head"><div><h1>Plan & billing</h1></div></div>${errorBannerHtml()}`; return }
     if (!data) { wwc.innerHTML = `<div class="loadwrap">Plan load ho raha hai…</div>`; return }
-    wwc.innerHTML = buildContent(data, billing.data ?? null, mode, waited, payments.data, usageHtml)
+    wwc.innerHTML = buildContent(data, billing.data ?? null, mode, waited, payments.data, usageHtml, stateInput)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, data, isError, billing.data, mode, waited >= 120, payments.data, usageHtml])
+  }, [ready, data, isError, billing.data, mode, waited >= 120, payments.data, usageHtml, stateInput])
+
+  // Deep links: #history / #plans / #over / #manual scroll into the shadow content, and a renewal link
+  // (?renew=1&plan=premium, the one in every reminder) opens that plan's confirmation once. ?pay=manual opens the manual form.
+  const deepDone = React.useRef({ hash: "", renew: false, manual: false })
+  React.useEffect(() => {
+    const sh = shadowRef.current
+    if (!sh || !ready || !data) return
+    const wwc = sh.getElementById("wwc"); if (!wwc || !wwc.querySelector(".plans")) return
+    const hash = typeof window !== "undefined" ? window.location.hash.replace("#", "") : ""
+    if (hash && deepDone.current.hash !== hash) {
+      const el = sh.getElementById(hash)
+      if (el) { deepDone.current.hash = hash; el.scrollIntoView({ block: "start" }) }
+    }
+    const wantPlan = params?.get("plan")
+    if (params?.get("renew") === "1" && wantPlan && !deepDone.current.renew) {
+      const btn = wwc.querySelector(`[data-subscribe="${CSS.escape(wantPlan)}"], [data-change-plan="${CSS.escape(wantPlan)}"]`) as HTMLButtonElement | null
+      if (btn && !btn.disabled) { deepDone.current.renew = true; btn.click() }
+    }
+    if (askedManual && !deepDone.current.manual && manualQ.data && manualQ.data !== "absent" && manualQ.data.enabled) {
+      deepDone.current.manual = true
+      ;(wwc.querySelector("[data-manual-open]") as HTMLElement | null)?.click()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, data, billing.data, manualQ.data, askedManual])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
@@ -425,9 +541,90 @@ export function BillingArtifact() {
       }
     }
 
+    // Manual proof route: pick a plan, see where to send the money, upload the proof; a super-admin approves it.
+    s.addEventListener("change", (e) => {
+      const t = e.target as HTMLElement
+      if (t.id === "mp-tier") {
+        const price = (t as HTMLSelectElement).selectedOptions[0]?.dataset.price
+        const amt = s.getElementById("mp-amt") as HTMLInputElement | null
+        if (price && amt) amt.value = price
+      }
+      if (t.closest("[data-live-form]") && (t as HTMLInputElement).type === "checkbox") {
+        const form = t.closest("[data-live-form]") as HTMLElement
+        const boxes = Array.from(form.querySelectorAll('input[type="checkbox"]')) as HTMLInputElement[]
+        boxes.forEach((b) => b.closest(".ol-row")?.classList.toggle("on", b.checked))
+        const max = planRef.current.state.venueLimit
+        const n = boxes.filter((b) => b.checked).length
+        const c = form.querySelector("[data-live-count]"); if (c) c.textContent = max !== null ? `${n} of ${max} selected` : `${n} selected`
+      }
+    })
+    s.addEventListener("submit", async (e) => {
+      const form = e.target as HTMLFormElement
+      if (form.matches("[data-mp-form]")) {
+        e.preventDefault()
+        const err = s.getElementById("mp-err") as HTMLElement | null
+        const setErr = (m: string) => { if (err) err.textContent = m }
+        const tier = (s.getElementById("mp-tier") as HTMLSelectElement | null)?.value || ""
+        const ref = ((s.getElementById("mp-ref") as HTMLInputElement | null)?.value || "").trim()
+        const amount = Number(((s.getElementById("mp-amt") as HTMLInputElement | null)?.value || "").replace(/[,\s]/g, ""))
+        const method = ((form.querySelector('input[name="mp-method"]:checked') as HTMLInputElement | null)?.value || "") as ManualMethodKey
+        const file = (s.getElementById("mp-proof") as HTMLInputElement | null)?.files?.[0]
+        if (!tier || !method) return setErr("Choose a plan and how you paid.")
+        if (!ref) return setErr("Enter the transaction ID or reference.")
+        if (!Number.isFinite(amount) || amount <= 0) return setErr("Enter the amount you sent.")
+        if (!file) return setErr("Upload your receipt or screenshot.")
+        if (file.size > 8 * 1024 * 1024) return setErr("The file is larger than 8 MB.")
+        if (!/^(image\/|application\/pdf)/.test(file.type)) return setErr("Upload an image or a PDF.")
+        setErr("")
+        const btn = form.querySelector("[data-mp-submit]") as HTMLButtonElement | null
+        if (btn) { btn.disabled = true; btn.textContent = say("manual.sending", "en") }
+        try {
+          await submitManualPayment({ tier, method, reference: ref, amountPkr: amount, proof: file })
+          closeDrawer(s)
+          toast.success("Proof bhej diya gaya — hum business hours mein check karenge")
+          qc.invalidateQueries({ queryKey: ["billing-manual"] })
+        } catch (e2: unknown) {
+          setErr(msgOf(e2) || "The proof could not be sent. Nothing was charged. Try again.")
+          if (btn) { btn.disabled = false; btn.textContent = say("manual.submit", "en") }
+        }
+        return
+      }
+      if (form.matches("[data-live-form]")) {
+        e.preventDefault()
+        const ids = (Array.from(form.querySelectorAll('input[type="checkbox"]:checked')) as HTMLInputElement[]).map((b) => Number(b.value))
+        const max = planRef.current.state.venueLimit
+        const err = s.getElementById("live-err") as HTMLElement | null
+        if (ids.length === 0) { if (err) err.textContent = "Keep at least one venue live."; return }
+        if (max !== null && ids.length > max) { if (err) err.textContent = `Your plan allows ${max} live. Untick ${ids.length - max}.`; return }
+        const btn = form.querySelector("[data-live-save]") as HTMLButtonElement | null
+        if (btn) { btn.disabled = true; btn.textContent = say("over.saving", "en") }
+        try {
+          await saveLiveVenues(ids)
+          closeDrawer(s)
+          toast.success(say("over.saved", "en"))
+          qc.invalidateQueries({ queryKey: ["billing-live-venues"] }); qc.invalidateQueries({ queryKey: ["billing-status"] })
+        } catch (e2: unknown) {
+          if (err) err.textContent = msgOf(e2) || "Could not save. Nothing was paused. Try again."
+          if (btn) { btn.disabled = false; btn.textContent = say("over.save", "en") }
+        }
+      }
+    })
+
     s.addEventListener("click", async (e) => {
       const t = e.target as HTMLElement
       if (t.closest("[data-retry]")) { refresh(); return }
+      if (t.closest("[data-manual-open]")) {
+        const st = planRef.current.state
+        const info = st.manual && st.manual !== "absent" ? st.manual : null
+        const cat = planRef.current.data?.plans ?? []
+        if (info?.enabled) openDrawer(s, "Bank transfer / JazzCash / Easypaisa", manualDrawerHtml(info, cat.map((p) => ({ tier: p.tier, name: p.name, pricePkrMonthly: p.pricePkrMonthly })), st.access?.plan ?? null))
+        return
+      }
+      if (t.closest("[data-live-open]")) {
+        const st = planRef.current.state
+        openDrawer(s, say("over.pick", "en"), liveVenuesDrawerHtml({ limit: st.venueLimit, venues: st.venues.map((v) => ({ id: v.id, name: v.name, city: v.city, live: v.live !== false })) }))
+        return
+      }
       if (t.closest("[data-dismiss-return]")) { window.history.replaceState(null, "", "/dashboard/billing"); setMode(null); return }
       const abandonBtn = t.closest("[data-cancel-checkout]") as HTMLButtonElement | null
       if (abandonBtn) {

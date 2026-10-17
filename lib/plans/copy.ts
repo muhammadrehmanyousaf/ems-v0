@@ -239,6 +239,7 @@ export const COPY = {
   "manual.field.reference": { en: "Transaction ID or reference", ru: "Transaction ID ya reference" },
   "manual.field.amount": { en: "Amount sent (Rs)", ru: "Bheji gayi raqam (Rs)" },
   "manual.field.proof": { en: "Receipt or screenshot (image or PDF)", ru: "Receipt ya screenshot (image ya PDF)" },
+  "manual.open": { en: "Upload proof", ru: "Saboot upload karein" },
   "manual.submit": { en: "Send for approval", ru: "Manzoori ke liye bhejein" },
   "manual.sending": { en: "Sending...", ru: "Bhej rahe hain..." },
   "manual.pending.title": { en: "Waiting for approval", ru: "Manzoori ka intezaar" },

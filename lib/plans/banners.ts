@@ -63,8 +63,9 @@ export function bannerFor(a: Access | null, now: Date = new Date(), opts: { welc
     return null
   }
   if (isLockedState(a.state)) {
-    // Only reachable on the pages that stay open while locked (billing, account).
-    return { kind: "locked_here", tone: "bad", keys: ["banner.locked_here"], vars: () => ({}), cta: a.canPay && !opts.onPaymentPage ? "renew" : null, dismiss: null }
+    // Only reachable on the pages that stay open while locked (billing, account). The billing page says it itself, in a card.
+    if (opts.onPaymentPage) return null
+    return { kind: "locked_here", tone: "bad", keys: ["banner.locked_here"], vars: () => ({}), cta: a.canPay ? "renew" : null, dismiss: null }
   }
   if (opts.wasLocked) return { kind: "reactivated", tone: "ok", keys: ["banner.reactivated"], vars: () => ({}), cta: null, dismiss: "once" }
   return null
