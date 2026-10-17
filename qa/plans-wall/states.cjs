@@ -21,6 +21,8 @@ const SCENARIOS = {
   "wall-closed": { status: () => L.statusBody(L.accessObj("closed", { lockReason: "plan_ended", lockedAt: L.pkEnd(-400), retainUntil: null })) },
   "wall-suspended": { status: () => L.statusBody(L.accessObj("suspended_admin", { canPay: false, lockReason: "admin_suspended", lockedAt: L.pkEnd(-2) })) },
   "wall-staff": { statusCode: 403, lock402: { code: "SUBSCRIPTION_REQUIRED", state: "locked", lockReason: "plan_ended", lockedSince: L.pkEnd(-1), retainUntil: L.pkEnd(89), renewUrl: null, staff: true, ownerMasked: "+92 3** *** *20" } },
+  "shadow-would-lock": { status: () => L.statusBody(L.accessObj("locked", { lockReason: "plan_ended", lockedAt: L.pkEnd(-1), retainUntil: L.pkEnd(89), enforced: false })), waitFor: ".cscroll" },
+  "unstarted": { status: () => L.statusBody(L.accessObj("unstarted", { plan: null, planName: null })) },
   "wall-obl-error": { status: () => L.statusBody(L.accessObj("locked", { lockReason: "plan_ended", lockedAt: L.pkEnd(-1), retainUntil: L.pkEnd(89) })), obligations: "error" },
   "wall-obl-404": { status: () => L.statusBody(L.accessObj("locked", { lockReason: "plan_ended", lockedAt: L.pkEnd(-1), retainUntil: L.pkEnd(89) })), obligations: "404" },
 }

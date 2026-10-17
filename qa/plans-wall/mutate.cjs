@@ -39,6 +39,9 @@ const M = [
   ["a 409 with any code is a paused venue", "lib/plans/venue-availability.ts", 'str(d.code) !== "VENUE_UNAVAILABLE"', "false"],
   ["the public page forgets the notice", "components/seo/vendor-detail-page.tsx", "readAvailabilityNotice(vendor.raw)", "null"],
   ["a second place lists the locked states", "components/dashboard/plans/banners/plan-banners.tsx", "const ICON = {", 'const LOCKED = ["locked", "dormant", "closed", "suspended_admin"]\nconst ICON = {'],
+  ["shadow mode walls anyway", "lib/plans/access.ts", "isLockedState(a.state) && a.enforced !== false", "isLockedState(a.state)"],
+  ["the revalidate hook loses its secret check", "app/api/revalidate/route.ts", 'if (typeof body.secret !== "string" || !safeEqual(body.secret, expected)) {', "if (false) {"],
+  ["an unstarted vendor is walled", "lib/plans/access.ts", '= ["locked", "dormant", "closed", "suspended_admin"]', '= ["locked", "dormant", "closed", "suspended_admin", "unstarted"]'],
   ["a raw 402 check appears elsewhere", "components/dashboard/plans/access-sync.tsx", "export function AccessSync() {", "export function AccessSync() {\n  const x = (e: any) => e.response.status === 402"],
 ]
 
