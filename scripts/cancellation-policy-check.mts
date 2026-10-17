@@ -179,12 +179,14 @@ for (const f of ["components/VendorDetails/VendorDetails.tsx", "components/Vendo
   const src = read(f);
   check(`${f} prints the policy through cancellationDisplay (the engine's summary), not the bare label`, /cancellationDisplay\(/.test(src) && !/cancellationLabel\(/.test(src));
 }
+const previewStep = read("components/booking/steps/preview-step.tsx");
+check("the booking confirmation reads the venue's and every added vendor's policy through cancellationDisplay", /cancellationDisplay\(venue\)/.test(previewStep) && /cancellationDisplay\(v\)/.test(previewStep));
 check("the venue page prints the plain-words detail under the headline (both layouts and the booking confirmation)", ["components/VendorDetails/VendorDetails.tsx", "components/VendorDetails/VendorDetailsMobile.tsx", "components/booking/steps/preview-step.tsx"].every((f) => /data-cancellation-detail/.test(read(f))));
 check("the vendor payload mappers carry the server summary", /cancellationSummary: raw\.cancellationSummary/.test(read("lib/api/vendors.ts")) && /cancellationSummary: raw\?\.cancellationSummary/.test(read("lib/seo/fetch-vendor.ts")));
 const policyScreen = read("components/dashboard/mainScreens/cancellation-policy/artifact/cancellation-policy-artifact.tsx");
 check("the vendor Cancellation policy screen says what couples read (the engine's summary) and names a label-derived source", /data-policy-says/.test(policyScreen) && /d\.summary/.test(policyScreen) && /business_label/.test(policyScreen));
-check("the vendor screen can edit the partial keep value: same rules as registration, same server door", /data-keep-edit/.test(policyScreen) && /validatePartialRefund\(/.test(policyScreen) && /partialRefund: \{ type: v\.type, value: v\.value \}/.test(policyScreen) && /Venue Keeps \(PKR\)/.test(policyScreen) && /Venue Keeps \(%\)/.test(policyScreen) && /partialRefund\?: \{ type: "percent" \| "fixed"/.test(read("lib/api/bookingOrder.ts")));
-check("the customer cancel dialog states the governing policy in words (policySummary)", /data-policy-summary/.test(cancelPage) && /refundPreview\.policySummary/.test(cancelPage) && /policySummary\?:/.test(read("lib/api/bookingOrder.ts")));
+check("the vendor screen can edit the partial keep value: same rules as registration, same server door", /data-keep-edit>/.test(policyScreen) && /closest\("\[data-keep-edit\]"\)/.test(policyScreen) && /validatePartialRefund\(/.test(policyScreen) && /partialRefund: \{ type: v\.type, value: v\.value \}/.test(policyScreen) && /Venue Keeps \(PKR\)/.test(policyScreen) && /Venue Keeps \(%\)/.test(policyScreen) && /partialRefund\?: \{ type: "percent" \| "fixed"/.test(read("lib/api/bookingOrder.ts")));
+check("the customer cancel dialog states the governing policy in words (policySummary)", /data-policy-summary/.test(cancelPage) && /\{refundPreview\.policySummary\?\.detail && \(/.test(cancelPage) && /policySummary\?:/.test(read("lib/api/bookingOrder.ts")));
 
 // no component prints the stored policy raw: a JSX expression that is just the field, or a Field/StatTile value, must go through the label helper
 // (form controls such as <Select value={formData.cancelationPolicy}> hold the KEY on purpose: they are not display)
