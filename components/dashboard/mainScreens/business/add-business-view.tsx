@@ -256,7 +256,7 @@ export function AddBusinessView() {
   const blocked: LimitReached | null = limitHit ?? (atLimit && limit ? { message: "", max: limit.max, used: limit.used, upgradeTo: null, currentPlan: limit.planName } : null)
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5 p-4 md:p-6">
+    <div className="mx-auto max-w-2xl space-y-5 p-4 md:p-6 min-[1280px]:max-w-6xl">
       <PageHeader
         eyebrow="Business"
         title="Add a business"
@@ -272,7 +272,14 @@ export function AddBusinessView() {
       {blocked ? (
         <LimitPanel max={blocked.max} used={blocked.used} upgradeTo={blocked.upgradeTo} currentPlan={blocked.currentPlan} message={blocked.message} />
       ) : (
-        <form onSubmit={onSubmit} noValidate className="space-y-5">
+        <form
+          onSubmit={onSubmit}
+          noValidate
+          // From 1280px the form is two columns instead of one centred 780px strip: the fields on the left,
+          // the two "read this first" notes beside them. DOM and reading order are unchanged.
+          className="space-y-5 min-[1280px]:grid min-[1280px]:grid-cols-[minmax(0,1fr)_380px] min-[1280px]:items-start min-[1280px]:gap-x-6 min-[1280px]:gap-y-5 min-[1280px]:space-y-0"
+        >
+          <div className="space-y-5 min-[1280px]:col-start-2 min-[1280px]:row-start-1 min-[1280px]:row-span-2">
           {/* Same account: the vendor can see nothing new is asked about them. */}
           <section aria-labelledby="ab-account" className="rounded-xl border bg-card p-4">
             <h2 id="ab-account" className="text-sm font-semibold">Adding to your account</h2>
@@ -304,8 +311,9 @@ export function AddBusinessView() {
               <li>While you wait, add photos, packages and prices in Business settings. You will land there next.</li>
             </ol>
           </section>
+          </div>
 
-          <section aria-labelledby="ab-details" className="space-y-4 rounded-xl border bg-card p-4">
+          <section aria-labelledby="ab-details" className="space-y-4 rounded-xl border bg-card p-4 min-[1280px]:col-start-1 min-[1280px]:row-start-1">
             <h2 id="ab-details" className="text-sm font-semibold">About this business</h2>
 
             <Field id="ab-name" label="Business name" help="businessName" required hint="Must be unique across Wedding Wala." error={touched.name ? nameError : serverNameError}>
@@ -435,6 +443,7 @@ export function AddBusinessView() {
             </Field>
           </section>
 
+          <div className="space-y-5 min-[1280px]:col-start-1 min-[1280px]:row-start-2">
           {submitError && (
             <p role="alert" data-testid="add-business-error" className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
               {submitError}
@@ -449,6 +458,7 @@ export function AddBusinessView() {
                 ? <><Spinner size={14} className="mr-1.5" /> Sending…</>
                 : <><Icon name="CheckCircle2" size={15} className="mr-1.5" /> Send for review</>}
             </Button>
+          </div>
           </div>
         </form>
       )}

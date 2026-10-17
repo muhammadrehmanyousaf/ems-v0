@@ -33,6 +33,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { STATUS_TEXT, STATUS_SOFT_BG } from "@/components/ui/status-tones";
 
 import {
   PageContainer,
@@ -47,47 +48,47 @@ const NOTIFICATION_CONFIG: Record<
 > = {
   booking_created: {
     icon: CalendarCheck,
-    tone: "bg-bridal-cream text-bridal-gold-dark",
+    tone: `${STATUS_SOFT_BG.info} ${STATUS_TEXT.info}`,
     label: "Booking",
   },
   booking_approved: {
     icon: CalendarCheck,
-    tone: "bg-bridal-sage/15 text-[#3F6B43]",
+    tone: `${STATUS_SOFT_BG.success} ${STATUS_TEXT.success}`,
     label: "Approved",
   },
   booking_rejected: {
     icon: CalendarX,
-    tone: "bg-bridal-coral/12 text-bridal-coral",
+    tone: `${STATUS_SOFT_BG.danger} ${STATUS_TEXT.danger}`,
     label: "Rejected",
   },
   booking_cancelled: {
     icon: CalendarX,
-    tone: "bg-bridal-gold/12 text-bridal-gold-dark",
+    tone: `${STATUS_SOFT_BG.danger} ${STATUS_TEXT.danger}`,
     label: "Cancelled",
   },
   payment_received: {
     icon: CreditCard,
-    tone: "bg-bridal-sage/15 text-[#3F6B43]",
+    tone: `${STATUS_SOFT_BG.success} ${STATUS_TEXT.success}`,
     label: "Payment",
   },
   payment_failed: {
     icon: AlertCircle,
-    tone: "bg-bridal-coral/12 text-bridal-coral",
+    tone: `${STATUS_SOFT_BG.danger} ${STATUS_TEXT.danger}`,
     label: "Failed",
   },
   payment_refunded: {
     icon: RefreshCcw,
-    tone: "bg-bridal-gold/12 text-bridal-gold-dark",
+    tone: `${STATUS_SOFT_BG.warning} ${STATUS_TEXT.warning}`,
     label: "Refund",
   },
   payout_processed: {
     icon: Wallet,
-    tone: "bg-bridal-sage/15 text-[#3F6B43]",
+    tone: `${STATUS_SOFT_BG.success} ${STATUS_TEXT.success}`,
     label: "Payout",
   },
   new_review: {
     icon: Star,
-    tone: "bg-bridal-gold/12 text-bridal-gold-dark",
+    tone: `${STATUS_SOFT_BG.warning} ${STATUS_TEXT.warning}`,
     label: "Review",
   },
   welcome: {
@@ -97,7 +98,7 @@ const NOTIFICATION_CONFIG: Record<
   },
   system: {
     icon: Info,
-    tone: "bg-muted text-muted-foreground",
+    tone: `${STATUS_SOFT_BG.neutral} ${STATUS_TEXT.neutral}`,
     label: "System",
   },
 };
@@ -188,8 +189,12 @@ function NotificationRow({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
+          {/* Mail-list row from 1024px: the title and its meta sit in a fixed-width left
+              column, the message reads across the rest of the row, so a wide window is not
+              a thin column of text with the right 40% empty. Below 1024px it stays stacked
+              in the same order (title, message, meta). */}
+          <div className="flex-1 min-w-0 lg:grid lg:grid-cols-[minmax(240px,320px)_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:gap-x-10">
+            <div className="flex items-center gap-2 flex-wrap lg:[grid-area:1/1]">
               <h3
                 className={cn(
                   "text-[13.5px] leading-tight",
@@ -204,10 +209,10 @@ function NotificationRow({
                 <span className="size-1.5 rounded-full bg-bridal-gold" />
               ) : null}
             </div>
-            <p className="text-[12.5px] text-muted-foreground mt-1 leading-relaxed">
+            <p className="text-[12.5px] text-muted-foreground mt-1 leading-relaxed lg:mt-0 lg:[grid-area:1/2/3/3]">
               {notification.message}
             </p>
-            <div className="flex items-center gap-2.5 mt-2 flex-wrap">
+            <div className="flex items-center gap-2.5 mt-2 flex-wrap lg:[grid-area:2/1]">
               <span className="text-[10.5px] text-muted-foreground/80 tabular-nums">
                 {formatDate(notification.createdAt)}
               </span>
@@ -233,7 +238,7 @@ function NotificationRow({
               e.stopPropagation();
               onDeleteRequest(notification.id);
             }}
-            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md text-muted-foreground hover:text-bridal-coral hover:bg-bridal-coral/10 transition-all"
+            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md text-muted-foreground hover:text-status-danger hover:bg-status-danger-soft transition-all"
             title="Delete notification"
           >
             <Trash2 className="size-4" />
@@ -325,7 +330,7 @@ export default function UserNotificationsPage() {
             <span
               className={cn(
                 "inline-flex items-center gap-1 text-[10.5px] uppercase tracking-[0.18em] font-medium",
-                isConnected ? "text-[#3F6B43]" : "text-muted-foreground",
+                isConnected ? STATUS_TEXT.success : "text-muted-foreground",
               )}
               title={isConnected ? "Live updates active" : "Connecting…"}
             >
@@ -434,7 +439,7 @@ export default function UserNotificationsPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
-              className="bg-bridal-coral hover:bg-bridal-coral/90 text-bridal-ivory"
+              className="bg-bridal-coral-dark hover:bg-bridal-coral-dark/95 text-white"
             >
               Delete
             </AlertDialogAction>

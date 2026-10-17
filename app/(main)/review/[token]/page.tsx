@@ -222,7 +222,7 @@ export default function Page({ params }: PageProps) {
 
       <main className="max-w-xl mx-auto px-6 py-8 space-y-6">
         {doneMessage && (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 flex items-start gap-2">
+          <div className="rounded-lg border border-status-success-line bg-status-success-soft p-3 text-sm text-status-success flex items-start gap-2">
             <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
             <span>{doneMessage}</span>
           </div>
@@ -230,7 +230,7 @@ export default function Page({ params }: PageProps) {
 
         {allDone ? (
           <div className="bg-white border border-neutral-200 rounded-xl p-6 text-center space-y-2">
-            <CheckCircle2 className="h-10 w-10 text-emerald-600 mx-auto" />
+            <CheckCircle2 className="h-10 w-10 text-status-success mx-auto" />
             <h2 className="text-lg font-semibold">All vendors reviewed</h2>
             <p className="text-sm text-neutral-600">
               Thank you — your feedback is live on Wedding Wala.
@@ -297,7 +297,7 @@ export default function Page({ params }: PageProps) {
                       className="accent-bridal-gold-dark"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-neutral-900">
+                      <div className="font-medium text-bridal-charcoal">
                         {b.name}
                       </div>
                       <div className="text-[11px] text-neutral-500">
@@ -385,7 +385,7 @@ export default function Page({ params }: PageProps) {
             </div>
 
             {error && (
-              <div className="rounded-md border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-800">
+              <div className="rounded-md border border-status-danger-line bg-status-danger-soft p-2.5 text-xs text-status-danger">
                 {error}
               </div>
             )}

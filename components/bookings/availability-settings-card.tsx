@@ -170,7 +170,7 @@ function VacationModeSection({
                 className={
                   "text-left rounded-md border p-3 text-sm transition " +
                   (handlingMode === "block"
-                    ? "border-rose-400 bg-rose-50"
+                    ? "border-rose-400 bg-status-danger-soft"
                     : "border-neutral-200 hover:bg-neutral-50")
                 }
               >
@@ -186,7 +186,7 @@ function VacationModeSection({
                 className={
                   "text-left rounded-md border p-3 text-sm transition " +
                   (handlingMode === "team"
-                    ? "border-emerald-400 bg-emerald-50"
+                    ? "border-emerald-400 bg-status-success-soft"
                     : "border-neutral-200 hover:bg-neutral-50")
                 }
               >
@@ -423,7 +423,7 @@ function RecurringBlocksSection({ businessId }: RecurringBlocksSectionProps) {
                 className={
                   "text-left rounded-md border p-3 text-sm transition " +
                   (handlingMode === "block"
-                    ? "border-rose-400 bg-rose-50"
+                    ? "border-rose-400 bg-status-danger-soft"
                     : "border-neutral-200 hover:bg-neutral-50")
                 }
               >
@@ -438,7 +438,7 @@ function RecurringBlocksSection({ businessId }: RecurringBlocksSectionProps) {
                 className={
                   "text-left rounded-md border p-3 text-sm transition " +
                   (handlingMode === "team"
-                    ? "border-emerald-400 bg-emerald-50"
+                    ? "border-emerald-400 bg-status-success-soft"
                     : "border-neutral-200 hover:bg-neutral-50")
                 }
               >
@@ -508,7 +508,7 @@ function RecurringBlocksSection({ businessId }: RecurringBlocksSectionProps) {
                   {isTeamManaged ? (
                     <Badge
                       variant="secondary"
-                      className="text-[10px] py-0 px-1.5 bg-emerald-50 text-emerald-700 border-emerald-200"
+                      className="text-[10px] py-0 px-1.5 bg-status-success-soft text-status-success border-status-success-line"
                     >
                       Team-managed
                     </Badge>
@@ -523,7 +523,7 @@ function RecurringBlocksSection({ businessId }: RecurringBlocksSectionProps) {
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-7 w-7 p-0 shrink-0 text-neutral-500 hover:text-red-600"
+                className="h-7 w-7 p-0 shrink-0 text-neutral-500 hover:text-status-danger"
                 onClick={() => remove(b.id)}
                 aria-label="Remove block"
               >

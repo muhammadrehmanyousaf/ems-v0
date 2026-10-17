@@ -55,7 +55,7 @@ type TagColor = "rose" | "gold" | "sage" | "coral" | "mauve";
 const TAG_STYLES: Record<TagColor, string> = {
     rose:  "bg-bridal-blush border-bridal-rose/55 text-bridal-mauve",
     gold:  "bg-[#FFF8EE] border-bridal-gold/55 text-[#8B5E2E]",
-    sage:  "bg-[#EFF5EC] border-bridal-sage/65 text-[#3F6B43]",
+    sage:  "bg-[#EFF5EC] border-bridal-sage/65 text-status-success",
     coral: "bg-[#FFF1EC] border-bridal-coral/60 text-[#9B4A38]",
     mauve: "bg-bridal-mauve/10 border-bridal-mauve/30 text-bridal-mauve",
 };

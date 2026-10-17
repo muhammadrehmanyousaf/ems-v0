@@ -97,7 +97,7 @@ export default function ContactPage() {
       <section className="py-12 px-4 bg-neutral-50">
         <div className="max-w-5xl mx-auto grid lg:grid-cols-3 gap-8">
           <div className="space-y-4">
-            <h2 className="text-xl font-bold text-neutral-900 mb-4">Contact Information</h2>
+            <h2 className="text-xl font-bold text-bridal-charcoal mb-4">Contact Information</h2>
             {info.map((item) => (
               <Card key={item.label} className="border-0 shadow-sm">
                 <CardContent className="p-4 flex items-center gap-3">
@@ -107,11 +107,11 @@ export default function ContactPage() {
                   <div>
                     <p className="text-xs text-neutral-500">{item.label}</p>
                     {item.href ? (
-                      <a href={item.href} className="text-sm font-medium text-neutral-900 hover:text-bridal-gold-dark">
+                      <a href={item.href} className="text-sm font-medium text-bridal-charcoal hover:text-bridal-gold-dark">
                         {item.value as string}
                       </a>
                     ) : Array.isArray(item.value) ? (
-                      <address className="not-italic text-sm font-medium leading-snug text-neutral-900">
+                      <address className="not-italic text-sm font-medium leading-snug text-bridal-charcoal">
                         {item.value.map((line) => (
                           <span key={line} className="block">
                             {line}
@@ -119,7 +119,7 @@ export default function ContactPage() {
                         ))}
                       </address>
                     ) : (
-                      <p className="text-sm font-medium text-neutral-900">{item.value as string}</p>
+                      <p className="text-sm font-medium text-bridal-charcoal">{item.value as string}</p>
                     )}
                   </div>
                 </CardContent>
@@ -135,19 +135,19 @@ export default function ContactPage() {
                 <dl className="mt-2 space-y-1.5 text-sm">
                   <div>
                     <dt className="sr-only">Legal name</dt>
-                    <dd className="font-medium text-neutral-900">{LEGAL_ENTITY_LINE}</dd>
+                    <dd className="font-medium text-bridal-charcoal">{LEGAL_ENTITY_LINE}</dd>
                   </div>
                   <div className="flex gap-2">
                     <dt className="text-neutral-500">Entity</dt>
-                    <dd className="text-neutral-900">{LEGAL_ENTITY_FORM}</dd>
+                    <dd className="text-bridal-charcoal">{LEGAL_ENTITY_FORM}</dd>
                   </div>
                   <div className="flex gap-2">
                     <dt className="text-neutral-500">NTN</dt>
-                    <dd className="text-neutral-900 tabular-nums">{BUSINESS_NTN}</dd>
+                    <dd className="text-bridal-charcoal tabular-nums">{BUSINESS_NTN}</dd>
                   </div>
                   <div className="flex gap-2">
                     <dt className="text-neutral-500">Registered address</dt>
-                    <dd className="text-neutral-900">{BUSINESS_ADDRESS_ONELINE}</dd>
+                    <dd className="text-bridal-charcoal">{BUSINESS_ADDRESS_ONELINE}</dd>
                   </div>
                 </dl>
                 <p className="mt-3 border-t border-neutral-100 pt-3 text-xs leading-relaxed text-neutral-500">
@@ -172,7 +172,7 @@ export default function ContactPage() {
                 {sent ? (
                   <div className="text-center py-12">
                     <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-neutral-900 mb-2">Message Sent!</h3>
+                    <h3 className="text-xl font-semibold text-bridal-charcoal mb-2">Message Sent!</h3>
                     <p className="text-neutral-600 mb-6">We'll get back to you within 24 hours.</p>
                     <Button variant="outline" onClick={() => { setSent(false); setForm({ name: "", email: "", subject: "", message: "" }); }}>
                       Send Another Message

@@ -686,7 +686,7 @@ export default function VendorSearch({
                             <BridalCheckRow
                               id="hasCatering"
                               label="In-house Catering"
-                              icon={<Utensils className="w-3.5 h-3.5 text-bridal-coral" />}
+                              icon={<Utensils className="w-3.5 h-3.5 text-bridal-coral-dark" />}
                               checked={filters.hasCatering}
                               onChange={v => setFilters(p => ({ ...p, hasCatering: !!v }))}
                             />

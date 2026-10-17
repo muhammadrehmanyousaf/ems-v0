@@ -1551,14 +1551,14 @@ export default function BookingForm() {
       )}
 
       {submitError && (
-        <div role="alert" tabIndex={-1} className="mb-5 rounded-[4px] border border-rose-200 bg-rose-50 p-4">
-          <p className="font-bridal text-[14px] font-medium text-rose-900">We couldn&rsquo;t confirm this booking</p>
-          <p className="mt-1 font-bridal text-[13px] leading-[18px] text-rose-800">{submitError.message}</p>
-          {submitError.hint && <p className="mt-2 font-bridal text-[13px] leading-[18px] text-rose-800">{submitError.hint}</p>}
+        <div role="alert" tabIndex={-1} className="mb-5 rounded-[4px] border border-status-danger-line bg-status-danger-soft p-4">
+          <p className="font-bridal text-[14px] font-medium text-status-danger">We couldn&rsquo;t confirm this booking</p>
+          <p className="mt-1 font-bridal text-[13px] leading-[18px] text-status-danger">{submitError.message}</p>
+          {submitError.hint && <p className="mt-2 font-bridal text-[13px] leading-[18px] text-status-danger">{submitError.hint}</p>}
           <button
             type="button"
             onClick={() => setSubmitError(null)}
-            className="mt-3 h-9 rounded-[4px] border border-rose-300 bg-white px-3 font-bridal text-[12px] font-medium text-rose-900 hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+            className="mt-3 h-9 rounded-[4px] border border-status-danger-line bg-white px-3 font-bridal text-[12px] font-medium text-status-danger hover:bg-status-danger-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
           >
             Dismiss and try again
           </button>
@@ -1569,22 +1569,22 @@ export default function BookingForm() {
           stays on the page, names the times still free, and offers the way
           back to the date step. */}
       {slotConflict && !isSuccessStep && (
-        <div role="alert" aria-live="assertive" className="mb-5 rounded-[4px] border border-rose-200 bg-rose-50 p-4">
-          <p className="font-bridal text-[14px] font-medium text-rose-900">That time was just booked</p>
-          <p className="mt-1 font-bridal text-[13px] leading-[18px] text-rose-800">{slotConflict.message}</p>
+        <div role="alert" aria-live="assertive" className="mb-5 rounded-[4px] border border-status-danger-line bg-status-danger-soft p-4">
+          <p className="font-bridal text-[14px] font-medium text-status-danger">That time was just booked</p>
+          <p className="mt-1 font-bridal text-[13px] leading-[18px] text-status-danger">{slotConflict.message}</p>
           {slotConflict.available.length > 0 ? (
             <>
-              <p className="mt-3 font-bridal text-[13px] font-medium text-rose-900">Still free on this date:</p>
+              <p className="mt-3 font-bridal text-[13px] font-medium text-status-danger">Still free on this date:</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {slotConflict.available.map((slot) => (
-                  <span key={slot} className="rounded-full border border-rose-300 bg-white px-3 py-1 font-bridal text-[12.5px] font-medium text-rose-900">
+                  <span key={slot} className="rounded-full border border-status-danger-line bg-white px-3 py-1 font-bridal text-[12.5px] font-medium text-status-danger">
                     {slot}
                   </span>
                 ))}
               </div>
             </>
           ) : (
-            <p className="mt-3 font-bridal text-[13px] text-rose-800">No other times are free on this date — please choose another day.</p>
+            <p className="mt-3 font-bridal text-[13px] text-status-danger">No other times are free on this date — please choose another day.</p>
           )}
           <BridalButton
             type="button"
@@ -1623,8 +1623,8 @@ export default function BookingForm() {
   } else if (error) {
     bodyNode = (
       <div className="mx-auto max-w-md py-10 text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-red-100 bg-red-50">
-          <svg className="h-7 w-7 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-status-danger-line bg-status-danger-soft">
+          <svg className="h-7 w-7 text-status-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
           </svg>
         </div>

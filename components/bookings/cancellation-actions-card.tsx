@@ -22,6 +22,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { STATUS_SOFT_BG, STATUS_TEXT } from "@/components/ui/status-tones";
 
 const rs = (n: number) => "Rs " + Math.round(n || 0).toLocaleString("en-PK");
 const REASONS: { value: string; label: string }[] = [
@@ -38,12 +39,14 @@ const REASONS: { value: string; label: string }[] = [
  * ACKNOWLEDGED - the customer confirming they got the money - is green.
  */
 const STATE_STYLE: Record<RefundState, string> = {
-  RAISED: "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
-  APPROVED: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
-  APPLIED: "bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300",
-  PAID_BY_VENDOR: "bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300",
-  ACKNOWLEDGED: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
-  DISPUTED: "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300",
+  // Semantic set (components/ui/status-tones.ts): new = gold, approved = mauve, owed = coral,
+  // waiting on the customer = stone, confirmed = sage, disputed = coral.
+  RAISED: `${STATUS_SOFT_BG.warning} ${STATUS_TEXT.warning}`,
+  APPROVED: `${STATUS_SOFT_BG.info} ${STATUS_TEXT.info}`,
+  APPLIED: `${STATUS_SOFT_BG.danger} ${STATUS_TEXT.danger}`,
+  PAID_BY_VENDOR: `${STATUS_SOFT_BG.neutral} ${STATUS_TEXT.neutral}`,
+  ACKNOWLEDGED: `${STATUS_SOFT_BG.success} ${STATUS_TEXT.success}`,
+  DISPUTED: `${STATUS_SOFT_BG.danger} ${STATUS_TEXT.danger}`,
   REJECTED: "bg-muted text-muted-foreground",
   WITHDRAWN: "bg-muted text-muted-foreground",
 };
@@ -120,7 +123,7 @@ export function CancellationActionsCard({ bookingId }: { bookingId: number }) {
           {exposure && (
             <span className={cn(
               "inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full",
-              exposure.flag === "OK" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
+              exposure.flag === "OK" ? "bg-status-success-soft text-status-success dark:bg-emerald-950/50 dark:text-emerald-300" : "bg-status-warning-soft text-status-warning dark:bg-amber-950/50 dark:text-amber-300",
             )} title="Legal defensibility: policy accepted, audit chain verified, and the money evidenced">
               {exposure.flag === "OK" ? <ShieldCheck className="size-3" /> : <ShieldAlert className="size-3" />}
               {exposure.flag === "OK" ? "Defensible" : "Review"}
@@ -135,8 +138,8 @@ export function CancellationActionsCard({ bookingId }: { bookingId: number }) {
             once a forfeit has been applied — by then it is too late to go and
             find the screenshot. */}
         {exposure && (exposure.receiptsWithoutProof ?? 0) > 0 && (
-          <div className="flex items-start gap-2 rounded-lg border border-amber-300/70 bg-amber-50 p-3 text-sm dark:border-amber-900/60 dark:bg-amber-950/30">
-            <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div className="flex items-start gap-2 rounded-lg border border-amber-300/70 bg-status-warning-soft p-3 text-sm dark:border-amber-900/60 dark:bg-amber-950/30">
+            <ShieldAlert className="mt-0.5 size-4 shrink-0 text-status-warning dark:text-amber-400" />
             <div>
               <p className="font-medium">
                 {exposure.receiptsWithoutProof} of {exposure.receiptsTotalCount} payments have no proof attached
@@ -154,7 +157,7 @@ export function CancellationActionsCard({ bookingId }: { bookingId: number }) {
         <div className="rounded-lg border p-3 text-sm">
           {acceptance ? (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <Check className="size-4 text-emerald-600 shrink-0" />
+              <Check className="size-4 text-status-success shrink-0" />
               <span>Policy accepted{acceptance.acceptedName ? ` — ${acceptance.acceptedName}` : ""} ({acceptance.policySnapshot?.name || "policy"})</span>
             </div>
           ) : (
@@ -185,17 +188,17 @@ export function CancellationActionsCard({ bookingId }: { bookingId: number }) {
                 <div className="flex items-center justify-between text-sm">
                   <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full", STATE_STYLE[r.state])}>{STATE_LABEL[r.state] ?? r.state}</span>
                   <span className="text-muted-foreground">
-                    Wapas <span className="font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">{rs(r.computed.refund)}</span>
+                    Wapas <span className="font-semibold text-status-success dark:text-emerald-400 tabular-nums">{rs(r.computed.refund)}</span>
                     {r.computed.carryForward ? <> · Credit <span className="tabular-nums">{rs(r.computed.carryForward)}</span></> : null}
                     {r.computed.forfeit ? <> · Zabt <span className="tabular-nums">{rs(r.computed.forfeit)}</span></> : null}
                   </span>
                 </div>
                 {r.state === "RAISED" && (
                   <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" className="text-emerald-700 border-emerald-300" disabled={busy} onClick={() => decide.mutate({ id: r.id, approve: true })}>
+                    <Button size="sm" variant="outline" className="text-status-success border-status-success-line" disabled={busy} onClick={() => decide.mutate({ id: r.id, approve: true })}>
                       <Check className="size-3.5 mr-1" /> Approve
                     </Button>
-                    <Button size="sm" variant="outline" className="text-rose-700 border-rose-300" disabled={busy} onClick={() => decide.mutate({ id: r.id, approve: false })}>
+                    <Button size="sm" variant="outline" className="text-status-danger border-status-danger-line" disabled={busy} onClick={() => decide.mutate({ id: r.id, approve: false })}>
                       <X className="size-3.5 mr-1" /> Reject
                     </Button>
                   </div>
@@ -246,7 +249,7 @@ export function CancellationActionsCard({ bookingId }: { bookingId: number }) {
                         </Button>
                       </div>
                       {markPaid.isError && (
-                        <p className="text-xs text-rose-600 dark:text-rose-400">
+                        <p className="text-xs text-status-danger dark:text-rose-400">
                           Record nahi hua — dobara koshish karein.
                         </p>
                       )}
@@ -257,7 +260,7 @@ export function CancellationActionsCard({ bookingId }: { bookingId: number }) {
                         <HandCoins className="size-3.5 mr-1" /> Maine {rs(outstandingRefund(r))} de diye
                       </Button>
                       {r.state === "DISPUTED" && r.disputeNote && (
-                        <span className="text-xs text-rose-600 dark:text-rose-400">&ldquo;{r.disputeNote}&rdquo;</span>
+                        <span className="text-xs text-status-danger dark:text-rose-400">&ldquo;{r.disputeNote}&rdquo;</span>
                       )}
                     </div>
                   )
@@ -274,7 +277,7 @@ export function CancellationActionsCard({ bookingId }: { bookingId: number }) {
                 )}
 
                 {r.state === "ACKNOWLEDGED" && (
-                  <p className="flex items-start gap-1.5 text-xs text-emerald-700 dark:text-emerald-400">
+                  <p className="flex items-start gap-1.5 text-xs text-status-success dark:text-emerald-400">
                     <Check className="mt-0.5 size-3.5 shrink-0" />
                     Customer ne tasdeeq kar di ke paisay mil gaye. Yeh refund mukammal hai.
                   </p>

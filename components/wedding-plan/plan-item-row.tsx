@@ -237,7 +237,7 @@ export function PlanItemRow({ planId, eventId, item, onChanged }: PlanItemRowPro
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-8 w-8 p-0 text-[#3F6B43]"
+                  className="h-8 w-8 p-0 text-status-success"
                   onClick={saveAmount}
                   disabled={saving}
                   aria-label="Save amount"
@@ -376,7 +376,7 @@ export function PlanItemRow({ planId, eventId, item, onChanged }: PlanItemRowPro
               type="button"
               size="sm"
               variant="ghost"
-              className="h-8 w-8 p-0 text-neutral-400 hover:text-bridal-coral"
+              className="h-8 w-8 p-0 text-neutral-400 hover:text-bridal-coral-dark"
               onClick={remove}
               disabled={removing}
               aria-label="Remove line"

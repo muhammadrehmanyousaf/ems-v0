@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { STATUS_CHIP } from "@/components/ui/status-tones";
 import {
   BookingAPI,
   type BookingChangeRequest,
@@ -228,10 +229,10 @@ function VendorChangeRequestRow({
         <div
           className={cn(
             "mt-0.5 rounded-full p-1.5",
-            cr.status === "approved" && "bg-emerald-100 text-emerald-700",
-            cr.status === "pending" && "bg-amber-100 text-amber-700",
+            cr.status === "approved" && "bg-status-success-soft text-status-success",
+            cr.status === "pending" && "bg-status-warning-soft text-status-warning",
             (cr.status === "declined" || cr.status === "expired") &&
-              "bg-red-100 text-red-700",
+              "bg-status-danger-soft text-status-danger",
             cr.status === "cancelled" && "bg-neutral-100 text-neutral-500",
           )}
         >
@@ -247,17 +248,17 @@ function VendorChangeRequestRow({
             </Badge>
             {/* BK-054-TOPUP — sub-state when row is awaiting / receiving / received customer top-up. */}
             {topUpState === "awaiting" ? (
-              <Badge variant="outline" className="text-[10.5px] border-amber-300 text-amber-700">
+              <Badge variant="outline" className={`text-[10.5px] ${STATUS_CHIP.warning}`}>
                 Awaiting customer payment
               </Badge>
             ) : null}
             {topUpState === "paying" ? (
-              <Badge variant="outline" className="text-[10.5px] border-blue-300 text-blue-700">
+              <Badge variant="outline" className={`text-[10.5px] ${STATUS_CHIP.info}`}>
                 Customer paying…
               </Badge>
             ) : null}
             {topUpState === "paid" ? (
-              <Badge variant="outline" className="text-[10.5px] border-emerald-300 text-emerald-700">
+              <Badge variant="outline" className={`text-[10.5px] ${STATUS_CHIP.success}`}>
                 Top-up paid · finalising
               </Badge>
             ) : null}
@@ -277,7 +278,7 @@ function VendorChangeRequestRow({
             <p
               className={cn(
                 "text-[12px] mt-1 tabular-nums font-medium",
-                diff > 0 ? "text-amber-700" : "text-emerald-700",
+                diff > 0 ? "text-status-warning" : "text-status-success",
               )}
             >
               {diff > 0 ? "Customer top-up:" : "Refund to customer:"}{" "}
@@ -299,7 +300,7 @@ function VendorChangeRequestRow({
             change, and they are not the same act.
           */}
           {isCancelRequest(cr) && cr.status === "pending" ? (
-            <p className="text-[12px] text-amber-700 mt-2">
+            <p className="text-[12px] text-status-warning mt-2">
               Approving cancels this booking and refunds the customer in full,
               per your policy. Declining keeps the booking as it is.
             </p>

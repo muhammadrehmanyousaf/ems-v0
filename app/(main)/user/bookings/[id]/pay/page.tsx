@@ -109,7 +109,7 @@ export default function PayBookingPage() {
       <div className="mx-auto w-full max-w-[1100px] px-4 sm:px-6 lg:px-8 py-10">
         {back}
         <div className="rounded-md border border-bridal-coral/40 bg-bridal-coral/15 p-6 text-center">
-          <p className="font-bridal text-[13px] text-bridal-coral">
+          <p className="font-bridal text-[13px] text-bridal-coral-dark">
             {error || "Booking unavailable."}
           </p>
         </div>

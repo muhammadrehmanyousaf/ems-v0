@@ -34,6 +34,7 @@ import {
   Heart,
 } from 'lucide-react';
 import { BACKEND_URL } from '@/lib/backend-url';
+import { STATUS_CHIP } from '@/components/ui/status-tones';
 
 interface Vendor {
   id: number;
@@ -208,7 +209,7 @@ export default function Page({ params }: PageProps) {
             </p>
           )}
           {umbrella.forceMajeure && (
-            <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-full inline-block px-3 py-1 mt-2">
+            <p className="text-xs text-status-danger bg-status-danger-soft border border-status-danger-line rounded-full inline-block px-3 py-1 mt-2">
               Postponed / force-majeure status
             </p>
           )}
@@ -229,7 +230,7 @@ export default function Page({ params }: PageProps) {
               <div className="text-[11px] uppercase tracking-wide text-neutral-500">
                 Total
               </div>
-              <div className="text-lg font-bold text-neutral-900 tabular-nums">
+              <div className="text-lg font-bold text-bridal-charcoal tabular-nums">
                 {fmtPKR(payments.totalScheduled)}
               </div>
             </div>
@@ -237,7 +238,7 @@ export default function Page({ params }: PageProps) {
               <div className="text-[11px] uppercase tracking-wide text-neutral-500">
                 Paid
               </div>
-              <div className="text-lg font-bold text-emerald-700 tabular-nums">
+              <div className="text-lg font-bold text-status-success tabular-nums">
                 {fmtPKR(payments.totalPaid)}
               </div>
             </div>
@@ -245,7 +246,7 @@ export default function Page({ params }: PageProps) {
               <div className="text-[11px] uppercase tracking-wide text-neutral-500">
                 Outstanding
               </div>
-              <div className="text-lg font-bold text-amber-700 tabular-nums">
+              <div className="text-lg font-bold text-status-warning tabular-nums">
                 {fmtPKR(payments.totalOutstanding)}
               </div>
             </div>
@@ -273,7 +274,7 @@ export default function Page({ params }: PageProps) {
                 >
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div>
-                      <div className="text-base font-semibold text-neutral-900">
+                      <div className="text-base font-semibold text-bridal-charcoal">
                         {fmtDate(b.bookingDate)}
                       </div>
                       <div className="text-xs text-neutral-500 mt-0.5">
@@ -285,12 +286,12 @@ export default function Page({ params }: PageProps) {
                       className={
                         'text-[10px] px-2 py-0.5 rounded-full border ' +
                         (b.status === 'Completed'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          ? STATUS_CHIP.success
                           : b.status === 'Confirmed'
-                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            ? STATUS_CHIP.info
                             : b.status === 'Cancelled'
-                              ? 'bg-rose-50 text-rose-700 border-rose-200'
-                              : 'bg-amber-50 text-amber-800 border-amber-200')
+                              ? STATUS_CHIP.danger
+                              : STATUS_CHIP.warning)
                       }
                     >
                       {b.status}
@@ -370,10 +371,10 @@ export default function Page({ params }: PageProps) {
                                 className={
                                   'text-[10px] px-1.5 py-0 rounded border ' +
                                   (s.state === 'paid'
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    ? STATUS_CHIP.success
                                     : s.state === 'signed' || s.state === 'beo_ready' || s.state === 'invoiced'
-                                      ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                      : 'bg-neutral-100 text-neutral-700 border-neutral-200')
+                                      ? STATUS_CHIP.info
+                                      : STATUS_CHIP.neutral)
                                 }
                               >
                                 {s.state.replace(/_/g, ' ')}
@@ -397,7 +398,7 @@ export default function Page({ params }: PageProps) {
                             className="flex items-center gap-2 text-xs"
                           >
                             {t.status === 'done' ? (
-                              <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
+                              <CheckCircle2 className="h-3 w-3 text-status-success shrink-0" />
                             ) : (
                               <Clock className="h-3 w-3 text-neutral-400 shrink-0" />
                             )}

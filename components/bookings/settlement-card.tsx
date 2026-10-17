@@ -97,9 +97,9 @@ export function SettlementCard({
         : null;
 
   return (
-    <div className={`rounded-xl border p-4 ${settled ? "border-emerald-300 bg-emerald-50/40 dark:border-emerald-900/50 dark:bg-emerald-950/20" : "border-border"}`}>
+    <div className={`rounded-xl border p-4 ${settled ? "border-status-success-line bg-emerald-50/40 dark:border-emerald-900/50 dark:bg-emerald-950/20" : "border-border"}`}>
       <div className="flex items-center gap-2">
-        {settled ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <Calculator className="h-4 w-4 text-muted-foreground" />}
+        {settled ? <CheckCircle2 className="h-4 w-4 text-status-success" /> : <Calculator className="h-4 w-4 text-muted-foreground" />}
         <h3 className="text-sm font-semibold">{settled ? "Final bill — settled" : "Final bill"}</h3>
         {data.locked && !settled && (
           <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
@@ -210,7 +210,7 @@ export function SettlementCard({
             maxLength={500}
             onChange={(e) => setNote(e.target.value)}
           />
-          {countsProblem && <p className="text-sm text-amber-700 dark:text-amber-400">{countsProblem}</p>}
+          {countsProblem && <p className="text-sm text-status-warning dark:text-amber-400">{countsProblem}</p>}
           <div className="flex gap-2">
             <Button size="sm" disabled={!!countsProblem || settleMut.isPending} onClick={() => settleMut.mutate()}>
               {settleMut.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}

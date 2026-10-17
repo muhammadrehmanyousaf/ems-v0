@@ -61,7 +61,7 @@ export default function EventTabs({ events, activeEventIndex, onTabChange }: Eve
             }`}
           >
             {isCompleted && (
-              <Check className="h-3.5 w-3.5 text-[#3F6B43]" strokeWidth={2.5} aria-hidden />
+              <Check className="h-3.5 w-3.5 text-status-success" strokeWidth={2.5} aria-hidden />
             )}
             <span>{event.eventType}</span>
             {isCompleted && <span className="sr-only">(request sent)</span>}

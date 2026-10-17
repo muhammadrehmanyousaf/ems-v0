@@ -31,25 +31,27 @@ import { useNotifications } from "@/context/NotificationContext";
 import type { Notification } from "@/lib/api/notifications";
 import { groupNotificationsByDate } from "@/lib/notificationGroups";
 import { getNotificationHref } from "@/lib/notificationHref";
+import { STATUS_TEXT, STATUS_SOFT_BG } from "@/components/ui/status-tones";
 
 const NOTIFICATION_CONFIG: Record<
   string,
   { icon: React.ElementType; color: string; bg: string; label: string }
 > = {
-  booking_created: { icon: CalendarCheck, color: "text-blue-600", bg: "bg-blue-50", label: "Booking" },
-  booking_approved: { icon: CalendarCheck, color: "text-green-600", bg: "bg-green-50", label: "Approved" },
-  booking_rejected: { icon: CalendarX, color: "text-red-600", bg: "bg-red-50", label: "Rejected" },
-  booking_cancelled: { icon: CalendarX, color: "text-orange-600", bg: "bg-orange-50", label: "Cancelled" },
-  payment_received: { icon: CreditCard, color: "text-green-600", bg: "bg-green-50", label: "Payment" },
-  payment_failed: { icon: AlertCircle, color: "text-red-600", bg: "bg-red-50", label: "Failed" },
-  payment_refunded: { icon: RefreshCcw, color: "text-amber-600", bg: "bg-amber-50", label: "Refund" },
+  // Colours come from the shared semantic set (components/ui/status-tones.ts).
+  booking_created: { icon: CalendarCheck, color: STATUS_TEXT.info, bg: STATUS_SOFT_BG.info, label: "Booking" },
+  booking_approved: { icon: CalendarCheck, color: STATUS_TEXT.success, bg: STATUS_SOFT_BG.success, label: "Approved" },
+  booking_rejected: { icon: CalendarX, color: STATUS_TEXT.danger, bg: STATUS_SOFT_BG.danger, label: "Rejected" },
+  booking_cancelled: { icon: CalendarX, color: STATUS_TEXT.danger, bg: STATUS_SOFT_BG.danger, label: "Cancelled" },
+  payment_received: { icon: CreditCard, color: STATUS_TEXT.success, bg: STATUS_SOFT_BG.success, label: "Payment" },
+  payment_failed: { icon: AlertCircle, color: STATUS_TEXT.danger, bg: STATUS_SOFT_BG.danger, label: "Failed" },
+  payment_refunded: { icon: RefreshCcw, color: STATUS_TEXT.warning, bg: STATUS_SOFT_BG.warning, label: "Refund" },
   // a customer says they paid (needs the vendor's check) / the vendor could not find it
-  payment_claim: { icon: CreditCard, color: "text-blue-600", bg: "bg-blue-50", label: "Payment report" },
-  payment_claim_rejected: { icon: AlertCircle, color: "text-red-600", bg: "bg-red-50", label: "Not found" },
-  payout_processed: { icon: Wallet, color: "text-emerald-600", bg: "bg-emerald-50", label: "Payout" },
-  new_review: { icon: Star, color: "text-yellow-600", bg: "bg-yellow-50", label: "Review" },
+  payment_claim: { icon: CreditCard, color: STATUS_TEXT.info, bg: STATUS_SOFT_BG.info, label: "Payment report" },
+  payment_claim_rejected: { icon: AlertCircle, color: STATUS_TEXT.danger, bg: STATUS_SOFT_BG.danger, label: "Not found" },
+  payout_processed: { icon: Wallet, color: STATUS_TEXT.success, bg: STATUS_SOFT_BG.success, label: "Payout" },
+  new_review: { icon: Star, color: STATUS_TEXT.warning, bg: STATUS_SOFT_BG.warning, label: "Review" },
   welcome: { icon: Sparkles, color: "text-bridal-gold-dark", bg: "bg-bridal-cream", label: "Welcome" },
-  system: { icon: Info, color: "text-gray-600", bg: "bg-gray-50", label: "System" },
+  system: { icon: Info, color: STATUS_TEXT.neutral, bg: STATUS_SOFT_BG.neutral, label: "System" },
 };
 
 function formatTimeAgo(dateStr: string) {
@@ -114,7 +116,7 @@ function NotificationItem({
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <p className={`text-[13px] leading-snug line-clamp-2 ${
-          !notification.isRead ? "font-semibold text-neutral-900 dark:text-neutral-100" : "text-neutral-600 dark:text-neutral-400"
+          !notification.isRead ? "font-semibold text-bridal-charcoal dark:text-neutral-100" : "text-neutral-600 dark:text-neutral-400"
           }`}>
             {notification.title}
           </p>
@@ -137,7 +139,7 @@ function NotificationItem({
           e.stopPropagation();
           onDelete(notification.id);
         }}
-        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 rounded-md text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 transition-all duration-150"
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 rounded-md text-neutral-300 hover:text-status-danger hover:bg-status-danger-soft transition-all duration-150"
         title="Remove"
       >
         <Trash2 className="h-3.5 w-3.5" />

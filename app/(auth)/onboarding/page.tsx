@@ -11,18 +11,21 @@
  *
  * Reuses the existing (captcha-gated in prod, disabled in dev) signup endpoint.
  */
+import "../../globals.css";
 import { useState } from "react";
 import Link from "next/link";
 import axios from "axios";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { BACKEND_URL } from "@/lib/backend-url";
 import axiosInstance from "@/lib/axiosConfig";
 import { SlotTemplatesAPI } from "@/lib/api/businessAvailability";
 import { useUser } from "@/context/UserContext";
 import { useNavPersona } from "@/lib/nav/nav-persona";
 import { VENDOR_TYPES } from "@/lib/vendor-types";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { BridalButton } from "@/components/bridal/bridal-button";
+import { BridalField, BridalInput } from "@/components/bridal/bridal-input";
+import { BridalTitle } from "@/components/bridal/bridal-card";
+import { FloatingPetals } from "@/components/bridal/floating-petals";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -87,66 +90,88 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-dvh flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-4">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">90 second mein shuru karein</h1>
-          <p className="text-sm text-muted-foreground mt-1">Naam, phone, aur type — bas. Baaqi baad mein.</p>
-        </div>
+    <div className="relative min-h-dvh bridal-surface overflow-hidden">
+      {/* The same ivory + jaal + warm wash + petals frame the sign-in and register screens sit on. */}
+      <div className="absolute inset-0 bg-bridal-hero" aria-hidden />
+      <div className="absolute inset-0 bg-bridal-wash opacity-95" aria-hidden />
+      <FloatingPetals className="z-0" />
 
-        <div className="space-y-3 rounded-xl border p-4">
-          <Field label="Business ka naam"><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Al-Habib Marquee" /></Field>
-          <Field label="Aap ka naam"><Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Owner ka naam" /></Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Phone"><Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="03xx-xxxxxxx" inputMode="tel" /></Field>
-            <Field label="City"><Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Lahore" /></Field>
-          </div>
-          <Field label="Type">
-            <select value={vendorType} onChange={(e) => setVendorType(e.target.value)} className="h-9 w-full rounded-md border bg-background px-2 text-sm">
-              {TYPE_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Email"><Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" inputMode="email" /></Field>
-            <Field label="Password"><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="6+ characters" /></Field>
+      <div className="relative z-10 flex min-h-dvh items-center justify-center px-4 py-10 sm:px-6">
+        <div className="w-full max-w-[520px] animate-stagger-fade-up">
+          <div className="text-center">
+            <BridalTitle size="h2" className="leading-tight">90 second mein shuru karein</BridalTitle>
+            <p className="font-bridal mt-2 text-[13px] text-bridal-text-soft">Naam, phone, aur type — bas. Baaqi baad mein.</p>
           </div>
 
-          {/* T6.2 — the one familiarity question, sets the nav register */}
-          <div>
-            <label className="text-xs text-muted-foreground">In systems se waqif hain?</label>
-            <div className="flex gap-2 mt-1">
-              {[["Naya hoon", false], ["Haan, use kiya hai", true]].map(([label, val]) => (
-                <button
-                  key={label as string}
-                  type="button"
-                  onClick={() => setFamiliar(val as boolean)}
-                  className={cn("flex-1 rounded-md border px-3 py-1.5 text-sm", familiar === val ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted")}
-                >
-                  {label}
-                </button>
-              ))}
+          <div className="mt-5 space-y-3.5 rounded-[6px] border border-bridal-beige bg-bridal-cream p-5 shadow-[0_24px_40px_-28px_rgba(176,125,84,0.4)] sm:p-6">
+            <BridalField id="onb-name" label="Business ka naam">
+              <BridalInput id="onb-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Al-Habib Marquee" />
+            </BridalField>
+            <BridalField id="onb-fullname" label="Aap ka naam">
+              <BridalInput id="onb-fullname" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Owner ka naam" />
+            </BridalField>
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+              <BridalField id="onb-phone" label="Phone">
+                <BridalInput id="onb-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="03xx-xxxxxxx" inputMode="tel" />
+              </BridalField>
+              <BridalField id="onb-city" label="City">
+                <BridalInput id="onb-city" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Lahore" />
+              </BridalField>
             </div>
+            <BridalField id="onb-type" label="Type">
+              <select
+                id="onb-type"
+                value={vendorType}
+                onChange={(e) => setVendorType(e.target.value)}
+                className="bridal-input bridal-select h-12 w-full px-4 font-bridal text-[14px]"
+              >
+                {TYPE_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </BridalField>
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+              <BridalField id="onb-email" label="Email">
+                <BridalInput id="onb-email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" inputMode="email" />
+              </BridalField>
+              <BridalField id="onb-password" label="Password">
+                <BridalInput id="onb-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="6+ characters" />
+              </BridalField>
+            </div>
+
+            {/* T6.2 — the one familiarity question, sets the nav register */}
+            <div className="space-y-1.5">
+              <span className="bridal-label block">In systems se waqif hain?</span>
+              <div className="flex gap-2">
+                {[["Naya hoon", false], ["Haan, use kiya hai", true]].map(([label, val]) => (
+                  <button
+                    key={label as string}
+                    type="button"
+                    aria-pressed={familiar === val}
+                    onClick={() => setFamiliar(val as boolean)}
+                    className={cn(
+                      "h-11 flex-1 rounded-[4px] border px-3 font-bridal text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold/60",
+                      familiar === val
+                        ? "border-bridal-gold-dark bg-bridal-gold-dark text-white"
+                        : "border-bridal-beige bg-bridal-cream text-bridal-charcoal hover:border-bridal-gold",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <BridalButton onClick={submit} disabled={busy} loading={busy} size="lg" block className="mt-1">
+              {busy ? null : <ShieldCheck className="size-4" />}
+              Calendar kholein
+            </BridalButton>
           </div>
 
-          <Button onClick={submit} disabled={busy} className="w-full mt-1">
-            {busy ? <Loader2 className="size-4 mr-2 animate-spin" /> : <ShieldCheck className="size-4 mr-2" />}
-            Calendar kholein
-          </Button>
+          <p className="font-bridal mt-4 text-center text-[13px] text-bridal-text-soft">
+            Pehle se account hai?{" "}
+            <Link href="/login" className="font-medium text-bridal-gold-dark underline-offset-4 hover:underline">Login</Link>
+          </p>
         </div>
-
-        <p className="text-center text-xs text-muted-foreground">
-          Pehle se account hai? <Link href="/login" className="text-primary hover:underline">Login</Link>
-        </p>
       </div>
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="text-xs text-muted-foreground">{label}</label>
-      <div className="mt-0.5">{children}</div>
     </div>
   );
 }

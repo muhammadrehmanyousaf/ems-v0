@@ -234,7 +234,7 @@ export function UserSidebar() {
               tooltip="Sign out"
               className="
                 h-9 rounded-md
-                text-bridal-text-soft hover:text-bridal-coral
+                text-bridal-text-soft hover:text-bridal-coral-dark
                 hover:bg-bridal-coral/10
                 transition-colors duration-150
               "

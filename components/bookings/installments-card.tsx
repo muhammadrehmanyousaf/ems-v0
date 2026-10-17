@@ -70,9 +70,9 @@ function Row({ q }: { q: BookingInstallment }) {
         <div
           className={cn(
             "mt-0.5 rounded-full p-1.5",
-            isPaid && "bg-emerald-100 text-emerald-700",
-            isOverdue && "bg-red-100 text-red-700",
-            !isPaid && !isOverdue && !isWaived && "bg-amber-100 text-amber-700",
+            isPaid && "bg-status-success-soft text-status-success",
+            isOverdue && "bg-status-danger-soft text-status-danger",
+            !isPaid && !isOverdue && !isWaived && "bg-status-warning-soft text-status-warning",
             isWaived && "bg-muted text-muted-foreground",
           )}
         >
@@ -85,7 +85,7 @@ function Row({ q }: { q: BookingInstallment }) {
               {view.label}
             </Badge>
           </div>
-          <p className={cn("text-[12px] mt-0.5", isOverdue ? "text-red-600 font-medium" : "text-muted-foreground")}>
+          <p className={cn("text-[12px] mt-0.5", isOverdue ? "text-status-danger font-medium" : "text-muted-foreground")}>
             {isPaid
               ? q.paidAt
                 ? `Paid on ${dayTextCustomer(String(q.paidAt).slice(0, 10))}`
@@ -164,7 +164,7 @@ export function InstallmentsCard({ bookingId }: InstallmentsCardProps) {
   if (error) {
     return (
       <SectionCard title="Payment schedule">
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm text-status-danger">{error}</p>
       </SectionCard>
     );
   }
@@ -191,7 +191,7 @@ export function InstallmentsCard({ bookingId }: InstallmentsCardProps) {
         <div
           className={cn(
             "mb-3 rounded-lg border px-3 py-2 text-sm",
-            nextDue.state === "overdue" ? "border-red-200 bg-red-50 text-red-800" : "border-amber-200 bg-amber-50 text-amber-900",
+            nextDue.state === "overdue" ? "border-status-danger-line bg-status-danger-soft text-status-danger" : "border-status-warning-line bg-status-warning-soft text-status-warning",
           )}
         >
           {nextDue.state === "overdue"
@@ -218,11 +218,11 @@ export function InstallmentsCard({ bookingId }: InstallmentsCardProps) {
           </div>
           <div>
             <p className="text-[10.5px] uppercase tracking-wide text-muted-foreground">Paid</p>
-            <p className="font-medium tabular-nums text-sm text-emerald-700">{rsTextCustomer(money.received)}</p>
+            <p className="font-medium tabular-nums text-sm text-status-success">{rsTextCustomer(money.received)}</p>
           </div>
           <div>
             <p className="text-[10.5px] uppercase tracking-wide text-muted-foreground">Remaining</p>
-            <p className={cn("font-medium tabular-nums text-sm", money.outstanding > 0 ? "text-amber-700" : "text-emerald-700")}>
+            <p className={cn("font-medium tabular-nums text-sm", money.outstanding > 0 ? "text-status-warning" : "text-status-success")}>
               {money.cancelled ? "—" : rsTextCustomer(money.outstanding)}
             </p>
           </div>

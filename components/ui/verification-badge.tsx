@@ -23,7 +23,7 @@ export function VerificationBadge({ verified, label, className, size = "sm" }: V
         size === "sm" ? "px-2 py-0.5 text-[11px]" : "px-3 py-1 text-xs",
         verified
           ? "bg-bridal-sage/15 text-bridal-sage border border-bridal-sage/30"
-          : "bg-bridal-coral/15 text-bridal-coral border border-bridal-coral/30",
+          : "bg-bridal-coral/15 text-bridal-coral-dark border border-bridal-coral/30",
         className
       )}
     >
@@ -69,7 +69,7 @@ export function KycStatusPill({ status, className, children }: KycStatusPillProp
   const map: Record<KycStatusPillProps["status"], string> = {
     approved: "bg-bridal-sage/15 text-bridal-sage border-bridal-sage/30",
     pending: "bg-bridal-gold/15 text-bridal-gold border-bridal-gold/30",
-    rejected: "bg-bridal-coral/15 text-bridal-coral border-bridal-coral/30",
+    rejected: "bg-bridal-coral/15 text-bridal-coral-dark border-bridal-coral/30",
     request_changes: "bg-bridal-mauve/15 text-bridal-mauve border-bridal-mauve/30",
   }
   const label: Record<KycStatusPillProps["status"], string> = {

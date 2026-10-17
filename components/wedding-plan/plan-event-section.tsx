@@ -112,7 +112,7 @@ export function PlanEventSection({ planId, event, onChanged }: PlanEventSectionP
         <span className="inline-flex items-center gap-2">
           {label}
           {bookedCount > 0 && (
-            <span className="font-bridal not-italic text-[10px] uppercase tracking-[0.2em] text-[#3F6B43] border border-bridal-sage/45 bg-bridal-sage/15 rounded-full px-2 py-0.5">
+            <span className="font-bridal not-italic text-[10px] uppercase tracking-[0.2em] text-status-success border border-bridal-sage/45 bg-bridal-sage/15 rounded-full px-2 py-0.5">
               {bookedCount} booked
             </span>
           )}
@@ -157,7 +157,7 @@ export function PlanEventSection({ planId, event, onChanged }: PlanEventSectionP
           <Button
             size="sm"
             variant="ghost"
-            className="h-8 w-8 p-0 text-neutral-400 hover:text-bridal-coral"
+            className="h-8 w-8 p-0 text-neutral-400 hover:text-bridal-coral-dark"
             onClick={removeEvent}
             disabled={removing}
             aria-label="Remove function"

@@ -219,8 +219,8 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                         {imgs.length > 0 ? (
                           <Image src={imgs[0]} alt={pkg.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
                         ) : (
-                          <div className="absolute inset-0 flex items-center justify-center bg-blue-50">
-                            <Car className="w-12 h-12 text-blue-200" />
+                          <div className="absolute inset-0 flex items-center justify-center bg-bridal-cream">
+                            <Car className="w-12 h-12 text-bridal-beige" />
                           </div>
                         )}
                         {vehicleType && (
@@ -254,16 +254,16 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                             </span>
                           )}
                           {units && (
-                            <span className="inline-flex items-center gap-1 bg-bridal-sage/20 text-[#3F6B43] text-xs px-2 py-0.5 rounded-full border border-bridal-sage/45">
+                            <span className="inline-flex items-center gap-1 bg-bridal-sage/20 text-status-success text-xs px-2 py-0.5 rounded-full border border-bridal-sage/45">
                               {units} available
                             </span>
                           )}
                         </div>
                         {(withDriver || hasAC || hasDecor) && (
                           <div className="flex flex-wrap gap-1 pt-1 border-t border-bridal-beige/70">
-                            {withDriver && <span className="text-[11px] bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-0.5 rounded-full">With Driver</span>}
-                            {hasAC && <span className="text-[11px] bg-sky-50 text-sky-700 border border-sky-100 px-2 py-0.5 rounded-full">AC</span>}
-                            {hasDecor && <span className="text-[11px] bg-pink-50 text-pink-700 border border-pink-100 px-2 py-0.5 rounded-full">Decoration</span>}
+                            {withDriver && <span className="text-[11px] bg-status-info-soft text-status-info border border-status-info-line px-2 py-0.5 rounded-full">With Driver</span>}
+                            {hasAC && <span className="text-[11px] bg-status-neutral-soft text-status-neutral border border-status-neutral-line px-2 py-0.5 rounded-full">AC</span>}
+                            {hasDecor && <span className="text-[11px] bg-bridal-blush text-bridal-mauve border border-bridal-rose/50 px-2 py-0.5 rounded-full">Decoration</span>}
                           </div>
                         )}
 
@@ -334,7 +334,7 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                         }`}
                       >
                         {isSelected && (
-                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-bridal-sage border border-[#3F6B43] flex items-center justify-center">
+                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-bridal-sage border border-status-success flex items-center justify-center">
                             <Check className="w-3 h-3 text-bridal-charcoal" strokeWidth={3} />
                           </motion.div>
                         )}
@@ -555,7 +555,7 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                   onClick={() => handleVendorPackageToggle(String(pkg.id))}
                 >
                   {isSelected && (
-                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-bridal-sage border border-[#3F6B43] flex items-center justify-center">
+                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-bridal-sage border border-status-success flex items-center justify-center">
                       <Check className="w-3 h-3 text-bridal-charcoal" strokeWidth={3} />
                     </motion.div>
                   )}
@@ -564,7 +564,7 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                       <h4 className="font-display italic text-[16px] text-bridal-charcoal">{pkg.name}</h4>
                       {vendor && <p className="font-bridal text-[11.5px] text-bridal-text-soft mt-1">by {vendor.name}</p>}
                     </div>
-                    <p className="font-display italic text-[20px] text-[#3F6B43] shrink-0">Rs. {Number(pkg.price)?.toLocaleString()}</p>
+                    <p className="font-display italic text-[20px] text-status-success shrink-0">Rs. {Number(pkg.price)?.toLocaleString()}</p>
                   </div>
                   {(() => {
                     const flat = getFlatFeatures(pkg.features)

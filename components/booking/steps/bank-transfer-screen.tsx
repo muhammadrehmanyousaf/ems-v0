@@ -55,6 +55,9 @@ interface BankTransferScreenProps {
    * next) on the left. Narrow windows stay one column in the same order.
    */
   layout?: "stack" | "split"
+  /** With layout "split" inside a card (the plan pay page): the form column is narrow, so method and
+   *  reference stay stacked instead of side by side. */
+  compact?: boolean
 }
 
 const METHOD_LABELS: Record<ClaimMethod, string> = {
@@ -83,6 +86,7 @@ export default function BankTransferScreen({
   paymentType,
   bookingDate,
   layout = "stack",
+  compact = false,
 }: BankTransferScreenProps) {
   const split = layout === "split"
   const card = split ? CARD_FULL : CARD
@@ -221,7 +225,7 @@ export default function BankTransferScreen({
 
   const copyIcon = (id: string) =>
     copied === id
-      ? <Check className="h-4 w-4 text-[#3F6B43] animate-scale-in" strokeWidth={2.5} aria-hidden />
+      ? <Check className="h-4 w-4 text-status-success animate-scale-in" strokeWidth={2.5} aria-hidden />
       : <Copy className="h-4 w-4" aria-hidden />
 
   let block = 0
@@ -304,9 +308,9 @@ export default function BankTransferScreen({
       )}
 
       {!loading && loadError && (
-        <div className={`mt-3 flex w-full ${cap} items-start gap-2 rounded-[4px] border border-rose-200 bg-rose-50 px-4 py-3`} role="alert">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" aria-hidden />
-          <p className="font-bridal text-[13px] leading-[18px] text-rose-800">
+        <div className={`mt-3 flex w-full ${cap} items-start gap-2 rounded-[4px] border border-status-danger-line bg-status-danger-soft px-4 py-3`} role="alert">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-status-danger" aria-hidden />
+          <p className="font-bridal text-[13px] leading-[18px] text-status-danger">
             {loadError} You can still contact the venue directly to arrange payment.
           </p>
         </div>
@@ -365,7 +369,7 @@ export default function BankTransferScreen({
                   {rail}
                 </span>
                 {acc.isVerified === false && (
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-bridal text-[10px] uppercase leading-[12px] tracking-[0.14em] text-amber-800">
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-status-warning-line bg-status-warning-soft px-2 py-0.5 font-bridal text-[10px] uppercase leading-[12px] tracking-[0.14em] text-status-warning">
                     <AlertTriangle className="h-3 w-3" aria-hidden />
                     Not yet checked by us
                   </span>
@@ -458,7 +462,7 @@ export default function BankTransferScreen({
                 </select>
               </div>
             )}
-            <div className={split ? "grid gap-3 sm:max-[1179px]:grid-cols-[minmax(0,170px)_minmax(0,1fr)] min-[1260px]:grid-cols-[minmax(0,170px)_minmax(0,1fr)]" : "space-y-3"}>
+            <div className={split && !compact ? "grid gap-3 sm:max-[1179px]:grid-cols-[minmax(0,170px)_minmax(0,1fr)] min-[1260px]:grid-cols-[minmax(0,170px)_minmax(0,1fr)]" : "space-y-3"}>
             <div>
               <label htmlFor="bank-claim-method" className={`mb-1 block ${LABEL}`}>How you paid</label>
               <select
@@ -529,7 +533,7 @@ export default function BankTransferScreen({
             </div>
 
             {claimError && (
-              <p className="font-bridal text-[12px] leading-[16px] text-rose-800" role="alert">{claimError}</p>
+              <p className="font-bridal text-[12px] leading-[16px] text-status-danger" role="alert">{claimError}</p>
             )}
 
             <BridalButton
@@ -544,7 +548,7 @@ export default function BankTransferScreen({
               {submitting ? "Sending…" : "I've sent the payment"}
             </BridalButton>
             {refRequired && transactionRef.trim().length > 0 && transactionRef.trim().length < 3 && (
-              <p className="font-bridal text-[12px] leading-[16px] text-rose-800">
+              <p className="font-bridal text-[12px] leading-[16px] text-status-danger">
                 Add the full reference from your bank.
               </p>
             )}
@@ -554,9 +558,9 @@ export default function BankTransferScreen({
 
       {reports.map((r) => (
         <div key={r.key} className={`mt-3 flex w-full ${cap} items-start gap-2 rounded-[4px] border border-bridal-sage/45 bg-bridal-sage/15 px-4 py-3`} role="status" data-claim-report={r.key}>
-          <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#3F6B43]" strokeWidth={2.5} aria-hidden />
+          <Check className="mt-0.5 h-4 w-4 shrink-0 text-status-success" strokeWidth={2.5} aria-hidden />
           <div className="min-w-0">
-            <p className="font-bridal text-[13px] leading-[18px] text-[#3F6B43]">
+            <p className="font-bridal text-[13px] leading-[18px] text-status-success">
               {r.existing ? (
                 <>
                   You&apos;ve already reported this payment{r.name ? <> to {r.name}</> : null}

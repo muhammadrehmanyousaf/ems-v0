@@ -201,7 +201,7 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <p className="font-display italic text-[18px] leading-6 text-bridal-charcoal">{pkg.name}</p>
                   {isForChosenSpace ? (
-                    <span className="rounded-full border border-bridal-sage/50 bg-bridal-sage/20 px-2 py-0.5 font-bridal text-[9.5px] font-medium uppercase tracking-[0.16em] text-[#3F6B43]">
+                    <span className="rounded-full border border-bridal-sage/50 bg-bridal-sage/20 px-2 py-0.5 font-bridal text-[9.5px] font-medium uppercase tracking-[0.16em] text-status-success">
                       {chosenSpaceName ? `${chosenSpaceName} package` : "This hall's package"}
                     </span>
                   ) : isPopular ? (
@@ -210,7 +210,7 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
                     </span>
                   ) : null}
                   {packageIncludesFood(pkg) && (
-                    <span className="font-bridal text-[10px] font-medium uppercase tracking-[0.16em] text-[#3F6B43]">Food included</span>
+                    <span className="font-bridal text-[10px] font-medium uppercase tracking-[0.16em] text-status-success">Food included</span>
                   )}
                 </div>
                 <p className="mt-0.5 flex min-w-0 items-baseline gap-1.5 font-bridal text-[12.5px] leading-[18px] text-bridal-text-soft">

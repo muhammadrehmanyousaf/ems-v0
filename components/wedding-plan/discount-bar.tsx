@@ -63,7 +63,7 @@ export function DiscountBar({ budget, discount, tiers }: DiscountBarProps) {
           <p className="text-[10px] uppercase tracking-[0.18em] text-bridal-text-label font-medium">
             Bundle savings
           </p>
-          <p className="font-display italic text-[20px] text-[#3F6B43] tabular-nums leading-tight inline-flex items-center gap-1">
+          <p className="font-display italic text-[20px] text-status-success tabular-nums leading-tight inline-flex items-center gap-1">
             {savings > 0 ? `- ${fmtPKR(savings)}` : "Rs. 0"}
           </p>
         </div>
@@ -83,7 +83,7 @@ export function DiscountBar({ budget, discount, tiers }: DiscountBarProps) {
           <div className="flex items-center justify-between text-[11px] text-bridal-text-soft mb-1">
             <span>{pct}% of your Rs. {budgetMax!.toLocaleString("en-PK")} budget</span>
             {overBudget && (
-              <span className="text-bridal-coral font-medium">Over budget</span>
+              <span className="text-bridal-coral-dark font-medium">Over budget</span>
             )}
           </div>
           <div className="h-2.5 w-full rounded-full bg-bridal-cream border border-bridal-beige overflow-hidden">

@@ -116,7 +116,7 @@ export function KycUploadCard({ businessId }: KycUploadCardProps) {
             <HelpRow help={DOC_HELP[type]} className="min-w-0">
               <p className="text-sm font-medium text-bridal-charcoal truncate">
                 {DOCUMENT_TYPE_LABELS[type]}
-                {required && <span className="ml-1 text-bridal-coral text-xs">*</span>}
+                {required && <span className="ml-1 text-bridal-coral-dark text-xs">*</span>}
               </p>
             </HelpRow>
             {doc ? (

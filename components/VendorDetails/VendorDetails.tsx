@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
-import { cancellationLabel } from "@/lib/cancellation-policy";
+import { cancellationDisplay } from "@/lib/cancellation-policy";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import "swiper/css";
@@ -218,6 +218,8 @@ interface LiveReview {
 }
 
 export default function VendorDetails({ vendor }: VendorDetailsProps) {
+  // WP29: the policy as the refund engine will apply it (the server's summary), not only the registration label
+  const cancelShown = cancellationDisplay(vendor);
   const lowestPackagePrice =
     vendor.packages?.length > 0
       ? Math.min(...vendor.packages.map((p) => p.price).filter((p) => p > 0))
@@ -856,14 +858,14 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                           } guests`}
                         />
                       )}
-                    {(vendor.cancelationPolicy || vendor.cancellationPolicy) && (
+                    {cancelShown && (
                       <StatTile
                         icon={<Clock className="w-4 h-4" />}
                         iconBg="bg-bridal-sage/25"
-                        iconColor="text-[#3F6B43]"
+                        iconColor="text-status-success"
                         label="Cancellation"
-                        value={cancellationLabel(vendor.cancelationPolicy || vendor.cancellationPolicy)}
-                        wide={cancellationLabel(vendor.cancelationPolicy || vendor.cancellationPolicy).length > 20}
+                        value={cancelShown.headline}
+                        wide={cancelShown.headline.length > 20}
                       />
                     )}
                     <StatTile
@@ -877,7 +879,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                       <StatTile
                         icon={<DollarSign className="w-4 h-4" />}
                         iconBg="bg-bridal-coral/20"
-                        iconColor="text-bridal-coral"
+                        iconColor="text-bridal-coral-dark"
                         label="Advance"
                         value={
                           vendor.downPaymentType === "Percentage"
@@ -1084,7 +1086,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                             {enabledBridalServices.map((s, i) => (
                               <span
                                 key={i}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-bridal-sage/20 border border-bridal-sage/40 text-[#3F6B43] font-bridal text-[12px] font-medium"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-bridal-sage/20 border border-bridal-sage/40 text-status-success font-bridal text-[12px] font-medium"
                               >
                                 <CheckCircle className="w-3.5 h-3.5" />
                                 {s.label}
@@ -1297,7 +1299,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                                               </span>
                                             )}
                                             {units && (
-                                              <span className="inline-flex items-center gap-1 text-[11px] bg-bridal-sage/20 text-[#3F6B43] px-2 py-0.5 rounded-full border border-bridal-sage/40 font-bridal">
+                                              <span className="inline-flex items-center gap-1 text-[11px] bg-bridal-sage/20 text-status-success px-2 py-0.5 rounded-full border border-bridal-sage/40 font-bridal">
                                                 {units} available
                                               </span>
                                             )}
@@ -1310,7 +1312,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                                               {hasAC ? "AC" : "No AC"}
                                             </span>
                                             {hasDecor && (
-                                              <span className="inline-flex items-center gap-1 text-[11px] bg-bridal-coral/15 text-bridal-coral px-2 py-0.5 rounded-full border border-bridal-coral/30 font-bridal">
+                                              <span className="inline-flex items-center gap-1 text-[11px] bg-bridal-coral/15 text-bridal-coral-dark px-2 py-0.5 rounded-full border border-bridal-coral/30 font-bridal">
                                                 Decoration
                                               </span>
                                             )}
@@ -1473,7 +1475,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                       )}
 
                       {isAuthenticated && alreadyReviewed && (
-                        <div className="flex items-center gap-2 font-bridal text-[13px] text-[#3F6B43] bg-bridal-sage/15 border border-bridal-sage/40 rounded-md px-4 py-3">
+                        <div className="flex items-center gap-2 font-bridal text-[13px] text-status-success bg-bridal-sage/15 border border-bridal-sage/40 rounded-md px-4 py-3">
                           <CheckCircle className="w-4 h-4 shrink-0" />
                           You've already reviewed this vendor. Thank you!
                         </div>
@@ -1562,7 +1564,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                       vendorBlocked: vendorBlockedDates,
                     }}
                     modifiersClassNames={{
-                      fullyBooked: "bg-bridal-coral/15 text-bridal-coral line-through",
+                      fullyBooked: "bg-bridal-coral/15 text-bridal-coral-dark line-through",
                       vendorBlocked: "bg-bridal-beige/60 text-bridal-text-soft line-through opacity-60",
                     }}
                   />
@@ -1600,8 +1602,8 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                           availability[toDateKey(selectedDate)]?.isBlocked
                             ? "text-bridal-text-soft"
                             : isDateAvailable
-                            ? "text-[#3F6B43]"
-                            : "text-bridal-coral"
+                            ? "text-status-success"
+                            : "text-bridal-coral-dark"
                         }`}
                       >
                         {availability[toDateKey(selectedDate)]?.isBlocked
@@ -1648,7 +1650,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
               </BridalSectionCard>
 
               {/* Booking Terms */}
-              {(vendor.downPayment || vendor.cancelationPolicy || vendor.cancellationPolicy) && (
+              {(vendor.downPayment || cancelShown) && (
                 <BridalSectionCard>
                   <CardHeader className="border-b border-bridal-beige bg-bridal-ivory rounded-t-md">
                     <CardTitle className="font-display italic text-[20px] text-bridal-charcoal flex items-center gap-2">
@@ -1670,14 +1672,19 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                         </div>
                       </div>
                     ) : null}
-                    {(vendor.cancelationPolicy || vendor.cancellationPolicy) && (
+                    {cancelShown && (
                       <div className="flex items-start gap-3 p-3 bg-bridal-ivory rounded-md border border-bridal-beige/70">
                         <Clock className="w-4 h-4 text-bridal-gold-dark mt-0.5 shrink-0" />
                         <div>
                           <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Cancellation Policy</p>
                           <p className="font-bridal text-[13.5px] font-medium text-bridal-charcoal mt-0.5">
-                            {cancellationLabel(vendor.cancelationPolicy || vendor.cancellationPolicy)}
+                            {cancelShown.headline}
                           </p>
+                          {cancelShown.detail && (
+                            <p className="font-bridal text-[12.5px] leading-relaxed text-bridal-text-soft mt-1" data-cancellation-detail>
+                              {cancelShown.detail}
+                            </p>
+                          )}
                         </div>
                       </div>
                     )}

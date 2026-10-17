@@ -34,7 +34,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "ou
   return (
     <div className="flex-1 min-w-[130px] rounded-lg border p-3">
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={cn("text-lg font-semibold tabular-nums", tone === "out" && "text-amber-600 dark:text-amber-500")}>
+      <p className={cn("text-lg font-semibold tabular-nums", tone === "out" && "text-status-warning dark:text-amber-500")}>
         {value}
       </p>
     </div>
@@ -142,7 +142,7 @@ function LedgerLine({ row, vendorName }: { row: LedgerRow; vendorName: string })
           <p className="text-xs text-muted-foreground">{fmtDate(row.date)}</p>
         </div>
         <div className="text-right shrink-0">
-          <p className="text-sm font-semibold tabular-nums text-amber-600 dark:text-amber-500">{PKR(row.balance)}</p>
+          <p className="text-sm font-semibold tabular-nums text-status-warning dark:text-amber-500">{PKR(row.balance)}</p>
           <p className="text-[11px] text-muted-foreground tabular-nums">of {PKR(row.grand)}</p>
         </div>
         {row.moneySource === "legacy" && (
@@ -156,7 +156,7 @@ function LedgerLine({ row, vendorName }: { row: LedgerRow; vendorName: string })
           rel="noopener noreferrer"
           title="Send balance reminder on WhatsApp"
           aria-label="WhatsApp reminder"
-          className="shrink-0 rounded-md p-1.5 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+          className="shrink-0 rounded-md p-1.5 text-status-success hover:bg-status-success-soft dark:text-emerald-400 dark:hover:bg-emerald-950/40"
         >
           <MessageCircle className="size-4" />
         </a>

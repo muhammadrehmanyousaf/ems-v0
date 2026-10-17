@@ -69,7 +69,7 @@ export function RemindersDueCard() {
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium truncate">{r.customerName || `Booking #${r.bookingId}`}</p>
                     {r.trigger === "event_upcoming" && r.daysUntil != null && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-status-warning-soft text-status-warning dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
                         {whenLabel(r.daysUntil)}
                       </span>
                     )}
@@ -84,7 +84,7 @@ export function RemindersDueCard() {
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
-                  <span className="text-sm font-bold tabular-nums text-amber-700 dark:text-amber-400">{rs(r.balance)}</span>
+                  <span className="text-sm font-bold tabular-nums text-status-warning dark:text-amber-400">{rs(r.balance)}</span>
                   <button
                     onClick={() => remind(r)}
                     className="inline-flex items-center gap-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-2.5 py-1 transition-colors"

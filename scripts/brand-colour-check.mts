@@ -20,10 +20,18 @@
  *   3. the Button's default variant is still driven by those tokens
  *      (bg-primary / hover:bg-primary-hover), and the hover step is declared only
  *      where <html> has no data-theme, so it cannot leak into the vendor console;
- *   4. no NEW raw violet/purple/indigo/fuchsia colour utility lands in customer or
- *      public code. The ones that exist are a ratchet (BASELINE below, each a
- *      deliberate category or status colour waiting on an owner decision): a file
- *      may go down, never up, and a file not listed may not appear.
+ *   4. (WP30) NO raw blue/sky/cyan/teal/indigo/violet/purple/fuchsia colour utility
+ *      anywhere in customer or public code. The WP27 ratchet is closed to zero: trust
+ *      tiers, category tiles, KPI cards and every status colour now come from the bridal
+ *      palette and the semantic status set;
+ *   5. coral TEXT on a light surface is bridal-coral-dark (AA), never plain bridal-coral
+ *      (2.3:1); the one dark surface that keeps it is booking-ledger.tsx;
+ *   6. the semantic status set (tailwind colors.status.{success,warning,danger,info,
+ *      neutral} + components/ui/status-tones.ts) is complete, sits in the right brand hue
+ *      family, and every tone clears AA (text on its soft fill and on white, solid >= 3:1
+ *      under a white label);
+ *   7. body ink: the customer/public --foreground is bridal-charcoal, not the near-black
+ *      the WP27 neutrals left.
  *
  * The vendor console (app/(dashboard), components/dashboard, components/admin)
  * declares its own tokens in app/styles/dashboard-styles.css and
@@ -105,24 +113,11 @@ if (!/hover:\s*'hsl\(var\(--primary-hover,\s*var\(--primary\)\s*\/\s*0\.9\)\)'/.
 else pass("primary.hover falls back to primary/90 (vendor console unchanged)");
 
 // ── 4: raw violet utilities in customer/public code (ratchet) ────────────────
-const BASELINE: Record<string, number> = {
-  "app/(main)/planning-tools/budget/page.tsx": 1,
-  "app/(main)/planning-tools/guest-list/page.tsx": 1,
-  "app/(main)/planning-tools/timeline/page.tsx": 1,
-  "app/globals.css": 1,
-  "components/booking/service-location-picker.tsx": 2,
-  "components/booking/steps/package-selection-step.tsx": 3,
-  "components/bookings/event-pnl-card.tsx": 4,
-  "components/floor/floor-home.tsx": 2,
-  "components/homepage/planning-tools.tsx": 3,
-  "components/homepage/wedding-tips.tsx": 5,
-  "components/quotes/quote-status-badge.tsx": 3,
-  "components/steps/business-type-step.tsx": 15,
-  "components/vendors/vendor-trust-badges.tsx": 6,
-};
+// WP30: the ratchet is closed. Nothing is allowed any more.
+const BASELINE: Record<string, number> = {};
 const SCAN_ROOTS = ["app/(main)", "app/(auth)", "app/staff", "app/floor", "app/pin", "app/globals.css", "components"];
 const SKIP_DIRS = new Set(["node_modules", ".next", "dashboard", "admin"]);
-const RAW = /(?:^|[\s"'`:])(?:[a-z0-9-]+:)*(?:bg|text|border|ring|from|to|via|fill|stroke|shadow|outline|divide|accent|decoration|placeholder|caret)-(?:violet|purple|indigo|fuchsia)-\d{2,3}/g;
+const RAW = /(?:^|[\s"'`:])(?:[a-z0-9-]+:)*(?:bg|text|border|ring|from|to|via|fill|stroke|shadow|outline|divide|accent|decoration|placeholder|caret)-(?:blue|sky|cyan|teal|violet|purple|indigo|fuchsia)-\d{2,3}/g;
 
 function walk(rel: string, out: string[]) {
   const abs = path.join(ROOT, rel);
@@ -140,10 +135,10 @@ if (process.argv.includes("--print-baseline")) { console.log(JSON.stringify(coun
 let ratchetOk = true;
 for (const [f, n] of Object.entries(counts)) {
   const allowed = BASELINE[f] ?? 0;
-  if (n > allowed) { ratchetOk = false; fail(`${f}: ${n} raw violet/purple/indigo/fuchsia utilities (allowed ${allowed}). Use the bridal-* tokens, or bg-primary for a primary action`); }
+  if (n > allowed) { ratchetOk = false; fail(`${f}: ${n} raw blue/violet-family utilities (allowed ${allowed}). Use the bridal-* tokens, the status-* set (components/ui/status-tones.ts), or bg-primary for a primary action`); }
 }
 for (const [f, n] of Object.entries(BASELINE)) { if ((counts[f] ?? 0) < n) console.log(`note  ${f}: down to ${counts[f] ?? 0} from ${n}; lower BASELINE`); }
-if (ratchetOk) pass(`no new raw violet utilities in customer/public code (${Object.keys(counts).length} baselined files)`);
+if (ratchetOk) pass(`no raw blue/violet-family utilities in customer/public code (0 allowed, ${files.length} files scanned)`);
 
 // ── 5: destructive / cancel TEXT in coral (F5-2, WP28) ───────────────────────
 // bridal-coral #E8917A is 2.3:1 on a near-white card: fine for a border or a tint, not for a label.
@@ -171,6 +166,65 @@ if (ratchetOk) pass(`no new raw violet utilities in customer/public code (${Obje
     if (bad.length) fail(`${f}: a Cancel button label still uses text-bridal-coral (2.3:1); use text-bridal-coral-dark`);
     else pass(`${f}: Cancel labels use text-bridal-coral-dark`);
   }
+}
+
+// ── 5b: plain coral TEXT in customer/public code (WP30) ───────────────────────
+{
+  const ALLOW = new Set(["components/booking/shell/booking-ledger.tsx"]); // dark ledger: coral on charcoal is fine
+  const bad: string[] = [];
+  for (const f of files) {
+    if (ALLOW.has(f)) continue;
+    read(f).split(/\r?\n/).forEach((l, n) => {
+      if (/(?<![\w-])(?:[a-z-]+:)*text-bridal-coral(?![\w-])/.test(l) && !/fill-bridal-coral/.test(l)) bad.push(`${f}:${n + 1}`);
+    });
+  }
+  if (bad.length) fail(`plain text-bridal-coral (2.3:1 on light) in: ${bad.slice(0, 8).join(", ")}${bad.length > 8 ? ` (+${bad.length - 8} more)` : ""}; use text-bridal-coral-dark`);
+  else pass("no plain text-bridal-coral on light surfaces (coral-dark carries coral text)");
+}
+
+// ── 6: the semantic status set (WP30) ─────────────────────────────────────────
+{
+  const hexRgb = (h: string): [number, number, number] => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) as [number, number, number];
+  const hueOf = (h: string) => { const [r, g, b] = hexRgb(h).map((x) => x / 255); const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; if (!d) return -1; return ((mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60 + 360) % 360; };
+  const satOf = (h: string) => { const [r, g, b] = hexRgb(h).map((x) => x / 255); const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn; return d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1)); };
+  const cr = (a: string, b: string) => { const x = lum(hexRgb(a)), y = lum(hexRgb(b)); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const statusAt = tw.indexOf("status: {");
+  const block = statusAt < 0 ? "" : tw.slice(statusAt, statusAt + 1500);
+  const FAMILY: Record<string, [number, number]> = { success: [85, 160], warning: [20, 55], danger: [0, 25], info: [300, 345], neutral: [10, 45] };
+  const TONES = Object.keys(FAMILY);
+  let ok = true;
+  if (statusAt < 0) { ok = false; fail("tailwind.config.ts: colors.status (the semantic status set) is missing"); }
+  for (const tone of TONES) {
+    const m = new RegExp(tone + "\\s*:\\s*\\{([^}]*)\\}").exec(block);
+    const get = (k: string) => new RegExp("\\b" + k + "\\s*:\\s*'(#[0-9A-Fa-f]{6})'").exec(m?.[1] ?? "")?.[1];
+    const t = { DEFAULT: get("DEFAULT"), soft: get("soft"), line: get("line"), solid: get("solid") };
+    if (!m || !t.DEFAULT || !t.soft || !t.line || !t.solid) { ok = false; fail(`tailwind.config.ts colors.status.${tone}: needs DEFAULT, soft, line and solid hex values`); continue; }
+    const [lo, hi] = FAMILY[tone];
+    const h = hueOf(t.DEFAULT);
+    if (h < lo || h > hi) { ok = false; fail(`status.${tone} ${t.DEFAULT} hue ${h.toFixed(0)} is outside its brand family (${lo}-${hi}); no blue or violet`); }
+    if (tone === "neutral" && satOf(t.DEFAULT) > 0.5) { ok = false; fail(`status.neutral ${t.DEFAULT} must be a warm brown-grey (saturation <= 50%)`); }
+    const onSoft = cr(t.DEFAULT, t.soft), onWhite = cr(t.DEFAULT, "#FFFFFF"), white = cr("#FFFFFF", t.solid);
+    if (onSoft < 4.5) { ok = false; fail(`status.${tone}: text ${t.DEFAULT} on soft ${t.soft} is ${onSoft.toFixed(2)}:1 < 4.5`); }
+    if (onWhite < 4.5) { ok = false; fail(`status.${tone}: text ${t.DEFAULT} on white is ${onWhite.toFixed(2)}:1 < 4.5`); }
+    if (white < 3) { ok = false; fail(`status.${tone}: white on solid ${t.solid} is ${white.toFixed(2)}:1 < 3 (graphic minimum)`); }
+  }
+  const tones = read("components/ui/status-tones.ts");
+  for (const map of ["STATUS_CHIP", "STATUS_TEXT", "STATUS_ICON", "STATUS_SOLID", "STATUS_SOFT_BG"]) {
+    const m = new RegExp("export const " + map + "[^=]*=\\s*\\{([\\s\\S]*?)\\n\\};").exec(tones);
+    const missing = TONES.filter((t) => !new RegExp("\\b" + t + "\\s*:").test(m?.[1] ?? ""));
+    if (!m || missing.length) { ok = false; fail(`components/ui/status-tones.ts ${map}: missing tone(s) ${missing.join(", ") || "(map not found)"}`); }
+  }
+  if (/(?:blue|violet|purple|indigo|sky)-\d/.test(tones)) { ok = false; fail("components/ui/status-tones.ts: raw blue/violet utility"); }
+  if (ok) pass(`semantic status set: ${TONES.join("/")} complete, brand hue families, text >= 4.5:1 on soft and white, solid >= 3:1 under white`);
+}
+
+// ── 7: body ink is bridal-charcoal (WP30) ─────────────────────────────────────
+{
+  const m = /:root:not\(\[data-theme\]\)\s*\{([^}]*--foreground[^}]*)\}/.exec(css)?.[1] ?? "";
+  const fgv = hsl(/--foreground\s*:\s*([^;]+);/.exec(m)?.[1]?.trim());
+  if (!fgv) fail("globals.css: :root:not([data-theme]) must declare --foreground (body ink = bridal-charcoal) for customer/public pages");
+  else if (fgv[0] < 12 || fgv[0] > 22 || fgv[1] < 35 || fgv[2] < 9 || fgv[2] > 14) fail(`globals.css: customer/public --foreground ${fgv.join(" ")} is not bridal-charcoal #2C1810 (about 17 47% 12%)`);
+  else pass(`customer/public --foreground ${fgv[0]} ${fgv[1]}% ${fgv[2]}% is bridal-charcoal`);
 }
 
 if (failures) { console.error(`\nbrand-colour-check: ${failures} failure(s)`); process.exit(1); }
