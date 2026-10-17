@@ -238,7 +238,8 @@ export function paymentsCardHtml(view: BookingSchedule | null, opts: PaymentsCar
     notes.push(`<div class="q-note warn" data-q-phantom><span>${escHtml(phantomNoticeText(m.unledgered, cancelled))}</span><span style="display:flex;gap:8px;flex-wrap:wrap">${cancelled ? "" : `<button class="btn btn-ghost" data-q-adopt="${Math.round(m.unledgered)}">${escHtml(ADOPT_BUTTON)}</button>`}<button class="btn btn-ghost" data-q-zero="${Math.round(m.unledgered)}">${escHtml(ZERO_BUTTON)}</button></span></div>`)
   }
   if (moneyOf(m.overpaid) > 0) {
-    notes.push(`<div class="q-note info"><span>${rsText(m.overpaid)} zyada mil gaya hai. Wapas karna ho to "Refund" se likhein.</span></div>`)
+    // WP37 (MONEY-022): the note used to tell the vendor to write a "Refund" that no control on the page could write
+    notes.push(`<div class="q-note info"><span>${rsText(m.overpaid)} zyada mil gaya hai. Wapas karna ho to "Refund" se likhein.</span><button class="btn btn-ghost" data-q-refund-over="${Math.round(moneyOf(m.overpaid))}">Refund likhein</button></div>`)
   }
   if (moneyOf(m.waived) > 0) {
     notes.push(`<div class="q-note"><span>${rsText(m.waived)} maaf kiya ja chuka hai — Kul raqam usi hisaab se kam hai.</span></div>`)

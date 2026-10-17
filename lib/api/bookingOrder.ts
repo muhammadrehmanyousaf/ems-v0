@@ -361,6 +361,19 @@ export async function markRefundPaid(
   return (data?.data as { request: RefundRequestRow; outstanding: number });
 }
 
+/**
+ * WP37 (MONEY-022): the vendor hands back money that is not owed (an over-payment) - POST /bookings/:id/refund.
+ * Writes one NEGATIVE receipt through the refund door (capped at what the ledger holds).
+ */
+export async function recordCashRefund(
+  bookingId: number,
+  body: { amount: number; refundMethod: string; reason?: string },
+  opts?: IdempotencyOptions,
+) {
+  const { data } = await axiosInstance.post(`${v1}/${bookingId}/refund`, body, idempotencyConfig(opts?.idempotencyKey));
+  return data?.data;
+}
+
 /** CUSTOMER: "I received it." The only path to ACKNOWLEDGED. */
 export async function acknowledgeRefund(bookingId: number, reqId: number, note?: string) {
   const { data } = await axiosInstance.patch(`${v1}/${bookingId}/refund-requests/${reqId}/acknowledge`, { note });
