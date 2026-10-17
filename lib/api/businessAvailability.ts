@@ -278,7 +278,8 @@ export interface SlotAvailabilityRow {
 // ───────────────────────────────────────────────────────────────────
 
 export interface SlotTemplate {
-  id: number;
+  // the server sends bigint ids as strings; every lookup compares String(id) (BOOKINGS-062)
+  id: number | string;
   businessId: number;
   label: string;
   startTime: string; // HH:MM:SS
@@ -301,6 +302,8 @@ export interface UpsertSlotTemplateInput {
   sortOrder?: number;
   bufferAfterMinutes?: number;
   unitGuestCapacity?: number | null;
+  /** confirm an edit that would leave upcoming bookings without a valid slot (server answers 409 SLOT_HAS_BOOKINGS otherwise) */
+  force?: boolean;
 }
 
 export class SlotTemplatesAPI {
@@ -340,9 +343,10 @@ export class SlotTemplatesAPI {
   }
 
   /** Soft-deactivate (the backend keeps the row for historical bookings). */
-  static async deactivate(businessId: number, templateId: number): Promise<void> {
+  static async deactivate(businessId: number, templateId: number, force = false): Promise<void> {
     await axiosInstance.delete(
       `${v1}/businesses/${businessId}/slots/${templateId}`,
+      force ? { params: { force: "true" } } : undefined,
     );
   }
 

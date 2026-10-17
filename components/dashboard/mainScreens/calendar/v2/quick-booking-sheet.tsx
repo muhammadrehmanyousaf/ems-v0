@@ -42,7 +42,7 @@ export function QuickBookingSheet({
   const [rakam, setRakam] = useState("");
   const [fn, setFn] = useState("Barat");
   const [defTime, setDefTime] = useState("18:00"); // Shaam — matches the default allowed slots
-  const [slotId, setSlotId] = useState<number | null>(null);
+  const [slotId, setSlotId] = useState<number | string | null>(null);
   const [saving, setSaving] = useState(false);
   // WWL-100 — which hall this booking is in. Without it a quick-add lands as
   // an unassigned booking, which is exactly what the grid then has to report
