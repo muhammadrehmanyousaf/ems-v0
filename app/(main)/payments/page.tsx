@@ -257,7 +257,7 @@ export default function PaymentsPage() {
                   key={item}
                   className="flex items-center gap-2.5 rounded-xl border border-bridal-beige/60 bg-white px-4 py-3 font-bridal text-[13.5px] text-bridal-text"
                 >
-                  <span className="font-bridal text-[15px] leading-none text-bridal-coral">✕</span>
+                  <span className="font-bridal text-[15px] leading-none text-bridal-coral-dark">✕</span>
                   {item}
                 </li>
               ))}

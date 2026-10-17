@@ -30,10 +30,10 @@ export interface NoticeLine {
 }
 
 const TONE: Record<NoticeTone, { text: string; icon: string; bg: string }> = {
-  rose: { text: "text-rose-800", icon: "text-rose-600", bg: "bg-rose-50 border-rose-200" },
-  amber: { text: "text-amber-800", icon: "text-amber-600", bg: "bg-amber-50 border-amber-200" },
+  rose: { text: "text-status-danger", icon: "text-status-danger", bg: "bg-status-danger-soft border-status-danger-line" },
+  amber: { text: "text-status-warning", icon: "text-status-warning", bg: "bg-status-warning-soft border-status-warning-line" },
   mauve: { text: "text-bridal-mauve", icon: "text-bridal-mauve", bg: "bg-bridal-blush/50 border-bridal-rose/50" },
-  sage: { text: "text-[#3F6B43]", icon: "text-[#3F6B43]", bg: "bg-bridal-sage/15 border-bridal-sage/45" },
+  sage: { text: "text-status-success", icon: "text-status-success", bg: "bg-bridal-sage/15 border-bridal-sage/45" },
   beige: { text: "text-bridal-charcoal/80", icon: "text-bridal-text-soft", bg: "bg-bridal-sand/50 border-bridal-beige" },
   soft: { text: "text-bridal-text-soft", icon: "text-bridal-text-soft", bg: "bg-transparent border-transparent" },
 }

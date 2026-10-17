@@ -120,8 +120,8 @@ function ReviewRow({
 
   if (vendor.alreadyReviewed) {
     return (
-      <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50/50 p-3 text-sm text-emerald-800">
-        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+      <div className="flex items-center gap-2 rounded-md border border-status-success-line bg-emerald-50/50 p-3 text-sm text-status-success">
+        <CheckCircle2 className="h-4 w-4 shrink-0 text-status-success" />
         <span>
           You&apos;ve already reviewed <strong>{vendor.businessName}</strong> for this booking. Thank you!
         </span>
@@ -131,8 +131,8 @@ function ReviewRow({
 
   if (submitted) {
     return (
-      <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50/50 p-3 text-sm text-emerald-800">
-        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+      <div className="flex items-center gap-2 rounded-md border border-status-success-line bg-emerald-50/50 p-3 text-sm text-status-success">
+        <CheckCircle2 className="h-4 w-4 shrink-0 text-status-success" />
         <span>
           Thank you — your review of <strong>{vendor.businessName}</strong> is live. It helps other Pakistani couples shortlist with confidence.
         </span>
@@ -178,7 +178,7 @@ function ReviewRow({
     <div className="rounded-lg border border-neutral-200 p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="font-medium text-sm text-neutral-900">{vendor.businessName}</p>
+          <p className="font-medium text-sm text-bridal-charcoal">{vendor.businessName}</p>
           <p className="text-xs text-neutral-500 mt-0.5">
             Tap a star — your honest rating helps other couples shortlist faster.
           </p>
@@ -246,8 +246,8 @@ export function ReviewPromptCard({
   if (pending.length === 0) {
     return (
       <Card id="leave-review">
-        <CardContent className="flex items-center gap-2 py-4 text-sm text-emerald-800">
-          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+        <CardContent className="flex items-center gap-2 py-4 text-sm text-status-success">
+          <CheckCircle2 className="h-4 w-4 text-status-success" />
           You&apos;ve reviewed every vendor on this booking — thank you.
         </CardContent>
       </Card>
@@ -259,7 +259,7 @@ export function ReviewPromptCard({
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-bridal-gold" />
-          <h3 className="font-medium text-neutral-900">Leave a review</h3>
+          <h3 className="font-medium text-bridal-charcoal">Leave a review</h3>
           <Badge variant="secondary" className="text-[10px]">
             {pending.length - completedCount} pending
           </Badge>

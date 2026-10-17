@@ -125,7 +125,7 @@ export default function ActionBar({
         </BridalButton>
 
         {reassurance && (
-          <p className="hidden min-w-0 flex-1 text-center font-bridal text-[12px] leading-[16px] text-[#3F6B43] line-clamp-2 xl:block">
+          <p className="hidden min-w-0 flex-1 text-center font-bridal text-[12px] leading-[16px] text-status-success line-clamp-2 xl:block">
             {reassurance}
           </p>
         )}

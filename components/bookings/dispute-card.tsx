@@ -134,7 +134,7 @@ export function DisputeCard({ bookingId, isCompleted }: DisputeCardProps) {
         }
       >
         <div className="flex items-start gap-3">
-          <div className="mt-0.5 rounded-full p-1.5 bg-amber-100 text-amber-700">
+          <div className="mt-0.5 rounded-full p-1.5 bg-status-warning-soft text-status-warning">
             {dispute.status === "resolved_refund" ? (
               <CheckCircle2 className="h-4 w-4" />
             ) : (

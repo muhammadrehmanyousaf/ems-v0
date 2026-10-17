@@ -108,7 +108,7 @@ export function ComplaintForm() {
           <div className="flex items-start gap-3">
             <ShieldCheck className="w-6 h-6 text-green-600 shrink-0 mt-0.5" />
             <div>
-              <h3 className="text-lg font-semibold text-neutral-900">
+              <h3 className="text-lg font-semibold text-bridal-charcoal">
                 Your complaint has been recorded
               </h3>
               <p className="text-sm text-neutral-600 mt-1">
@@ -124,7 +124,7 @@ export function ComplaintForm() {
                 Your reference number
               </p>
               <div className="flex items-center gap-3 mt-1">
-                <span className="text-2xl font-bold tracking-tight text-neutral-900">
+                <span className="text-2xl font-bold tracking-tight text-bridal-charcoal">
                   {result.reference}
                 </span>
                 <Button

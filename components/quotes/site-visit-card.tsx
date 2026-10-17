@@ -23,6 +23,7 @@ import { CalendarClock, Check, X, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { errorMessage } from "@/lib/utils/api-error"
 import { Button } from "@/components/ui/button"
+import { STATUS_SOFT_BG, STATUS_TEXT } from "@/components/ui/status-tones"
 import { QuotesAPI, SITE_VISIT_LABELS, type Quote, type QuoteParty } from "@/lib/api/quotes"
 
 /** Local datetime string for <input type="datetime-local">. */
@@ -96,12 +97,12 @@ export function SiteVisitCard({ quote, role }: { quote: Quote; role: QuoteParty 
             className={
               "ml-auto rounded-full px-2 py-0.5 text-[11px] " +
               (status === "confirmed"
-                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                ? `${STATUS_SOFT_BG.success} ${STATUS_TEXT.success}`
                 : status === "declined"
                   ? "bg-muted text-muted-foreground"
                   : status === "completed"
-                    ? "bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300"
-                    : "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-300")
+                    ? `${STATUS_SOFT_BG.info} ${STATUS_TEXT.info}`
+                    : `${STATUS_SOFT_BG.warning} ${STATUS_TEXT.warning}`)
             }
           >
             {SITE_VISIT_LABELS[status]}

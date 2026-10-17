@@ -155,7 +155,7 @@ export function RefundSettlementCard({ bookingId }: { bookingId: number | string
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <span className="text-[13px] font-medium">{STATE_LINE[r.state] ?? r.state}</span>
                 {owed > 0 && r.state !== "REJECTED" && r.state !== "WITHDRAWN" && (
-                  <span className="text-[13px] font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+                  <span className="text-[13px] font-semibold tabular-nums text-status-success dark:text-emerald-400">
                     {rs(owed)}
                   </span>
                 )}
@@ -247,7 +247,7 @@ export function RefundSettlementCard({ bookingId }: { bookingId: number | string
                   </div>
                 ) : (
                   <div className="flex flex-wrap items-center justify-between gap-2 text-[12px]">
-                    <span className={r.payoutMethod ? "text-muted-foreground" : "text-amber-700 dark:text-amber-400"}>
+                    <span className={r.payoutMethod ? "text-muted-foreground" : "text-status-warning dark:text-amber-400"}>
                       {r.payoutMethod
                         ? <>Send to: {payoutSummary(r)}</>
                         : <>Your venue doesn&apos;t know where to send this yet.</>}
@@ -274,7 +274,7 @@ export function RefundSettlementCard({ bookingId }: { bookingId: number | string
               )}
 
               {r.state === "ACKNOWLEDGED" && r.acknowledgedAt && (
-                <p className="flex items-start gap-1.5 text-[12px] text-emerald-700 dark:text-emerald-400">
+                <p className="flex items-start gap-1.5 text-[12px] text-status-success dark:text-emerald-400">
                   <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   Confirmed on {nice(r.acknowledgedAt)}.
                 </p>

@@ -862,7 +862,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                       <StatTile
                         icon={<Clock className="w-4 h-4" />}
                         iconBg="bg-bridal-sage/25"
-                        iconColor="text-[#3F6B43]"
+                        iconColor="text-status-success"
                         label="Cancellation"
                         value={cancelShown.headline}
                         wide={cancelShown.headline.length > 20}
@@ -879,7 +879,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                       <StatTile
                         icon={<DollarSign className="w-4 h-4" />}
                         iconBg="bg-bridal-coral/20"
-                        iconColor="text-bridal-coral"
+                        iconColor="text-bridal-coral-dark"
                         label="Advance"
                         value={
                           vendor.downPaymentType === "Percentage"
@@ -1086,7 +1086,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                             {enabledBridalServices.map((s, i) => (
                               <span
                                 key={i}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-bridal-sage/20 border border-bridal-sage/40 text-[#3F6B43] font-bridal text-[12px] font-medium"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-bridal-sage/20 border border-bridal-sage/40 text-status-success font-bridal text-[12px] font-medium"
                               >
                                 <CheckCircle className="w-3.5 h-3.5" />
                                 {s.label}
@@ -1299,7 +1299,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                                               </span>
                                             )}
                                             {units && (
-                                              <span className="inline-flex items-center gap-1 text-[11px] bg-bridal-sage/20 text-[#3F6B43] px-2 py-0.5 rounded-full border border-bridal-sage/40 font-bridal">
+                                              <span className="inline-flex items-center gap-1 text-[11px] bg-bridal-sage/20 text-status-success px-2 py-0.5 rounded-full border border-bridal-sage/40 font-bridal">
                                                 {units} available
                                               </span>
                                             )}
@@ -1312,7 +1312,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                                               {hasAC ? "AC" : "No AC"}
                                             </span>
                                             {hasDecor && (
-                                              <span className="inline-flex items-center gap-1 text-[11px] bg-bridal-coral/15 text-bridal-coral px-2 py-0.5 rounded-full border border-bridal-coral/30 font-bridal">
+                                              <span className="inline-flex items-center gap-1 text-[11px] bg-bridal-coral/15 text-bridal-coral-dark px-2 py-0.5 rounded-full border border-bridal-coral/30 font-bridal">
                                                 Decoration
                                               </span>
                                             )}
@@ -1475,7 +1475,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                       )}
 
                       {isAuthenticated && alreadyReviewed && (
-                        <div className="flex items-center gap-2 font-bridal text-[13px] text-[#3F6B43] bg-bridal-sage/15 border border-bridal-sage/40 rounded-md px-4 py-3">
+                        <div className="flex items-center gap-2 font-bridal text-[13px] text-status-success bg-bridal-sage/15 border border-bridal-sage/40 rounded-md px-4 py-3">
                           <CheckCircle className="w-4 h-4 shrink-0" />
                           You've already reviewed this vendor. Thank you!
                         </div>
@@ -1564,7 +1564,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                       vendorBlocked: vendorBlockedDates,
                     }}
                     modifiersClassNames={{
-                      fullyBooked: "bg-bridal-coral/15 text-bridal-coral line-through",
+                      fullyBooked: "bg-bridal-coral/15 text-bridal-coral-dark line-through",
                       vendorBlocked: "bg-bridal-beige/60 text-bridal-text-soft line-through opacity-60",
                     }}
                   />
@@ -1602,8 +1602,8 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                           availability[toDateKey(selectedDate)]?.isBlocked
                             ? "text-bridal-text-soft"
                             : isDateAvailable
-                            ? "text-[#3F6B43]"
-                            : "text-bridal-coral"
+                            ? "text-status-success"
+                            : "text-bridal-coral-dark"
                         }`}
                       >
                         {availability[toDateKey(selectedDate)]?.isBlocked

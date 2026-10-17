@@ -38,7 +38,7 @@ export function PaisaReconcileCard({ bookingId }: { bookingId: number }) {
     return (
       <Card>
         <CardContent className="p-4 flex items-center gap-2 text-sm">
-          <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
+          <CheckCircle2 className="size-4 text-status-success shrink-0" />
           <span className="text-muted-foreground">
             Paisa milta hai — {data.receiptCount} receipt, kul {rs(data.receiptsTotal)} wasool. Baqaya {rs(data.trueBalance)}.
           </span>
@@ -50,18 +50,18 @@ export function PaisaReconcileCard({ bookingId }: { bookingId: number }) {
   // They disagree → the alert.
   const shownMore = data.displayedAdvance > data.receiptsTotal;
   return (
-    <Card className="border-amber-300 dark:border-amber-900/50">
+    <Card className="border-status-warning-line dark:border-amber-900/50">
       <CardContent className="p-4 space-y-2">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="size-4 text-amber-600 shrink-0" />
+          <AlertTriangle className="size-4 text-status-warning shrink-0" />
           <h3 className="text-sm font-semibold">Paisa mismatch — check karein</h3>
         </div>
         <div className="text-xs space-y-1">
           <div className="flex justify-between"><span className="text-muted-foreground">Screen par &quot;wasool&quot;</span><span className="tabular-nums">{rs(data.displayedAdvance)}</span></div>
           <div className="flex justify-between"><span className="text-muted-foreground">Asal receipts ({data.receiptCount})</span><span className="tabular-nums font-semibold">{rs(data.receiptsTotal)}</span></div>
-          <div className="flex justify-between border-t pt-1"><span className="text-muted-foreground">Asal baqaya</span><span className="tabular-nums font-semibold text-amber-700 dark:text-amber-400">{rs(data.trueBalance)}</span></div>
+          <div className="flex justify-between border-t pt-1"><span className="text-muted-foreground">Asal baqaya</span><span className="tabular-nums font-semibold text-status-warning dark:text-amber-400">{rs(data.trueBalance)}</span></div>
           {data.overpaid > 0 && (
-            <div className="flex justify-between"><span className="text-muted-foreground">Zyada jama (overpaid)</span><span className="tabular-nums text-emerald-700 dark:text-emerald-400">{rs(data.overpaid)}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Zyada jama (overpaid)</span><span className="tabular-nums text-status-success dark:text-emerald-400">{rs(data.overpaid)}</span></div>
           )}
         </div>
         <p className="text-[11px] text-muted-foreground">

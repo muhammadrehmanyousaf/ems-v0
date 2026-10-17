@@ -32,9 +32,9 @@ const categories = [
 ];
 
 const priorities = [
-  { value: 'low', label: 'Low', color: 'bg-green-100 text-green-700' },
-  { value: 'medium', label: 'Medium', color: 'bg-yellow-100 text-yellow-700' },
-  { value: 'high', label: 'High', color: 'bg-red-100 text-red-700' }
+  { value: 'low', label: 'Low', color: 'bg-status-success-soft text-status-success' },
+  { value: 'medium', label: 'Medium', color: 'bg-status-warning-soft text-status-warning' },
+  { value: 'high', label: 'High', color: 'bg-status-danger-soft text-status-danger' }
 ];
 
 export default function ChecklistPage() {
@@ -166,7 +166,7 @@ export default function ChecklistPage() {
             <CalendarDays className="w-6 h-6 sm:w-8 sm:h-8 text-bridal-gold-dark" />
           </div>
           <div className="flex-1">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900 mb-2">Wedding Checklist</h1>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-bridal-charcoal mb-2">Wedding Checklist</h1>
             <p className="text-sm sm:text-base text-neutral-600">Stay organized with our comprehensive wedding planning checklist</p>
           </div>
           
@@ -193,7 +193,7 @@ export default function ChecklistPage() {
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div>
-            <h2 className="text-lg sm:text-xl font-bold text-neutral-900 mb-1">Progress Overview</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-bridal-charcoal mb-1">Progress Overview</h2>
             <p className="text-sm text-neutral-600">
               {completedCount} of {items.length} tasks completed
             </p>
@@ -298,7 +298,7 @@ export default function ChecklistPage() {
                   className="flex-shrink-0 mt-1"
                 >
                   {item.completed ? (
-                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <CheckCircle className="w-5 h-5 text-status-success" />
                   ) : (
                     <Circle className="w-5 h-5 text-neutral-400 hover:text-bridal-gold transition-colors" />
                   )}
@@ -307,7 +307,7 @@ export default function ChecklistPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className={`text-sm sm:text-base font-medium ${item.completed ? 'line-through text-neutral-500' : 'text-neutral-900'}`}>
+                      <h3 className={`text-sm sm:text-base font-medium ${item.completed ? 'line-through text-neutral-500' : 'text-bridal-charcoal'}`}>
                         {item.title}
                       </h3>
                       <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -329,7 +329,7 @@ export default function ChecklistPage() {
                     <button
                       onClick={() => deleteItem(item.id)}
                       aria-label={`Delete ${item.title}`}
-                      className="flex-shrink-0 p-1 text-neutral-400 hover:text-red-500 transition-colors"
+                      className="flex-shrink-0 p-1 text-neutral-400 hover:text-status-danger transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -349,7 +349,7 @@ export default function ChecklistPage() {
             <div className="text-neutral-400 mb-4">
               <CalendarDays className="w-12 h-12 mx-auto" />
             </div>
-            <h3 className="text-lg font-medium text-neutral-900 mb-2">No tasks found</h3>
+            <h3 className="text-lg font-medium text-bridal-charcoal mb-2">No tasks found</h3>
             <p className="text-neutral-600 mb-4">
               {searchTerm || selectedCategory !== 'all' 
                 ? 'Try adjusting your search or filters'

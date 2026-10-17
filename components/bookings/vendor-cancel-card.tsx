@@ -131,7 +131,7 @@ export function VendorCancelCard({
             />
           </label>
           {reason.trim().length > 0 && reason.trim().length < MIN_REASON && (
-            <p className="text-xs text-amber-700 dark:text-amber-400">
+            <p className="text-xs text-status-warning dark:text-amber-400">
               Give them a real explanation — this is their wedding.
             </p>
           )}

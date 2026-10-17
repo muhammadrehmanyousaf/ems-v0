@@ -209,7 +209,7 @@ export function QuoteLinesEditor({
                     aria-label="Reason for this discount"
                   />
                   {!String(l.note ?? "").trim() && (
-                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    <p className="mt-1 text-xs text-status-warning dark:text-amber-400">
                       The customer sees this, and you&apos;ll be asked about it later.
                     </p>
                   )}
@@ -279,7 +279,7 @@ export function QuoteLinesTable({
           {computed.priced.map((l, i) => (
             <tr key={i} className="border-b border-border/60 last:border-0">
               <td className="py-1.5 pr-3">
-                <span className={l.kind === "discount" ? "text-emerald-700 dark:text-emerald-400" : ""}>
+                <span className={l.kind === "discount" ? "text-status-success dark:text-emerald-400" : ""}>
                   {l.label}
                 </span>
                 {l.unit === "per_head" && (

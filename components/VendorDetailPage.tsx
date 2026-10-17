@@ -117,7 +117,7 @@ export default function VendorDetailPage({ categoryLabel }: VendorDetailPageProp
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
-          <h2 className="text-xl font-semibold text-neutral-900 mb-2">
+          <h2 className="text-xl font-semibold text-bridal-charcoal mb-2">
             Unable to load {categoryLabel}
           </h2>
           <p className="text-red-600 mb-6 text-sm">{error}</p>
@@ -146,7 +146,7 @@ export default function VendorDetailPage({ categoryLabel }: VendorDetailPageProp
           <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-neutral-400" />
           </div>
-          <h2 className="text-xl font-semibold text-neutral-900 mb-2">
+          <h2 className="text-xl font-semibold text-bridal-charcoal mb-2">
             {capitalize(categoryLabel)} not found
           </h2>
           <p className="text-neutral-600 mb-6">

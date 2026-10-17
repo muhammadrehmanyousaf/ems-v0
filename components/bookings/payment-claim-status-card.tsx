@@ -70,7 +70,7 @@ export function PaymentClaimStatusCard({ bookingId }: { bookingId: number }) {
             )}
 
             {claim.status === "pending" && (
-              <p className="mt-2 inline-flex items-start gap-1.5 text-sm text-amber-700 dark:text-amber-400">
+              <p className="mt-2 inline-flex items-start gap-1.5 text-sm text-status-warning dark:text-amber-400">
                 <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <span>
                   Waiting for the venue to find it in their account — transfers can
@@ -80,7 +80,7 @@ export function PaymentClaimStatusCard({ bookingId }: { bookingId: number }) {
             )}
 
             {claim.status === "confirmed" && (
-              <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-emerald-700 dark:text-emerald-400">
+              <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-status-success dark:text-emerald-400">
                 <CheckCircle2 className="h-3.5 w-3.5" /> Confirmed by the venue
               </p>
             )}

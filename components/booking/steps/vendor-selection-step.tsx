@@ -291,7 +291,7 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
                     <p className="truncate font-bridal text-[12px] leading-[16px] text-bridal-text-soft">
                       {vendorTypeOf(vendor)}
                       {pkgCount > 0 && (
-                        <span className="text-[#3F6B43]">
+                        <span className="text-status-success">
                           {" "}· <span className="tabular-nums">{pkgCount}</span> {pkgCount === 1 ? "package" : "packages"}
                         </span>
                       )}
@@ -304,7 +304,7 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
                     type="button"
                     onClick={() => removeVendor(vendor.id)}
                     aria-label={`Remove ${vendor.name}`}
-                    className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-bridal-text-soft transition-colors duration-150 hover:bg-bridal-coral/15 hover:text-bridal-coral xl:h-9 xl:w-9 ${FOCUS_RING}`}
+                    className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-bridal-text-soft transition-colors duration-150 hover:bg-bridal-coral/15 hover:text-bridal-coral-dark xl:h-9 xl:w-9 ${FOCUS_RING}`}
                   >
                     <X className="h-4 w-4" aria-hidden />
                   </button>

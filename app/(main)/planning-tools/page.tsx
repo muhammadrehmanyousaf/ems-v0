@@ -89,7 +89,7 @@ export default function PlanningToolsPage() {
             Planning Made Easy
           </span>
         </div>
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-neutral-900 mb-4 leading-tight">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-bridal-charcoal mb-4 leading-tight">
           Essential Planning Tools
         </h1>
         <p className="text-base sm:text-lg text-neutral-600 max-w-2xl mx-auto leading-relaxed">
@@ -117,7 +117,7 @@ export default function PlanningToolsPage() {
                   <div className={`w-12 h-12 sm:w-16 sm:h-16 ${tool.bgColor} rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
                     <tool.icon className={`w-6 h-6 sm:w-8 sm:h-8 ${tool.color}`} />
                   </div>
-                  <CardTitle className="text-lg sm:text-xl font-bold text-neutral-900 mb-2">{tool.title}</CardTitle>
+                  <CardTitle className="text-lg sm:text-xl font-bold text-bridal-charcoal mb-2">{tool.title}</CardTitle>
                   <CardDescription className="text-sm sm:text-base text-neutral-600 mb-4">{tool.description}</CardDescription>
                   
                   {/* Features list - hidden on mobile, shown on larger screens */}
@@ -155,7 +155,7 @@ export default function PlanningToolsPage() {
         className="mt-12 sm:mt-16 lg:mt-20 text-center px-4"
       >
         <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-lg border border-neutral-200 max-w-4xl mx-auto">
-          <h2 className="text-xl sm:text-2xl font-bold text-neutral-900 mb-4">Need More Help?</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-bridal-charcoal mb-4">Need More Help?</h2>
           <p className="text-sm sm:text-base text-neutral-600 mb-6 max-w-2xl mx-auto">
             Our comprehensive planning tools are designed to make your wedding planning journey 
             as smooth and enjoyable as possible.

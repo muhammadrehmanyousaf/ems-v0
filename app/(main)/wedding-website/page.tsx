@@ -42,7 +42,7 @@ export default function WeddingWebsitePage() {
             <Badge className="bg-bridal-gold/15 text-bridal-gold-dark mb-3">
               <Sparkles className="w-3 h-3 mr-1" />Coming Soon
             </Badge>
-            <h2 className="text-2xl font-bold text-neutral-900 mb-3">Everything You Need in One Place</h2>
+            <h2 className="text-2xl font-bold text-bridal-charcoal mb-3">Everything You Need in One Place</h2>
             <p className="text-neutral-600 max-w-lg mx-auto">
               Your wedding website will be the go-to hub for your guests — from event details to RSVPs to your registry.
             </p>
@@ -55,7 +55,7 @@ export default function WeddingWebsitePage() {
                   <div className="w-12 h-12 bg-bridal-gold/15 rounded-xl flex items-center justify-center mx-auto mb-4">
                     <f.icon className="w-6 h-6 text-bridal-gold-dark" />
                   </div>
-                  <h3 className="font-semibold text-neutral-900 mb-2">{f.title}</h3>
+                  <h3 className="font-semibold text-bridal-charcoal mb-2">{f.title}</h3>
                   <p className="text-sm text-neutral-600">{f.desc}</p>
                 </CardContent>
               </Card>
@@ -65,7 +65,7 @@ export default function WeddingWebsitePage() {
           <Card className="border-0 shadow-lg overflow-hidden">
             <CardContent className="p-0">
               <div className="bg-gradient-to-r from-bridal-cream to-pink-50 p-8 sm:p-12 text-center">
-                <h3 className="text-2xl font-bold text-neutral-900 mb-3">Be the First to Know</h3>
+                <h3 className="text-2xl font-bold text-bridal-charcoal mb-3">Be the First to Know</h3>
                 <p className="text-neutral-600 mb-6 max-w-md mx-auto">
                   We&apos;re building something special. Wedding websites are launching soon on Wedding Wala. Start planning your wedding now and your website will be ready when you need it.
                 </p>

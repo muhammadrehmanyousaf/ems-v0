@@ -14,7 +14,7 @@ export default function VendorReviews({ reviews = [] }: VendorReviewsProps) {
 
   return (
     <div className="space-y-6 mb-8">
-      <h3 className="text-xl font-semibold text-neutral-900">Reviews ({reviews.length})</h3>
+      <h3 className="text-xl font-semibold text-bridal-charcoal">Reviews ({reviews.length})</h3>
       <div className="space-y-4">
         {reviews.map((review, i) => (
           <div key={i} className="bg-white p-4 sm:p-5 rounded-xl border border-neutral-100 shadow-sm">
@@ -24,7 +24,7 @@ export default function VendorReviews({ reviews = [] }: VendorReviewsProps) {
                   <User className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm sm:text-base text-neutral-900">{review.userName || review.userName || "Anonymous"}</h4>
+                  <h4 className="font-semibold text-sm sm:text-base text-bridal-charcoal">{review.userName || review.userName || "Anonymous"}</h4>
                   <p className="text-xs text-neutral-500">{review.date || review.createdAt || "Recent"}</p>
                 </div>
               </div>

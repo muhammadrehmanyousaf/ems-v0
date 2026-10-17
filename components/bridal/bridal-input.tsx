@@ -86,11 +86,11 @@ export function BridalField({
         className="bridal-label flex items-center gap-1"
       >
         {label}
-        {required && <span className="text-bridal-coral">*</span>}
+        {required && <span className="text-bridal-coral-dark">*</span>}
       </label>
       {children}
       {error ? (
-        <p className="text-[12px] text-bridal-coral font-bridal">
+        <p className="text-[12px] text-bridal-coral-dark font-bridal">
           {error}
         </p>
       ) : hint ? (

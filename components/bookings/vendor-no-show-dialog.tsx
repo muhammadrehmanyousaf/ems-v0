@@ -198,7 +198,7 @@ export function VendorNoShowDialog({
           type="button"
           variant="outline"
           size="sm"
-          className="gap-1.5 border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800"
+          className="gap-1.5 border-status-danger-line text-status-danger hover:bg-status-danger-soft hover:text-status-danger"
           onClick={() => setOpen(true)}
         >
           <ShieldAlert className="h-3.5 w-3.5" />
@@ -209,7 +209,7 @@ export function VendorNoShowDialog({
       <AlertDialog open={open} onOpenChange={handleClose}>
         <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-red-700">
+            <AlertDialogTitle className="flex items-center gap-2 text-status-danger">
               <AlertTriangle className="h-5 w-5" />
               Report customer no-show
             </AlertDialogTitle>
@@ -246,7 +246,7 @@ export function VendorNoShowDialog({
                 <span
                   className={
                     reasonLen < REASON_MIN
-                      ? "text-amber-600"
+                      ? "text-status-warning"
                       : "text-neutral-500"
                   }
                 >

@@ -31,7 +31,7 @@ export default function FileUploader({ rounded = false, setFile, file }: FileUpl
     <div className="relative inline-block">
       <div
         {...getRootProps()}
-        className={`size-20 p-2 border-2 border-dashed cursor-pointer flex items-center justify-center rounded-full ${isDragActive ? "border-blue-500 bg-blue-100" : "border-gray-300"}`}
+        className={`size-20 p-2 border-2 border-dashed cursor-pointer flex items-center justify-center rounded-full ${isDragActive ? "border-bridal-gold bg-bridal-sand" : "border-gray-300"}`}
       >
         {file ? (
           <div className="w-full h-full relative group">

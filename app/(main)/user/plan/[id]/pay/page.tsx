@@ -92,6 +92,18 @@ export default function PlanPayPage() {
 
   React.useEffect(() => setMounted(true), []);
 
+  // From 1500px the pay card is wide enough for the bank screen's own two-column layout
+  // (form left, amount / reference / accounts right) instead of a 560px stack with the
+  // right 40% of the card empty. Below that it stays the stack.
+  const [wide, setWide] = React.useState(false);
+  React.useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1500px)");
+    const sync = () => setWide(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
   React.useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.replace(`/login?redirect=/user/plan/${planId}/pay`);
@@ -235,7 +247,7 @@ export default function PlanPayPage() {
         />
         <SectionCard>
           <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-bridal-sage/20 text-[#3F6B43]">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-bridal-sage/20 text-status-success">
               {everythingPaid ? (
                 <PartyPopper className="h-5 w-5" />
               ) : (
@@ -284,7 +296,7 @@ export default function PlanPayPage() {
       {allDone ? (
         <SectionCard>
           <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-bridal-sage/20 text-[#3F6B43]">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-bridal-sage/20 text-status-success">
               <PartyPopper className="h-5 w-5" />
             </div>
             <div>
@@ -305,9 +317,9 @@ export default function PlanPayPage() {
           </div>
         </SectionCard>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 lg:max-[1499px]:grid-cols-3 min-[1500px]:grid-cols-[minmax(0,1fr)_340px] gap-5">
           {/* Left — the active pay form */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:max-[1499px]:col-span-2 space-y-4">
             {activeBooking ? (
               <SectionCard
                 title={bookingLabel(activeBooking)}
@@ -328,6 +340,8 @@ export default function PlanPayPage() {
                   paymentType={activeBooking.paymentType ?? "down_payment"}
                   customerEmail={activeBooking.customerEmail ?? undefined}
                   bookingDate={activeBooking.bookingDate ?? undefined}
+                  layout={wide ? "split" : "stack"}
+                  compact
                 />
 
                 {/* Moving on is an explicit act now, not a payment callback.
@@ -413,7 +427,7 @@ export default function PlanPayPage() {
                             {fmtPKR(b.dueNow)}
                           </p>
                           {outcome === "paid" ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-[#3F6B43]">
+                            <span className="inline-flex items-center gap-1 text-[11px] text-status-success">
                               <CheckCircle2 className="h-3 w-3" />
                               Paid
                             </span>

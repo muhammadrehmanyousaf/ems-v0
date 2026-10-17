@@ -32,7 +32,7 @@ export default function DealsPage() {
 
           <div className="text-center mt-12 bg-white rounded-2xl p-8 shadow-sm border">
             <Bell className="w-10 h-10 text-bridal-gold-dark mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-neutral-900 mb-2">Never Miss a Deal</h2>
+            <h2 className="text-xl font-bold text-bridal-charcoal mb-2">Never Miss a Deal</h2>
             <p className="text-neutral-600 mb-6 max-w-md mx-auto">
               Browse our vendor catalog to discover more offers and seasonal promotions.
             </p>

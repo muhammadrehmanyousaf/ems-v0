@@ -303,7 +303,7 @@ const ProfilePage = () => {
     if (score <= 2) return { score: 2, label: "Fair", color: "bg-bridal-coral/70" };
     if (score <= 3) return { score: 3, label: "Good", color: "bg-bridal-gold/70" };
     if (score <= 4) return { score: 4, label: "Strong", color: "bg-bridal-sage" };
-    return { score: 5, label: "Very strong", color: "bg-[#3F6B43]" };
+    return { score: 5, label: "Very strong", color: "bg-status-success" };
   };
 
   const hasChanges = () => {
@@ -477,7 +477,7 @@ const ProfilePage = () => {
             </p>
             {lastUpdated && (
               <p className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <CheckCircle className="size-3 text-[#3F6B43]" />
+                <CheckCircle className="size-3 text-status-success" />
                 Updated {lastUpdated.toLocaleString()}
               </p>
             )}
@@ -647,7 +647,7 @@ const ProfilePage = () => {
             </div>
             {passwordForm.repeatPassword &&
               passwordForm.repeatPassword !== passwordForm.newPassword && (
-                <p className="text-[11px] text-bridal-coral">Passwords do not match</p>
+                <p className="text-[11px] text-bridal-coral-dark">Passwords do not match</p>
               )}
           </div>
         </div>

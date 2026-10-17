@@ -893,7 +893,7 @@ export default function DateTimeStep({
     <span
       className={`shrink-0 rounded-full border px-2 py-[3px] font-bridal text-[10px] font-medium uppercase leading-3 tracking-[0.12em] ${
         tone === "coral"
-          ? "border-bridal-coral/40 bg-bridal-coral/15 text-bridal-coral"
+          ? "border-bridal-coral/40 bg-bridal-coral/15 text-bridal-coral-dark"
           : tone === "gold"
             ? "border-bridal-gold/45 bg-bridal-gold/15 text-bridal-gold-dark"
             : "border-bridal-beige bg-bridal-beige/60 text-bridal-text-soft"
@@ -1409,7 +1409,7 @@ export default function DateTimeStep({
                 {locMode && locMode !== "at_vendor" && (
                   <>
                     {" · "}
-                    {locAddressMissing ? <span className="text-bridal-coral">Address needed</span> : locAddress}
+                    {locAddressMissing ? <span className="text-bridal-coral-dark">Address needed</span> : locAddress}
                   </>
                 )}
               </span>

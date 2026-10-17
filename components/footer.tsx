@@ -208,7 +208,7 @@ export function Footer() {
                     <p
                       id="newsletter-error"
                       role="alert"
-                      className="font-bridal text-[12.5px] text-bridal-coral"
+                      className="font-bridal text-[12.5px] text-bridal-coral-dark"
                     >
                       {errorMsg}
                     </p>

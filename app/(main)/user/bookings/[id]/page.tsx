@@ -143,13 +143,13 @@ const STATUS_CONFIG: Record<
   confirmed: {
     label: "Confirmed",
     icon: CheckCircle2,
-    tone: "border-bridal-sage/45 bg-bridal-sage/15 text-[#3F6B43]",
+    tone: "border-status-success-line bg-status-success-soft text-status-success",
     dot: "bg-bridal-sage",
   },
   "awaiting payment": {
     label: "Awaiting payment",
     icon: CreditCard,
-    tone: "border-bridal-gold/45 bg-bridal-gold/12 text-bridal-gold-dark",
+    tone: "border-status-warning-line bg-status-warning-soft text-status-warning",
     dot: "bg-bridal-gold",
   },
   pending: {
@@ -161,13 +161,13 @@ const STATUS_CONFIG: Record<
   completed: {
     label: "Completed",
     icon: CheckCircle2,
-    tone: "border-bridal-rose/45 bg-bridal-blush text-bridal-mauve",
+    tone: "border-status-info-line bg-status-info-soft text-status-info",
     dot: "bg-bridal-mauve",
   },
   cancelled: {
     label: "Cancelled",
     icon: XCircle,
-    tone: "border-bridal-coral/35 bg-bridal-coral/12 text-bridal-coral",
+    tone: "border-status-danger-line bg-status-danger-soft text-status-danger",
     dot: "bg-bridal-coral",
   },
 };
@@ -179,11 +179,11 @@ const PAYMENT_CONFIG: Record<string, { label: string; tone: string }> = {
   },
   paid: {
     label: "Paid",
-    tone: "border-bridal-sage/45 bg-bridal-sage/15 text-[#3F6B43]",
+    tone: "border-status-success-line bg-status-success-soft text-status-success",
   },
   partial: {
     label: "Partial",
-    tone: "border-bridal-rose/45 bg-bridal-blush text-bridal-mauve",
+    tone: "border-status-info-line bg-status-info-soft text-status-info",
   },
   // WW-PARTIALREFUND — see the note on the same entry in ../page.tsx. Without
   // it the fallback names a partly-refunded booking "Unpaid".
@@ -197,7 +197,7 @@ const PAYMENT_CONFIG: Record<string, { label: string; tone: string }> = {
   },
   failed: {
     label: "Failed",
-    tone: "border-bridal-coral/35 bg-bridal-coral/12 text-bridal-coral",
+    tone: "border-status-danger-line bg-status-danger-soft text-status-danger",
   },
 };
 
@@ -763,17 +763,17 @@ export default function BookingDetailPage() {
           grid so the customer + any family member opening the link
           immediately understands the booking is paused. */}
       {booking.postponedAt && (
-        <div className="mb-5 rounded-lg border border-amber-300 bg-amber-50 p-4">
+        <div className="mb-5 rounded-lg border border-status-warning-line bg-status-warning-soft p-4">
           <div className="flex items-start gap-3">
-            <div className="size-9 rounded-md bg-amber-100 border border-amber-200 flex items-center justify-center flex-shrink-0">
-              <Timer className="size-4 text-amber-700" />
+            <div className="size-9 rounded-md bg-status-warning-soft border border-status-warning-line flex items-center justify-center flex-shrink-0">
+              <Timer className="size-4 text-status-warning" />
             </div>
             <div className="space-y-1 min-w-0">
-              <p className="font-medium text-amber-900">
+              <p className="font-medium text-status-warning">
                 This booking is postponed
               </p>
               {booking.postponedUntilAt && (
-                <p className="text-xs text-amber-800">
+                <p className="text-xs text-status-warning">
                   Set a new date by {fmtShort(booking.postponedUntilAt)} via reschedule. Your deposit stays safe in the meantime.
                 </p>
               )}
@@ -792,7 +792,7 @@ export default function BookingDetailPage() {
                 </div>
               ) : null}
               {booking.postponeReason && (
-                <p className="text-xs text-amber-700 italic mt-1 leading-relaxed">
+                <p className="text-xs text-status-warning italic mt-1 leading-relaxed">
                   &ldquo;{booking.postponeReason}&rdquo;
                 </p>
               )}
@@ -962,7 +962,7 @@ export default function BookingDetailPage() {
                                     key={i}
                                     className="flex items-start gap-1.5 text-[12px] text-foreground/85"
                                   >
-                                    <CheckCircle2 className="size-3 text-[#3F6B43] flex-shrink-0 mt-0.5" />
+                                    <CheckCircle2 className="size-3 text-status-success flex-shrink-0 mt-0.5" />
                                     {f}
                                   </li>
                                 ))}
@@ -1237,7 +1237,7 @@ export default function BookingDetailPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="size-5 text-bridal-coral" />
+              <AlertTriangle className="size-5 text-bridal-coral-dark" />
               {windowClosed ? `Ask the venue to cancel #${booking.id}?` : `Cancel booking #${booking.id}?`}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
@@ -1284,7 +1284,7 @@ export default function BookingDetailPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-bridal-charcoal">You&apos;ll get back</span>
                       {/* WP26: the TOTAL the customer receives (policy refund + price-drop + declined-line), not the policy part alone */}
-                      <span className="font-semibold text-emerald-700" data-refund-total>{fmt(refundParts(refundPreview).total)}</span>
+                      <span className="font-semibold text-status-success" data-refund-total>{fmt(refundParts(refundPreview).total)}</span>
                     </div>
                     {/* one short line per component, only when money beyond the policy refund is owed */}
                     {refundParts(refundPreview).hasExtras && (
@@ -1401,7 +1401,7 @@ export default function BookingDetailPage() {
                 void handleCancel();
               }}
               disabled={isCancelling || requestSent}
-              className="bg-bridal-coral hover:bg-bridal-coral/90 text-bridal-ivory"
+              className="bg-bridal-coral-dark hover:bg-bridal-coral-dark/95 text-white"
             >
               {isCancelling
                 ? (windowClosed ? "Sending…" : "Cancelling…")

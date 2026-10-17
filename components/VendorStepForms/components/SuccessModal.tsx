@@ -66,7 +66,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ setOpen, open, message }) =
                     <div className="relative">
                         <div className="mx-auto w-16 h-16 rounded-full bg-bridal-cream border-2 border-bridal-sage/55 flex items-center justify-center shadow-[0_8px_22px_-12px_rgba(168,196,162,0.6)]">
                             <CheckCircle2
-                                className="w-8 h-8 text-[#3F6B43]"
+                                className="w-8 h-8 text-status-success"
                                 strokeWidth={2.2}
                             />
                         </div>

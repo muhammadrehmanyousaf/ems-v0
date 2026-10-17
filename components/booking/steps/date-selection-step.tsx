@@ -328,8 +328,8 @@ export default function DateSelectionStep({
                 vendorBlocked: vendorBlockedDates,
               }}
               modifiersClassNames={{
-                partiallyBooked: "bg-amber-50 text-amber-700 font-medium",
-                fullyBooked: "bg-red-50 text-red-600 line-through",
+                partiallyBooked: "bg-status-warning-soft text-status-warning font-medium",
+                fullyBooked: "bg-status-danger-soft text-status-danger line-through",
                 vendorBlocked: "bg-bridal-sand text-bridal-text-soft/75 line-through opacity-60",
               }}
             />
@@ -344,7 +344,7 @@ export default function DateSelectionStep({
               </div>
             )}
             {availabilityFailed && (
-              <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+              <div className="mt-3 flex items-start gap-2 rounded-md border border-status-warning-line bg-status-warning-soft px-3 py-2 text-[12px] text-status-warning">
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <div>
                   <p className="font-medium">We couldn&apos;t load this venue&apos;s calendar.</p>
@@ -441,7 +441,7 @@ export default function DateSelectionStep({
                         ${isBooked
                           ? "border-bridal-beige bg-bridal-cream opacity-60"
                           : isHeld
-                            ? "border-amber-200 bg-amber-50/50"
+                            ? "border-status-warning-line bg-amber-50/50"
                             : isSelected
                               ? "border-bridal-gold-dark bg-bridal-cream ring-2 ring-bridal-gold-dark/5"
                               : "border-bridal-beige bg-white hover:border-bridal-gold/60 hover:bg-bridal-cream"
@@ -452,13 +452,13 @@ export default function DateSelectionStep({
                           ${isBooked
                             ? "bg-bridal-sand"
                             : isHeld
-                              ? "bg-amber-100"
+                              ? "bg-status-warning-soft"
                               : isSelected
                                 ? "bg-bridal-gold-dark text-white"
                                 : "bg-bridal-sand text-bridal-text"
                           }`}>
                           <Clock className={`w-4 h-4 ${
-                            isBooked ? "text-bridal-text-soft/75" : isHeld ? "text-amber-700" : "text-current"
+                            isBooked ? "text-bridal-text-soft/75" : isHeld ? "text-status-warning" : "text-current"
                           }`} />
                         </div>
                         <div>
@@ -470,11 +470,11 @@ export default function DateSelectionStep({
                         </div>
                       </div>
                       {isBooked ? (
-                        <span className="text-[10.5px] uppercase tracking-[0.12em] font-semibold text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded-full">
+                        <span className="text-[10.5px] uppercase tracking-[0.12em] font-semibold text-status-danger bg-status-danger-soft border border-status-danger-line px-2 py-0.5 rounded-full">
                           Fully booked
                         </span>
                       ) : isHeld ? (
-                        <span className="text-[10.5px] uppercase tracking-[0.12em] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                        <span className="text-[10.5px] uppercase tracking-[0.12em] font-semibold text-status-warning bg-status-warning-soft border border-status-warning-line px-2 py-0.5 rounded-full inline-flex items-center gap-1">
                           <Timer className="w-2.5 h-2.5" />
                           Reserved
                         </span>
@@ -489,9 +489,9 @@ export default function DateSelectionStep({
                       )}
                     </button>
                     {isHeld && heldMinsLeft !== null && (
-                      <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
-                        <AlertTriangle className="h-3.5 w-3.5 text-amber-700 shrink-0 mt-0.5" />
-                        <p className="text-[12px] text-amber-900 leading-snug">
+                      <div className="flex items-start gap-2 rounded-lg bg-status-warning-soft border border-status-warning-line px-3 py-2">
+                        <AlertTriangle className="h-3.5 w-3.5 text-status-warning shrink-0 mt-0.5" />
+                        <p className="text-[12px] text-status-warning leading-snug">
                           <span className="font-semibold">Temporarily reserved</span> — someone is completing their booking.
                           {heldMinsLeft > 0
                             ? <> Check back in ~<span className="font-semibold">{heldMinsLeft} min{heldMinsLeft !== 1 ? "s" : ""}</span> — it may become available.</>
@@ -508,9 +508,9 @@ export default function DateSelectionStep({
             {/* Alerts & Guest Count */}
             <div className="space-y-3">
               {holdFailed && (
-                <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2.5">
-                  <XCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
-                  <p className="text-[12px] text-red-700 leading-snug">
+                <div className="flex items-start gap-2 rounded-lg bg-status-danger-soft border border-status-danger-line px-3 py-2.5">
+                  <XCircle className="h-4 w-4 text-status-danger shrink-0 mt-0.5" />
+                  <p className="text-[12px] text-status-danger leading-snug">
                     <span className="font-semibold">Slot unavailable</span> — this time slot was just reserved by another customer.
                     {holdFailedUntil && (
                       <> It will be held until{" "}
@@ -525,9 +525,9 @@ export default function DateSelectionStep({
               )}
 
               {!holdFailed && !isHolding && date && formData.timeSlot && timeRemaining === 0 && (
-                <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5">
-                  <AlertTriangle className="h-4 w-4 text-amber-700 shrink-0" />
-                  <p className="text-[12px] text-amber-900">
+                <div className="flex items-center gap-2 rounded-lg bg-status-warning-soft border border-status-warning-line px-3 py-2.5">
+                  <AlertTriangle className="h-4 w-4 text-status-warning shrink-0" />
+                  <p className="text-[12px] text-status-warning">
                     Hold expired. Re-select time slot to reserve again.
                   </p>
                 </div>
@@ -586,13 +586,13 @@ export default function DateSelectionStep({
                     </div>
                   </div>
                   {venue?.maxCapacity && formData.guestCount >= venue.maxCapacity && (
-                    <p className="mt-3 text-[11.5px] text-amber-700 flex items-center gap-1.5 pt-3 border-t border-bridal-beige/60">
+                    <p className="mt-3 text-[11.5px] text-status-warning flex items-center gap-1.5 pt-3 border-t border-bridal-beige/60">
                       <AlertTriangle className="h-3 w-3 shrink-0" />
                       Maximum capacity reached (max: {venue.maxCapacity} guests)
                     </p>
                   )}
                   {venue?.minCapacity && formData.guestCount > 0 && formData.guestCount < venue.minCapacity && (
-                    <p className="mt-3 text-[11.5px] text-amber-700 flex items-center gap-1.5 pt-3 border-t border-bridal-beige/60">
+                    <p className="mt-3 text-[11.5px] text-status-warning flex items-center gap-1.5 pt-3 border-t border-bridal-beige/60">
                       <AlertTriangle className="h-3 w-3 shrink-0" />
                       Below minimum capacity (min: {venue.minCapacity} guests)
                     </p>

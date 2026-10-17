@@ -151,7 +151,7 @@ export function RequirementsCard({
           {role === "vendor" ? "Customer requirements" : "What you asked for"}
         </h3>
         {openCount > 0 && (
-          <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+          <span className="ml-auto rounded-full bg-status-warning-soft px-2 py-0.5 text-xs font-medium text-status-warning dark:bg-amber-950 dark:text-amber-200">
             {openCount} {role === "vendor" ? "to answer" : "awaiting a reply"}
           </span>
         )}
@@ -168,7 +168,7 @@ export function RequirementsCard({
               className={cn(
                 "rounded-lg border p-3",
                 isOpen
-                  ? "border-amber-300 bg-amber-50/40 dark:border-amber-900/50 dark:bg-amber-950/20"
+                  ? "border-status-warning-line bg-amber-50/40 dark:border-amber-900/50 dark:bg-amber-950/20"
                   : "border-border",
               )}
             >
@@ -220,7 +220,7 @@ export function RequirementsCard({
 
               {/* Answers */}
               {r.status === "agreed" && (
-                <p className="mt-2 inline-flex items-start gap-1.5 text-sm text-emerald-700 dark:text-emerald-400">
+                <p className="mt-2 inline-flex items-start gap-1.5 text-sm text-status-success dark:text-emerald-400">
                   <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <span>{r.vendorResponse || "Agreed."}</span>
                 </p>
@@ -242,7 +242,7 @@ export function RequirementsCard({
               )}
               {r.status === "quoted" && (
                 <p className="mt-2 inline-flex items-start gap-1.5 text-sm">
-                  <Banknote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-700 dark:text-amber-400" />
+                  <Banknote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-status-warning dark:text-amber-400" />
                   <span>
                     <span className="font-medium">
                       Adds {fmtPkr(r.priceImpactPkr ?? 0)}.
@@ -252,7 +252,7 @@ export function RequirementsCard({
                 </p>
               )}
               {isOpen && role === "customer" && (
-                <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-amber-700 dark:text-amber-400">
+                <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-status-warning dark:text-amber-400">
                   <Clock className="h-3.5 w-3.5" /> Waiting for the venue to reply
                 </p>
               )}
