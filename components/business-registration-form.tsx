@@ -1157,7 +1157,7 @@ export function BusinessRegistrationForm() {
 
                 <ul className="space-y-1.5">
                   {[
-                    "Free, full-featured business profile",
+                    "A free first month with every feature open, no card needed",
                     "Direct, qualified customer leads",
                     "Booking calendar & package manager",
                     "24/7 vendor success support",

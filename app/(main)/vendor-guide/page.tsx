@@ -51,7 +51,7 @@ const steps = [
 ]
 
 const benefits = [
-  "Free listing on Pakistan's premier event platform",
+  "A free first month on Pakistan's premier event platform, no card needed",
   "Reach thousands of couples actively planning weddings",
   "Customers pay you directly, into your own bank account or wallet",
   "Dedicated vendor dashboard with analytics",

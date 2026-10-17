@@ -16,9 +16,11 @@ import NextTopLoader from "nextjs-toploader"
 // SSR locale always falls back to English.
 import { LocaleProvider } from "@/lib/i18n/useT"
 import { ProductTourProvider } from "@/components/dashboard/tour/product-tour"
-// The portal paywall: with BILLING_ENFORCE on, a vendor without a paid
-// Safepay plan sees the plan wall on every route except Billing.
-import { BillingGate } from "@/components/dashboard/billing/billing-gate"
+// The Wall: when the server says the plan is over, EVERY console route renders the lock screen instead (deny by default;
+// only billing, the account page and add-a-business stay open). The access state comes from /subscriptions/status and from
+// any 402, into one store (lib/plans/access-store.ts).
+import { AccessGate } from "@/components/dashboard/plans/access-gate"
+import { AccessSync } from "@/components/dashboard/plans/access-sync"
 // What the vendor's plan includes and how much of it is used, from the server (one provider for the whole portal),
 // and the one dialog that explains any plan refusal. See context/plan-context.tsx.
 import { PlanProvider } from "@/context/plan-context"
@@ -61,6 +63,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
       <ProtectedRoutes>
         <LocaleProvider>
           <PlanProvider>
+          <AccessSync />
           {/* ReviewProfileGate sits OUTSIDE SidebarProvider on purpose —
               when active, the vendor sees ONLY the under-review screen,
               no sidebar / no header / no dashboard chrome that would
@@ -74,9 +77,9 @@ const layout = ({ children }: { children: React.ReactNode }) => {
                 vendors (no per-route rebuild flash; artifact + React pages both
                 render inside it) and the classic sidebar for admins. See
                 dashboard-chrome.tsx. */}
-            <DashboardChrome>
-              <BillingGate>{children}</BillingGate>
-            </DashboardChrome>
+            <AccessGate>
+              <DashboardChrome>{children}</DashboardChrome>
+            </AccessGate>
             </ProductTourProvider>
           </ReviewProfileGate>
           </PlanProvider>

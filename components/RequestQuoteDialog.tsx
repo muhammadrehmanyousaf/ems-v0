@@ -20,6 +20,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { CheckCircle2, Loader2 } from "lucide-react"
+import { VenueUnavailableNotice } from "@/components/venue/venue-unavailable-notice"
+import { claimVenueUnavailable, venueUnavailableFromError } from "@/lib/plans/venue-availability"
 
 interface Props {
   businessId: number | string
@@ -33,9 +35,11 @@ export default function RequestQuoteDialog({ businessId, vendorName, open, onOpe
   const [submitting, setSubmitting] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // 409 VENUE_UNAVAILABLE: the venue is not taking new enquiries. Shown kindly, in place of the form.
+  const [unavailable, setUnavailable] = useState<string | null>(null)
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
-  const reset = () => { setForm({ eventType: "", eventDate: "", guestCount: "", notes: "" }); setSent(false); setError(null) }
+  const reset = () => { setForm({ eventType: "", eventDate: "", guestCount: "", notes: "" }); setSent(false); setError(null); setUnavailable(null) }
 
   const submit = async () => {
     if (submitting) return
@@ -50,6 +54,8 @@ export default function RequestQuoteDialog({ businessId, vendorName, open, onOpe
       })
       setSent(true)
     } catch (e: any) {
+      const gone = venueUnavailableFromError(e)
+      if (gone) { claimVenueUnavailable(e); setUnavailable(gone.message ?? ""); return }
       setError(errorMessage(e, "Couldn't send your request — please try again"))
     } finally {
       setSubmitting(false)
@@ -59,7 +65,15 @@ export default function RequestQuoteDialog({ businessId, vendorName, open, onOpe
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) setTimeout(reset, 200) }}>
       <DialogContent className="sm:max-w-md">
-        {sent ? (
+        {unavailable !== null ? (
+          <div className="space-y-4 py-2">
+            <DialogHeader>
+              <DialogTitle>Request a quote from {vendorName}</DialogTitle>
+            </DialogHeader>
+            <VenueUnavailableNotice text={unavailable || undefined} />
+            <Button variant="outline" className="w-full" onClick={() => onOpenChange(false)}>Close</Button>
+          </div>
+        ) : sent ? (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
               <CheckCircle2 className="h-8 w-8" />

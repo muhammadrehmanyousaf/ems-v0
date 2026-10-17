@@ -1,6 +1,7 @@
 import "../globals.css"
 import { Inter } from "next/font/google"
 import { PublicChrome } from "@/components/public-chrome"
+import { VenueUnavailableHost } from "@/components/venue/venue-unavailable-host"
 
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
@@ -22,6 +23,8 @@ export default async function RootLayout({
     <div lang="en" suppressHydrationWarning>
       <div className={inter.className} suppressHydrationWarning>
         <PublicChrome>{children}</PublicChrome>
+        {/* Tells a customer kindly when a venue is not taking new enquiries (409 VENUE_UNAVAILABLE from any request). */}
+        <VenueUnavailableHost />
       </div>
     </div>
   )

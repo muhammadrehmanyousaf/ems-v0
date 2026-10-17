@@ -173,6 +173,16 @@ const FAQS = [
     answer: `The customer pays you directly — into the bank or wallet account you publish on your bookings — and ${SITE_NAME} records the payment. We never take, hold or deduct anything from what your customers pay you, and the money does not pass through us.`,
   },
   {
+    question: "Is there a free trial? Is there a free plan?",
+    answer:
+      "Every new vendor gets one free month, automatically, with every feature of the Pro plan open and no card needed. There is no free vendor plan: after the free month you choose a paid plan. If you subscribe early, the days you have left are added on top.",
+  },
+  {
+    question: "What happens if my plan ends or I stop paying?",
+    answer:
+      "Your dashboard locks and shows how to renew. Nothing is deleted: your bookings, customers, khata and calendar are kept and come back exactly as you left them when you renew. You can still download your money and tax records. Your venue is taken off search and shows that it is not taking new enquiries, and customers who have already booked are not affected.",
+  },
+  {
     question: "Is there a setup fee, a listing fee or a contract?",
     answer:
       "No setup fee and no listing fee. Plans are monthly and you can stop at the end of any paid month — there is no lock-in period and no cancellation charge.",
@@ -184,7 +194,7 @@ const FAQS = [
   {
     question: "How do I pay?",
     answer:
-      "Choose a plan from your vendor dashboard and we confirm it with you before anything is charged — requesting a plan is not an agreement to pay. Invoices are payable by bank transfer today. Card and mobile-wallet payment is being enabled through our licensed Pakistani payment processor.",
+      "Choose a plan from your vendor dashboard and pay by card through Safepay, our licensed payment processor; nothing is charged until you approve it on Safepay's page. If you cannot pay by card, send the amount by bank transfer, JazzCash or Easypaisa and upload the receipt on the Billing page; we approve it in business hours.",
   },
   {
     question: "Can I change or cancel my plan?",

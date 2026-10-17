@@ -66,6 +66,8 @@ import { useUser } from "@/context/UserContext";
 import { useFavorites } from "@/hooks/use-favorites";
 import { ChatDrawer } from "@/components/chat/chat-drawer";
 import VendorInquiryDialog from "@/components/VendorInquiryDialog";
+import { VenueUnavailableNotice } from "@/components/venue/venue-unavailable-notice";
+import { announceVenueUnavailable, readAvailabilityNotice } from "@/lib/plans/venue-availability";
 import { isUnpricedVendor, priceLabelFor } from "@/lib/pricing/unpriced";
 import { toast as sonnerToast } from "sonner";
 import { VendorAPI } from "@/lib/api/vendors";
@@ -372,6 +374,8 @@ export default function VendorDetailsMobile({
   const [liveAvgRating, setLiveAvgRating] = useState<number | null>(null)
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [userBookingId, setUserBookingId] = useState<number | null>(null)
+  // PLANS-SPEC contract 6: set while this venue's plan is paused. Null for every venue that is taking enquiries.
+  const availabilityNotice = readAvailabilityNotice(vendor as unknown);
   const [reviewRating, setReviewRating] = useState(0)
   const [reviewHover, setReviewHover] = useState(0)
   const [reviewComment, setReviewComment] = useState("")
@@ -379,6 +383,7 @@ export default function VendorDetailsMobile({
   const [alreadyReviewed, setAlreadyReviewed] = useState(false)
 
   const handleMessageVendor = () => {
+    if (availabilityNotice) { announceVenueUnavailable({ message: availabilityNotice.text }); return; }
     if (!isAuthenticated) {
       router.push(loginUrl());
       return;
@@ -394,7 +399,10 @@ export default function VendorDetailsMobile({
   // inquiry dialog (no login, no booking needed) instead of the booking-gated
   // chat, and lands a tracked lead in the vendor's inbox.
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
-  const handleContactVendor = () => setIsInquiryOpen(true);
+  const handleContactVendor = () => {
+    if (availabilityNotice) { announceVenueUnavailable({ message: availabilityNotice.text }); return; }
+    setIsInquiryOpen(true);
+  };
 
   // Refs for scroll-spy sections
   const heroRef = useRef<HTMLDivElement>(null);
@@ -574,6 +582,7 @@ export default function VendorDetailsMobile({
   };
 
   const handleBookNow = () => {
+    if (availabilityNotice) { announceVenueUnavailable({ message: availabilityNotice.text }); return; }
     const isLoggedIn =
       typeof window !== "undefined" && localStorage.getItem("user_id");
     if (isLoggedIn) {
@@ -1035,6 +1044,12 @@ export default function VendorDetailsMobile({
 
   return (
     <div className="min-h-screen bg-bridal-ivory">
+      {/* pt-24: the site header is fixed over the top of this page */}
+      {availabilityNotice && (
+        <div className="mx-auto max-w-3xl px-4 pb-4 pt-24">
+          <VenueUnavailableNotice text={availabilityNotice.text} />
+        </div>
+      )}
       {guidanceFaqLd && (
         <script
           type="application/ld+json"
@@ -1181,6 +1196,7 @@ export default function VendorDetailsMobile({
                 <button
                   type="button"
                   onClick={unpriced ? handleContactVendor : handleBookNow}
+                  disabled={!!availabilityNotice} style={availabilityNotice ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
                   className="inline-flex items-center gap-2 h-12 px-7 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium shadow-[0_14px_30px_-12px_rgba(176,125,84,0.65)] hover:shadow-[0_18px_36px_-12px_rgba(176,125,84,0.8)] transition-all duration-300"
                 >
                   {unpriced ? <MessageCircle className="w-4 h-4" /> : <CalendarCheck className="w-4 h-4" />}
@@ -2726,6 +2742,7 @@ export default function VendorDetailsMobile({
                   <button
                     type="button"
                     onClick={handleBookNow}
+                    disabled={!!availabilityNotice} style={availabilityNotice ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
                     className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] hover:shadow-[0_14px_30px_-12px_rgba(176,125,84,0.7)] transition-all duration-300 mb-3"
                   >
                     <CalendarCheck className="w-4 h-4" />
@@ -2803,6 +2820,7 @@ export default function VendorDetailsMobile({
                   <button
                     type="button"
                     onClick={handleBookNow}
+                    disabled={!!availabilityNotice} style={availabilityNotice ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
                     className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] transition-all duration-300"
                   >
                     <CalendarCheck className="w-4 h-4" />
@@ -2858,6 +2876,7 @@ export default function VendorDetailsMobile({
           <button
             type="button"
             onClick={unpriced ? handleContactVendor : handleBookNow}
+            disabled={!!availabilityNotice} style={availabilityNotice ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
             className="inline-flex items-center justify-center h-11 px-6 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[11px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] transition-all duration-300"
           >
             {unpriced ? "Ask for a price" : "Book now"}

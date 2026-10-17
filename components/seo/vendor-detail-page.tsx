@@ -25,6 +25,8 @@ import { VenueSpaceSelector } from "@/components/booking/venue-space-selector"
 import { ClaimListingCard } from "@/components/seo/claim-listing-card"
 import { fetchVendorHasMultiSpace } from "@/lib/seo/fetch-vendor"
 import VendorInquiryCta from "@/components/seo/vendor-inquiry-cta"
+import { UnavailableButton, VenueUnavailableNotice } from "@/components/venue/venue-unavailable-notice"
+import { readAvailabilityNotice } from "@/lib/plans/venue-availability"
 import VendorOfferings from "@/components/seo/vendor-offerings"
 import { SeoVendorSecondaryCtas } from "@/components/seo/seo-vendor-secondary-ctas"
 import {
@@ -252,6 +254,8 @@ export async function VendorDetailPage(input: PageInput) {
   // Decide server-side (ISR-cached 1h) whether to surface the space selector, and
   // only make the call at all when the feature is on — zero per-visitor cost.
   const hasMultiSpace = await fetchVendorHasMultiSpace(Number(vendor.id))
+  // PLANS-SPEC contract 6: set while the venue's plan is paused. Null for every venue that is taking enquiries.
+  const availabilityNotice = readAvailabilityNotice(vendor.raw)
 
   return (
     <>
@@ -366,7 +370,18 @@ export async function VendorDetailPage(input: PageInput) {
               </p>
             )}
 
+            {/* A venue whose plan is paused (PLANS-SPEC contract 6): the page stays up (200) with a calm notice, the enquiry /
+                booking / quote doors are shown disabled, and an existing booking is not affected. */}
+            {availabilityNotice && <VenueUnavailableNotice text={availabilityNotice.text} className="mt-6" />}
             <div className="mt-6 flex flex-wrap gap-3">
+              {availabilityNotice ? (
+                <>
+                  <UnavailableButton label={vendor.priceMin ? "Check availability" : "Ask for a price"} />
+                  <UnavailableButton label="Ask a question" />
+                  <UnavailableButton label="Request a quote" />
+                </>
+              ) : (
+              <>
               {/* WW-PRICE0 — an unpriced vendor cannot be booked (the server
                   refuses it), so don't promise availability. The link still goes
                   to the booking funnel, which renders the price-on-request panel
@@ -398,6 +413,8 @@ export async function VendorDetailPage(input: PageInput) {
                 vendorName={vendor.name}
                 vendorType={vendor.vendorType}
               />
+              </>
+              )}
             </div>
           </div>
         </header>
@@ -700,11 +717,13 @@ export async function VendorDetailPage(input: PageInput) {
           they scroll and is still there when the photographs or the menus make
           them wonder again.
         */}
-        <StickyQuoteBar
-          raw={vendor.raw}
-          vendorId={vendor.id}
-          ctaLabel={vendor.priceMin ? "Check availability" : "Ask for a price"}
-        />
+        {!availabilityNotice && (
+          <StickyQuoteBar
+            raw={vendor.raw}
+            vendorId={vendor.id}
+            ctaLabel={vendor.priceMin ? "Check availability" : "Ask for a price"}
+          />
+        )}
       </div>
     </>
   )
