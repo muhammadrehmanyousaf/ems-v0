@@ -250,7 +250,7 @@ function buildContent(d: RData, cashLockedHtml = ""): string {
   const bkSeries = d.monthly.map((x) => x.n)
   const revSeries = d.series.map((x) => x.v)
   const kpis = `<div class="kpis">
-    <div class="kpi"><div class="l">Kul kamaai (saal)</div><div class="vrow"><span class="v tnum"><span class="rs">Rs</span> ${pkNum(d.revenue)}</span>${spark(revSeries)}</div><div class="d">is saal received</div></div>
+    <div class="kpi"><div class="l">Kul kamaai (saal)</div><div class="vrow"><span class="v tnum"><span class="rs">Rs</span> ${pkNum(d.revenue)}</span>${spark(revSeries)}</div><div class="d">is saal ke events par mila (event ki tareekh se)</div></div>
     <div class="kpi"><div class="l">Kul bookings</div><div class="vrow"><span class="v tnum">${d.bookings}</span>${spark(bkSeries)}</div><div class="d">is saal</div></div>
     <div class="kpi"><div class="l">Auosat vasooli</div><div class="vrow"><span class="v tnum"><span class="rs">Rs</span> ${pkNum(d.avg)}</span>${spark(revSeries)}</div><div class="d">per booking (mila hua)</div></div>
     <div class="kpi"><div class="l">Occupancy</div><div class="vrow"><span class="v tnum">${d.occ}%</span>${spark(bkSeries)}</div><div class="d">saal ke din booked</div></div>
