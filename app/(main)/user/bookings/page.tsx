@@ -643,7 +643,7 @@ export default function BookingsPage() {
                           }}
                           variant="outline"
                           size="sm"
-                          className="gap-1.5 border-bridal-coral/30 text-bridal-coral hover:bg-bridal-coral/10 hover:text-bridal-coral hover:border-bridal-coral/45"
+                          className="gap-1.5 border-bridal-coral/30 text-bridal-coral-dark hover:bg-bridal-coral/10 hover:text-bridal-coral-dark hover:border-bridal-coral/45"
                         >
                           <Trash2 className="size-3.5" />
                           Cancel

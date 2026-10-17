@@ -29,6 +29,10 @@ const config: Config = {
   				mauve: '#8B5A72',
   				sage: '#A8C4A2',
   				coral: '#E8917A',
+  				// Destructive / cancel TEXT. #E8917A is 2.34:1 on a near-white card; this is the
+  				// same hue (12deg, 62%) at lower lightness: 5.2-5.4:1 on white, cream and ivory,
+  				// 4.97:1 on the 10% coral hover tint. Borders and tints keep bridal-coral.
+  				'coral-dark': '#B6462B',
   				charcoal: '#2C1810',
   				beige: '#EDD9C3',
   				sand: '#F5E6D3',
