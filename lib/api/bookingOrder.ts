@@ -597,6 +597,10 @@ export interface RefundBreakdown {
 export interface RefundPreview {
   bookingId: number; eventDate: string | null; daysBefore: number;
   grand: number; totalPaid: number;
+  /** WP37 (FLAGGED-063): what comes back if the VENUE agrees to cancel (the vendor-cancel path refunds in full). Absent on an older server. */
+  ifVenueAgrees?: { refund: number; forfeit: number };
+  /** WP37: what the cancellation policy gives back if it is applied (the same figure as `preview`). */
+  ifPolicyApplied?: { refund: number; forfeit: number };
   /**
    * WP16: money the booking's roll-up shows but no receipt backs (a legacy advance never ledgered). Not in
    * `totalPaid` or the refund: only what the ledger holds can be handed back. Absent when there is none.

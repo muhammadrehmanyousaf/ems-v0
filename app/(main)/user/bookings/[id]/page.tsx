@@ -1151,12 +1151,15 @@ export default function BookingDetailPage() {
               DISPUTE_ENGINE_ENABLED is globally enabled in production — so the
               build-time flag that hid this card has been removed. Raising a request
               moves NO money: it freezes the calculation for the vendor to decide.
-              Shown only where sensible: an active booking with money paid. */}
+              WP37 (FLAGGED-069): shown only for a CANCELLED booking that holds money. A cancellation-policy
+              refund requested on a booking that stays live refunded the money while the date stayed booked
+              (the server now answers 409 BOOKING_NOT_CANCELLED); an active booking cancels through
+              "Cancel booking" above, which works the refund out as part of the cancellation. */}
           <RefundRequestCard
             bookingId={booking.id}
             canRequest={
-              !["cancelled", "completed"].includes(statusKey) &&
-              ["paid", "partial"].includes(paymentKey)
+              statusKey === "cancelled" &&
+              (["paid", "partial"].includes(paymentKey) || money.received > 0)
             }
           />
 
@@ -1292,6 +1295,10 @@ export default function BookingDetailPage() {
                   <p>
                     This action cannot be undone. Any payments made may be
                     subject to the vendor&apos;s refund policy.
+                    {/* WP37 (CUSTOMER-034): when no refund figure could be worked out, still say what has been paid and who decides */}
+                    {!refundPreviewLoading && !refundPreview && money.received > 0 ? (
+                      <> You have paid {fmt(money.received)} so far; the venue decides how much of it comes back, and you will be told here.</>
+                    ) : null}
                   </p>
                 )}
                 {/* QA #4 — show the actual refund per the vendor's policy so the
@@ -1300,7 +1307,20 @@ export default function BookingDetailPage() {
                 {refundPreviewLoading && (
                   <p className="text-xs text-bridal-text-soft">Checking your refund…</p>
                 )}
-                {refundPreview && (refundPreview.totalPaid > 0 || (refundPreview.unledgeredAdvance ?? 0) > 0 || refundParts(refundPreview).hasExtras) && (
+                {/* WP37 (FLAGGED-063): inside the notice window the customer only ASKS the venue, and a venue that agrees
+                    refunds in full: say that, not the policy forfeit ("You'll get back Rs 0") that applies to a cancel the venue refused. */}
+                {windowClosed && refundPreview?.ifVenueAgrees && refundPreview.totalPaid > 0 && (
+                  <div className="rounded-md border border-bridal-gold/45 bg-bridal-cream p-3 text-sm" data-venue-agrees>
+                    <div className="flex items-center justify-between">
+                      <span className="text-bridal-charcoal">If the venue agrees to cancel</span>
+                      <span className="font-semibold text-status-success">{fmt(refundParts(refundPreview).total - refundParts(refundPreview).policy + refundPreview.ifVenueAgrees.refund)}</span>
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-bridal-text-soft leading-relaxed">
+                      The venue decides. If it does not agree, your booking stays and the cancellation policy applies.
+                    </p>
+                  </div>
+                )}
+                {refundPreview && !(windowClosed && refundPreview.ifVenueAgrees) && (refundPreview.totalPaid > 0 || (refundPreview.unledgeredAdvance ?? 0) > 0 || refundParts(refundPreview).hasExtras) && (
                   <div className="rounded-md border border-bridal-gold/45 bg-bridal-cream p-3 text-sm">
                     <div className="flex items-center justify-between">
                       <span className="text-bridal-charcoal">You&apos;ll get back</span>
