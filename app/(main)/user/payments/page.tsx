@@ -434,7 +434,7 @@ function PaymentsPageContent() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 pt-3 border-t border-border/60">
+                    <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-border/60">
                       <Button
                         onClick={() =>
                           router.push(`/user/bookings/${booking.bookingId || booking.id}`)
@@ -446,10 +446,11 @@ function PaymentsPageContent() {
                         Details
                         <ArrowRight className="size-3" />
                       </Button>
+                      {/* F5-1: on a phone the label plus the amount no longer fits beside Details; the row wraps instead of cutting the amount */}
                       <Button
                         onClick={() => handlePay(booking)}
                         size="sm"
-                        className="gap-1.5 flex-1"
+                        className="gap-1.5 flex-1 min-w-[14rem]"
                       >
                         <CreditCard className="size-3.5" />
                         {action.label} — {fmt(action.amount)}
