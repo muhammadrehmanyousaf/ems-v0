@@ -42,6 +42,8 @@ import { openDrawer, closeDrawer, escHtml, pkNum } from "./artifact-shell"
 import { dayText, qistHeading, rsText } from "@/lib/utils/qist"
 import { invalidateMoney } from "@/lib/query/money-keys"
 import { SubmitKey, isAmbiguousFailure, isRetrySameKey, checkPaymentLanded } from "@/lib/utils/idempotency"
+import { unledgered409 } from "@/lib/utils/phantom-advance"
+import { phantomPanelHtml, wirePhantomButtons } from "./phantom-advance"
 
 const METHODS: { v: ReceiptMethod; l: string }[] = [
   { v: "cash", l: "Cash" }, { v: "bank_transfer", l: "Bank transfer" }, { v: "jazzcash", l: "JazzCash" },
@@ -72,6 +74,7 @@ export function openRecordPaymentDrawer(shadow: ShadowRoot, opts: RecordPaymentO
   const startAmount = typeof opts.amount === "number" && opts.amount > 0 ? opts.amount : hasDue ? due! : 0
   const body = `
     <div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;margin-bottom:4px">${escHtml(customerName || "Booking")} <span style="font-size:12px;color:var(--ink-3);font-weight:600">#${bookingId}</span></div>
+    <div id="rp-phantom"></div>
     <div id="rp-due">${hasDue ? `<div style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--warn);background:var(--warn-wash);border-radius:7px;padding:4px 10px;margin-bottom:14px">Baqaya: Rs ${pkNum(due!)}</div>` : ""}</div>
     ${opts.hint ? `<div class="bf-hint">${escHtml(opts.hint)}</div>` : ""}
     <div class="dfield" id="rp-qist-wrap" hidden><label class="dlabel" for="rp-qist">Kis qist ke liye</label><select id="rp-qist"></select><div class="bf-hint" id="rp-qhint" style="margin:6px 0 0"></div></div>
@@ -210,7 +213,22 @@ export function openRecordPaymentDrawer(shadow: ShadowRoot, opts: RecordPaymentO
           submitKey.rotate()
           const resp = (err as { response?: { data?: { message?: string; data?: { code?: string; outstanding?: number } } } })?.response?.data
           if (status === 409) { BookingAPI.getSchedule(bookingId).then(applySchedule).catch(() => {}); void invalidateMoney({ bookingId }) }
-          if (status === 409 && resp?.data?.code === "OUTSTANDING_CHANGED") {
+          const ph = unledgered409(err)
+          if (ph) {
+            // WP31: the booking says money was received that no receipt backs. Nothing was written. Show why, and the two
+            // explicit taps (Adopt / Zero); when one lands this drawer opens again, fresh, so the vendor carries on.
+            const host = shadow.getElementById("rp-phantom")
+            const again = () => { opts.onSaved?.(); openRecordPaymentDrawer(shadow, { ...opts, schedule: null, installmentId: opts.installmentId }) }
+            if (host) {
+              host.innerHTML = phantomPanelHtml({ unledgered: ph.unledgered, cancelled: !!schedule?.money?.cancelled })
+              wirePhantomButtons(shadow, host, {
+                bookingId, customerName, unledgered: ph.unledgered, received: ph.received, ledger: ph.ledger,
+                total: schedule?.money?.total ?? null, cancelled: !!schedule?.money?.cancelled, createdDate: schedule?.money?.createdDate ?? null,
+                onSettled: again, onStale: again,
+              })
+              host.scrollIntoView?.({ block: "nearest" })
+            } else toast.error(resp?.message || "Pehle bina-receipt advance theek karein")
+          } else if (status === 409 && resp?.data?.code === "OUTSTANDING_CHANGED") {
             // another device / screen moved this booking's baqaya since the drawer opened (WP02)
             toast.error(`Is booking ka baqaya badal chuka hai${typeof resp.data.outstanding === "number" ? ` (ab ${rsText(resp.data.outstanding)})` : ""}. Naye hisaab ke saath amount dobara check karke save karein.`, { duration: 9000 })
           } else {
