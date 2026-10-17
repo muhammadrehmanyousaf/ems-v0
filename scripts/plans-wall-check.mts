@@ -140,7 +140,7 @@ await check("what 'locked' means is defined once: LOCKED_STATES lives in lib/pla
 });
 await check("the billing screen offers a trial button only when the server's access object says canStartTrial", () => {
   const src = read("components/dashboard/mainScreens/billing/artifact/billing-artifact.tsx");
-  ok(/ctx\.canStartTrial\s*&&/.test(src), "the trial button must be behind ctx.canStartTrial");
+  ok(/foot = ctx\.canStartTrial\s*\?/.test(src), "the trial button must be behind ctx.canStartTrial");
   ok(!/d\.trialEligible/.test(src), "d.trialEligible must not decide the trial button any more");
   ok(!/planNameOf\("free"\)/.test(src), "the comparison table must not draw a free column");
 });

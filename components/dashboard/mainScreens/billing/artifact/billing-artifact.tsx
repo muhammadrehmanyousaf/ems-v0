@@ -174,8 +174,8 @@ function planCard(p: PlanCatalogEntry, d: MyPlanData, view: PlanView, ctx: CardC
     const days = ctx.trialDays || d.trialDays || 0
     // The trial starts by itself when the first business is submitted. This button is only a fallback, and only when the
     // server's access object says a trial can still be started by hand (canStartTrial); never from a local rule.
-    foot = ctx.canStartTrial && days > 0
-      ? `<button class="btn btn-primary" data-trial="${escHtml(p.tier)}" data-trial-days="${days}" data-plan-name="${escHtml(p.name)}" aria-label="Start a ${days}-day free trial of ${escHtml(p.name)}">${svg(IC.check, 2.4)} ${days} din muft azmaayein</button><div style="margin-top:8px">${priceBtn(p, "btn-ghost", `data-subscribe="${escHtml(p.tier)}"`, "Ya abhi subscribe karein", `Subscribe to ${p.name} for Rs ${pkNum(p.pricePkrMonthly)} a month with Safepay`)}</div>`
+    foot = ctx.canStartTrial
+      ? `<button class="btn btn-primary" data-trial="${escHtml(p.tier)}" data-trial-days="${days > 0 ? days : ""}" data-plan-name="${escHtml(p.name)}" aria-label="Start a free trial of ${escHtml(p.name)}${days > 0 ? ` for ${days} days` : ""}">${svg(IC.check, 2.4)} ${days > 0 ? `${days} din muft azmaayein` : "Muft trial shuru karein"}</button><div style="margin-top:8px">${priceBtn(p, "btn-ghost", `data-subscribe="${escHtml(p.tier)}"`, "Ya abhi subscribe karein", `Subscribe to ${p.name} for Rs ${pkNum(p.pricePkrMonthly)} a month with Safepay`)}</div>`
       : subscribeBtn
   }
   return `<div class="plan${isCur ? " cur" : ""}">
@@ -671,8 +671,8 @@ export function BillingArtifact() {
         const days = trialBtn.dataset.trialDays || ""
         const planName = trialBtn.dataset.planName || "plan"
         openConfirm(s, {
-          title: `${days} din muft trial shuru karein?`,
-          message: `Koi card nahi, koi charge nahi. ${planName} ke saare features ${days} din ke liye khul jayenge. Trial ke baad portal band ho jata hai jab tak aap subscribe na karein — aur jo din bach jayen, woh paid plan mein shamil ho jate hain. Trial ek hi baar milta hai.`,
+          title: days ? `${days} din muft trial shuru karein?` : "Muft trial shuru karein?",
+          message: `Koi card nahi, koi charge nahi. ${planName} ke saare features${days ? ` ${days} din ke liye` : ""} khul jayenge. Trial ke baad portal band ho jata hai jab tak aap subscribe na karein — aur jo din bach jayen, woh paid plan mein shamil ho jate hain. Trial ek hi baar milta hai.`,
           confirmLabel: "Trial shuru karein",
           cancelLabel: "Rehne dein",
           danger: false,
