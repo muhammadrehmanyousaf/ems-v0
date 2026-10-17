@@ -153,6 +153,9 @@ export const venueSpacesApi = {
   listMergeGroups: (businessId: number): Promise<{ businessId: number; groups: MergeGroup[] }> => unwrap(api.get(`${BASE}/business/${businessId}/merge-groups`)),
   createMergeGroup: (businessId: number, body: { name: string; subVenueIds: number[]; combinedCapacity?: number; combinedPricePkr?: number }): Promise<MergeGroup> =>
     unwrap<MergeGroup>(api.post(`${BASE}/business/${businessId}/merge-groups`, body)),
+  /** SETUP-018: edit a combo in place (keeps its id). `combinedPricePkr: null` clears the price. */
+  updateMergeGroup: (id: number, body: { name?: string; subVenueIds?: number[]; combinedCapacity?: number | null; combinedPricePkr?: number | null }): Promise<MergeGroup> =>
+    unwrap<MergeGroup>(api.patch(`${BASE}/merge-groups/${id}`, body)),
   deleteMergeGroup: (id: number): Promise<{ deleted: number }> => unwrap(api.delete(`${BASE}/merge-groups/${id}`)),
 
   // booking engine

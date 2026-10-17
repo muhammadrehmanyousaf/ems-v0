@@ -137,7 +137,7 @@ export function TodayArtifact() {
     bound.current = true
     s.addEventListener("click", async (e) => {
       const t = e.target as HTMLElement
-      if (t.closest("[data-retry]")) { qc.invalidateQueries({ queryKey: ["today-art", activeBusinessId] }); return }
+      if (t.closest("[data-retry]")) { qc.invalidateQueries({ queryKey: ["today-art"] }); return }
       const wa = t.closest("[data-wa]") as HTMLElement | null
       if (wa) { const p = waDigits(wa.dataset.wa); if (p) window.open(`https://wa.me/${p}`, "_blank", "noopener"); return }
       const tel = t.closest("[data-tel]") as HTMLElement | null
@@ -145,13 +145,13 @@ export function TodayArtifact() {
       // record baqaya in place — the customer is at the venue today
       const rec = t.closest("[data-rec]") as HTMLElement | null
       if (rec?.dataset.rec) {
-        openRecordPaymentDrawer(s, { bookingId: Number(rec.dataset.rec), customerName: rec.dataset.recName || undefined, due: Number(rec.dataset.recDue) || 0, onSaved: () => qc.invalidateQueries({ queryKey: ["today-art", activeBusinessId] }) })
+        openRecordPaymentDrawer(s, { bookingId: Number(rec.dataset.rec), customerName: rec.dataset.recName || undefined, due: Number(rec.dataset.recDue) || 0, onSaved: () => qc.invalidateQueries({ queryKey: ["today-art"] }) })
         return
       }
       const tk = t.closest("[data-task]") as HTMLElement | null
       if (tk?.dataset.task) {
         const id = Number(tk.dataset.task); const cur = tk.dataset.status
-        try { await BookingTimelineAPI.setStatus(id, cur === "done" ? "pending" : "done"); qc.invalidateQueries({ queryKey: ["today-art", activeBusinessId] }) } catch { toast.error("Nahi hua") }
+        try { await BookingTimelineAPI.setStatus(id, cur === "done" ? "pending" : "done"); qc.invalidateQueries({ queryKey: ["today-art"] }) } catch { toast.error("Nahi hua") }
         return
       }
     })

@@ -35,6 +35,7 @@ import { businessStatusInfo, businessSubtitle } from "@/lib/business-status"
 import { describeLimit, useBusinessLimit } from "@/lib/business-limits"
 import { PlanLockChip } from "@/components/dashboard/plans/plan-locked"
 import { SCREEN_FEATURE } from "@/lib/plan-gate"
+import { useDirtyGuard } from "@/lib/store/dirty-guard"
 
 type Biz = {
   id: number; name?: string; city?: string | null; subArea?: string | null; status?: string
@@ -128,7 +129,7 @@ function StatusChip({ status }: { status?: string }) {
 }
 
 function BusinessSwitcher() {
-  const { business, businesses } = useBusiness()
+  const { business, businesses, loading, loadError, retryLoad } = useBusiness()
   const { user } = useUser()
   const setActiveBusinessId = useActiveBusinessStore((s) => s.setActiveBusinessId)
   const activeBusinessId = useActiveBusinessStore((s) => s.activeBusinessId)
@@ -207,11 +208,22 @@ function BusinessSwitcher() {
                   </DropdownMenuItem>
                 )
               })}
-              {list.length === 0 && (
+              {/* SETUP-012 - a list that is still loading, or failed to load, is not an
+                  empty account: telling the vendor "no business" invited a duplicate registration. */}
+              {list.length === 0 && loading && (
+                <div className="px-2 py-1.5 text-xs text-muted-foreground" data-testid="switcher-loading">Loading your venues...</div>
+              )}
+              {list.length === 0 && !loading && loadError && (
+                <div className="px-2 py-1.5 text-xs text-muted-foreground" data-testid="switcher-error">
+                  Could not load your venues.{" "}
+                  <button type="button" className="font-medium text-primary underline-offset-2 hover:underline" onClick={(e) => { e.preventDefault(); e.stopPropagation(); retryLoad() }}>Try again</button>
+                </div>
+              )}
+              {list.length === 0 && !loading && !loadError && (
                 <div className="px-2 py-1.5 text-xs text-muted-foreground">You have no business on this account yet.</div>
               )}
             </div>
-            {canAdd && (
+            {canAdd && !(list.length === 0 && (loading || loadError)) && (
               <>
                 <DropdownMenuSeparator />
                 {/* Last row, always in view. Opens a short form that reuses this login. */}
@@ -242,7 +254,8 @@ function BusinessSwitcher() {
 export function ChampagneSidebar() {
   const router = useRouter()
   const pathname = usePathname()
-  const go = (url: string) => router.push(url)
+  // SETUP-027 - a screen with unsaved edits parks the navigation and asks first.
+  const go = (url: string) => { useDirtyGuard.getState().guard(() => router.push(url)) }
 
   const activeDrill = React.useMemo<null | "khata" | "setup" | "more">(() => {
     if (KHATA_ACTIVE(pathname)) return "khata"

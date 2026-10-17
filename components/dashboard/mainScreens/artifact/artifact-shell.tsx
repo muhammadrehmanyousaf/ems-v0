@@ -43,8 +43,36 @@ export const escHtml = (s: unknown) =>
  * is one real, consistent action across the console. Skips fully-hidden rows so
  * an active filter/search narrows the export too.
  */
+/** A screen can register a data-driven exporter: it receives the rows the tab + search currently select (every
+ *  page of them) and returns a header + one array per row, built from its data model (one clean column per field).
+ *  Without one, the DOM table is exported (all matching rows, with cell text that no longer fuses). */
+export type TableExport = { head: string[]; rows: (string | number | null | undefined)[][] }
+const EXPORTERS = new WeakMap<ShadowRoot, (rows: HTMLElement[]) => TableExport | null>()
+export function registerTableExport(shadow: ShadowRoot, fn: ((rows: HTMLElement[]) => TableExport | null) | null) {
+  if (fn) EXPORTERS.set(shadow, fn); else EXPORTERS.delete(shadow)
+}
+/** Cell text with a space between sibling elements (textContent glued "AS" + "AUD-BK scale 085" + "Other Tenant"),
+ *  without avatar initials. */
+function cellText(el: Element): string {
+  const out: string[] = []
+  const walk = (n: Node) => {
+    if (n.nodeType === 3) { out.push(n.textContent || ""); return }
+    if (n.nodeType !== 1) return
+    const e = n as Element
+    if (e.matches(".ava, [aria-hidden='true'], svg, script, style")) return
+    e.childNodes.forEach(walk)
+    out.push(" ")
+  }
+  walk(el)
+  return out.join("").replace(/\s+/g, " ").trim()
+}
 function exportWwcTable(shadow: ShadowRoot, name: string) {
   const wwc = shadow.getElementById("wwc"); if (!wwc) return
+  const custom = EXPORTERS.get(shadow)
+  if (custom) {
+    const out = custom(pagerMatchedRows(shadow))
+    if (out && out.rows.length) { downloadCsv([out.head, ...out.rows], name); return }
+  }
   const table = wwc.querySelector("table.tbl") as HTMLTableElement | null
   if (!table) return
   // PAY-REPORTS-024 / WWL-123: a cell that opens with = + - @ (tab, CR) is a formula to Excel and
@@ -56,20 +84,38 @@ function exportWwcTable(shadow: ShadowRoot, name: string) {
     if (!m) return neutraliseFormula(raw)
     return m[1] === "+" ? m[2] : m[2].replace(/^(Rs\.?\s*)/, "$1-")
   }
-  const cell = (el: Element) => `"${safeText((el.textContent || "").replace(/\s+/g, " ").trim()).replace(/"/g, '""')}"`
   const heads = [...table.querySelectorAll("thead th")]
-  const lines: string[] = []
-  if (heads.length) lines.push(heads.map(cell).join(","))
-  ;[...table.querySelectorAll("tbody tr")].forEach((tr) => {
-    if ((tr as HTMLElement).hidden) return
+  // A column with an empty header is an action column (kebab, "Record"): not data.
+  const keep = heads.map((h, i) => (cellText(h) ? i : -1)).filter((i) => i >= 0)
+  const pick = (cells: Element[]) => (keep.length ? keep.map((i) => cells[i]).filter(Boolean) : cells)
+  // MONEY-038 / BOOKINGS-012: every row the tab + search select (all pages), not only the rows the pager shows.
+  const st = PAGERS.get(shadow)
+  const trs = st ? pagerMatched(st) : ([...table.querySelectorAll("tbody tr")] as HTMLElement[]).filter((tr) => !tr.hidden)
+  const grid: string[][] = []
+  // MONEY-038: a cell that is only an amount ("Rs 7,20,000") is written as the number 720000.
+  const plainMoney = (t: string) => { const m = t.match(/^Rs\.?\s*(-?[\d,]+(?:\.\d+)?)$/); return m ? m[1].replace(/,/g, "") : t }
+  if (heads.length) grid.push(pick(heads).map(cellText).map(safeText))
+  trs.forEach((tr) => {
     const tds = [...tr.querySelectorAll("td")]
-    if (tds.length) lines.push(tds.map(cell).join(","))
+    if (tds.length) grid.push(pick(tds).map(cellText).map(safeText).map(plainMoney))
   })
-  if (lines.length <= (heads.length ? 1 : 0)) return
+  if (grid.length <= (heads.length ? 1 : 0)) return
+  downloadCsv(grid, name, true)
+}
+/** Write a CSV (UTF-8 BOM so Excel reads Urdu names) and download it. `pre` = cells already formula-safe. */
+function downloadCsv(grid: (string | number | null | undefined)[][], name: string, pre = false) {
+  const q = (v: string | number | null | undefined) => {
+    if (typeof v === "number") return Number.isFinite(v) ? String(v) : ""
+    const raw = String(v ?? "")
+    return `"${(pre ? raw : neutraliseFormula(raw)).replace(/"/g, '""')}"`
+  }
+  const lines = grid.map((r) => r.map(q).join(","))
   const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" })
   const url = URL.createObjectURL(blob)
   const a = document.createElement("a")
-  a.href = url; a.download = `${(name || "export").toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${new Date().toISOString().slice(0, 10)}.csv`
+  // the file's date is the Pakistan day, not the UTC one (a late-evening export was dated tomorrow)
+  const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi" }).format(new Date())
+  a.href = url; a.download = `${(name || "export").toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${day}.csv`
   document.body.appendChild(a); a.click(); document.body.removeChild(a)
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
@@ -359,9 +405,19 @@ function pagerButtons(page: number, pages: number): string {
   for (const p of list) { if (prev >= 0 && p - prev > 1) html += `<span class="pgdots">…</span>`; html += btn(p); prev = p }
   return html
 }
-function pagerRender(st: PagerState) {
+/** Rows passing the screen's tab filter AND the search box, across ALL pages (not just the one on screen).
+ *  A row may carry `data-search` with text that is searchable but not drawn (a phone number, a hidden id). */
+function pagerMatched(st: PagerState): HTMLElement[] {
   const q = st.search
-  const matched = st.rows.filter((tr) => st.filter(tr) && (!q || (tr.textContent || "").toLowerCase().includes(q)))
+  return st.rows.filter((tr) => st.filter(tr) && (!q || ((tr.textContent || "") + " " + (tr.dataset.search || "")).toLowerCase().includes(q)))
+}
+/** The rows the current tab + search select, every page of them. Used by data-driven exports. */
+export function pagerMatchedRows(shadow: ShadowRoot): HTMLElement[] {
+  const st = PAGERS.get(shadow)
+  return st ? pagerMatched(st) : []
+}
+function pagerRender(st: PagerState) {
+  const matched = pagerMatched(st)
   const total = matched.length
   const pages = Math.max(1, Math.ceil(total / st.pageSize))
   st.page = Math.min(Math.max(0, st.page), pages - 1)

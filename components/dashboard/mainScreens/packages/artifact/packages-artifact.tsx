@@ -17,6 +17,7 @@ import { venueSpacesApi, type SubVenueNode } from "@/lib/api/venueSpaces"
 import { COUNTS_AS_LABELS, COUNTS_AS, flattenMenuItems, type CountsAs } from "@/lib/compliance/one-dish"
 import { useBusiness } from "@/context/BusinessContext"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
+import { buildPackageBody } from "@/lib/settings/package-body"
 import { useArtifactShell, pkNum, escHtml, errorBannerHtml, openDrawer, closeDrawer, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const money = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
@@ -95,6 +96,7 @@ function pkgFormBody(p: ApiPackage | null, duplicate: boolean, menus: ApiMenu[],
   const menuOpts = `<option value=""${menuId == null ? " selected" : ""}>— koi menu bundle nahi —</option>` + menus.map((m) => `<option value="${m.id}"${menuId === m.id ? " selected" : ""}>${escHtml(m.title)}</option>`).join("")
   return `
     <input type="hidden" id="p-id" value="${idVal}"/>
+    <input type="hidden" id="p-upd" value="${p && !duplicate ? escHtml(String((p as { updatedAt?: string }).updatedAt || "")) : ""}"/>
     <div class="dfield"><label class="dlabel">Package ka naam <span class="req">*</span></label><input type="text" id="p-name" value="${escHtml(name)}" placeholder="Jaise: Gold Package"/></div>
     <div class="dfield row2">
       <div><label class="dlabel">Qeemat <span class="req">*</span></label><div class="suffix"><span class="rs">Rs</span><input type="number" id="p-price" min="0" value="${p ? money(p.price) : ""}" placeholder="0"/></div></div>
@@ -261,16 +263,17 @@ export function PackagesArtifact() {
         const bId = Number(bizRef.current); if (!bId) return
         const editId = Number(val("p-id"))
         const foodOn = s.getElementById("p-food")?.getAttribute("aria-pressed") === "true"
-        const gmin = Number(val("p-gmin")), gmax = Number(val("p-gmax"))
-        const body: Record<string, unknown> = { name, price, businessId: bId, pricingUnit: val("p-unit"), includesFood: foodOn, description: val("p-desc") || undefined }
-        if (gmin > 0) body.guestRangeMin = gmin
-        if (gmax > 0) body.guestRangeMax = gmax
-        if (val("p-svc")) body.serviceStyle = val("p-svc")
-        body.menuId = val("p-menu") ? Number(val("p-menu")) : null
-        body.subVenueId = val("p-sub") ? Number(val("p-sub")) : null
-        const feats = val("p-feats").split("\n").map((x) => x.trim()).filter(Boolean); if (feats.length) body.features = feats
-        const mingt = Number(val("p-mingt")); if (mingt > 0 && val("p-unit") === "per_head") body.minGuaranteeCount = mingt
+        const feats = val("p-feats").split("\n").map((x) => x.trim()).filter(Boolean)
+        // SETUP-005 - one builder: on edit every cleared optional field goes out as
+        // null / [] (an absent key is "leave it alone" to the server).
+        const body = buildPackageBody({
+          editing: !!editId, name, price, businessId: bId, pricingUnit: val("p-unit"), includesFood: foodOn,
+          description: val("p-desc"), guestRangeMin: val("p-gmin"), guestRangeMax: val("p-gmax"),
+          serviceStyle: val("p-svc"), menuId: val("p-menu"), subVenueId: val("p-sub"), features: feats, minGuarantee: val("p-mingt"),
+        })
         const btn = s.getElementById("pf-save") as HTMLButtonElement | null; if (btn) { btn.disabled = true; btn.textContent = "Save ho raha…" }
+        // CONCURRENCY-009: the updatedAt the drawer was opened on; the server refuses the save if the package moved on
+        if (editId && val("p-upd")) body.expectedUpdatedAt = val("p-upd")
         try { if (editId) await PackagesAPI.update(editId, body as never); else await PackagesAPI.create(body as never); toast.success(editId ? "Package update ho gaya" : "Package ban gaya"); closeDrawer(s); refetchPkg() }
         catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua"); if (btn) { btn.disabled = false; btn.textContent = "Package save karein" } }
         return

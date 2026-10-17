@@ -50,7 +50,7 @@ const EXTRA_CSS = String.raw`
 .loadwrap{ display:grid; place-items:center; padding:80px 16px; color:var(--ink-3); font-size:13px; }
 `
 
-function buildContent(list: Notification[], filter: string): string {
+function buildContent(list: Notification[], filter: string, serverTotal: number = list.length): string {
   const unread = list.filter((n) => !n.isRead).length
   const toolbar = `<div class="toolbar"><div class="tabs" id="tabs">
     <button class="tab${filter === "all" ? " on" : ""}" data-f="all">Sab <span class="cnt">${list.length}</span></button>
@@ -79,7 +79,7 @@ function buildContent(list: Notification[], filter: string): string {
     </div>`
   }).join("")}</div></div>` : `<div class="card"><div class="empty">${filter === "unread" ? "Koi anpadhi notification nahi 🎉" : "Abhi koi notification nahi."}</div></div>`
   return `
-  <div class="head"><div><h1>Notifications</h1><div class="sub">${unread > 0 ? `<b>${unread}</b> anpadhi` : "Sab padh li"} · ${list.length} total.</div></div></div>
+  <div class="head"><div><h1>Notifications</h1><div class="sub">${unread > 0 ? `<b>${unread}</b> anpadhi` : "Sab padh li"} · ${serverTotal} total.</div></div></div>
   ${toolbar}${feed}
   <div class="foot">WeddingWala vendor console · Notifications</div>`
 }
@@ -90,8 +90,23 @@ export function NotificationsArtifact() {
     activeHref: "/dashboard/notifications", crumbBold: "Ops", crumbSub: "Notifications", extraCss: EXTRA_CSS,
   })
   const qc = useQueryClient()
-  const { data, isError } = useQuery({ queryKey: ["notifs-art"], queryFn: () => NotificationAPI.getNotifications(1, 50, false) })
+  const { data, isError } = useQuery({ queryKey: ["notifs-art"], queryFn: async () => {
+    // CONCURRENCY-015 - one call of 50 made the header read "50 anpadhi - 50 total" for 1,092 notifications
+    // (1,032 unread). Walk the pages the server says exist (100 a page, capped at 30 pages) and keep its totals.
+    const first = await NotificationAPI.getNotifications(1, 100, false)
+    const rows = [...first.notifications]
+    let hasMore = !!(first as { hasMore?: boolean }).hasMore
+    for (let page = 2; hasMore && page <= 30; page++) {
+      const next = await NotificationAPI.getNotifications(page, 100, false)
+      if (!next.notifications.length) break
+      rows.push(...next.notifications)
+      hasMore = !!(next as { hasMore?: boolean }).hasMore
+    }
+    const t = (first as { total?: number; totalCount?: number }).total ?? (first as { totalCount?: number }).totalCount
+    return { ...first, notifications: rows, serverTotal: Math.max(Number(t) || 0, rows.length), truncated: hasMore }
+  } })
   const list = React.useMemo(() => (data?.notifications ?? []) as Notification[], [data])
+  const serverTotal = (data as { serverTotal?: number } | undefined)?.serverTotal ?? list.length
   const [filter, setFilter] = React.useState(() => loadPref("tab:notifications", "all"))
 
   React.useEffect(() => {
@@ -100,7 +115,7 @@ export function NotificationsArtifact() {
     const wwc = s.getElementById("wwc"); if (!wwc) return
     if (isError) { wwc.innerHTML = `<div class="head"><div><h1>Notifications</h1></div></div>${errorBannerHtml()}`; return }
     if (!data) { wwc.innerHTML = `<div class="loadwrap">Notifications load ho rahi hain…</div>`; return }
-    wwc.innerHTML = buildContent(list, filter)
+    wwc.innerHTML = buildContent(list, filter, serverTotal)
     initTablePager(s, { rows: ".nrow", pageSize: 20, noun: "ittilaat" })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, data, filter, isError])

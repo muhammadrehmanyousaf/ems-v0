@@ -134,7 +134,8 @@ function readBeo(s: ShadowRoot): BeoData {
   })).filter((r) => r.time || r.activity)
   return {
     spaces: val("beo-spaces") || undefined,
-    guaranteedHeadcount: headRaw ? Number(headRaw) : null,
+    // OPS-067: a typed -20 passed the input's min and was saved; a headcount is a whole number >= 0
+    guaranteedHeadcount: headRaw && Number.isFinite(Number(headRaw)) ? Math.max(0, Math.floor(Number(headRaw))) : null,
     setupTime: val("beo-setup") || undefined,
     teardownTime: val("beo-teardown") || undefined,
     timeline,

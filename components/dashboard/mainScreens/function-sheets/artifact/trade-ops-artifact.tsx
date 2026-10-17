@@ -8,6 +8,8 @@
  * rows, per-cell editing, dirty tracking + save.
  */
 
+import { storedSectionRows } from "@/lib/dashboard/trade-ops-config"
+import { pickDefaultSheet, sheetIdFromUrl } from "@/lib/function-sheets/default-sheet"
 import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -66,8 +68,14 @@ export function TradeOpsArtifact() {
   const { shadowRef, ready } = useArtifactShell(hostRef, { activeHref: "/dashboard/trade-ops", crumbBold: "Ops", crumbSub: "Trade operations", extraCss: EXTRA_CSS })
   const qc = useQueryClient()
   const { data: sheet, isError: sheetErr } = useQuery({
-    queryKey: ["tradeops-sheet"],
-    queryFn: async () => { const list = await FunctionSheetAPI.list(); const first = list?.functionSheets?.[0]; return first ? FunctionSheetAPI.get(first.id) : null },
+    queryKey: ["tradeops-sheet", sheetIdFromUrl()],
+    // OPS-019 - ?id= is honoured (it was ignored: only one sheet's trade data could ever be edited); without an
+    // id the default is the most recently CREATED sheet, not the one with the earliest event date.
+    queryFn: async () => {
+      const id = sheetIdFromUrl()
+      if (id) return FunctionSheetAPI.get(id)
+      const list = await FunctionSheetAPI.list(); const first = pickDefaultSheet(list?.functionSheets); return first ? FunctionSheetAPI.get(first.id) : null
+    },
   })
   const trades = TRADE_OPS
   const [activeTrade, setActiveTrade] = React.useState(trades[0]?.trade ?? "")
@@ -86,7 +94,7 @@ export function TradeOpsArtifact() {
       const stored = (s[t.jsonField] as Record<string, unknown[]>) || {}
       rowsRef.current[t.trade] = {}
       for (const sec of t.sections) {
-        const arr = Array.isArray(stored[sec.key]) ? stored[sec.key] : []
+        const arr = storedSectionRows(stored as Record<string, unknown>, sec)
         rowsRef.current[t.trade][sec.key] = arr.map((r) => ({ ...(r as Record<string, unknown>), _rid: newRid() }))
       }
     }

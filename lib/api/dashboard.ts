@@ -1668,7 +1668,7 @@ export class PackagesAPI {
 
   static async create(data: {
     name: string;
-    description?: string;
+    description?: string | null;
     price: number;
     features?: PackageFeatures;
     images?: string[];
@@ -1686,7 +1686,10 @@ export class PackagesAPI {
     id: number,
     data: {
       name?: string;
-      description?: string;
+      /** null clears it (an absent key leaves it alone) - SETUP-005. */
+      description?: string | null;
+      /** CONCURRENCY-009 (optional): the updatedAt this edit started from; the server answers 409 STALE_RECORD if it moved. */
+      expectedUpdatedAt?: string;
       price?: number;
       features?: PackageFeatures;
       images?: string[];

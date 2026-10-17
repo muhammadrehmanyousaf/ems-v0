@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/button"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { pushLive } from "@/lib/seo/push-live"
+import { ConfirmRemove } from "@/components/dashboard/shared/confirm-remove"
 import { venueSpacesApi } from "@/lib/api/venueSpaces"
 // WW-ONE-DISH — Punjab / ICT allow one main dish and one sweet dish at a
 // marriage function, and the duty falls on the VENUE and the CATERER as much as
@@ -105,6 +107,8 @@ export function MenusManager({
   }, [spaceTree])
   const [adding, setAdding] = React.useState(false)
   const [editingId, setEditingId] = React.useState<number | null>(null)
+  // SETUP-006 - Remove fired on one click with no confirm and no undo.
+  const [pendingRemove, setPendingRemove] = React.useState<{ id: number; title: string } | null>(null)
   // WW-PRICING-OVERHAUL — pricingUnit is now an EXPLICIT vendor choice, not
   // inferred from whether a guarantee was typed. "per_head" bills price × guests;
   // "per_event" is a flat price. New menus default to per_head (the Pakistani
@@ -296,7 +300,8 @@ export function MenusManager({
       }, { ruleApplies }),
     [form.dishes, form.groups, ruleApplies],
   )
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["menus", businessId] })
+  // SETUP-026 - also drop the public listing's cache entry (1 h ISR window).
+  const invalidate = () => { qc.invalidateQueries({ queryKey: ["menus", businessId] }); void pushLive(businessId) }
 
   /**
    * WW-DISH-LIBRARY — the dishes this vendor has already used, with the
@@ -528,6 +533,13 @@ export function MenusManager({
 
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm">
+      <ConfirmRemove
+        open={pendingRemove !== null}
+        title={`Remove "${pendingRemove?.title ?? "this menu"}"?`}
+        description="This removes the menu from your listing and cannot be undone."
+        onCancel={() => setPendingRemove(null)}
+        onConfirm={() => { if (pendingRemove) removeMut.mutate(pendingRemove.id); setPendingRemove(null) }}
+      />
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
         <span className="grid h-8 w-8 place-items-center rounded-lg bg-muted text-muted-foreground"><Icon name="ClipboardList" size={16} /></span>
         <div className="mr-auto"><h2 className="text-sm font-semibold">Menus</h2><p className="text-xs text-muted-foreground">Catering menus with per-head pricing.</p></div>
@@ -982,7 +994,7 @@ export function MenusManager({
                 })()}
                 <div className="mt-3 flex justify-end gap-1 border-t border-border/60 pt-2">
                   <Button size="sm" variant="ghost" onClick={() => startEdit(m)}><Icon name="Pencil" size={14} className="mr-1" /> Edit</Button>
-                  <Button size="sm" variant="ghost" disabled={removeMut.isPending} onClick={() => removeMut.mutate(m.id)}><Icon name="Trash2" size={14} className="mr-1 text-muted-foreground hover:text-destructive" /> Remove</Button>
+                  <Button size="sm" variant="ghost" disabled={removeMut.isPending} onClick={() => setPendingRemove({ id: m.id, title: m.title })}><Icon name="Trash2" size={14} className="mr-1 text-muted-foreground hover:text-destructive" /> Remove</Button>
                 </div>
               </div>
             ))}

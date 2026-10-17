@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { ConfirmRemove } from "@/components/dashboard/shared/confirm-remove"
 import { useBeforeUnloadGuard } from "@/lib/hooks/useBeforeUnloadGuard"
 import {
   FormBlockedHint,
@@ -56,6 +57,8 @@ export function BankAccountsManager() {
   const { data: accounts, isLoading } = useQuery<BankDetail[]>({ queryKey: ["bank-accounts"], queryFn: () => BankDetailsAPI.listMine() })
   const [adding, setAdding] = React.useState(false)
   const [editingId, setEditingId] = React.useState<number | null>(null)
+  // SETUP-006 - the trash icon removed a payout account on one click.
+  const [pendingRemove, setPendingRemove] = React.useState<BankDetail | null>(null)
   // Errors surface only after a field is touched, so opening the form doesn't
   // immediately flag an empty IBAN the vendor hasn't reached yet.
   const [touched, setTouched] = React.useState<Record<string, boolean>>({})
@@ -179,6 +182,17 @@ export function BankAccountsManager() {
 
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm">
+      <ConfirmRemove
+        open={pendingRemove !== null}
+        title={`Remove ${pendingRemove ? (pendingRemove.accountType === "jazzcash" ? "JazzCash" : pendingRemove.accountType === "easypaisa" ? "Easypaisa" : pendingRemove.bankName) : "this"} account?`}
+        description={
+          pendingRemove?.isActive
+            ? "This is your default payout account. After you remove it, no account of this kind is the default until you set another one."
+            : "This removes the account from your payout accounts. Money already received is not affected."
+        }
+        onCancel={() => setPendingRemove(null)}
+        onConfirm={() => { if (pendingRemove) removeMut.mutate(pendingRemove.id); setPendingRemove(null) }}
+      />
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
         <span className="grid h-8 w-8 place-items-center rounded-lg bg-muted text-muted-foreground"><Icon name="CreditCard" size={16} /></span>
         <div className="mr-auto"><h2 className="text-sm font-semibold">Bank details</h2><p className="text-xs text-muted-foreground">Payout accounts for your receivables. Bank, JazzCash and Easypaisa each have their own default.</p></div>
@@ -318,7 +332,7 @@ export function BankAccountsManager() {
               <div className="ml-auto flex items-center gap-1">
                 {!a.isActive && <Button size="sm" variant="ghost" disabled={activeMut.isPending} onClick={() => activeMut.mutate(a.id)}><Icon name="Star" size={14} className="mr-1" /> Set default</Button>}
                 <Button size="sm" variant="ghost" onClick={() => startEdit(a)} aria-label="Edit account"><Icon name="Pencil" size={14} className="text-muted-foreground" /></Button>
-                <Button size="sm" variant="ghost" disabled={removeMut.isPending} onClick={() => removeMut.mutate(a.id)} aria-label="Remove account"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
+                <Button size="sm" variant="ghost" disabled={removeMut.isPending} onClick={() => setPendingRemove(a)} aria-label="Remove account"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
               </div>
             </div>
           ))

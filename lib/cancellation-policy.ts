@@ -203,6 +203,22 @@ export function ladderText(slabs: unknown): string {
     .join("; ")
 }
 
+/**
+ * The day range one ladder row covers, for slabs sorted highest `daysToEvent` first (LOGIC-013 / SETUP-048).
+ * `daysToEvent` is a MINIMUM (the engine's resolveTier: first slab, highest first, with d >= minDaysBefore;
+ * anything closer than the smallest slab stays in the last one), so row i runs from its own `daysToEvent` up to
+ * one day short of the previous row. Returns the words as the vendor screen prints them.
+ */
+export function slabRangeLabel(sortedDesc: { daysToEvent: number }[], i: number): string {
+  const s = sortedDesc[i]
+  const next = sortedDesc[i + 1]
+  const upper = i > 0 ? sortedDesc[i - 1].daysToEvent - 1 : 0
+  if (sortedDesc.length === 1 && s.daysToEvent === 0) return "Kisi bhi din"
+  if (i === 0) return `${s.daysToEvent}+ din pehle`
+  if (!next) return `${upper} din ya kam pehle`
+  return s.daysToEvent === upper ? `${s.daysToEvent} din pehle` : `${s.daysToEvent}–${upper} din pehle`
+}
+
 /** What a slab list is, in the three-label vocabulary. */
 export function shapeOfSlabs(slabs: unknown): { kind: "non_refundable" | "partial_percent" | "partial_fixed" | "ladder"; value?: number } {
   const s = Array.isArray(slabs) ? (slabs as PolicySlabLike[]) : []

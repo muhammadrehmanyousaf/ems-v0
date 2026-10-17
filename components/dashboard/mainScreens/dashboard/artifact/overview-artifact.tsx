@@ -65,6 +65,8 @@ interface ArtData {
   profile: { score: number; title: string; body: string; items: { label: string; pts: number }[]; remaining: number } | null
   rating: { avg: number; count: number; newThisMonth: number; quote: string; by: string; avatars: string[] } | null
   wapsi: { total: number; rows: { id: number; booking: number; amount: number; disputed: boolean; days: number }[]; oldestDays: number; oldestBooking: number } | null
+  /** OPS-003 - "unknown" = the refund-obligations request failed / is unavailable. Never rendered as "all settled". */
+  wapsiState: "ok" | "unknown" | "loading"
 }
 
 /* ── content HTML built from live data ───────────────────────── */
@@ -117,8 +119,10 @@ function ratingCard(r: ArtData["rating"]): string {
       <div><div class="stars" aria-label="${r.avg.toFixed(1)} out of 5">${stars}</div><div class="rev-cap">${r.count} reviews${r.newThisMonth ? ` · iss mahine <b>${r.newThisMonth} naye</b>` : ""}</div></div></div>
       ${quote}</div></div>`
 }
-function wapsiCard(w: ArtData["wapsi"]): string {
+function wapsiCard(w: ArtData["wapsi"], state: ArtData["wapsiState"] = "ok"): string {
   const head = `<div class="card-h"><div><h2>Wapsi — jo dena hai</h2><div class="sub">Cancel hui bookings ke refund</div></div><a class="link" data-nav href="/dashboard/receivables">Khata ${chevSvg}</a></div>`
+  if (state === "loading") return `<div class="card">${head}<div class="list"><div class="row"><div class="r-main"><div class="r-meta">Wapsi ka hisaab load ho raha hai…</div></div></div></div></div>`
+  if (state === "unknown") return `<div class="card">${head}<div class="list"><div class="row"><div class="r-main"><div class="r-meta" data-wapsi-unknown>Wapsi ka hisaab load nahi hua — dobara koshish karein.</div></div></div></div></div>`
   if (!w || !w.rows.length) {
     return `<div class="card">${head}<div class="list"><div class="row"><div class="r-main"><div class="r-meta">Koi wapsi baaki nahi — sab settle.</div></div></div></div></div>`
   }
@@ -238,7 +242,7 @@ function buildContent(d: ArtData, greeting: string, todayStr: string): string {
       <div class="list">${eventsList}</div>
     </div>
     ${attentionCard(o)}
-    ${wapsiCard(d.wapsi)}
+    ${wapsiCard(d.wapsi, d.wapsiState)}
   </section>
   <section class="grid-half">
     <div class="card">
@@ -487,7 +491,7 @@ export function OverviewArtifact() {
   // Keyed by activeBusinessId itself: the key is stable from the first render (the old
   // first-venue fallback was null until the business list resolved, then a different
   // key, so the call fired twice).
-  const refundQ = useQuery({ queryKey: ["art-refunds", activeBusinessId], enabled: !businessLoading, queryFn: () => listRefundObligations(activeBusinessId ?? undefined).catch(() => null) })
+  const refundQ = useQuery({ queryKey: ["art-refunds", activeBusinessId], enabled: !businessLoading, queryFn: () => listRefundObligations(activeBusinessId ?? undefined) })
 
   const data: ArtData = React.useMemo(() => {
     const bundle = dashQ.data
@@ -549,8 +553,10 @@ export function OverviewArtifact() {
       loading: dashQ.isLoading,
       failed: dashQ.isError || (!dashQ.isLoading && !o),
       o, baqaya, occ, profile, rating, wapsi,
+      // OPS-003 - a 404 (engine flag off -> null), a 500 or a timeout is "unknown", not "settled".
+      wapsiState: refundQ.isPending && !refundQ.isError ? "loading" : refundQ.isError || refundQ.data == null ? "unknown" : "ok",
     }
-  }, [dashQ.data, dashQ.isLoading, dashQ.isError, compQ.data, reviewsQ.data, refundQ.data])
+  }, [dashQ.data, dashQ.isLoading, dashQ.isError, compQ.data, reviewsQ.data, refundQ.data, refundQ.isError, refundQ.isPending])
 
   const greeting = React.useMemo(() => {
     const full = (user as { fullName?: string } | null)?.fullName
