@@ -55,6 +55,8 @@ import { invalidateBusinessData } from "@/lib/query/business-keys"
 import { businessStatusInfo, businessSubtitle } from "@/lib/business-status"
 import { describeLimit, useBusinessLimit } from "@/lib/business-limits"
 import { cancellationLabel } from "@/lib/cancellation-policy"
+import { useDirtyRegistry } from "@/components/dashboard/shared/leave-guard"
+import { ConfirmRemove } from "@/components/dashboard/shared/confirm-remove"
 
 const numOrNull = (v: string) => (v.trim() === "" ? null : Number(v) || 0)
 
@@ -521,6 +523,10 @@ export function BusinessSettingsHubView() {
    */
   const [listingDirty, setListingDirty] = React.useState(false)
   useBeforeUnloadGuard({ enabled: dirty || listingDirty })
+  // SETUP-027 - the shell's sidebar and in-page links ask before leaving with unsaved edits.
+  useDirtyRegistry("settings-hub", dirty || listingDirty)
+  // The business-tab switch asks through the app's own dialog, not window.confirm.
+  const [switchTarget, setSwitchTarget] = React.useState<number | null>(null)
 
   // Publish this bar's height as --ww-bottom-bar so nothing else can sit on top
   // of it. The PWA install prompt is `fixed bottom` at z-50 while this bar is
@@ -828,6 +834,23 @@ export function BusinessSettingsHubView() {
       className="space-y-6 p-4 md:p-6"
       style={{ paddingBottom: "calc(var(--ww-bottom-bar, 6rem) + 2rem)" }}
     >
+      <ConfirmRemove
+        open={switchTarget !== null}
+        title="Switch business?"
+        description="You have unsaved changes on this business. If you switch now, they will be lost."
+        confirmLabel="Switch anyway"
+        cancelLabel="Stay here"
+        onCancel={() => setSwitchTarget(null)}
+        onConfirm={() => {
+          const id = switchTarget
+          setSwitchTarget(null)
+          if (id == null) return
+          setDirty(false)
+          setListingDirty(false)
+          setPickedId(id)
+          syncUrl({ biz: id })
+        }}
+      />
       <PageHeader
         eyebrow="Settings · Business"
         title={biz.name || "Business settings"}
@@ -898,10 +921,7 @@ export function BusinessSettingsHubView() {
                        flag, so unsaved edits in Listing content (which keeps its
                        own state and its own save button) were carried away
                        without a word. */
-                    if ((dirty || listingDirty) &&
-                        !window.confirm("You have unsaved changes on this business. Switch anyway and lose them?")) return
-                    setDirty(false)
-                    setListingDirty(false)
+                    if (dirty || listingDirty) { setSwitchTarget(b.id); return }
                     setPickedId(b.id)
                     syncUrl({ biz: b.id })
                   }}

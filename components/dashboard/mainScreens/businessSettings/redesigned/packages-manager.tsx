@@ -28,6 +28,7 @@ import {
   validateOptionalText,
 } from "@/components/dashboard/primitives/field-error"
 import { cn } from "@/lib/utils"
+import { pushLive } from "@/lib/seo/push-live"
 import { packageRestoreBody } from "@/lib/settings/package-body"
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
@@ -148,7 +149,8 @@ export function PackagesManager({ businessId }: { businessId: number }) {
     })
     setTouched({}); setEditingId(p.id); setAdding(true)
   }
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["pkgs", businessId] })
+  // SETUP-026 - also drop the public listing's cache entry (1 h ISR window).
+  const invalidate = () => { qc.invalidateQueries({ queryKey: ["pkgs", businessId] }); void pushLive(businessId) }
 
   const saveMut = useMutation({
     mutationFn: () => {
