@@ -682,7 +682,7 @@ export default function BookingDetailPage() {
             onClick={() => setCancelDialogOpen(true)}
             size="sm"
             variant="outline"
-            className="gap-1.5 border-bridal-coral/30 text-bridal-coral hover:bg-bridal-coral/10 hover:text-bridal-coral hover:border-bridal-coral/45"
+            className="gap-1.5 border-bridal-coral/30 text-bridal-coral-dark hover:bg-bridal-coral/10 hover:text-bridal-coral-dark hover:border-bridal-coral/45"
           >
             <Trash2 className="size-3.5" />
             Cancel
@@ -1223,7 +1223,7 @@ export default function BookingDetailPage() {
               <Button
                 onClick={() => setCancelDialogOpen(true)}
                 variant="ghost"
-                className="w-full justify-start gap-2 text-[13px] text-bridal-coral hover:text-bridal-coral hover:bg-bridal-coral/10"
+                className="w-full justify-start gap-2 text-[13px] text-bridal-coral-dark hover:text-bridal-coral-dark hover:bg-bridal-coral/10"
               >
                 <Trash2 className="size-4" />
                 Cancel booking

@@ -145,5 +145,33 @@ for (const [f, n] of Object.entries(counts)) {
 for (const [f, n] of Object.entries(BASELINE)) { if ((counts[f] ?? 0) < n) console.log(`note  ${f}: down to ${counts[f] ?? 0} from ${n}; lower BASELINE`); }
 if (ratchetOk) pass(`no new raw violet utilities in customer/public code (${Object.keys(counts).length} baselined files)`);
 
+// ── 5: destructive / cancel TEXT in coral (F5-2, WP28) ───────────────────────
+// bridal-coral #E8917A is 2.3:1 on a near-white card: fine for a border or a tint, not for a label.
+// Destructive text uses bridal-coral-dark: same hue, lower lightness, AA on every surface it sits on.
+{
+  const hexRgb = (h: string): [number, number, number] => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) as [number, number, number];
+  const hue = (h: string) => { const [r, g, b] = hexRgb(h).map((x) => x / 255); const mx = Math.max(r, g, b), d = mx - Math.min(r, g, b); return ((mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60 + 360) % 360; };
+  const L = (c: [number, number, number]) => lum(c);
+  const cr = (a: [number, number, number], b: [number, number, number]) => (Math.max(L(a), L(b)) + 0.05) / (Math.min(L(a), L(b)) + 0.05);
+  const coral = /\bcoral:\s*'(#[0-9A-Fa-f]{6})'/.exec(tw)?.[1];
+  const dark = /'coral-dark':\s*'(#[0-9A-Fa-f]{6})'/.exec(tw)?.[1];
+  if (!coral || !dark) fail("tailwind.config.ts: bridal coral / 'coral-dark' not found");
+  else {
+    const d = hexRgb(dark), c = hexRgb(coral);
+    const tint = c.map((x) => Math.round(x * 0.1 + 255 * 0.9)) as [number, number, number]; // 10% coral hover tint on white
+    const surfaces: Array<[string, [number, number, number]]> = [["white", [255, 255, 255]], ["cream #FFF9F4", hexRgb("#FFF9F4")], ["ivory #FDF8F2", hexRgb("#FDF8F2")], ["10% coral hover tint", tint]];
+    let ok = Math.abs(hue(dark) - hue(coral)) <= 6;
+    if (!ok) fail(`coral-dark ${dark} hue ${hue(dark).toFixed(1)} drifted from coral ${coral} hue ${hue(coral).toFixed(1)}`);
+    for (const [n, s] of surfaces) { const r = cr(d, s); if (r < 4.5) { ok = false; fail(`coral-dark ${dark} on ${n}: ${r.toFixed(2)}:1 < 4.5`); } }
+    if (ok) pass(`coral-dark ${dark}: same hue as coral, AA (${surfaces.map(([n, s]) => cr(d, s).toFixed(2)).join(" / ")}) on white / cream / ivory / hover tint`);
+  }
+  for (const f of ["app/(main)/user/bookings/page.tsx", "app/(main)/user/bookings/[id]/page.tsx"]) {
+    const src = read(f);
+    const bad = src.split(/\r?\n/).filter((l) => /\btext-bridal-coral\b(?!-)/.test(l) && /hover:bg-bridal-coral\/10/.test(l));
+    if (bad.length) fail(`${f}: a Cancel button label still uses text-bridal-coral (2.3:1); use text-bridal-coral-dark`);
+    else pass(`${f}: Cancel labels use text-bridal-coral-dark`);
+  }
+}
+
 if (failures) { console.error(`\nbrand-colour-check: ${failures} failure(s)`); process.exit(1); }
 console.log("\nbrand-colour-check: all passed");
