@@ -12,11 +12,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { VendorHoldsAPI, type VendorHold } from "@/lib/api/vendorHolds"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
+import { useBusiness } from "@/context/BusinessContext"
 import { useArtifactShell, escHtml, initTablePager, errorBannerHtml, openDrawer, closeDrawer } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { openBookingForm } from "@/components/dashboard/mainScreens/artifact/booking-form"
 import { fmtYmd } from "@/lib/utils/ymd"
 import { todayInKarachi } from "@/lib/utils/pk-date"
-import { holdSlotText } from "@/lib/booking/slot-vocabulary"
+import { holdSlotText, holdBookingTime } from "@/lib/booking/slot-vocabulary"
 
 // WP23: a hold date is a calendar day (no zone): printed from the string, never through the browser zone
 function fmtDate(s?: string | null) { return s ? fmtYmd(s, "weekday", null) : "—" }
@@ -86,19 +87,28 @@ export function HoldsArtifact() {
   const qc = useQueryClient()
   const activeBusinessId = useActiveBusinessId()
   const bizRef = React.useRef(activeBusinessId); bizRef.current = activeBusinessId
-  const { data, isError } = useQuery({ queryKey: ["holds-art", activeBusinessId], queryFn: () => VendorHoldsAPI.list(activeBusinessId ?? undefined) })
+  // FLAGGED-002: the booking form needs the vendor's venues to show (and select) the held one by name
+  const { businesses } = useBusiness()
+  const bizListRef = React.useRef<{ id: number; name?: string | null }[]>([])
+  bizListRef.current = ((businesses ?? []) as { id: number; name?: string | null }[]).map((b) => ({ id: b.id, name: b.name }))
+  const { data, isError, error } = useQuery({ queryKey: ["holds-art", activeBusinessId], queryFn: () => VendorHoldsAPI.list(activeBusinessId ?? undefined) })
+  // BOOKINGS-042: the server answers 404 { data: { flag } } when date holds are not switched on for this account;
+  // that is not a "load failed" (retrying never helps), it is the feature being off.
+  const featureOff = isError && (error as { response?: { status?: number; data?: { data?: { flag?: unknown } } } } | null)?.response?.status === 404
+    && !!(error as { response?: { data?: { data?: { flag?: unknown } } } } | null)?.response?.data?.data?.flag
   const list = React.useMemo(() => (data ?? []) as VendorHold[], [data])
 
   React.useEffect(() => {
     const s = shadowRef.current
     if (!s || !ready) return
     const wwc = s.getElementById("wwc"); if (!wwc) return
+    if (featureOff) { wwc.innerHTML = `<div class="head"><div><h1>Holds</h1></div></div><div class="card"><div class="empty">Date holds abhi aap ke account par chalu nahi hain. Chalu karwane ke liye WeddingWala support se rabta karein — baqi sab kuch jaisa hai waisa hi hai.</div></div>`; return }
     if (isError) { wwc.innerHTML = `<div class="head"><div><h1>Holds</h1></div></div>${errorBannerHtml()}`; return }
     if (!data) { wwc.innerHTML = `<div class="loadwrap">Holds load ho rahe hain…</div>`; return }
     wwc.innerHTML = buildContent(list)
     initTablePager(s, { rows: ".hold", pageSize: 15, noun: "holds" })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, data, isError])
+  }, [ready, data, isError, featureOff])
 
   const bound = React.useRef(false)
   React.useEffect(() => {
@@ -112,10 +122,11 @@ export function HoldsArtifact() {
       if (t.closest("#addbtn")) { openDrawer(s, "Naya hold", holdFormBody()); return }
       const bk = t.closest("[data-hold-book]") as HTMLElement | null
       if (bk) {
-        const time = (bk.dataset.hbTime || "").slice(0, 5)
+        const time = holdBookingTime(bk.dataset.hbTime)
         openBookingForm(s, {
           prefill: { bookingDate: bk.dataset.hbDate || undefined, bookingTime: time || undefined, businessId: Number(bk.dataset.hbBiz) || bizRef.current || undefined },
           activeBiz: Number(bk.dataset.hbBiz) || bizRef.current || undefined,
+          businesses: bizListRef.current,
           onSaved: () => { toast.success("Booking ban gayi — hold pakki ho gayi"); refetch() },
         })
         return

@@ -424,14 +424,18 @@ export class VendorAPI {
   // Get bulk availability for businesses over a month
   static async getMonthAvailability(
     businessIds: number[],
-    month: string
+    month: string,
+    // CUSTOMER-004: the booking picker needs to know a request FAILED (it must not read the empty answer as "every day
+    // is unavailable"); the venue-page calendars keep the old forgiving {} so they are unchanged.
+    opts?: { strict?: boolean }
   ): Promise<Record<number, Record<string, { bookedSlots: string[]; availableSlots: string[] }>>> {
     try {
       const response = await axiosInstance.get('/api/v1/bookings/availability', {
         params: { businessIds: businessIds.join(','), month },
       })
       return response.data.data?.availability || {}
-    } catch {
+    } catch (e) {
+      if (opts?.strict) throw e
       return {}
     }
   }
