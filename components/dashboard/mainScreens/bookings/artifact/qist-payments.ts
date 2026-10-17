@@ -229,7 +229,7 @@ export function paymentsCardHtml(view: BookingSchedule | null, opts: PaymentsCar
   if (moneyOf(m.unledgered) > 0) {
     // WP31: a booking that says money was received which no receipt backs. Two explicit taps, never automatic:
     // Adopt ("haan, mila tha": one receipt of exactly this amount) or Zero ("mila hi nahi": the figure comes off).
-    notes.push(`<div class="q-note warn" data-q-phantom><span>${escHtml(phantomNoticeText(m.unledgered))}</span><span style="display:flex;gap:8px;flex-wrap:wrap">${cancelled ? "" : `<button class="btn btn-ghost" data-q-adopt="${Math.round(m.unledgered)}">${escHtml(ADOPT_BUTTON)}</button>`}<button class="btn btn-ghost" data-q-zero="${Math.round(m.unledgered)}">${escHtml(ZERO_BUTTON)}</button></span></div>`)
+    notes.push(`<div class="q-note warn" data-q-phantom><span>${escHtml(phantomNoticeText(m.unledgered, cancelled))}</span><span style="display:flex;gap:8px;flex-wrap:wrap">${cancelled ? "" : `<button class="btn btn-ghost" data-q-adopt="${Math.round(m.unledgered)}">${escHtml(ADOPT_BUTTON)}</button>`}<button class="btn btn-ghost" data-q-zero="${Math.round(m.unledgered)}">${escHtml(ZERO_BUTTON)}</button></span></div>`)
   }
   if (moneyOf(m.overpaid) > 0) {
     notes.push(`<div class="q-note info"><span>${rsText(m.overpaid)} zyada mil gaya hai. Wapas karna ho to "Refund" se likhein.</span></div>`)

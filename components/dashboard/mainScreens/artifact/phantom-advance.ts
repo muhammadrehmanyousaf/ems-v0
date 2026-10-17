@@ -69,7 +69,7 @@ export function phantomButtonsHtml(cancelled?: boolean): string {
  */
 export function phantomPanelHtml(ctx: Pick<PhantomCtx, "unledgered" | "cancelled">): string {
   return `<div class="ph-panel" data-ph-panel style="margin-bottom:14px;padding:10px 12px;border-radius:9px;font-size:12px;line-height:1.5;background:var(--warn-wash);color:var(--warn);display:flex;flex-direction:column;gap:8px">
-    <div style="font-weight:600">${escHtml(phantomNoticeText(ctx.unledgered))}</div>
+    <div style="font-weight:600">${escHtml(phantomNoticeText(ctx.unledgered, ctx.cancelled))}</div>
     <div>${escHtml(PHANTOM_EXPLAIN.intro)}</div>
     ${ctx.cancelled ? `<div>${escHtml(PHANTOM_EXPLAIN.cancelled)}</div>` : `<div>${escHtml(PHANTOM_EXPLAIN.adopt)}<br>${escHtml(PHANTOM_EXPLAIN.zero)}</div>`}
     <div style="display:flex;gap:8px;flex-wrap:wrap">${phantomButtonsHtml(ctx.cancelled)}</div>

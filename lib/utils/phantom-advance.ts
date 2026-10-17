@@ -42,8 +42,8 @@ export const PHANTOM_STALE_CODES = ["UNLEDGERED_CHANGED", "NO_UNLEDGERED_ADVANCE
 export const rsOf = (n: unknown): string => `Rs ${groupPk(n)}`
 
 /** The notice (booking page, drawers). */
-export function phantomNoticeText(unledgered: number): string {
-  return `Is booking par ${rsOf(unledgered)} ka advance ledger mein darj nahi hai: Adopt ya Zero karein.`
+export function phantomNoticeText(unledgered: number, cancelled = false): string {
+  return `Is booking par ${rsOf(unledgered)} ka advance ledger mein darj nahi hai: ${cancelled ? "Zero karein (cancel booking par receipt nahi ban sakti)." : "Adopt ya Zero karein."}`
 }
 
 /** What each choice means, in the words the vendor decides by. */
