@@ -14,6 +14,7 @@ import { CustomersAPI, type ApiCustomer } from "@/lib/api/dashboard"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useBusiness } from "@/context/BusinessContext"
+import { walkPages } from "@/lib/query/walk-pages"
 import { useArtifactShell, escHtml, initialsOf, initTablePager, setPagerFilter, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { openBookingForm } from "@/components/dashboard/mainScreens/artifact/booking-form"
 
@@ -90,7 +91,11 @@ export function CustomersArtifact() {
   const { shadowRef, ready } = useArtifactShell(hostRef, {
     activeHref: "/dashboard/customers", crumbBold: "Log", crumbSub: "Customers", extraCss: EXTRA_CSS,
   })
-  const { data, isError } = useQuery({ queryKey: ["customers-art"], queryFn: () => CustomersAPI.getAll(1, 200) })
+  const { data, isError } = useQuery({ queryKey: ["customers-art"], queryFn: async () => {
+    // CONCURRENCY-015 - the server caps a page at 100, so one call of 200 showed 100 of 457 and search missed the rest.
+    const all = await walkPages((page) => CustomersAPI.getAll(page, 100).then((r) => ({ items: r.customers, pagination: r.pagination })))
+    return { customers: all.items, total: all.total }
+  } })
   const list = React.useMemo(() => (data?.customers ?? []) as ApiCustomer[], [data])
   const qc = useQueryClient()
   const { business, businesses } = useBusiness()

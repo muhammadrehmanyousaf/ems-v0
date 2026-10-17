@@ -306,7 +306,7 @@ export function LeadsArtifact() {
   const bizRef = React.useRef(bizId); bizRef.current = bizId
   const bizList = React.useMemo(() => ((businesses ?? []) as { id: number; name?: string | null }[]).map((b) => ({ id: b.id, name: b.name })), [businesses])
   const bizListRef = React.useRef(bizList); bizListRef.current = bizList
-  const { data, isError } = useQuery({ queryKey: ["leads-artifact"], queryFn: () => LeadAPI.list({}) })
+  const { data, isError } = useQuery({ queryKey: ["leads-artifact"], queryFn: () => LeadAPI.listAll({}) })
   const leads = data?.leads ?? []
   const leadsRef = React.useRef(leads); leadsRef.current = leads
   const searchParams = useSearchParams()

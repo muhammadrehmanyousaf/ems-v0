@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { AnalyticsAPI, type CashFlowForecastData, type SeasonalityData, type ResponseTimesData } from "@/lib/api/analytics"
 import { LeadAPI, type Lead, type LeadSource, type ConversionAnalytics } from "@/lib/api/leads"
-import { useFetchData } from "@/hooks/use-fetch-data"
+import { useFetchAllPages } from "@/hooks/use-fetch-all-pages"
 import { useActiveBusinessId, useActiveBusinessStore } from "@/lib/store/active-business-store"
 import type { BookingData } from "@/lib/dashboard-types"
 import { usePlan } from "@/context/plan-context"
@@ -331,7 +331,7 @@ export function ReportsArtifact() {
   const revQ = useQuery({ queryKey: ["rep-rev"], queryFn: () => must(AnalyticsAPI.getRevenueTrends("this_year")), enabled: on })
   const bkTrQ = useQuery({ queryKey: ["rep-bk"], queryFn: () => must(AnalyticsAPI.getBookingTrends("this_year")), enabled: on })
   const bkdQ = useQuery({ queryKey: ["rep-bkd"], queryFn: () => must(AnalyticsAPI.getRevenueBreakdowns("this_year")), enabled: on })
-  const leadsQ = useQuery({ queryKey: ["rep-leads"], queryFn: () => LeadAPI.list({}), enabled: on })
+  const leadsQ = useQuery({ queryKey: ["rep-leads"], queryFn: () => LeadAPI.listAll({}), enabled: on })
   // All three were already typed and wrapped in lib/api with no caller
   // anywhere. `.catch(() => null)` so one slow analytic never blanks the page —
   // each card renders nothing when its data is missing.
@@ -346,7 +346,8 @@ export function ReportsArtifact() {
   const isError = kpiQ.isError || revQ.isError || bkTrQ.isError || bkdQ.isError
   // ...and while they are still in flight the page must not draw zeros either.
   const isLoadingCore = !isError && (kpiQ.isLoading || revQ.isLoading || bkTrQ.isLoading || bkdQ.isLoading)
-  const { data: bkData } = useFetchData({ endpoint: "/api/v1/bookings", queryKey: ["rep-bookings"], Params: { page: 1, limit: 100 } })
+  // CONCURRENCY-015 - the status chart read 100 bookings ("Confirmed 54%" when the truth was 46%); read them all.
+  const { data: bkData } = useFetchAllPages<BookingData>({ endpoint: "/api/v1/bookings", queryKey: ["rep-bookings"], Params: {} })
 
   const d: RData = React.useMemo(() => {
     const k = kpiQ.data

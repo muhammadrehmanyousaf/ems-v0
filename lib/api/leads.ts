@@ -167,6 +167,9 @@ export interface LeadListFilters {
   search?: string;
   /** Reverse-lookup: which lead converted to this booking? */
   bookingId?: number;
+  /** Page size (server cap 500) and start row - additive paging. */
+  limit?: number;
+  offset?: number;
 }
 
 export interface WhatsappSendResult {
@@ -213,6 +216,32 @@ export class LeadAPI {
         provider: "noop",
       } as LeadListResponse)
     );
+  }
+
+  /**
+   * Every lead, not the first 500 (CONCURRENCY-015). The list endpoint caps a call at 500 and takes `?offset`;
+   * this walks it until a short page. `summary` is recomputed over the merged rows (the server builds it per page).
+   */
+  static async listAll(filters: LeadListFilters = {}, pageSize = 500, maxPages = 20): Promise<LeadListResponse> {
+    const first = await LeadAPI.list({ ...filters, limit: pageSize, offset: 0 } as LeadListFilters);
+    const leads = [...first.leads];
+    let last = first.leads.length;
+    for (let page = 1; last >= pageSize && page < maxPages; page++) {
+      const next = await LeadAPI.list({ ...filters, limit: pageSize, offset: page * pageSize } as LeadListFilters);
+      if (!next.leads.length) break;
+      leads.push(...next.leads);
+      last = next.leads.length;
+    }
+    if (leads.length === first.leads.length) return first;
+    const summary = leads.reduce(
+      (acc, r) => {
+        acc.byStatus[r.status] = (acc.byStatus[r.status] || 0) + 1;
+        acc.bySource[r.source] = (acc.bySource[r.source] || 0) + 1;
+        return acc;
+      },
+      { byStatus: {} as Record<string, number>, bySource: {} as Record<string, number> },
+    );
+    return { ...first, leads, summary: summary as LeadListResponse["summary"] };
   }
 
   /** GET /api/v1/leads/:id */
