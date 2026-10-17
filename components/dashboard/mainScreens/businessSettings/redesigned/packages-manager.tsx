@@ -129,7 +129,10 @@ export function PackagesManager({ businessId }: { businessId: number }) {
     })
     setTouched({}); setAdding(false); setEditingId(null)
   }
+  // CONCURRENCY-009: the updatedAt the edit started from (the server refuses the save if the package moved on).
+  const editingUpd = React.useRef<string | null>(null)
   const startEdit = (p: ApiPackage) => {
+    editingUpd.current = (p as { updatedAt?: string }).updatedAt ?? null
     setForm({
       name: p.name ?? "",
       price: String(p.price ?? ""),
@@ -175,7 +178,9 @@ export function PackagesManager({ businessId }: { businessId: number }) {
         guestRangeMax: form.guestRangeMax.trim() ? Number(form.guestRangeMax) : null,
         serviceStyle: form.serviceStyle || null,
       }
-      return editingId ? PackagesAPI.update(editingId, body) : PackagesAPI.create(body)
+      return editingId
+        ? PackagesAPI.update(editingId, editingUpd.current ? { ...body, expectedUpdatedAt: editingUpd.current } : body)
+        : PackagesAPI.create(body)
     },
     onSuccess: () => { showSuccessToast(editingId ? "Package updated" : "Package added"); reset(); invalidate() },
     // Held long enough to read: the rate-card guard's refusal explains which

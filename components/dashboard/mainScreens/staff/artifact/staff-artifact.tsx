@@ -53,6 +53,7 @@ function formBody(m?: StaffMember | null): string {
   const active = m ? String(m.isActive) : "true"
   const wa = (m as { whatsappNumber?: string } | null | undefined)?.whatsappNumber || ""
   return `
+  <input type="hidden" id="m-upd" value="${m ? escHtml((m as { updatedAt?: string }).updatedAt || "") : ""}"/>
   <div class="dfield"><label class="dlabel">Poora naam <span class="req">*</span></label><input type="text" id="m-name" value="${m ? escHtml(m.fullName) : ""}" placeholder="Naam"/></div>
   <div class="dfield row2">
     <div><label class="dlabel">Kaam (role)</label><select id="m-role">${roleOpts}</select></div>
@@ -199,6 +200,8 @@ export function StaffArtifact() {
         if (val("m-salary")) body.monthlySalary = Number(val("m-salary")); else if (editId) optional.monthlySalary = null
         if (val("m-dihari")) body.defaultDihariRate = Number(val("m-dihari")); else if (editId) optional.defaultDihariRate = null
         if (editId) body.isActive = val("m-active") === "true" // status editable on existing members
+        // CONCURRENCY-009: the updatedAt the drawer was opened on; the server refuses the save if the member moved on
+        if (editId && val("m-upd")) (body as unknown as Record<string, unknown>).expectedUpdatedAt = val("m-upd")
         save.disabled = true; const orig = save.textContent; save.textContent = "Save ho raha…"
         try {
           if (editId) await StaffAPI.updateMember(editId, body)

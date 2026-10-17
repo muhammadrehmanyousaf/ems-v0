@@ -1688,6 +1688,8 @@ export class PackagesAPI {
       name?: string;
       /** null clears it (an absent key leaves it alone) - SETUP-005. */
       description?: string | null;
+      /** CONCURRENCY-009 (optional): the updatedAt this edit started from; the server answers 409 STALE_RECORD if it moved. */
+      expectedUpdatedAt?: string;
       price?: number;
       features?: PackageFeatures;
       images?: string[];

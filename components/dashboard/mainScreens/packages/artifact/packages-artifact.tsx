@@ -96,6 +96,7 @@ function pkgFormBody(p: ApiPackage | null, duplicate: boolean, menus: ApiMenu[],
   const menuOpts = `<option value=""${menuId == null ? " selected" : ""}>— koi menu bundle nahi —</option>` + menus.map((m) => `<option value="${m.id}"${menuId === m.id ? " selected" : ""}>${escHtml(m.title)}</option>`).join("")
   return `
     <input type="hidden" id="p-id" value="${idVal}"/>
+    <input type="hidden" id="p-upd" value="${p && !duplicate ? escHtml(String((p as { updatedAt?: string }).updatedAt || "")) : ""}"/>
     <div class="dfield"><label class="dlabel">Package ka naam <span class="req">*</span></label><input type="text" id="p-name" value="${escHtml(name)}" placeholder="Jaise: Gold Package"/></div>
     <div class="dfield row2">
       <div><label class="dlabel">Qeemat <span class="req">*</span></label><div class="suffix"><span class="rs">Rs</span><input type="number" id="p-price" min="0" value="${p ? money(p.price) : ""}" placeholder="0"/></div></div>
@@ -271,6 +272,8 @@ export function PackagesArtifact() {
           serviceStyle: val("p-svc"), menuId: val("p-menu"), subVenueId: val("p-sub"), features: feats, minGuarantee: val("p-mingt"),
         })
         const btn = s.getElementById("pf-save") as HTMLButtonElement | null; if (btn) { btn.disabled = true; btn.textContent = "Save ho raha…" }
+        // CONCURRENCY-009: the updatedAt the drawer was opened on; the server refuses the save if the package moved on
+        if (editId && val("p-upd")) body.expectedUpdatedAt = val("p-upd")
         try { if (editId) await PackagesAPI.update(editId, body as never); else await PackagesAPI.create(body as never); toast.success(editId ? "Package update ho gaya" : "Package ban gaya"); closeDrawer(s); refetchPkg() }
         catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua"); if (btn) { btn.disabled = false; btn.textContent = "Package save karein" } }
         return

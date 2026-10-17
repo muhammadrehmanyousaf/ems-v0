@@ -280,8 +280,9 @@ export function SpacesArtifact() {
         const mgEditId = val("mg-id") ? Number(val("mg-id")) : null
         const mgOrig = mgSave.textContent; mgSave.disabled = true; mgSave.textContent = "Save ho raha…"
         try {
-          if (mgEditId) await venueSpacesApi.deleteMergeGroup(mgEditId)
-          await venueSpacesApi.createMergeGroup(Number(bizRef.current), body)
+          // SETUP-018: edit in place - delete + create gave the combo a NEW id every time.
+          if (mgEditId) await venueSpacesApi.updateMergeGroup(mgEditId, { ...body, combinedPricePkr: body.combinedPricePkr ?? null })
+          else await venueSpacesApi.createMergeGroup(Number(bizRef.current), body)
           toast.success(mgEditId ? "Combo update ho gaya" : "Spaces combine ho gaye"); closeDrawer(s); refetch()
         } catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua"); mgSave.disabled = false; if (mgOrig) mgSave.textContent = mgOrig }
         return
