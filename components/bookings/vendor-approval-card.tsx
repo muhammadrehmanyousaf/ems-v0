@@ -97,9 +97,9 @@ export function VendorApprovalCard({
   if (!AWAITING.includes(String(status || ""))) return null;
 
   return (
-    <div className="rounded-xl border border-amber-300 bg-amber-50/50 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
+    <div className="rounded-xl border border-status-warning-line bg-amber-50/50 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
       <div className="flex items-center gap-2">
-        <CalendarClock className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+        <CalendarClock className="h-4 w-4 text-status-warning dark:text-amber-400" />
         <h3 className="text-sm font-semibold">Booking request — your decision</h3>
       </div>
 

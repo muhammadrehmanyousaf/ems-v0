@@ -494,13 +494,13 @@ export default function UmbrellaDetailPage() {
                 </div>
                 <div className="flex justify-between gap-2">
                   <dt className="text-bridal-text-soft">Paid so far</dt>
-                  <dd className="font-medium text-emerald-700 tabular-nums">
+                  <dd className="font-medium text-status-success tabular-nums">
                     Rs. {stats.totalPaid.toLocaleString()}
                   </dd>
                 </div>
                 <div className="flex justify-between gap-2">
                   <dt className="text-bridal-text-soft">Outstanding</dt>
-                  <dd className="font-medium text-amber-700 tabular-nums">
+                  <dd className="font-medium text-status-warning tabular-nums">
                     Rs. {stats.outstanding.toLocaleString()}
                   </dd>
                 </div>
@@ -748,18 +748,18 @@ export default function UmbrellaDetailPage() {
                     )}
                     {cancelOutcome.failed.length > 0 && (
                       <div>
-                        <p className="text-xs font-medium text-red-700 uppercase tracking-wider mb-1.5">
+                        <p className="text-xs font-medium text-status-danger uppercase tracking-wider mb-1.5">
                           Couldn&apos;t cancel ({cancelOutcome.failed.length})
                         </p>
                         <ul className="space-y-1 text-sm">
                           {cancelOutcome.failed.map((o) => (
                             <li
                               key={o.id}
-                              className="px-2 py-1 rounded bg-red-50 border border-red-200"
+                              className="px-2 py-1 rounded bg-status-danger-soft border border-status-danger-line"
                             >
                               <p>Booking #{o.id}</p>
                               {o.error && (
-                                <p className="text-[10px] text-red-700 mt-0.5 italic">
+                                <p className="text-[10px] text-status-danger mt-0.5 italic">
                                   {o.error}
                                 </p>
                               )}

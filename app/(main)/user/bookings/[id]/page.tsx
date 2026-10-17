@@ -763,17 +763,17 @@ export default function BookingDetailPage() {
           grid so the customer + any family member opening the link
           immediately understands the booking is paused. */}
       {booking.postponedAt && (
-        <div className="mb-5 rounded-lg border border-amber-300 bg-amber-50 p-4">
+        <div className="mb-5 rounded-lg border border-status-warning-line bg-status-warning-soft p-4">
           <div className="flex items-start gap-3">
-            <div className="size-9 rounded-md bg-amber-100 border border-amber-200 flex items-center justify-center flex-shrink-0">
-              <Timer className="size-4 text-amber-700" />
+            <div className="size-9 rounded-md bg-status-warning-soft border border-status-warning-line flex items-center justify-center flex-shrink-0">
+              <Timer className="size-4 text-status-warning" />
             </div>
             <div className="space-y-1 min-w-0">
-              <p className="font-medium text-amber-900">
+              <p className="font-medium text-status-warning">
                 This booking is postponed
               </p>
               {booking.postponedUntilAt && (
-                <p className="text-xs text-amber-800">
+                <p className="text-xs text-status-warning">
                   Set a new date by {fmtShort(booking.postponedUntilAt)} via reschedule. Your deposit stays safe in the meantime.
                 </p>
               )}
@@ -792,7 +792,7 @@ export default function BookingDetailPage() {
                 </div>
               ) : null}
               {booking.postponeReason && (
-                <p className="text-xs text-amber-700 italic mt-1 leading-relaxed">
+                <p className="text-xs text-status-warning italic mt-1 leading-relaxed">
                   &ldquo;{booking.postponeReason}&rdquo;
                 </p>
               )}
@@ -1284,7 +1284,7 @@ export default function BookingDetailPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-bridal-charcoal">You&apos;ll get back</span>
                       {/* WP26: the TOTAL the customer receives (policy refund + price-drop + declined-line), not the policy part alone */}
-                      <span className="font-semibold text-emerald-700" data-refund-total>{fmt(refundParts(refundPreview).total)}</span>
+                      <span className="font-semibold text-status-success" data-refund-total>{fmt(refundParts(refundPreview).total)}</span>
                     </div>
                     {/* one short line per component, only when money beyond the policy refund is owed */}
                     {refundParts(refundPreview).hasExtras && (

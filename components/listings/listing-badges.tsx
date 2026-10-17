@@ -122,7 +122,7 @@ export function ListingBadges({ business, className }: ListingBadgesProps) {
       {showVacation && (
         <Badge
           variant="secondary"
-          className="gap-1 border border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-100/90 font-bridal text-[10px] uppercase tracking-[0.18em] font-medium px-2 py-0.5"
+          className="gap-1 border border-status-warning-line bg-status-warning-soft text-status-warning hover:bg-amber-100/90 font-bridal text-[10px] uppercase tracking-[0.18em] font-medium px-2 py-0.5"
           title={
             business.vacationMessage?.trim()
               ? business.vacationMessage.trim()
@@ -145,7 +145,7 @@ export function ListingBadges({ business, className }: ListingBadgesProps) {
           >
             <Badge
               variant="secondary"
-              className="gap-1 border border-orange-300 bg-orange-100 text-orange-800 hover:bg-orange-200 cursor-pointer font-bridal text-[10px] uppercase tracking-[0.18em] font-medium px-2 py-0.5"
+              className="gap-1 border border-status-warning-line bg-status-warning-soft text-status-warning hover:bg-orange-200 cursor-pointer font-bridal text-[10px] uppercase tracking-[0.18em] font-medium px-2 py-0.5"
               title="This venue requires a municipal permit — click to view the checklist"
             >
               <ShieldCheck className="w-3 h-3" aria-hidden />
@@ -155,7 +155,7 @@ export function ListingBadges({ business, className }: ListingBadgesProps) {
         ) : (
           <Badge
             variant="secondary"
-            className="gap-1 border border-orange-300 bg-orange-100 text-orange-800 font-bridal text-[10px] uppercase tracking-[0.18em] font-medium px-2 py-0.5"
+            className="gap-1 border border-status-warning-line bg-status-warning-soft text-status-warning font-bridal text-[10px] uppercase tracking-[0.18em] font-medium px-2 py-0.5"
             title="This venue requires a municipal permit (sound, alcohol, road closure, security)"
           >
             <ShieldCheck className="w-3 h-3" aria-hidden />
@@ -167,7 +167,7 @@ export function ListingBadges({ business, className }: ListingBadgesProps) {
       {lastSpot && (
         <Badge
           variant="secondary"
-          className="gap-1 border border-red-300 bg-red-100 text-red-800 hover:bg-red-100/90 font-bridal text-[10px] uppercase tracking-[0.18em] font-medium px-2 py-0.5"
+          className="gap-1 border border-status-danger-line bg-status-danger-soft text-status-danger hover:bg-red-100/90 font-bridal text-[10px] uppercase tracking-[0.18em] font-medium px-2 py-0.5"
           title="Selling fast — limited availability"
         >
           <Flame className="w-3 h-3" aria-hidden />

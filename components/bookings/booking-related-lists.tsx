@@ -153,12 +153,12 @@ export function BookingDisputesCard({ bookingId }: { bookingId: number }) {
   const open = disputes.filter((d) => d.status === 'open').length;
 
   return (
-    <Card className={cn(open > 0 && 'border-red-200')}>
+    <Card className={cn(open > 0 && 'border-status-danger-line')}>
       <CardContent className="p-5 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertTriangle
-              className={cn('h-4 w-4', open > 0 ? 'text-red-600' : 'text-bridal-gold')}
+              className={cn('h-4 w-4', open > 0 ? 'text-status-danger' : 'text-bridal-gold')}
             />
             <span className="text-sm font-semibold text-neutral-700">Disputes</span>
           </div>
@@ -166,7 +166,7 @@ export function BookingDisputesCard({ bookingId }: { bookingId: number }) {
             variant="outline"
             className={cn(
               'text-xs',
-              open > 0 && 'bg-red-50 text-red-700 border-red-200',
+              open > 0 && 'bg-status-danger-soft text-status-danger border-status-danger-line',
             )}
           >
             {open > 0 ? `${open} open` : `${disputes.length} settled`}
@@ -192,7 +192,7 @@ export function BookingDisputesCard({ bookingId }: { bookingId: number }) {
                 className={cn(
                   'text-[10px] py-0 capitalize shrink-0',
                   d.status === 'open'
-                    ? 'bg-red-50 text-red-700 border-red-200'
+                    ? 'bg-status-danger-soft text-status-danger border-status-danger-line'
                     : 'bg-neutral-100 text-neutral-600 border-neutral-300',
                 )}
               >

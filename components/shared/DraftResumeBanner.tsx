@@ -47,7 +47,7 @@ export function DraftResumeBanner({
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-start gap-2.5">
-          <History className="w-4 h-4 text-amber-700 dark:text-amber-300 mt-0.5 flex-shrink-0" />
+          <History className="w-4 h-4 text-status-warning dark:text-amber-300 mt-0.5 flex-shrink-0" />
           <div className="text-sm">
             <p className="font-medium text-foreground">{title}</p>
             {meta && (

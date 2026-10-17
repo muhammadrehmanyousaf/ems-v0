@@ -223,7 +223,7 @@ export function NegotiateDialog({
             />
           </div>
 
-          {lineProblem && <p className="text-sm text-amber-700 dark:text-amber-400">{lineProblem}</p>}
+          {lineProblem && <p className="text-sm text-status-warning dark:text-amber-400">{lineProblem}</p>}
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
 

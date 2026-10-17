@@ -37,9 +37,9 @@ function formatDate(iso: string | null | undefined): string {
 }
 
 function StatusIcon({ status }: { status: ComplaintRow["status"] }) {
-  if (status === "resolved") return <CheckCircle2 className="w-5 h-5 text-green-600" />
+  if (status === "resolved") return <CheckCircle2 className="w-5 h-5 text-status-success" />
   if (status === "dismissed") return <AlertTriangle className="w-5 h-5 text-neutral-400" />
-  return <Clock className="w-5 h-5 text-amber-600" />
+  return <Clock className="w-5 h-5 text-status-warning" />
 }
 
 export default function UserComplaintsPage() {

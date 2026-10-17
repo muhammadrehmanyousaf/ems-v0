@@ -297,7 +297,7 @@ export function ServiceLocationPicker({
                 the empty case is already said by the row outside ("Address
                 needed") and by the required mark on the label. */}
             {addressTooShort && (address || "").trim().length > 0 && (
-              <p className="text-[11px] text-red-600">
+              <p className="text-[11px] text-status-danger">
                 Please enter at least {ADDRESS_MIN} characters.
               </p>
             )}

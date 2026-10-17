@@ -308,9 +308,9 @@ export default function BankTransferScreen({
       )}
 
       {!loading && loadError && (
-        <div className={`mt-3 flex w-full ${cap} items-start gap-2 rounded-[4px] border border-rose-200 bg-rose-50 px-4 py-3`} role="alert">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" aria-hidden />
-          <p className="font-bridal text-[13px] leading-[18px] text-rose-800">
+        <div className={`mt-3 flex w-full ${cap} items-start gap-2 rounded-[4px] border border-status-danger-line bg-status-danger-soft px-4 py-3`} role="alert">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-status-danger" aria-hidden />
+          <p className="font-bridal text-[13px] leading-[18px] text-status-danger">
             {loadError} You can still contact the venue directly to arrange payment.
           </p>
         </div>
@@ -369,7 +369,7 @@ export default function BankTransferScreen({
                   {rail}
                 </span>
                 {acc.isVerified === false && (
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-bridal text-[10px] uppercase leading-[12px] tracking-[0.14em] text-amber-800">
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-status-warning-line bg-status-warning-soft px-2 py-0.5 font-bridal text-[10px] uppercase leading-[12px] tracking-[0.14em] text-status-warning">
                     <AlertTriangle className="h-3 w-3" aria-hidden />
                     Not yet checked by us
                   </span>
@@ -533,7 +533,7 @@ export default function BankTransferScreen({
             </div>
 
             {claimError && (
-              <p className="font-bridal text-[12px] leading-[16px] text-rose-800" role="alert">{claimError}</p>
+              <p className="font-bridal text-[12px] leading-[16px] text-status-danger" role="alert">{claimError}</p>
             )}
 
             <BridalButton
@@ -548,7 +548,7 @@ export default function BankTransferScreen({
               {submitting ? "Sending…" : "I've sent the payment"}
             </BridalButton>
             {refRequired && transactionRef.trim().length > 0 && transactionRef.trim().length < 3 && (
-              <p className="font-bridal text-[12px] leading-[16px] text-rose-800">
+              <p className="font-bridal text-[12px] leading-[16px] text-status-danger">
                 Add the full reference from your bank.
               </p>
             )}

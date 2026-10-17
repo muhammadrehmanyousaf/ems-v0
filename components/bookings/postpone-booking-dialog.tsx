@@ -232,7 +232,7 @@ export function PostponeBookingDialog({
                 <span
                   className={
                     reasonLen < REASON_MIN
-                      ? "text-amber-600"
+                      ? "text-status-warning"
                       : "text-neutral-500"
                   }
                 >

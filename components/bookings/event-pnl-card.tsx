@@ -87,18 +87,18 @@ export function EventPnlCard({ bookingId }: { bookingId: number }) {
   };
 
   return (
-    <Card className={cn(loss ? "border-rose-300 dark:border-rose-900/60" : "border-emerald-200 dark:border-emerald-900/50")}>
+    <Card className={cn(loss ? "border-status-danger-line dark:border-rose-900/60" : "border-status-success-line dark:border-emerald-900/50")}>
       <CardContent className="p-5 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            {loss ? <TrendingDown className="size-4 text-rose-600" /> : <TrendingUp className="size-4 text-emerald-600" />}
+            {loss ? <TrendingDown className="size-4 text-status-danger" /> : <TrendingUp className="size-4 text-status-success" />}
             <h3 className="font-semibold">Is event pe kitna bacha?</h3>
             <span className="text-[11px] text-muted-foreground">(sirf aap dekh sakte hain)</span>
           </div>
           {loss ? (
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">Nuqsan</span>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-status-danger-soft text-status-danger dark:bg-rose-950/50 dark:text-rose-300">Nuqsan</span>
           ) : (
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">{Math.round(margin)}% margin</span>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-status-success-soft text-status-success dark:bg-emerald-950/50 dark:text-emerald-300">{Math.round(margin)}% margin</span>
           )}
         </div>
 
@@ -109,11 +109,11 @@ export function EventPnlCard({ bookingId }: { bookingId: number }) {
           </div>
           <div className="rounded-lg border p-2.5">
             <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Gaya</div>
-            <div className="text-lg font-bold tabular-nums text-rose-600 dark:text-rose-400">−{PKR(cost)}</div>
+            <div className="text-lg font-bold tabular-nums text-status-danger dark:text-rose-400">−{PKR(cost)}</div>
           </div>
-          <div className={cn("rounded-lg border p-2.5", loss ? "bg-rose-50 dark:bg-rose-950/30" : "bg-emerald-50 dark:bg-emerald-950/30")}>
+          <div className={cn("rounded-lg border p-2.5", loss ? "bg-status-danger-soft dark:bg-rose-950/30" : "bg-status-success-soft dark:bg-emerald-950/30")}>
             <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{loss ? "Nuqsan" : "Bacha"}</div>
-            <div className={cn("text-lg font-bold tabular-nums", loss ? "text-rose-600 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-400")}>{PKR(Math.abs(profit))}</div>
+            <div className={cn("text-lg font-bold tabular-nums", loss ? "text-status-danger dark:text-rose-400" : "text-status-success dark:text-emerald-400")}>{PKR(Math.abs(profit))}</div>
           </div>
         </div>
 
@@ -128,14 +128,14 @@ export function EventPnlCard({ bookingId }: { bookingId: number }) {
         )}
 
         {udhaarOwed > 0 && (
-          <div className="flex items-center justify-between rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5 text-sm">
-            <span className="text-amber-800 dark:text-amber-300">Udhaar — aap ke zimma (suppliers/labour)</span>
-            <span className="font-semibold tabular-nums text-amber-700 dark:text-amber-400">{PKR(udhaarOwed)}</span>
+          <div className="flex items-center justify-between rounded-md border border-status-warning-line bg-status-warning-soft dark:bg-amber-950/30 px-3 py-1.5 text-sm">
+            <span className="text-status-warning dark:text-amber-300">Udhaar — aap ke zimma (suppliers/labour)</span>
+            <span className="font-semibold tabular-nums text-status-warning dark:text-amber-400">{PKR(udhaarOwed)}</span>
           </div>
         )}
 
         <div className="flex items-center gap-2">
-          <Button asChild size="sm" variant="outline" className="text-emerald-700 border-emerald-300">
+          <Button asChild size="sm" variant="outline" className="text-status-success border-status-success-line">
             <a href={shareHref} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-4 mr-1.5" /> WhatsApp</a>
           </Button>
           <Button size="sm" variant="outline" onClick={shareImage}>

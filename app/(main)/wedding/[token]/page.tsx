@@ -209,7 +209,7 @@ export default function Page({ params }: PageProps) {
             </p>
           )}
           {umbrella.forceMajeure && (
-            <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-full inline-block px-3 py-1 mt-2">
+            <p className="text-xs text-status-danger bg-status-danger-soft border border-status-danger-line rounded-full inline-block px-3 py-1 mt-2">
               Postponed / force-majeure status
             </p>
           )}
@@ -238,7 +238,7 @@ export default function Page({ params }: PageProps) {
               <div className="text-[11px] uppercase tracking-wide text-neutral-500">
                 Paid
               </div>
-              <div className="text-lg font-bold text-emerald-700 tabular-nums">
+              <div className="text-lg font-bold text-status-success tabular-nums">
                 {fmtPKR(payments.totalPaid)}
               </div>
             </div>
@@ -246,7 +246,7 @@ export default function Page({ params }: PageProps) {
               <div className="text-[11px] uppercase tracking-wide text-neutral-500">
                 Outstanding
               </div>
-              <div className="text-lg font-bold text-amber-700 tabular-nums">
+              <div className="text-lg font-bold text-status-warning tabular-nums">
                 {fmtPKR(payments.totalOutstanding)}
               </div>
             </div>
@@ -398,7 +398,7 @@ export default function Page({ params }: PageProps) {
                             className="flex items-center gap-2 text-xs"
                           >
                             {t.status === 'done' ? (
-                              <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
+                              <CheckCircle2 className="h-3 w-3 text-status-success shrink-0" />
                             ) : (
                               <Clock className="h-3 w-3 text-neutral-400 shrink-0" />
                             )}

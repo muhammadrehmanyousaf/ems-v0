@@ -154,10 +154,10 @@ function ChangeRequestRow({ cr, bookingId, onChanged }: ChangeRequestRowProps) {
           <div
             className={cn(
               "mt-0.5 rounded-full p-1.5",
-              cr.status === "approved" && "bg-emerald-100 text-emerald-700",
-              cr.status === "pending" && "bg-amber-100 text-amber-700",
+              cr.status === "approved" && "bg-status-success-soft text-status-success",
+              cr.status === "pending" && "bg-status-warning-soft text-status-warning",
               (cr.status === "declined" || cr.status === "expired") &&
-                "bg-red-100 text-red-700",
+                "bg-status-danger-soft text-status-danger",
               cr.status === "cancelled" && "bg-muted text-muted-foreground",
             )}
           >
@@ -190,7 +190,7 @@ function ChangeRequestRow({ cr, bookingId, onChanged }: ChangeRequestRowProps) {
               <p
                 className={cn(
                   "text-[12px] mt-1 tabular-nums",
-                  diff > 0 ? "text-amber-700" : "text-emerald-700",
+                  diff > 0 ? "text-status-warning" : "text-status-success",
                 )}
               >
                 {diff > 0 ? "Top-up due" : "Refund on approval"}:{" "}

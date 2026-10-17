@@ -394,7 +394,7 @@ export default function PlanBuilderPage() {
                 </div>
                 <div className="flex justify-between gap-2">
                   <dt className="text-bridal-text-soft">Outstanding</dt>
-                  <dd className="font-medium text-amber-700 tabular-nums">
+                  <dd className="font-medium text-status-warning tabular-nums">
                     {fmtPKR(umbrellaStats.outstanding)}
                   </dd>
                 </div>

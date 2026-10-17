@@ -234,15 +234,15 @@ export function OrderBuilderCard({ bookingId }: { bookingId: number }) {
                     placeholder={isDiscount ? "Discount label" : costLine ? "Your cost (e.g. diesel, dihari)" : "Item name"}
                     className="h-8 flex-1"
                   />
-                  {costLine && <Badge variant="outline" className="text-[10px] shrink-0 text-rose-600 border-rose-300">my cost</Badge>}
+                  {costLine && <Badge variant="outline" className="text-[10px] shrink-0 text-status-danger border-status-danger-line">my cost</Badge>}
                   {costLine && (
                     <button
                       onClick={() => update(i, { meta: { ...((l.meta as Record<string, unknown>) || {}), paymentState: (l.meta as any)?.paymentState === "udhaar" ? "paid" : "udhaar" } })}
                       className={cn(
                         "text-[10px] shrink-0 px-2 py-0.5 rounded-full border",
                         (l.meta as any)?.paymentState === "udhaar"
-                          ? "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300"
-                          : "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300",
+                          ? "bg-status-warning-soft text-status-warning border-status-warning-line dark:bg-amber-950/40 dark:text-amber-300"
+                          : "bg-status-success-soft text-status-success border-status-success-line dark:bg-emerald-950/40 dark:text-emerald-300",
                       )}
                       title="Cash diya ya udhaar? — tap to toggle"
                     >
@@ -375,7 +375,7 @@ export function OrderBuilderCard({ bookingId }: { bookingId: number }) {
             />
           </div>
           {finalOverride != null && Math.abs(totals.negotiatedAdjustment) > 0.5 && (
-            <div className="flex justify-between text-xs text-amber-600 dark:text-amber-500">
+            <div className="flex justify-between text-xs text-status-warning dark:text-amber-500">
               <span>Negotiated adjustment</span>
               <span className="tabular-nums">
                 {totals.negotiatedAdjustment > 0 ? "+" : "−"}{PKR(Math.abs(totals.negotiatedAdjustment))}
@@ -413,7 +413,7 @@ export function OrderBuilderCard({ bookingId }: { bookingId: number }) {
                 variant="secondary"
                 className={
                   "tabular-nums " +
-                  (profit.profit >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400")
+                  (profit.profit >= 0 ? "text-status-success dark:text-emerald-400" : "text-status-danger dark:text-rose-400")
                 }
               >
                 {profit.margin.toFixed(0)}% margin
@@ -429,7 +429,7 @@ export function OrderBuilderCard({ bookingId }: { bookingId: number }) {
             </div>
             <div className="flex justify-between font-semibold pt-1 border-t">
               <span>Profit</span>
-              <span className={"tabular-nums " + (profit.profit >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400")}>
+              <span className={"tabular-nums " + (profit.profit >= 0 ? "text-status-success dark:text-emerald-400" : "text-status-danger dark:text-rose-400")}>
                 {PKR(profit.profit)}
               </span>
             </div>
