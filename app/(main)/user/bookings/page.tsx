@@ -50,6 +50,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { bookingSlotText } from "@/lib/booking/slot-vocabulary";
+import { useLiveRefresh } from "@/lib/hooks/useLiveRefresh";
 import { cancelRouteFor, cancelErrorMessage, isPaymentAlreadyReceived } from "@/lib/bookings/cancel-route";
 import { loginUrl } from "@/lib/auth/go-login"
 
@@ -179,6 +180,8 @@ export default function BookingsPage() {
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(true);
+  // CUSTOMER-059 - a failed load is not an empty list.
+  const [loadFailed, setLoadFailed] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
@@ -225,10 +228,25 @@ export default function BookingsPage() {
         `${BACKEND_URL}api/v1/bookings/simple-user-bookings`,
       );
       setBookings(res.data?.data || []);
+      setLoadFailed(false);
     } catch {
-      setBookings([]);
+      // Keep whatever was already on screen; only say "couldn't load".
+      setLoadFailed(true);
     } finally {
       setIsLoadingBookings(false);
+    }
+  };
+
+  // CUSTOMER-036 - follow the venue's actions without a reload.
+  useLiveRefresh(() => { void refetchQuietly(); }, !!user);
+
+  const refetchQuietly = async () => {
+    try {
+      const res = await axiosInstance.get(`${BACKEND_URL}api/v1/bookings/simple-user-bookings`);
+      setBookings(res.data?.data || []);
+      setLoadFailed(false);
+    } catch {
+      /* best-effort */
     }
   };
 
@@ -379,6 +397,29 @@ export default function BookingsPage() {
           action={
             <Button onClick={() => router.push(loginUrl())} size="sm">
               Log in
+            </Button>
+          }
+        />
+      </PageContainer>
+    );
+  }
+
+  if (loadFailed && bookings.length === 0) {
+    return (
+      <PageContainer>
+        <PageHeader
+          eyebrow={eyebrow}
+          title="My bookings"
+          description="Track and manage every event booking in one place."
+          actions={headerActions}
+        />
+        <EmptyState
+          icon={<Calendar className="size-6" />}
+          title="We couldn't load your bookings"
+          description="This is a connection problem, not an empty list. Your bookings are safe. Try again in a moment."
+          action={
+            <Button onClick={() => void fetchBookings()} size="sm" data-testid="bookings-retry">
+              Try again
             </Button>
           }
         />

@@ -271,7 +271,7 @@ function leadFormHtml(l?: Lead, prefillDate?: string, businesses?: BizLite[], cu
   const selBiz = lx.businessId ?? curBiz ?? (businesses && businesses[0]?.id) ?? ""
   const bizOpts = (businesses || []).map((b) => `<option value="${b.id}"${b.id === selBiz ? " selected" : ""}>${escHtml(b.name || `Venue #${b.id}`)}</option>`).join("")
   const fuVal = lx.nextFollowUpAt ? String(lx.nextFollowUpAt).slice(0, 16) : ""
-  return `<input type="hidden" id="ld-id" value="${l ? l.id : ""}"/>
+  return `<input type="hidden" id="ld-id" value="${l ? l.id : ""}"/><input type="hidden" id="ld-upd" value="${l ? escHtml(l.updatedAt || "") : ""}"/>
     <div class="dfield"><label class="dlabel">Naam <span class="req">*</span></label><input id="ld-name" value="${v(l?.contactName)}" placeholder="Customer ka naam"/></div>
     <div class="dfield row2"><div><label class="dlabel">Phone</label><input id="ld-phone" value="${v(l?.contactPhone)}" placeholder="0300…"/></div><div><label class="dlabel">WhatsApp</label><input id="ld-wa" value="${v(l?.contactWhatsapp)}" placeholder="agar alag ho"/></div></div>
     <div class="dfield"><label class="dlabel">Email</label><input id="ld-email" value="${v(l?.contactEmail)}" placeholder="optional"/></div>
@@ -314,7 +314,7 @@ export function LeadsArtifact() {
   const bizRef = React.useRef(bizId); bizRef.current = bizId
   const bizList = React.useMemo(() => ((businesses ?? []) as { id: number; name?: string | null }[]).map((b) => ({ id: b.id, name: b.name })), [businesses])
   const bizListRef = React.useRef(bizList); bizListRef.current = bizList
-  const { data, isError } = useQuery({ queryKey: ["leads-artifact"], queryFn: () => LeadAPI.list({}) })
+  const { data, isError } = useQuery({ queryKey: ["leads-artifact"], queryFn: () => LeadAPI.listAll({}) })
   const leads = data?.leads ?? []
   const leadsRef = React.useRef(leads); leadsRef.current = leads
   const searchParams = useSearchParams()
@@ -416,13 +416,14 @@ export function LeadsArtifact() {
           }
           const btn = t.closest("[data-lead-save]") as HTMLButtonElement; btn.disabled = true; btn.textContent = "Save ho raha…"
           try {
-            if (editId) await LeadAPI.update(editId, { ...common, businessId: bizPick || undefined } as UpdateLeadInput)
+            // CONCURRENCY-009: the updatedAt the drawer was opened on; the server refuses the save if the lead moved on
+            if (editId) await LeadAPI.update(editId, { ...common, businessId: bizPick || undefined, ...(val("ld-upd") ? { expectedUpdatedAt: val("ld-upd") } : {}) } as UpdateLeadInput)
             else { if (!bizPick) { toast.error("Venue select karein"); btn.disabled = false; return } await LeadAPI.create({ businessId: bizPick, ...common } as CreateLeadInput) }
             // WP21 — the list shows the venue picked in the sidebar. A lead saved under ANOTHER venue is real, but it is not in
             // this list: say where it went instead of a plain "ban gaya" next to a list that did not change.
             const elsewhere = bizPick && bizRef.current != null && Number(bizRef.current) !== bizPick
             toast.success(editId ? "Lead update ho gaya" : elsewhere ? `Naya lead ban gaya — ${bizListRef.current.find((b) => b.id === bizPick)?.name || "doosre venue"} mein (sidebar se wo venue chunein)` : "Naya lead ban gaya"); closeDrawer(s); qc.invalidateQueries({ queryKey: ["leads-artifact"] })
-          } catch (err: unknown) { if (!showLeadFieldError(s, err)) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua"); btn.disabled = false; btn.textContent = editId ? "Update karein" : "Lead add karein" }
+          } catch (err: unknown) { if (!showLeadFieldError(s, err)) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua"); if ((err as { response?: { status?: number } })?.response?.status === 409) qc.invalidateQueries({ queryKey: ["leads-artifact"] }); btn.disabled = false; btn.textContent = editId ? "Update karein" : "Lead add karein" }
           return
         }
         const btn = t.closest(".tab") as HTMLElement | null

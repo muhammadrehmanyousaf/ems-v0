@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { AnalyticsAPI, type CashFlowForecastData, type SeasonalityData, type ResponseTimesData } from "@/lib/api/analytics"
 import { LeadAPI, type Lead, type LeadSource, type ConversionAnalytics } from "@/lib/api/leads"
-import { useFetchData } from "@/hooks/use-fetch-data"
+import { useFetchAllPages } from "@/hooks/use-fetch-all-pages"
 import { useActiveBusinessId, useActiveBusinessStore } from "@/lib/store/active-business-store"
 import type { BookingData } from "@/lib/dashboard-types"
 import { usePlan } from "@/context/plan-context"
@@ -250,7 +250,7 @@ function buildContent(d: RData, cashLockedHtml = ""): string {
   const bkSeries = d.monthly.map((x) => x.n)
   const revSeries = d.series.map((x) => x.v)
   const kpis = `<div class="kpis">
-    <div class="kpi"><div class="l">Kul kamaai (saal)</div><div class="vrow"><span class="v tnum"><span class="rs">Rs</span> ${pkNum(d.revenue)}</span>${spark(revSeries)}</div><div class="d">is saal received</div></div>
+    <div class="kpi"><div class="l">Kul kamaai (saal)</div><div class="vrow"><span class="v tnum"><span class="rs">Rs</span> ${pkNum(d.revenue)}</span>${spark(revSeries)}</div><div class="d">is saal ke events par mila (event ki tareekh se)</div></div>
     <div class="kpi"><div class="l">Kul bookings</div><div class="vrow"><span class="v tnum">${d.bookings}</span>${spark(bkSeries)}</div><div class="d">is saal</div></div>
     <div class="kpi"><div class="l">Auosat vasooli</div><div class="vrow"><span class="v tnum"><span class="rs">Rs</span> ${pkNum(d.avg)}</span>${spark(revSeries)}</div><div class="d">per booking (mila hua)</div></div>
     <div class="kpi"><div class="l">Occupancy</div><div class="vrow"><span class="v tnum">${d.occ}%</span>${spark(bkSeries)}</div><div class="d">saal ke din booked</div></div>
@@ -323,11 +323,15 @@ export function ReportsArtifact() {
     ? planLockedHtml({ requiredPlan: fc.requiredPlan, planName: plan.planName, what: "The cash-flow forecast", compact: true, feature: "forecasting" })
     : ""), [forecastLocked, fc, plan.planName])
   const on = !lock.locked
-  const kpiQ = useQuery({ queryKey: ["rep-kpi", activeBusinessId], queryFn: () => AnalyticsAPI.getDashboardKpis("this_year", undefined, undefined, activeBusinessId), enabled: on })
-  const revQ = useQuery({ queryKey: ["rep-rev"], queryFn: () => AnalyticsAPI.getRevenueTrends("this_year"), enabled: on })
-  const bkTrQ = useQuery({ queryKey: ["rep-bk"], queryFn: () => AnalyticsAPI.getBookingTrends("this_year"), enabled: on })
-  const bkdQ = useQuery({ queryKey: ["rep-bkd"], queryFn: () => AnalyticsAPI.getRevenueBreakdowns("this_year"), enabled: on })
-  const leadsQ = useQuery({ queryKey: ["rep-leads"], queryFn: () => LeadAPI.list({}), enabled: on })
+  // OPS-007 - the AnalyticsAPI wrappers turn every failure into `null` (other callers rely on that), so
+  // isError could never fire and a failed request printed Rs 0 / 0 / 0% as fact. At THIS call site a null
+  // answer is a failure: throw it so the error banner shows.
+  const must = <T,>(p: Promise<T | null>): Promise<T> => p.then((v) => { if (v == null) throw new Error("analytics unavailable"); return v })
+  const kpiQ = useQuery({ queryKey: ["rep-kpi", activeBusinessId], queryFn: () => must(AnalyticsAPI.getDashboardKpis("this_year", undefined, undefined, activeBusinessId)), enabled: on })
+  const revQ = useQuery({ queryKey: ["rep-rev"], queryFn: () => must(AnalyticsAPI.getRevenueTrends("this_year")), enabled: on })
+  const bkTrQ = useQuery({ queryKey: ["rep-bk"], queryFn: () => must(AnalyticsAPI.getBookingTrends("this_year")), enabled: on })
+  const bkdQ = useQuery({ queryKey: ["rep-bkd"], queryFn: () => must(AnalyticsAPI.getRevenueBreakdowns("this_year")), enabled: on })
+  const leadsQ = useQuery({ queryKey: ["rep-leads"], queryFn: () => LeadAPI.listAll({}), enabled: on })
   // All three were already typed and wrapped in lib/api with no caller
   // anywhere. `.catch(() => null)` so one slow analytic never blanks the page —
   // each card renders nothing when its data is missing.
@@ -340,7 +344,10 @@ export function ReportsArtifact() {
   // analytics layer holds, and nothing was showing it.
   const respQ = useQuery({ queryKey: ["rep-resp"], queryFn: () => AnalyticsAPI.getResponseTimes("this_year").catch(() => null), enabled: on })
   const isError = kpiQ.isError || revQ.isError || bkTrQ.isError || bkdQ.isError
-  const { data: bkData } = useFetchData({ endpoint: "/api/v1/bookings", queryKey: ["rep-bookings"], Params: { page: 1, limit: 100 } })
+  // ...and while they are still in flight the page must not draw zeros either.
+  const isLoadingCore = !isError && (kpiQ.isLoading || revQ.isLoading || bkTrQ.isLoading || bkdQ.isLoading)
+  // CONCURRENCY-015 - the status chart read 100 bookings ("Confirmed 54%" when the truth was 46%); read them all.
+  const { data: bkData } = useFetchAllPages<BookingData>({ endpoint: "/api/v1/bookings", queryKey: ["rep-bookings"], Params: {} })
 
   const d: RData = React.useMemo(() => {
     const k = kpiQ.data
@@ -376,6 +383,7 @@ export function ReportsArtifact() {
     if (wwc && lock.locked) { wwc.innerHTML = lock.html; return }
     if (wwc) {
       if (isError) { wwc.innerHTML = `<div class="head"><div><h1>Reports</h1></div></div>${errorBannerHtml()}` }
+      else if (isLoadingCore) { wwc.innerHTML = `<div class="head"><div><h1>Reports</h1></div></div><div class="loadwrap" style="display:grid;place-items:center;padding:80px 16px;color:var(--ink-3);font-size:13px">Reports load ho rahi hain…</div>` }
       else { wwc.innerHTML = head + buildContent(d, cashLockedHtml); drawChart(s, d.series) }
     }
     // Screen-local actions, bound once (delegated on the shadow root). Export
@@ -397,7 +405,7 @@ export function ReportsArtifact() {
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, kpiQ.data, revQ.data, bkTrQ.data, bkdQ.data, leadsQ.data, bkData, isError, cashQ.data, seasonQ.data, convQ.data, respQ.data, lock.locked, lock.html, cashLockedHtml])
+  }, [ready, kpiQ.data, revQ.data, bkTrQ.data, bkdQ.data, leadsQ.data, bkData, isError, isLoadingCore, cashQ.data, seasonQ.data, convQ.data, respQ.data, lock.locked, lock.html, cashLockedHtml])
 
   return <div ref={hostRef} />
 }

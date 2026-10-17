@@ -27,7 +27,10 @@ function shortDate(s?: string) {
   const d = new Date(s); if (isNaN(d.getTime())) return String(s)
   return d.toLocaleDateString("en-PK", { day: "numeric", month: "short" })
 }
-const timeOf = (s?: string) => { if (!s) return ""; const d = new Date(s); return isNaN(d.getTime()) ? "" : d.toLocaleTimeString("en-PK", { hour: "numeric", minute: "2-digit" }) }
+// MONEY-003 - a receivedDate is a calendar DAY ("2026-10-09"); parsed as a date it is UTC midnight, i.e. a made-up
+// "5:00 am" in Karachi. A day-only value has no time to show. A real instant is shown in Karachi time.
+const isDayOnly = (s: string) => String(s).trim().length === 10 && !String(s).includes("T")
+const timeOf = (s?: string) => { if (!s || isDayOnly(s)) return ""; const d = new Date(s); return isNaN(d.getTime()) ? "" : d.toLocaleTimeString("en-PK", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Karachi" }) }
 const isThisMonth = (s?: string) => { if (!s) return false; const d = new Date(s); const n = new Date(); return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear() }
 
 const EXTRA_CSS = String.raw`

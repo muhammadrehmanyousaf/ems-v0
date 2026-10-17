@@ -11,6 +11,10 @@ interface BusinessContextType {
     businesses: ApiBusiness[];
     business: ApiBusiness | null;     // first / default business (convenience)
     loading: boolean;
+    /** SETUP-012 - the list request failed and there is nothing cached: NOT the same as "no business". */
+    loadError: boolean;
+    /** Re-run the failed list request. */
+    retryLoad: () => void;
     refreshBusiness: (silent?: boolean) => Promise<void>;
 }
 
@@ -65,6 +69,8 @@ export const BusinessProvider = ({ children }: { children: ReactNode }) => {
             businesses,
             business: businesses[0] ?? null,
             loading: enabled && q.isLoading,
+            loadError: enabled && q.isError && !q.data,
+            retryLoad: () => { void q.refetch(); },
             refreshBusiness,
         }}>
             {children}

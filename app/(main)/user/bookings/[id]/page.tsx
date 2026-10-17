@@ -73,6 +73,7 @@ import { RefundSettlementCard } from "@/components/bookings/refund-settlement-ca
 import { getRefundPreview, requestCancellation, type RefundPreview } from "@/lib/api/bookingOrder";
 import { refundParts, refundPin } from "@/lib/refund-total";
 import { bookingSlotText } from "@/lib/booking/slot-vocabulary";
+import { useLiveRefresh } from "@/lib/hooks/useLiveRefresh";
 import { bookingMoney } from "@/lib/utils/booking-money";
 import { PaymentInstructionsAPI } from "@/lib/api/paymentInstructions";
 import { paymentNotDueYet, customerDepositLine } from "@/lib/payment-status";
@@ -251,6 +252,8 @@ export default function BookingDetailPage() {
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [isLoadingBooking, setIsLoadingBooking] = useState(true);
+  // CUSTOMER-059 - "couldn't load" is not "not found".
+  const [loadFailed, setLoadFailed] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   // QA #4 — refund the customer would receive if they cancel now (per the
@@ -364,6 +367,17 @@ export default function BookingDetailPage() {
     };
   }, [user, bookingId]);
 
+  // CUSTOMER-036 - follow the venue's payment without a reload (socket + 60 s poll).
+  useLiveRefresh(() => {
+    axiosInstance
+      .get(`${BACKEND_URL}api/v1/bookings/simple-user-bookings`)
+      .then((res) => {
+        const found = (res.data?.data || []).find((b: Booking) => String(b.id) === String(bookingId));
+        if (found) setBooking(found);
+      })
+      .catch(() => { /* best-effort */ });
+  }, !!user && !!bookingId);
+
   const fetchBooking = async () => {
     setIsLoadingBooking(true);
     try {
@@ -373,9 +387,12 @@ export default function BookingDetailPage() {
       const found = (res.data?.data || []).find(
         (b: Booking) => String(b.id) === String(bookingId),
       );
+      setLoadFailed(false);
       if (found) setBooking(found);
-      else throw new Error("not found");
+      // else: the list loaded and this booking is not in it - that IS "not found".
     } catch {
+      // CUSTOMER-059 - a network blip / 5xx is not "this booking was removed".
+      setLoadFailed(true);
       toast({
         title: "Error",
         description: "Failed to load booking details.",
@@ -547,6 +564,23 @@ export default function BookingDetailPage() {
           action={
             <Button onClick={() => router.push(loginUrl())} size="sm">
               Log in
+            </Button>
+          }
+        />
+      </PageContainer>
+    );
+  }
+
+  if (!booking && loadFailed) {
+    return (
+      <PageContainer>
+        <EmptyState
+          icon={<AlertTriangle className="size-6" />}
+          title="We couldn't load this booking"
+          description="This looks like a connection problem, not a removed booking. Try again in a moment."
+          action={
+            <Button onClick={() => void fetchBooking()} size="sm" data-testid="booking-retry">
+              Try again
             </Button>
           }
         />

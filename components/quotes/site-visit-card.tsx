@@ -60,7 +60,11 @@ export function SiteVisitCard({ quote, role }: { quote: Quote; role: QuoteParty 
     return toLocalInput(d)
   })
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["quotes"] })
+  // FLAGGED-057 - the customer list is keyed ["my-quotes"] and the vendor shell
+  // ["quotes-art", bizId]; invalidating only ["quotes"] refreshed neither.
+  const invalidate = () => {
+    for (const key of ["quotes", "my-quotes", "quotes-art"]) qc.invalidateQueries({ queryKey: [key] })
+  }
 
   const act = useMutation({
     mutationFn: (v: { action: "propose" | "confirm" | "decline" | "complete"; at?: string }) =>

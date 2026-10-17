@@ -57,14 +57,19 @@ function buildContent(r: AnnualTaxReport, year: number, basis: string): string {
   const cats = (Object.entries(r.expensesByCategory || {}) as [string, number][]).filter(([, v]) => money(v) > 0).sort((a, b) => money(b[1]) - money(a[1]))
   const maxCat = cats.length ? money(cats[0][1]) : 1
 
-  const years = [year + 1, year, year - 1, year - 2].filter((y) => y <= new Date().getFullYear() + 1)
+  // MONEY-035 - the selector offered a fiscal year that has not started (2027 = FY 2027-28). The latest year
+  // offered is the current one (fiscal years start in July); a year already selected stays selectable.
+  const nowD = new Date()
+  const latest = basis === "fiscal" ? (nowD.getMonth() >= 6 ? nowD.getFullYear() : nowD.getFullYear() - 1) : nowD.getFullYear()
+  const years = [...new Set([year, latest, latest - 1, latest - 2, latest - 3])].filter((y) => y <= latest || y === year).sort((a, b) => b - a)
+  const yearLabel = (y: number) => (basis === "fiscal" ? `${y}-${String(y + 1).slice(2)}` : String(y))
   const toolbar = `<div class="toolbar">
     <div class="seg" id="basis"><button class="${basis === "fiscal" ? "on" : ""}" data-basis="fiscal">Fiscal (Jul–Jun)</button><button class="${basis === "calendar" ? "on" : ""}" data-basis="calendar">Calendar</button></div>
-    <select class="yearsel" id="yearsel">${years.map((y) => `<option value="${y}"${y === year ? " selected" : ""}>${y}</option>`).join("")}</select>
+    <select class="yearsel" id="yearsel">${years.map((y) => `<option value="${y}"${y === year ? " selected" : ""}>${yearLabel(y)}</option>`).join("")}</select>
     <div class="filters"><button class="btn btn-primary" id="pdfbtn">${svg(IC.dl)} PDF download</button></div></div>`
 
   const tiles = `<div class="tax-tiles">
-    <div class="tile"><div class="t-cap">${svg(IC.up, 1.9)} Kul revenue</div><div class="t-val tnum"><span class="rs">Rs</span> ${pkNum(totalRev)}</div><div class="t-sub">${s.bookingCount} bookings</div></div>
+    <div class="tile"><div class="t-cap">${svg(IC.up, 1.9)} Kul revenue (booked, event ki tareekh se)</div><div class="t-val tnum"><span class="rs">Rs</span> ${pkNum(totalRev)}</div><div class="t-sub">${s.bookingCount} bookings${s.bookingReceived != null ? ` · in par mila: Rs ${pkNum(money(s.bookingReceived))}` : ""}</div></div>
     <div class="tile"><div class="t-cap">${svg(IC.down, 1.9)} Kul kharcha</div><div class="t-val tnum"><span class="rs">Rs</span> ${pkNum(money(s.totalExpenses))}</div><div class="t-sub">${s.expenseCount} entries</div></div>
     <div class="tile ${net >= 0 ? "pos" : "neg"} hl"><div class="t-cap">${svg(IC.scale, 1.9)} Net P&L</div><div class="t-val tnum"><span class="rs">Rs</span> ${pkNum(net)}</div><div class="t-sub">revenue − kharcha</div></div>
     <div class="tile"><div class="t-cap">${svg(IC.doc, 1.9)} FBR jama</div><div class="t-val tnum"><span class="rs">Rs</span> ${pkNum(money(s.fbrSubmittedValue))}</div><div class="t-sub">${s.fbrSubmittedCount} submissions</div></div>

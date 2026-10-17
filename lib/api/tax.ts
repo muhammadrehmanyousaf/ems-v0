@@ -34,6 +34,10 @@ export interface AnnualTaxReport {
      */
     fbrProvider?: string;
     fbrConfigured?: boolean;
+    /** MONEY-035 - what was actually collected on the same Confirmed/Completed events (WP08). */
+    bookingReceived?: number;
+    /** "booked_by_event_date": bookingRevenue is the booked total, not cash. */
+    revenueBasis?: string;
   };
   expensesByCategory: Record<string, number>;
   months: Array<{

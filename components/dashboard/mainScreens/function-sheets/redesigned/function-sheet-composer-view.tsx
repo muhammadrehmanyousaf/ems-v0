@@ -10,6 +10,7 @@
  * /dashboard/function-sheet-composer. Mutations hit the (dev) API.
  */
 
+import { pickDefaultSheet } from "@/lib/function-sheets/default-sheet"
 import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
@@ -55,7 +56,7 @@ export function FunctionSheetComposerView() {
       const idParam = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("id") : null
       if (idParam) return FunctionSheetAPI.get(Number(idParam))
       const list = await FunctionSheetAPI.list()
-      const first = list?.functionSheets?.[0]
+      const first = pickDefaultSheet(list?.functionSheets)
       return first ? FunctionSheetAPI.get(first.id) : null
     },
   })

@@ -28,6 +28,8 @@ import {
   validateOptionalText,
 } from "@/components/dashboard/primitives/field-error"
 import { cn } from "@/lib/utils"
+import { pushLive } from "@/lib/seo/push-live"
+import { packageRestoreBody } from "@/lib/settings/package-body"
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
@@ -127,7 +129,10 @@ export function PackagesManager({ businessId }: { businessId: number }) {
     })
     setTouched({}); setAdding(false); setEditingId(null)
   }
+  // CONCURRENCY-009: the updatedAt the edit started from (the server refuses the save if the package moved on).
+  const editingUpd = React.useRef<string | null>(null)
   const startEdit = (p: ApiPackage) => {
+    editingUpd.current = (p as { updatedAt?: string }).updatedAt ?? null
     setForm({
       name: p.name ?? "",
       price: String(p.price ?? ""),
@@ -147,14 +152,17 @@ export function PackagesManager({ businessId }: { businessId: number }) {
     })
     setTouched({}); setEditingId(p.id); setAdding(true)
   }
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["pkgs", businessId] })
+  // SETUP-026 - also drop the public listing's cache entry (1 h ISR window).
+  const invalidate = () => { qc.invalidateQueries({ queryKey: ["pkgs", businessId] }); void pushLive(businessId) }
 
   const saveMut = useMutation({
     mutationFn: () => {
       const body = {
         name: form.name.trim(),
         price: Number(form.price) || 0,
-        description: form.description.trim() || undefined,
+        // SETUP-005 - on edit an emptied description is sent as null; `undefined`
+        // dropped the key and the old text silently came back.
+        description: form.description.trim() || (editingId ? null : undefined),
         features: form.features.split("\n").map((s) => s.trim()).filter(Boolean),
         businessId,
         // Always sent, including as null, so a vendor can move a package back to
@@ -170,7 +178,9 @@ export function PackagesManager({ businessId }: { businessId: number }) {
         guestRangeMax: form.guestRangeMax.trim() ? Number(form.guestRangeMax) : null,
         serviceStyle: form.serviceStyle || null,
       }
-      return editingId ? PackagesAPI.update(editingId, body) : PackagesAPI.create(body)
+      return editingId
+        ? PackagesAPI.update(editingId, editingUpd.current ? { ...body, expectedUpdatedAt: editingUpd.current } : body)
+        : PackagesAPI.create(body)
     },
     onSuccess: () => { showSuccessToast(editingId ? "Package updated" : "Package added"); reset(); invalidate() },
     // Held long enough to read: the rate-card guard's refusal explains which
@@ -186,13 +196,10 @@ export function PackagesManager({ businessId }: { businessId: number }) {
         message: `"${p.name}" removed`,
         onUndo: async () => {
           try {
-            await PackagesAPI.create({
-              name: p.name,
-              price: Number(p.price) || 0,
-              description: p.description ?? undefined,
-              features: asFeatures(p.features),
-              businessId,
-            })
+            // SETUP-023 - every column, not four of them: the old body re-created a
+            // per-head package as a flat one (unit, guest range, minimum
+            // guarantee, service style, menu and hall all lost).
+            await PackagesAPI.create(packageRestoreBody(p, businessId) as never)
             invalidate()
           } catch {
             toast.error("Couldn't restore that package.")

@@ -42,6 +42,8 @@ import { unledgered409 } from "@/lib/utils/phantom-advance"
 import { moneyOf } from "@/lib/utils/qist"
 import { fmtYmd, ymdOf, ymdToUtcDate } from "@/lib/utils/ymd"
 import { bookingSlotText } from "@/lib/booking/slot-vocabulary"
+import { historyRows } from "@/lib/bookings/history-rows"
+import { approvalToast } from "@/lib/bookings/approval-toast"
 import { slotPickerField, bindSlotPicker, loadSlotPicker, refreshPicker, recheckPicker, pickerChoice } from "@/components/dashboard/mainScreens/artifact/slot-picker"
 
 /* ── formatting ──────────────────────────────────────────────── */
@@ -563,7 +565,9 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
   const statusLabel = bookingStatusLabel(booking) || "Booking"
   const tone = toneOf(statusLabel)
   const st = (booking.status || "").toLowerCase()
-  const isPending = /await|pending|request/.test(st)
+  // BOOKINGS-029 - "waiting on the vendor" is NOT the same as an Awaiting-payment status: once the vendor has
+  // approved (vendorApprovedAt set) the booking is waiting on the CUSTOMER's advance and Confirm/Reject must go.
+  const isPending = /await|pending|request/.test(st) && !(/await/.test(st) && (booking as { vendorApprovedAt?: string | null }).vendorApprovedAt)
   const isClosed = /cancel|complete|done|reject/.test(st)
   // A dead booking — money can no longer be collected on it (the backend refuses
   // with BOOKING_CANCELLED), so every payment CTA is hidden here too.
@@ -674,9 +678,10 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
   const actItems = (history || []).slice(0, 8).map((h) => {
     const from = h.fromStatus, to = h.toStatus
     const title = to ? `Status: ${escHtml(from || "—")} → ${escHtml(to)}` : escHtml(h.reason || "Update")
-    const when = fmtDateShort(h.changedAt || h.createdAt)
+    const when = fmtDateShort(h.at || h.changedAt || h.createdAt)
+    const who = h.actorRole || h.changedByRole
     return `<div class="tl-item done"><span class="tl-dot">${svg(I.check)}</span>
-      <div class="tl-body"><div class="tl-title" style="font-weight:500">${title}</div><div class="tl-meta">${when}${h.changedByRole ? ` · ${escHtml(h.changedByRole)}` : ""}</div></div></div>`
+      <div class="tl-body"><div class="tl-title" style="font-weight:500">${title}</div><div class="tl-meta">${when}${who ? ` · ${escHtml(who)}` : ""}</div></div></div>`
   }).join("")
   const createdItem = `<div class="tl-item"><span class="tl-dot">${svg(I.cal)}</span>
     <div class="tl-body"><div class="tl-title" style="font-weight:500">Booking banai gayi</div><div class="tl-meta">${fmtDateShort(booking.createdAt)}</div></div></div>`
@@ -1083,7 +1088,7 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
     wwc.innerHTML = buildDetail(
       booking,
       payQ.data ?? null,
-      Array.isArray(histQ.data) ? histQ.data : [],
+      historyRows(histQ.data),
       sheetsQ.data ?? [],
       scheduleQ.data ?? null,
       scheduleQ.isError,
@@ -1187,7 +1192,7 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
       const ap = t.closest("[data-bk-approve]") as HTMLButtonElement | null
       if (ap?.dataset.bkApprove) {
         ap.disabled = true; const o = ap.innerHTML; ap.textContent = "Confirm ho raha…"
-        try { await BookingsAPI.approveBooking(Number(ap.dataset.bkApprove)); toast.success("Booking confirm ho gayi"); invalidateAll() }
+        try { const res = await BookingsAPI.approveBooking(Number(ap.dataset.bkApprove)); toast.success(approvalToast(res)); invalidateAll() }
         catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Confirm nahi hui"); ap.disabled = false; ap.innerHTML = o }
         return
       }

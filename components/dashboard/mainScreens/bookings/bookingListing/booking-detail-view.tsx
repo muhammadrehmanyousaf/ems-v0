@@ -23,6 +23,7 @@
  *   - Lead list filtered by bookingId (additive query param)
  */
 
+import { historyRows } from "@/lib/bookings/history-rows"
 import * as React from "react";
 import { bookingStatusLabel } from "@/lib/booking-status-label";
 import { useEffect, useState } from "react";
@@ -212,11 +213,7 @@ export default function BookingDetailView({
         if (cancelled) return;
         setSheets(sheetsRes.functionSheets || []);
         setSourceLead(leadsRes.leads?.[0] ?? null);
-        const histRows: HistoryEntry[] =
-          (historyRes as any)?.history ||
-          (historyRes as any)?.entries ||
-          (Array.isArray(historyRes) ? historyRes : []) ||
-          [];
+        const histRows: HistoryEntry[] = historyRows<HistoryEntry>(historyRes);
         setHistory(histRows);
       } catch (e: any) {
         if (cancelled) return;
