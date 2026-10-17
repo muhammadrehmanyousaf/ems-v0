@@ -17,7 +17,8 @@ import { AlertTriangle, CheckCircle2, Clock, Lock, Sparkles, X } from "lucide-re
 import { useAccess } from "@/hooks/use-access"
 import { bannerFor, chipFor, type BannerSpec } from "@/lib/plans/banners"
 import { firstFilled, say } from "@/lib/plans/copy"
-import { PLAN_UI_CSS } from "../plan-ui-css"
+import { useResolvedThemeMode } from "@/lib/store/theme-prefs"
+import { PLAN_UI_CSS, WALL_TOKENS_CSS } from "../plan-ui-css"
 import { useOne, useBi } from "../bilingual"
 
 const ICON = { trial_welcome: Sparkles, trial_t7: Clock, trial_t3: Clock, trial_t1: AlertTriangle, trial_today: AlertTriangle, past_due: AlertTriangle, cancelling: Clock, comp_end: Clock, locked_here: Lock, reactivated: CheckCircle2 } as const
@@ -47,6 +48,7 @@ export function PlanBanners() {
   const pathname = usePathname() || ""
   const one = useOne()
   const bi = useBi()
+  const mode = useResolvedThemeMode()
 
   // "Welcome back" once after a lock ends: remember that the Wall was shown.
   const [wasLocked, setWasLocked] = React.useState(false)
@@ -73,8 +75,8 @@ export function PlanBanners() {
   const dismissLabel = say(spec.dismiss === "once" ? "banner.dismiss_welcome" : "banner.dismiss", one.lang)
 
   return (
-    <div className="wwp-banners" data-testid="plan-banners">
-      <style dangerouslySetInnerHTML={{ __html: PLAN_UI_CSS }} />
+    <div className="wwp-banners wwp-scope" data-theme={mode} data-testid="plan-banners">
+      <style dangerouslySetInnerHTML={{ __html: WALL_TOKENS_CSS + PLAN_UI_CSS }} />
       <div className={`wwp-banner ${spec.tone}`} role={spec.tone === "bad" ? "alert" : "status"} data-kind={spec.kind}>
         <Icon aria-hidden />
         <div className="tx">
@@ -98,15 +100,16 @@ export function PlanBanners() {
 export function PlanChip({ className }: { className?: string }) {
   const { access } = useAccess()
   const one = useOne()
+  const mode = useResolvedThemeMode()
   const chip = React.useMemo(() => chipFor(access), [access])
   if (!chip) return null
   const label = say(chip.key, one.lang, chip.vars)
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: PLAN_UI_CSS }} />
+    <span className="wwp-scope" data-theme={mode} style={{ background: "transparent", display: "inline-block", maxWidth: "100%" }}>
+      <style dangerouslySetInnerHTML={{ __html: WALL_TOKENS_CSS + PLAN_UI_CSS }} />
       <Link href="/dashboard/billing" className={`wwp-chip ${chip.tone === "ok" ? "" : chip.tone} ${className ?? ""}`} title={say("chip.title", one.lang)} data-testid="plan-chip">
         <i aria-hidden /><span>{label}</span>
       </Link>
-    </>
+    </span>
   )
 }

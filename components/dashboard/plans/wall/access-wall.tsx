@@ -60,6 +60,16 @@ export function AccessWall({ access }: { access: Access }) {
   const plans = useQuery({ queryKey: ["plan-wall-me"], queryFn: () => SubscriptionAPI.getMyPlan(), enabled: !access.staff && model.cta !== "none", staleTime: 5 * 60_000, retry: 0 })
   const price = access.plan ? plans.data?.plans.find((p) => p.tier === access.plan)?.pricePkrMonthly ?? null : null
 
+  // The Wall replaces the whole shell, which is what normally hides the document's own scrollbar: hide it here too.
+  React.useEffect(() => {
+    const html = document.documentElement
+    const prevOverflow = html.style.overflow
+    const prevGutter = html.style.scrollbarGutter
+    html.style.overflow = "hidden"
+    html.style.scrollbarGutter = "auto"
+    return () => { html.style.overflow = prevOverflow; html.style.scrollbarGutter = prevGutter }
+  }, [])
+
   const renewHref = access.renewUrl && access.renewUrl.startsWith("/") ? access.renewUrl : "/dashboard/billing"
 
   const onPrimary = async () => {
@@ -101,7 +111,7 @@ export function AccessWall({ access }: { access: Access }) {
         </nav>
       </header>
 
-      <div className="wwp-main">
+      <div className={"wwp-main" + (model.owner ? "" : " solo")}>
         <section className="wwp-card wwp-hero" aria-labelledby="wwp-title">
           <div className="wwp-top">
             <span className={"wwp-eyebrow" + (model.variant === "suspended" ? " bad" : "")}><Lock aria-hidden />{say(model.eyebrow, one)}</span>
@@ -152,14 +162,15 @@ export function AccessWall({ access }: { access: Access }) {
                 )}
               </div>
               {price !== null && model.cta === "renew" && (
-                <p className="wwp-hint">{fill("wall.cta.hint", one, { amount: price.toLocaleString("en-PK") })}</p>
+                <div className="wwp-hint">
+                  {show("en") && <div>{fill("wall.cta.hint", "en", { amount: price.toLocaleString("en-PK") })}</div>}
+                  {show("ru") && <div style={{ marginTop: show("en") ? 2 : 0 }}>{fill("wall.cta.hint", "ru", { amount: price.toLocaleString("en-PK") })}</div>}
+                </div>
               )}
-              {pref === "both" && model.cta === "renew" && <p className="wwp-hint" style={{ marginTop: 2 }}>{say("wall.cta.renew", "ru", vars)}</p>}
               {model.manual && (
                 <div className="wwp-act-sub">
-                  <Link className="wwp-textlink" href="/dashboard/billing?pay=manual" data-testid="wall-manual">
-                    {say("wall.cta.manual", one)}{pref === "both" ? ` / ${say("wall.cta.manual", "ru")}` : ""}
-                  </Link>
+                  <Link className="wwp-textlink" href="/dashboard/billing?pay=manual" data-testid="wall-manual">{say("wall.cta.manual", one)}</Link>
+                  {pref === "both" && <span className="wwp-hint" style={{ marginTop: 0 }}>{say("wall.cta.manual", "ru")}</span>}
                 </div>
               )}
             </>
@@ -177,7 +188,7 @@ export function AccessWall({ access }: { access: Access }) {
             </div>
           )}
 
-          {model.owner && missed !== null && missed > 0 && (
+          {model.missed && missed !== null && missed > 0 && (
             <div className="wwp-missed" data-testid="wall-missed">
               {show("en") && <div className="en">{missed === 1 ? say("wall.missed.one", "en") : say("wall.missed.n", "en", { n: missed })}</div>}
               {show("ru") && <div className="ru">{missed === 1 ? say("wall.missed.one", "ru") : say("wall.missed.n", "ru", { n: missed })}</div>}
@@ -185,7 +196,7 @@ export function AccessWall({ access }: { access: Access }) {
           )}
         </section>
 
-        {model.owner && <ObligationsStrip />}
+        {model.owner && <ObligationsStrip onHold={model.onHold} />}
 
         <section className="wwp-card wwp-help" aria-label={say("wall.help", one)}>
           <span><b>{say("wall.help", one)}</b>{pref === "both" ? ` ${say("wall.help", "ru")}` : ""}</span>

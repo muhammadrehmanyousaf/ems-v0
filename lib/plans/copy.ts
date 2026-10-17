@@ -85,13 +85,13 @@ export const COPY = {
   "wall.eyebrow.suspended": { en: "Account on hold", ru: "Account rok diya gaya hai" },
   "wall.trial_ended.title": { en: "Your free month has ended", ru: "Aap ka muft mahina khatam ho gaya" },
   "wall.trial_ended.body": {
-    en: "Your data is safe. Nothing has been deleted. Choose a plan to open your dashboard again.",
-    ru: "Aap ka data mehfooz hai. Kuch delete nahi hua. Dashboard dobara kholne ke liye plan chun lein.",
+    en: "Choose a plan to open your dashboard again. Everything comes back exactly as you left it.",
+    ru: "Dashboard dobara kholne ke liye plan chun lein. Sab kuch bilkul waisa hi wapas aayega.",
   },
   "wall.no_plan.title": { en: "Choose a plan to open your dashboard", ru: "Dashboard kholne ke liye plan chunein" },
   "wall.no_plan.body": {
-    en: "WeddingWala vendor plans are paid plans. Your data is safe. Nothing has been deleted. Pick the plan that fits your venue.",
-    ru: "WeddingWala vendor plans paid plans hain. Aap ka data mehfooz hai. Kuch delete nahi hua. Apne venue ke liye munasib plan chun lein.",
+    en: "WeddingWala vendor plans are paid plans. Pick the plan that fits your venue.",
+    ru: "WeddingWala vendor plans paid plans hain. Apne venue ke liye munasib plan chun lein.",
   },
   "wall.plan_ended.title": { en: "Your {planName} plan has ended", ru: "Aap ka {planName} plan khatam ho gaya" },
   "wall.plan_ended.body": {
@@ -124,8 +124,8 @@ export const COPY = {
   },
   "wall.suspended.title": { en: "Your account is on hold", ru: "Aap ka account rok diya gaya hai" },
   "wall.suspended.body": {
-    en: "WeddingWala has put this account on hold. Your data is safe and has not been deleted. Please contact our support team so we can sort it out together.",
-    ru: "WeddingWala ne is account ko rok diya hai. Aap ka data mehfooz hai, kuch delete nahi hua. Barah-e-meherbani support team se rabta karein taake hum mil kar masla hal karein.",
+    en: "WeddingWala has put this account on hold. Please contact our support team so we can sort it out together.",
+    ru: "WeddingWala ne is account ko rok diya hai. Barah-e-meherbani support team se rabta karein taake hum mil kar masla hal karein.",
   },
   "wall.staff.title": { en: "Your company's plan has ended", ru: "Aap ki company ka plan khatam ho gaya" },
   "wall.staff.body": {
@@ -178,6 +178,7 @@ export const COPY = {
 
   /* ───────────── obligations strip + export ───────────── */
   "obl.title": { en: "While your plan is paused", ru: "Jab tak plan band hai" },
+  "obl.title_hold": { en: "While your account is on hold", ru: "Jab tak account rok diya gaya hai" },
   "obl.responsibility": { en: "These are still your responsibility.", ru: "Yeh abhi bhi aap ki zimmedari hain." },
   "obl.events": { en: "Confirmed events in the next 60 days", ru: "Agle 60 din ke confirmed events" },
   "obl.next": { en: "Next event", ru: "Agla event" },

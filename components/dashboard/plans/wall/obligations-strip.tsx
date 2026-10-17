@@ -22,7 +22,7 @@ export const OBLIGATIONS_KEY = ["plan-obligations"] as const
 const NA = <span className="wwp-na">-</span>
 const rs = (n: number) => <><span className="rs">Rs</span>{n.toLocaleString("en-PK")}</>
 
-export function ObligationsStrip() {
+export function ObligationsStrip({ onHold = false }: { onHold?: boolean }) {
   const one = useOne()
   const q = useQuery({
     queryKey: OBLIGATIONS_KEY,
@@ -43,8 +43,8 @@ export function ObligationsStrip() {
 
   return (
     <section className="wwp-card wwp-obl" aria-labelledby="wwp-obl-h" data-testid="obligations-strip">
-      <h2 id="wwp-obl-h">{one.t("obl.title")}</h2>
-      {one.both && <div className="ru-h">{one.other("obl.title")}</div>}
+      <h2 id="wwp-obl-h">{one.t(onHold ? "obl.title_hold" : "obl.title")}</h2>
+      {one.both && <div className="ru-h">{one.other(onHold ? "obl.title_hold" : "obl.title")}</div>}
 
       {q.isLoading ? (
         <div className="resp" role="status">...</div>
@@ -56,17 +56,17 @@ export function ObligationsStrip() {
       ) : o ? (
         <>
           <p className="resp">{one.t("obl.responsibility")}{one.both ? <span style={{ color: "var(--ink-3)" }}> {one.other("obl.responsibility")}</span> : null}</p>
-          <div className="wwp-tiles">
-            <Tile label="obl.events" value={o.confirmedEventsNext60 === null ? NA : <>{o.confirmedEventsNext60}</>} />
-            <Tile
+          <dl className="wwp-rows">
+            <Row label="obl.events" value={o.confirmedEventsNext60 === null ? NA : <>{o.confirmedEventsNext60}</>} />
+            <Row
               label="obl.next"
               small
               value={o.nextEvent ? <>{fmtPkDate(o.nextEvent.date) || NA}</> : o.confirmedEventsNext60 === 0 ? <span className="wwp-na">{one.t("obl.next_none")}</span> : NA}
               sub={o.nextEvent ? [o.nextEvent.hall, o.nextEvent.slotLabel].filter(Boolean).join(" - ") : undefined}
             />
-            <Tile label="obl.collect" value={o.totalToCollect === null ? NA : rs(o.totalToCollect)} />
-            <Tile label="obl.cheques" value={o.chequesDue14d === null ? NA : <>{o.chequesDue14d}</>} />
-          </div>
+            <Row label="obl.collect" value={o.totalToCollect === null ? NA : rs(o.totalToCollect)} />
+            <Row label="obl.cheques" value={o.chequesDue14d === null ? NA : <>{o.chequesDue14d}</>} />
+          </dl>
         </>
       ) : null}
 
@@ -84,13 +84,12 @@ export function ObligationsStrip() {
   )
 }
 
-function Tile({ label, value, sub, small }: { label: "obl.events" | "obl.next" | "obl.collect" | "obl.cheques"; value: React.ReactNode; sub?: string; small?: boolean }) {
+function Row({ label, value, sub, small }: { label: "obl.events" | "obl.next" | "obl.collect" | "obl.cheques"; value: React.ReactNode; sub?: string; small?: boolean }) {
   const one = useOne()
   return (
-    <div className="wwp-tile">
-      <div className="l">{one.t(label)}{one.both ? <span>{one.other(label)}</span> : null}</div>
-      <div className={"v" + (small ? " sm" : "")}>{value}</div>
-      {sub ? <div className="s">{sub}</div> : null}
+    <div className="wwp-row">
+      <dt>{one.t(label)}{one.both ? <span>{one.other(label)}</span> : null}</dt>
+      <dd className={small ? "sm" : undefined}>{value}{sub ? <small>{sub}</small> : null}</dd>
     </div>
   )
 }
