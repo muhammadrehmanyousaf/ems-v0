@@ -1,0 +1,36 @@
+/**
+ * The vendor sends a manual payment proof through the REAL billing drawer.  node manual.cjs <email> <method> <reference> <tag> [expectAmount]
+ * (uploads public/og-default.jpg as the "receipt screenshot")
+ */
+const L = require("./lib.cjs")
+const path = require("path")
+;(async () => {
+  const [email, method, reference, tag, w = "1536", h = "864"] = process.argv.slice(2)
+  const b = await L.launch()
+  const ctx = await L.uiLogin(b, email, { width: +w, height: +h })
+  const page = await ctx.newPage()
+  const errors = []
+  page.on("pageerror", (e) => errors.push(String(e).slice(0, 160)))
+  const posts = []
+  page.on("response", async (r) => { if (/subscriptions\/manual-payment/.test(r.url())) posts.push(`${r.status()} ${r.request().method()} ${(await r.text().catch(() => "")).slice(0, 260)}`) })
+  await page.goto(L.BASE + "/dashboard/billing?pay=manual", { waitUntil: "domcontentloaded", timeout: 180000 })
+  await page.waitForSelector("#mp-ref", { timeout: 120000 })
+  await page.waitForTimeout(1000)
+  await L.shot(page, `${tag}-manual-drawer-open`)
+  const tierOpts = await page.evaluate(() => Array.from(document.querySelectorAll("#mp-tier option")).map((o) => o.textContent))
+  console.log("tier options:", JSON.stringify(tierOpts), "default amount:", await page.inputValue("#mp-amt"))
+  await page.locator(`input[name=mp-method][value=${method}]`).check()
+  await page.fill("#mp-ref", reference)
+  await page.setInputFiles("#mp-proof", path.join(__dirname, "../../public/og-default.jpg"))
+  await L.shot(page, `${tag}-manual-drawer-filled`)
+  await page.locator("[data-mp-submit]").click()
+  await page.waitForTimeout(4500)
+  console.log("responses:", posts.join("\n  "))
+  console.log("drawer error text:", await page.locator("#mp-err").innerText().catch(() => "(drawer closed)"))
+  await page.reload({ waitUntil: "domcontentloaded" })
+  await page.waitForTimeout(5000)
+  await L.shot(page, `${tag}-manual-after-submit`)
+  console.log("errors:", errors.length ? errors.join(" | ") : "NONE")
+  await b.close()
+  process.exit(0)
+})().catch((e) => { console.error("FAILED", e); process.exit(1) })

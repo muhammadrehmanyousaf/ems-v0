@@ -67,6 +67,32 @@ export function announceVenueUnavailable(v: VenueUnavailable): void {
   listeners.forEach((l) => { try { l(v) } catch { /* a listener must never break the page */ } })
 }
 
+/* ───────────── the "venue is offline" notice on an ACCEPTED request (PL-B section 8) ───────────── */
+
+export interface VenueOfflineNotice { text: string | null; textUr: string | null }
+
+/**
+ * A customer's message, payment report, proof, cancellation or refund request on a booking at a locked venue is STORED and
+ * answered 2xx with `data.venueNotice: { code: "VENUE_OFFLINE", text, textUr }`: the venue is not told live. The customer must
+ * not be left believing the venue saw it, so the screen says so. null = the venue is open (no key) or this is not a notice.
+ */
+export function readVenueNotice(data: unknown): VenueOfflineNotice | null {
+  if (!isRec(data)) return null
+  const n = data.venueNotice
+  if (!isRec(n) || str(n.code) !== "VENUE_OFFLINE") return null
+  return { text: str(n.text), textUr: str(n.textUr) }
+}
+
+type OfflineListener = (n: VenueOfflineNotice) => void
+const offlineListeners = new Set<OfflineListener>()
+export function onVenueOffline(l: OfflineListener): () => void {
+  offlineListeners.add(l)
+  return () => { offlineListeners.delete(l) }
+}
+export function announceVenueOffline(n: VenueOfflineNotice): void {
+  offlineListeners.forEach((l) => { try { l(n) } catch { /* a listener must never break a request */ } })
+}
+
 export function claimVenueUnavailable(error: unknown): void {
   if (error && typeof error === "object") (error as { __venueUnavailableClaimed?: boolean }).__venueUnavailableClaimed = true
 }

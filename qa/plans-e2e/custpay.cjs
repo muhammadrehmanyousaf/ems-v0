@@ -1,0 +1,27 @@
+/** The customer pays the next instalment of an EXISTING booking at a locked venue. node custpay.cjs <tag> <bookingId> */
+const L = require("./lib.cjs")
+;(async () => {
+  const [tag, id] = process.argv.slice(2)
+  const b = await L.launch()
+  const ctx = await L.uiLogin(b, L.K.CREDS.customer.email, { width: 1536, height: 864 }, L.K.CREDS.customer.password)
+  const page = await ctx.newPage()
+  const calls = []
+  page.on("response", async (r) => { const u = r.url(); if (u.includes(":5134/api/v1/") && (r.request().method() !== "GET" || r.status() >= 400)) calls.push(`${r.status()} ${r.request().method()} ${u.replace(/^.*\/api\/v1/, "").split("?")[0]} ${(await r.text().catch(() => "")).slice(0, 160)}`) })
+  await page.goto(`${L.BASE}/user/bookings/${id}`, { waitUntil: "domcontentloaded", timeout: 180000 })
+  await page.waitForTimeout(6000)
+  await page.getByRole("button", { name: /Pay remaining Rs/i }).first().click()
+  await page.waitForURL(/\/pay/, { timeout: 120000 }).catch(() => console.log("no navigation to /pay"))
+  await page.waitForTimeout(9000)
+  console.log("url:", page.url())
+  await L.shot(page, `${tag}-cust-pay-open`)
+  const txt = await page.evaluate(() => (document.querySelector("[role=dialog]")?.innerText || document.body.innerText).replace(/\s+/g, " ").slice(0, 900))
+  console.log("after click:", txt)
+  calls.length = 0
+  await page.getByRole("button", { name: /I.ve sent the payment/i }).click()
+  await page.waitForTimeout(6000)
+  await L.shot(page, `${tag}-cust-pay-sent`)
+  console.log("after sending:", (await page.evaluate(() => document.body.innerText)).replace(/\s+/g, " ").slice(200, 800))
+  console.log("non-GET calls:", calls.join("\n  ") || "none")
+  await b.close()
+  process.exit(0)
+})().catch((e) => { console.error("FAILED", e); process.exit(1) })
