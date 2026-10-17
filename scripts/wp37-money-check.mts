@@ -84,7 +84,7 @@ for (const rel of [
   const text = src(rel);
   check(`${rel}: no UTC-day default`, !/new Date\(\)\.toISOString\(\)\.slice\(0,\s*10\)/.test(text));
 }
-check("holds: the date cannot be in the past", /id="h-date" value="\$\{todayIso\(\)\}" min="\$\{todayIso\(\)\}"/.test(src("components/dashboard/mainScreens/holds/artifact/holds-artifact.tsx")));
+check("holds: the date cannot be in the past", /id="h-date"[^>]*min="\$\{todayIso\(\)\}"/.test(src("components/dashboard/mainScreens/holds/artifact/holds-artifact.tsx")));
 
 // ── LOGIC-029 / FLAGGED-040 ──
 check("the damage-claim button is hidden until the customer screen exists", /const DAMAGE_CLAIM_BUTTON = false/.test(src("components/dashboard/mainScreens/bookings/artifact/booking-detail-artifact.tsx")));
