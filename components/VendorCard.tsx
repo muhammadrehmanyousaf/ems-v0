@@ -381,7 +381,7 @@ export default function VendorCard({
                         className={`w-4 h-4 transition-all duration-200 ${
                           isFavorite
                             ? "fill-bridal-coral text-bridal-coral"
-                            : "text-bridal-text-soft hover:text-bridal-coral"
+                            : "text-bridal-text-soft hover:text-bridal-coral-dark"
                         }`}
                       />
                     )}
