@@ -14,7 +14,7 @@ const SEV: Record<string, { dot: string; label: string }> = {
   INFO: { dot: "bg-bridal-gold/50", label: "text-bridal-text-soft" },
   NOTICE: { dot: "bg-bridal-gold-dark", label: "text-bridal-charcoal" },
   WARNING: { dot: "bg-amber-500", label: "text-amber-700" },
-  CRITICAL: { dot: "bg-bridal-coral", label: "text-bridal-coral" },
+  CRITICAL: { dot: "bg-bridal-coral", label: "text-bridal-coral-dark" },
 };
 
 function dayKey(iso: string) {
@@ -35,7 +35,7 @@ function EventRow({ e, showActor }: { e: ActivityEvent; showActor?: boolean }) {
       <div className="flex items-baseline gap-2 flex-wrap">
         <span className={`text-[14px] font-medium ${sev.label}`}>{e.humanized}</span>
         {e.outcome === "DENIED" && (
-          <span className="text-[10px] font-bridal uppercase tracking-wide text-bridal-coral border border-bridal-coral/40 rounded px-1">denied</span>
+          <span className="text-[10px] font-bridal uppercase tracking-wide text-bridal-coral-dark border border-bridal-coral/40 rounded px-1">denied</span>
         )}
         {e.money && !e.money.redacted && e.money.amount && (
           <span className="text-[12px] font-medium text-bridal-gold-dark tabular-nums">

@@ -196,7 +196,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
               }`}
             />
             {errors.name && (
-              <p className="text-bridal-coral text-[12px] mt-1">{errors.name}</p>
+              <p className="text-bridal-coral-dark text-[12px] mt-1">{errors.name}</p>
             )}
           </div>
 
@@ -224,7 +224,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
               }`}
             />
             {errors.description && (
-              <p className="text-bridal-coral text-[12px] mt-1">
+              <p className="text-bridal-coral-dark text-[12px] mt-1">
                 {errors.description}
               </p>
             )}
@@ -249,7 +249,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
               selectedIndexes={selectedTypeIndexes}
             />
             {errors.subBusinessType && (
-              <p className="text-bridal-coral text-[12px] mt-1">
+              <p className="text-bridal-coral-dark text-[12px] mt-1">
                 {errors.subBusinessType}
               </p>
             )}
@@ -274,7 +274,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
               selectedOption={selectedExpertise}
             />
             {errors.expertise && (
-              <p className="text-bridal-coral text-[12px] mt-1">
+              <p className="text-bridal-coral-dark text-[12px] mt-1">
                 {errors.expertise}
               </p>
             )}
@@ -304,7 +304,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
               selectedOption={selectedAmenities}
             />
             {errors.amenities && (
-              <p className="text-bridal-coral text-[12px] mt-1">
+              <p className="text-bridal-coral-dark text-[12px] mt-1">
                 {errors.amenities}
               </p>
             )}
@@ -324,7 +324,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
               selectedIndexes={selectedStaffIndexes}
             />
             {errors.staff && (
-              <p className="text-bridal-coral text-[12px] mt-1">{errors.staff}</p>
+              <p className="text-bridal-coral-dark text-[12px] mt-1">{errors.staff}</p>
             )}
           </div>
         </div>
@@ -420,7 +420,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
               />
             </div>
             {errors.downPayment && (
-              <p className="text-bridal-coral text-[12px] mt-1">
+              <p className="text-bridal-coral-dark text-[12px] mt-1">
                 {errors.downPayment}
               </p>
             )}
@@ -449,12 +449,12 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
               </SelectContent>
             </Select>
             {errors.cancelationPolicy && (
-              <p className="text-bridal-coral text-[12px] mt-1">
+              <p className="text-bridal-coral-dark text-[12px] mt-1">
                 {errors.cancelationPolicy}
               </p>
             )}
           </div>
-          <PartialRefundFields policy={cancellation} errors={errors} setErrors={setErrors} labelClassName="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label" triggerClassName="mt-1.5 h-11 border-bridal-beige" inputClassName="h-11 border-bridal-beige" errorClassName="text-bridal-coral text-[12px]" />
+          <PartialRefundFields policy={cancellation} errors={errors} setErrors={setErrors} labelClassName="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label" triggerClassName="mt-1.5 h-11 border-bridal-beige" inputClassName="h-11 border-bridal-beige" errorClassName="text-bridal-coral-dark text-[12px]" />
         </div>
       </SectionCard>
     </div>

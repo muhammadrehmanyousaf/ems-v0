@@ -52,10 +52,10 @@ const STATUS_LABEL: Record<UmbrellaStatus, string> = {
 };
 
 const STATUS_TONE: Record<UmbrellaStatus, string> = {
-  planning: "border-bridal-gold/45 bg-bridal-gold/12 text-bridal-gold-dark",
-  active: "border-bridal-sage/45 bg-bridal-sage/15 text-[#3F6B43]",
-  completed: "border-bridal-rose/45 bg-bridal-blush text-bridal-mauve",
-  cancelled: "border-bridal-coral/35 bg-bridal-coral/12 text-bridal-coral",
+  planning: "border-status-warning-line bg-status-warning-soft text-status-warning",
+  active: "border-status-success-line bg-status-success-soft text-status-success",
+  completed: "border-status-info-line bg-status-info-soft text-status-info",
+  cancelled: "border-status-danger-line bg-status-danger-soft text-status-danger",
 };
 
 function fmtDate(s: string | null | undefined): string {

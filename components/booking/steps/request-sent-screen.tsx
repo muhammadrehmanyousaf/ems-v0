@@ -191,7 +191,7 @@ export default function RequestSentScreen({
               >
                 <span className="font-medium">{reference}</span>
                 {copied ? (
-                  <span className="inline-flex items-center gap-1 text-[12px] text-[#3F6B43]" aria-live="polite">
+                  <span className="inline-flex items-center gap-1 text-[12px] text-status-success" aria-live="polite">
                     <Check className="h-3 w-3 animate-scale-in" strokeWidth={3} aria-hidden />
                     Copied
                   </span>

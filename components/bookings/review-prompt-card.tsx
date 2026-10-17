@@ -178,7 +178,7 @@ function ReviewRow({
     <div className="rounded-lg border border-neutral-200 p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="font-medium text-sm text-neutral-900">{vendor.businessName}</p>
+          <p className="font-medium text-sm text-bridal-charcoal">{vendor.businessName}</p>
           <p className="text-xs text-neutral-500 mt-0.5">
             Tap a star — your honest rating helps other couples shortlist faster.
           </p>
@@ -259,7 +259,7 @@ export function ReviewPromptCard({
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-bridal-gold" />
-          <h3 className="font-medium text-neutral-900">Leave a review</h3>
+          <h3 className="font-medium text-bridal-charcoal">Leave a review</h3>
           <Badge variant="secondary" className="text-[10px]">
             {pending.length - completedCount} pending
           </Badge>

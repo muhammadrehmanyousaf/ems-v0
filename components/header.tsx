@@ -723,7 +723,7 @@ export function Header() {
                 >
                   <MessageCircle className="w-[18px] h-[18px]" strokeWidth={1.6} />
                   {totalUnread > 0 && (
-                    <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-bridal-coral text-bridal-ivory text-[10px] font-bridal font-bold leading-none">
+                    <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-bridal-coral-dark text-white text-[10px] font-bridal font-bold leading-none">
                       {totalUnread > 99 ? "99+" : totalUnread}
                     </span>
                   )}

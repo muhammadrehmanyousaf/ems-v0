@@ -124,7 +124,7 @@ export default function MenuSelectionStep({
           className="mb-3 flex min-h-[44px] items-center gap-2 rounded-[4px] border border-bridal-beige bg-bridal-sand/50 px-4 py-2 motion-safe:animate-stagger-fade-up"
           style={{ animationDelay: "0ms" }}
         >
-          <Check className="h-3.5 w-3.5 shrink-0 text-[#3F6B43]" strokeWidth={2.5} aria-hidden="true" />
+          <Check className="h-3.5 w-3.5 shrink-0 text-status-success" strokeWidth={2.5} aria-hidden="true" />
           <p className="font-bridal text-[13px] leading-[18px] text-bridal-text">
             Food is included in
             <strong className="font-medium not-italic text-bridal-charcoal"> {packageName || "your package"}</strong>.
@@ -209,7 +209,7 @@ export default function MenuSelectionStep({
                       here would be quoting a number that never appears on
                       their bill. "Included" is both true and reassuring. */}
                   {includedInPackage ? (
-                    <span className="font-bridal text-[11px] uppercase leading-[14px] tracking-[0.18em] text-[#3F6B43]">
+                    <span className="font-bridal text-[11px] uppercase leading-[14px] tracking-[0.18em] text-status-success">
                       Included
                     </span>
                   ) : (
@@ -271,7 +271,7 @@ export default function MenuSelectionStep({
                                       gets or pays, so they belong next to the
                                       dish and not in a footnote. */}
                                   {dish.isLive && (
-                                    <span className="ml-1.5 font-bridal text-[10px] uppercase tracking-[0.16em] text-[#3F6B43]">
+                                    <span className="ml-1.5 font-bridal text-[10px] uppercase tracking-[0.16em] text-status-success">
                                       live
                                     </span>
                                   )}

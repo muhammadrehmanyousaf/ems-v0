@@ -43,7 +43,7 @@ export default function AddReview({ vendorId, onAddReview }: AddReviewProps) {
 
   return (
     <div className="bg-neutral-50 p-5 sm:p-6 rounded-xl border border-neutral-100">
-      <h3 className="text-lg font-semibold mb-4 text-neutral-900">Write a Review</h3>
+      <h3 className="text-lg font-semibold mb-4 text-bridal-charcoal">Write a Review</h3>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-neutral-700 mb-2">Your Rating</label>

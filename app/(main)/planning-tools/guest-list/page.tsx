@@ -211,7 +211,7 @@ export default function GuestListPage() {
             <Users className="w-6 h-6 sm:w-8 sm:h-8 text-status-info" />
           </div>
           <div className="flex-1">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900 mb-2">Guest List Manager</h1>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-bridal-charcoal mb-2">Guest List Manager</h1>
             <p className="text-sm sm:text-base text-neutral-600">Organize your guest list and track RSVPs in one place</p>
           </div>
           
@@ -286,7 +286,7 @@ export default function GuestListPage() {
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div>
-            <h2 className="text-lg sm:text-xl font-bold text-neutral-900 mb-1">RSVP Progress</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-bridal-charcoal mb-1">RSVP Progress</h2>
             <p className="text-sm text-neutral-600">
               {Math.round(rsvpProgress)}% of guests have responded
             </p>
@@ -393,7 +393,7 @@ export default function GuestListPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm sm:text-base font-medium text-neutral-900 mb-1">
+                      <h3 className="text-sm sm:text-base font-medium text-bridal-charcoal mb-1">
                         {guest.name}
                         {guest.plusOne && guest.plusOneName && (
                           <span className="text-xs text-neutral-500 ml-2">
@@ -493,7 +493,7 @@ export default function GuestListPage() {
             <div className="text-neutral-400 mb-4">
               <Users className="w-12 h-12 mx-auto" />
             </div>
-            <h3 className="text-lg font-medium text-neutral-900 mb-2">No guests found</h3>
+            <h3 className="text-lg font-medium text-bridal-charcoal mb-2">No guests found</h3>
             <p className="text-neutral-600 mb-4">
               {searchTerm || selectedGroup !== 'all' || selectedRsvp !== 'all'
                 ? 'Try adjusting your search or filters'

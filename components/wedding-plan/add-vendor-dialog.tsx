@@ -199,7 +199,7 @@ export function AddVendorDialog({
                     </div>
                   </div>
                   {added ? (
-                    <Badge className="shrink-0 gap-1 text-[10px] bg-bridal-sage/20 text-[#3F6B43] hover:bg-bridal-sage/20">
+                    <Badge className="shrink-0 gap-1 text-[10px] bg-bridal-sage/20 text-status-success hover:bg-bridal-sage/20">
                       <CheckCircle2 className="h-3 w-3" />
                       Added
                     </Badge>

@@ -707,7 +707,7 @@ export default function ReviewStep({
                 {setupEntries.map(([k, v]) => (
                   <span
                     key={k}
-                    className="rounded-full border border-bridal-sage/45 bg-bridal-sage/15 px-2.5 py-1 font-bridal text-[12px] leading-[16px] tabular-nums text-[#3F6B43]"
+                    className="rounded-full border border-bridal-sage/45 bg-bridal-sage/15 px-2.5 py-1 font-bridal text-[12px] leading-[16px] tabular-nums text-status-success"
                   >
                     {String(v)} {SETUP_REVIEW_LABELS[k] ?? k}
                   </span>

@@ -254,7 +254,7 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                             </span>
                           )}
                           {units && (
-                            <span className="inline-flex items-center gap-1 bg-bridal-sage/20 text-[#3F6B43] text-xs px-2 py-0.5 rounded-full border border-bridal-sage/45">
+                            <span className="inline-flex items-center gap-1 bg-bridal-sage/20 text-status-success text-xs px-2 py-0.5 rounded-full border border-bridal-sage/45">
                               {units} available
                             </span>
                           )}
@@ -334,7 +334,7 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                         }`}
                       >
                         {isSelected && (
-                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-bridal-sage border border-[#3F6B43] flex items-center justify-center">
+                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-bridal-sage border border-status-success flex items-center justify-center">
                             <Check className="w-3 h-3 text-bridal-charcoal" strokeWidth={3} />
                           </motion.div>
                         )}
@@ -555,7 +555,7 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                   onClick={() => handleVendorPackageToggle(String(pkg.id))}
                 >
                   {isSelected && (
-                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-bridal-sage border border-[#3F6B43] flex items-center justify-center">
+                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-bridal-sage border border-status-success flex items-center justify-center">
                       <Check className="w-3 h-3 text-bridal-charcoal" strokeWidth={3} />
                     </motion.div>
                   )}
@@ -564,7 +564,7 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                       <h4 className="font-display italic text-[16px] text-bridal-charcoal">{pkg.name}</h4>
                       {vendor && <p className="font-bridal text-[11.5px] text-bridal-text-soft mt-1">by {vendor.name}</p>}
                     </div>
-                    <p className="font-display italic text-[20px] text-[#3F6B43] shrink-0">Rs. {Number(pkg.price)?.toLocaleString()}</p>
+                    <p className="font-display italic text-[20px] text-status-success shrink-0">Rs. {Number(pkg.price)?.toLocaleString()}</p>
                   </div>
                   {(() => {
                     const flat = getFlatFeatures(pkg.features)

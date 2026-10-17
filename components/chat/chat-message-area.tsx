@@ -165,7 +165,7 @@ function MessageBubble({ message, isOwn, showAvatar, showName, isLastInGroup }: 
                     : "rounded-2xl"
                 )
               : cn(
-                  "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100",
+                  "bg-gray-100 dark:bg-gray-800 text-bridal-charcoal dark:text-gray-100",
                   showAvatar || isLastInGroup
                     ? "rounded-2xl rounded-bl-md"
                     : "rounded-2xl"

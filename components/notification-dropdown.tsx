@@ -116,7 +116,7 @@ function NotificationItem({
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <p className={`text-[13px] leading-snug line-clamp-2 ${
-          !notification.isRead ? "font-semibold text-neutral-900 dark:text-neutral-100" : "text-neutral-600 dark:text-neutral-400"
+          !notification.isRead ? "font-semibold text-bridal-charcoal dark:text-neutral-100" : "text-neutral-600 dark:text-neutral-400"
           }`}>
             {notification.title}
           </p>

@@ -138,7 +138,7 @@ function ChecklistTool() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-xl font-bold text-neutral-900">Wedding Checklist</h3>
+          <h3 className="text-xl font-bold text-bridal-charcoal">Wedding Checklist</h3>
           <p className="text-sm text-neutral-600">
             {completedCount} of {items.length} tasks completed
           </p>
@@ -191,7 +191,7 @@ function ChecklistTool() {
               )}
             </button>
             <div className="flex-1">
-              <p className={`font-medium ${item.completed ? 'line-through text-neutral-500' : 'text-neutral-900'}`}>
+              <p className={`font-medium ${item.completed ? 'line-through text-neutral-500' : 'text-bridal-charcoal'}`}>
                 {item.title}
               </p>
               <Badge variant="secondary" className="mt-1 bg-bridal-gold/15 text-bridal-gold-dark border-0">
@@ -501,7 +501,7 @@ function GuestListManager() {
           <div key={guest.id} className="p-4 border border-neutral-200 rounded-xl space-y-3 bg-white hover:shadow-md transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-semibold text-neutral-900">{guest.name}</p>
+                <p className="font-semibold text-bridal-charcoal">{guest.name}</p>
                 <p className="text-sm text-neutral-600">{guest.email}</p>
               </div>
               <div className="flex items-center gap-3">
@@ -642,7 +642,7 @@ function TimelineCreator() {
               <div className="text-xs text-neutral-500">{event.duration}</div>
             </div>
             <div className="flex-1">
-              <h5 className="font-semibold text-neutral-900">{event.event}</h5>
+              <h5 className="font-semibold text-bridal-charcoal">{event.event}</h5>
               <p className="text-sm text-neutral-600">Responsible: {event.responsible}</p>
               {event.notes && (
                 <p className="text-sm text-neutral-500 mt-1">{event.notes}</p>

@@ -221,7 +221,7 @@ export default function BankTransferScreen({
 
   const copyIcon = (id: string) =>
     copied === id
-      ? <Check className="h-4 w-4 text-[#3F6B43] animate-scale-in" strokeWidth={2.5} aria-hidden />
+      ? <Check className="h-4 w-4 text-status-success animate-scale-in" strokeWidth={2.5} aria-hidden />
       : <Copy className="h-4 w-4" aria-hidden />
 
   let block = 0
@@ -554,9 +554,9 @@ export default function BankTransferScreen({
 
       {reports.map((r) => (
         <div key={r.key} className={`mt-3 flex w-full ${cap} items-start gap-2 rounded-[4px] border border-bridal-sage/45 bg-bridal-sage/15 px-4 py-3`} role="status" data-claim-report={r.key}>
-          <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#3F6B43]" strokeWidth={2.5} aria-hidden />
+          <Check className="mt-0.5 h-4 w-4 shrink-0 text-status-success" strokeWidth={2.5} aria-hidden />
           <div className="min-w-0">
-            <p className="font-bridal text-[13px] leading-[18px] text-[#3F6B43]">
+            <p className="font-bridal text-[13px] leading-[18px] text-status-success">
               {r.existing ? (
                 <>
                   You&apos;ve already reported this payment{r.name ? <> to {r.name}</> : null}

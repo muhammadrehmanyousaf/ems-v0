@@ -59,9 +59,9 @@ export function CheckoutOutcomeView({
           <div
             className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
               allBooked
-                ? "bg-bridal-sage/20 text-[#3F6B43]"
+                ? "bg-bridal-sage/20 text-status-success"
                 : nothingBooked
-                  ? "bg-bridal-coral/15 text-bridal-coral"
+                  ? "bg-bridal-coral/15 text-bridal-coral-dark"
                   : "bg-bridal-gold/15 text-bridal-gold-dark"
             }`}
           >
@@ -113,7 +113,7 @@ export function CheckoutOutcomeView({
                 className="flex items-center justify-between gap-3 rounded-md border border-bridal-sage/40 bg-bridal-sage/10 px-3 py-2"
               >
                 <span className="inline-flex items-center gap-2 text-sm text-bridal-charcoal min-w-0">
-                  <CheckCircle2 className="h-4 w-4 text-[#3F6B43] shrink-0" />
+                  <CheckCircle2 className="h-4 w-4 text-status-success shrink-0" />
                   <span className="truncate">{labelForItem(b.itemId)}</span>
                 </span>
                 {b.bookingId ? (
@@ -169,11 +169,11 @@ export function CheckoutOutcomeView({
                 className="rounded-md border border-bridal-coral/40 bg-bridal-coral/5 px-3 py-2"
               >
                 <span className="inline-flex items-center gap-2 text-sm text-bridal-charcoal">
-                  <XCircle className="h-4 w-4 text-bridal-coral shrink-0" />
+                  <XCircle className="h-4 w-4 text-bridal-coral-dark shrink-0" />
                   <span className="truncate">{labelForItem(f.itemId)}</span>
                 </span>
                 {f.error && (
-                  <p className="text-[11px] text-bridal-coral mt-1 ml-6 italic">
+                  <p className="text-[11px] text-bridal-coral-dark mt-1 ml-6 italic">
                     {f.error}
                   </p>
                 )}

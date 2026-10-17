@@ -168,7 +168,7 @@ const Packages = ({ setErrors, errors }: PackagesProps) => {
                             variant="ghost"
                             size="icon"
                             onClick={() => removePackage(index)}
-                            className={`text-bridal-coral hover:bg-bridal-coral/10 hover:text-bridal-coral ${formData.packages.length > 1 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                            className={`text-bridal-coral-dark hover:bg-bridal-coral/10 hover:text-bridal-coral-dark ${formData.packages.length > 1 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                             disabled={formData.packages.length <= 1}
                             aria-label={`Remove ${itemLabel.toLowerCase()}`}
                         >
@@ -188,7 +188,7 @@ const Packages = ({ setErrors, errors }: PackagesProps) => {
                                 className={`h-11 ${errors[`packages[${index}].name`] ? "border-bridal-coral" : "border-bridal-beige focus:border-bridal-gold"}`}
                             />
                             {errors[`packages[${index}].name`] && (
-                                <p className="text-bridal-coral text-[12px]">{errors[`packages[${index}].name`]}</p>
+                                <p className="text-bridal-coral-dark text-[12px]">{errors[`packages[${index}].name`]}</p>
                             )}
                         </div>
                         <div className="space-y-1.5">
@@ -210,7 +210,7 @@ const Packages = ({ setErrors, errors }: PackagesProps) => {
                                 className={`h-11 ${errors[`packages[${index}].price`] ? "border-bridal-coral" : "border-bridal-beige focus:border-bridal-gold"}`}
                             />
                             {errors[`packages[${index}].price`] && (
-                                <p className="text-bridal-coral text-[12px]">{errors[`packages[${index}].price`]}</p>
+                                <p className="text-bridal-coral-dark text-[12px]">{errors[`packages[${index}].price`]}</p>
                             )}
                         </div>
                     </section>
@@ -267,7 +267,7 @@ const Packages = ({ setErrors, errors }: PackagesProps) => {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                className="h-8 w-8 text-bridal-coral hover:bg-bridal-coral/10 hover:text-bridal-coral flex-shrink-0"
+                                                                className="h-8 w-8 text-bridal-coral-dark hover:bg-bridal-coral/10 hover:text-bridal-coral-dark flex-shrink-0"
                                                                 onClick={() => removeFeatureItem(index, category.id, itemIdx)}
                                                                 aria-label="Remove item"
                                                             >
@@ -276,7 +276,7 @@ const Packages = ({ setErrors, errors }: PackagesProps) => {
                                                         </div>
                                                     ))}
                                                     {errors[`packages[${index}].features.${category.id}`] && (
-                                                        <p className="text-bridal-coral text-[12px]">
+                                                        <p className="text-bridal-coral-dark text-[12px]">
                                                             {errors[`packages[${index}].features.${category.id}`]}
                                                         </p>
                                                     )}
@@ -300,7 +300,7 @@ const Packages = ({ setErrors, errors }: PackagesProps) => {
             ))}
 
             {errors.packages && (
-                <p className="text-bridal-coral text-[13px]">{errors.packages}</p>
+                <p className="text-bridal-coral-dark text-[13px]">{errors.packages}</p>
             )}
 
             <Button

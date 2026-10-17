@@ -435,7 +435,7 @@ export default function UserNotificationsPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
-              className="bg-bridal-coral hover:bg-bridal-coral/90 text-bridal-ivory"
+              className="bg-bridal-coral-dark hover:bg-bridal-coral-dark/95 text-white"
             >
               Delete
             </AlertDialogAction>

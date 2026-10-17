@@ -520,6 +520,19 @@ html[data-locale="ur"] body {
   .dark:not([data-theme]) { --primary-hover: 27 47% 68%; }
 }
 
+/* Body text = bridal-charcoal (#2C1810), the ink every brand screen already uses
+   (text-bridal-charcoal). The WP27 neutrals left a different near-black here
+   (24 30% 10%, #211711), so shadcn text-foreground pages and brand pages disagreed.
+   Same guard as --primary-hover: only where <html> has no data-theme, so the vendor
+   console (which stamps one and owns its tokens) never sees it. WP30. */
+@layer base {
+  :root:not([data-theme]) {
+    --foreground: 17 47% 12%;
+    --card-foreground: 17 47% 12%;
+    --popover-foreground: 17 47% 12%;
+  }
+}
+
 /* Theme engine — selectors are :root[data-theme] / .dark[data-theme] so they
    outrank the dashboard's stock :root token set in dashboard-styles.css. */
 /* ============================================================

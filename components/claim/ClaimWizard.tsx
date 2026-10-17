@@ -349,7 +349,7 @@ export function ClaimWizard({ listingId }: { listingId: string }) {
                   </BridalField>
 
                   {contactError && (
-                    <p className="text-[12px] text-bridal-coral font-bridal">
+                    <p className="text-[12px] text-bridal-coral-dark font-bridal">
                       {contactError}
                     </p>
                   )}
@@ -407,7 +407,7 @@ export function ClaimWizard({ listingId }: { listingId: string }) {
                   </BridalField>
 
                   {otpError && (
-                    <p className="text-[12px] text-bridal-coral font-bridal">
+                    <p className="text-[12px] text-bridal-coral-dark font-bridal">
                       {otpError}
                     </p>
                   )}
@@ -441,7 +441,7 @@ export function ClaimWizard({ listingId }: { listingId: string }) {
             {step === "password" && (
               <>
                 <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-bridal-sage/20 border border-bridal-sage/40 flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6 text-[#3F6B43]" />
+                  <CheckCircle2 className="w-6 h-6 text-status-success" />
                 </div>
                 <BridalCrown className="mb-3">You&apos;re Verified</BridalCrown>
                 <BridalTitle size="h2" className="text-center mb-2">
@@ -490,7 +490,7 @@ export function ClaimWizard({ listingId }: { listingId: string }) {
                   </BridalField>
 
                   {passwordError && (
-                    <p className="text-[12px] text-bridal-coral font-bridal">
+                    <p className="text-[12px] text-bridal-coral-dark font-bridal">
                       {passwordError}
                     </p>
                   )}
@@ -544,7 +544,7 @@ export function ClaimWizard({ listingId }: { listingId: string }) {
                   </BridalField>
 
                   {evidenceError && (
-                    <p className="text-[12px] text-bridal-coral font-bridal">
+                    <p className="text-[12px] text-bridal-coral-dark font-bridal">
                       {evidenceError}
                     </p>
                   )}
@@ -567,7 +567,7 @@ export function ClaimWizard({ listingId }: { listingId: string }) {
             {step === "submitted" && (
               <div className="text-center">
                 <div className="mx-auto mb-5 w-16 h-16 rounded-full bg-bridal-sage/20 border border-bridal-sage/40 flex items-center justify-center">
-                  <CheckCircle2 className="w-7 h-7 text-[#3F6B43]" />
+                  <CheckCircle2 className="w-7 h-7 text-status-success" />
                 </div>
                 <BridalCrown className="mb-3">Submitted</BridalCrown>
                 <BridalTitle size="h2" className="mb-3">

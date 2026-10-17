@@ -297,7 +297,7 @@ export default function Page({ params }: PageProps) {
                       className="accent-bridal-gold-dark"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-neutral-900">
+                      <div className="font-medium text-bridal-charcoal">
                         {b.name}
                       </div>
                       <div className="text-[11px] text-neutral-500">

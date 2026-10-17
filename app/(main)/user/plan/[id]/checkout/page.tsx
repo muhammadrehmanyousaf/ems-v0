@@ -468,7 +468,7 @@ function AvailabilityBadge({ result }: { result: AvailabilityResult }) {
   const status = result.status;
   if (status === "available") {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] text-[#3F6B43] mt-1">
+      <span className="inline-flex items-center gap-1 text-[11px] text-status-success mt-1">
         <CheckCircle2 className="h-3 w-3" />
         {result.message || "Available"}
       </span>
@@ -476,7 +476,7 @@ function AvailabilityBadge({ result }: { result: AvailabilityResult }) {
   }
   if (status === "unavailable") {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] text-bridal-coral mt-1">
+      <span className="inline-flex items-center gap-1 text-[11px] text-bridal-coral-dark mt-1">
         <AlertTriangle className="h-3 w-3" />
         {result.message || "May be unavailable"}
       </span>

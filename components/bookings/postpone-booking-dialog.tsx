@@ -269,7 +269,7 @@ export function PostponeBookingDialog({
                       )}
                       aria-pressed={active}
                     >
-                      <p className="text-sm font-medium text-neutral-900">
+                      <p className="text-sm font-medium text-bridal-charcoal">
                         {p.label}
                       </p>
                       <p className="text-[10px] text-neutral-500 mt-0.5">

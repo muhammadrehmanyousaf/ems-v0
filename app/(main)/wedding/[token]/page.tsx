@@ -230,7 +230,7 @@ export default function Page({ params }: PageProps) {
               <div className="text-[11px] uppercase tracking-wide text-neutral-500">
                 Total
               </div>
-              <div className="text-lg font-bold text-neutral-900 tabular-nums">
+              <div className="text-lg font-bold text-bridal-charcoal tabular-nums">
                 {fmtPKR(payments.totalScheduled)}
               </div>
             </div>
@@ -274,7 +274,7 @@ export default function Page({ params }: PageProps) {
                 >
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div>
-                      <div className="text-base font-semibold text-neutral-900">
+                      <div className="text-base font-semibold text-bridal-charcoal">
                         {fmtDate(b.bookingDate)}
                       </div>
                       <div className="text-xs text-neutral-500 mt-0.5">

@@ -35,7 +35,7 @@ export function FavoritesPreloader({ children }: FavoritesPreloaderProps) {
           <div className="container mx-auto px-4 py-8">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-neutral-100 flex items-center">
+                <h1 className="text-3xl font-bold text-bridal-charcoal dark:text-neutral-100 flex items-center">
                   <Heart className="w-8 h-8 text-bridal-gold mr-3" />
                   My Favorites
                 </h1>
@@ -57,7 +57,7 @@ export function FavoritesPreloader({ children }: FavoritesPreloaderProps) {
           <Card className="text-center py-12 dark:bg-neutral-900 dark:border-neutral-800">
             <CardContent>
               <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-bridal-gold" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-neutral-100 mb-2">Loading vendor details...</h3>
+              <h3 className="text-lg font-semibold text-bridal-charcoal dark:text-neutral-100 mb-2">Loading vendor details...</h3>
               <p className="text-gray-600 dark:text-neutral-400">
                 Found {favorites.length} favorites, loading vendor information...
               </p>

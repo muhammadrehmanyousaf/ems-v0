@@ -44,12 +44,12 @@ export function KpiCard({
   const trendTone =
     resolvedTrend === "up"
       ? goodIsUp
-        ? "text-[#3F6B43] bg-bridal-sage/15 border-bridal-sage/35"
-        : "text-bridal-coral bg-bridal-coral/12 border-bridal-coral/35"
+        ? "text-status-success bg-status-success-soft border-status-success-line"
+        : "text-status-danger bg-status-danger-soft border-status-danger-line"
       : resolvedTrend === "down"
         ? goodIsUp
-          ? "text-bridal-coral bg-bridal-coral/12 border-bridal-coral/35"
-          : "text-[#3F6B43] bg-bridal-sage/15 border-bridal-sage/35"
+          ? "text-status-danger bg-status-danger-soft border-status-danger-line"
+          : "text-status-success bg-status-success-soft border-status-success-line"
         : "text-muted-foreground bg-muted border-border"
 
   const TrendIcon =

@@ -273,7 +273,7 @@ export default function PlanBuilderPage() {
             <Button
               size="sm"
               variant="ghost"
-              className="gap-1.5 text-bridal-text-soft hover:text-bridal-coral"
+              className="gap-1.5 text-bridal-text-soft hover:text-bridal-coral-dark"
               onClick={deletePlan}
               disabled={deleting}
               aria-label="Delete plan"
@@ -388,7 +388,7 @@ export default function PlanBuilderPage() {
                 </div>
                 <div className="flex justify-between gap-2">
                   <dt className="text-bridal-text-soft">Paid so far</dt>
-                  <dd className="font-medium text-[#3F6B43] tabular-nums">
+                  <dd className="font-medium text-status-success tabular-nums">
                     {fmtPKR(umbrellaStats.totalPaid)}
                   </dd>
                 </div>

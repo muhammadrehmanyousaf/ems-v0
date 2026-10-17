@@ -111,7 +111,7 @@ export default function FloorHome() {
           <p className="text-[11px] uppercase tracking-wide text-bridal-gold-dark/70">
             {timeOfDayGreeting()}
           </p>
-          <h1 className="text-xl font-semibold text-neutral-900">
+          <h1 className="text-xl font-semibold text-bridal-charcoal">
             {user?.fullName || 'Floor'}
           </h1>
         </div>
@@ -274,7 +274,7 @@ export default function FloorHome() {
                         : 'bg-neutral-50 border-neutral-200',
                   )}
                 >
-                  <div className="text-sm font-medium text-neutral-900">
+                  <div className="text-sm font-medium text-bridal-charcoal">
                     {a.title}
                   </div>
                   {a.description && (
@@ -303,7 +303,7 @@ export default function FloorHome() {
               <div className="text-[10px] uppercase tracking-wide text-neutral-600">
                 Held PDCs
               </div>
-              <div className="text-lg font-bold tabular-nums text-neutral-900">
+              <div className="text-lg font-bold tabular-nums text-bridal-charcoal">
                 {len(data.moneyIn?.heldPdcs)}
               </div>
             </div>
@@ -311,7 +311,7 @@ export default function FloorHome() {
               <div className="text-[10px] uppercase tracking-wide text-neutral-600">
                 Unpaid suppliers
               </div>
-              <div className="text-lg font-bold tabular-nums text-neutral-900">
+              <div className="text-lg font-bold tabular-nums text-bridal-charcoal">
                 {len(data.moneyOut?.unpaidSupplierInvoices)}
               </div>
             </div>
@@ -319,7 +319,7 @@ export default function FloorHome() {
               <div className="text-[10px] uppercase tracking-wide text-neutral-600">
                 Broker payouts
               </div>
-              <div className="text-lg font-bold tabular-nums text-neutral-900">
+              <div className="text-lg font-bold tabular-nums text-bridal-charcoal">
                 {len(data.moneyOut?.unpaidBrokerCommissions)}
               </div>
             </div>
@@ -398,7 +398,7 @@ function ActionTile({
         {icon}
       </div>
       <div className="mt-auto">
-        <p className="text-sm font-semibold text-neutral-900 leading-tight">
+        <p className="text-sm font-semibold text-bridal-charcoal leading-tight">
           {label}
         </p>
         <p className="text-[11px] text-neutral-500 leading-snug mt-0.5">

@@ -90,13 +90,13 @@ const STATUS_CONFIG: Record<
   confirmed: {
     label: "Confirmed",
     icon: CheckCircle2,
-    tone: "border-bridal-sage/45 bg-bridal-sage/15 text-[#3F6B43]",
+    tone: "border-status-success-line bg-status-success-soft text-status-success",
     accent: "border-l-bridal-sage",
   },
   "awaiting payment": {
     label: "Awaiting payment",
     icon: CreditCard,
-    tone: "border-bridal-gold/45 bg-bridal-gold/12 text-bridal-gold-dark",
+    tone: "border-status-warning-line bg-status-warning-soft text-status-warning",
     accent: "border-l-bridal-gold",
   },
   pending: {
@@ -108,13 +108,13 @@ const STATUS_CONFIG: Record<
   completed: {
     label: "Completed",
     icon: CheckCircle2,
-    tone: "border-bridal-rose/45 bg-bridal-blush text-bridal-mauve",
+    tone: "border-status-info-line bg-status-info-soft text-status-info",
     accent: "border-l-bridal-mauve",
   },
   cancelled: {
     label: "Cancelled",
     icon: XCircle,
-    tone: "border-bridal-coral/35 bg-bridal-coral/12 text-bridal-coral",
+    tone: "border-status-danger-line bg-status-danger-soft text-status-danger",
     accent: "border-l-bridal-coral",
   },
 };
@@ -122,15 +122,15 @@ const STATUS_CONFIG: Record<
 const PAYMENT_CONFIG: Record<string, { label: string; tone: string }> = {
   pending: {
     label: "Unpaid",
-    tone: "border-bridal-gold/40 bg-bridal-gold/10 text-bridal-gold-dark",
+    tone: "border-status-warning-line bg-status-warning-soft text-status-warning",
   },
   paid: {
     label: "Paid",
-    tone: "border-bridal-sage/45 bg-bridal-sage/15 text-[#3F6B43]",
+    tone: "border-status-success-line bg-status-success-soft text-status-success",
   },
   partial: {
     label: "Partial",
-    tone: "border-bridal-rose/45 bg-bridal-blush text-bridal-mauve",
+    tone: "border-status-info-line bg-status-info-soft text-status-info",
   },
   // WW-PARTIALREFUND. The key is the lowercased server value, so this one
   // carries a space — statusKey() only lowercases.
@@ -153,7 +153,7 @@ const PAYMENT_CONFIG: Record<string, { label: string; tone: string }> = {
   },
   failed: {
     label: "Failed",
-    tone: "border-bridal-coral/35 bg-bridal-coral/12 text-bridal-coral",
+    tone: "border-status-danger-line bg-status-danger-soft text-status-danger",
   },
 };
 
@@ -675,7 +675,7 @@ export default function BookingsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="size-5 text-bridal-coral" />
+              <AlertTriangle className="size-5 text-bridal-coral-dark" />
               Cancel booking #{bookingToCancel?.id}
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -688,7 +688,7 @@ export default function BookingsPage() {
             <AlertDialogAction
               onClick={handleConfirmCancel}
               disabled={isCancelling}
-              className="bg-bridal-coral hover:bg-bridal-coral/90 text-bridal-ivory"
+              className="bg-bridal-coral-dark hover:bg-bridal-coral-dark/95 text-white"
             >
               {isCancelling ? "Cancelling…" : "Yes, cancel"}
             </AlertDialogAction>

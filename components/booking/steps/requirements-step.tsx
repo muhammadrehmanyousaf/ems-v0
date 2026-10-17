@@ -444,7 +444,7 @@ function Section({
               <span className="block truncate font-bridal text-[12px] leading-[16px] text-bridal-text-soft">{subtitle}</span>
             </span>
             {answered > 0 && (
-              <span className="shrink-0 rounded-full bg-bridal-sage/25 px-2.5 py-1 font-bridal text-[11px] uppercase leading-[14px] tracking-[0.18em] text-[#3F6B43] tabular-nums">
+              <span className="shrink-0 rounded-full bg-bridal-sage/25 px-2.5 py-1 font-bridal text-[11px] uppercase leading-[14px] tracking-[0.18em] text-status-success tabular-nums">
                 {answered} {answeredNoun}
               </span>
             )}

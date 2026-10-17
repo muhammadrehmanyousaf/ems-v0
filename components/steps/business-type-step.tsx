@@ -296,7 +296,7 @@ export function BusinessTypeStep({
                       "font-bold text-sm sm:text-base transition-colors duration-300 truncate",
                       businessType === type.id
                         ? type.textColor
-                        : "text-neutral-900",
+                        : "text-bridal-charcoal",
                     )}
                   >
                     {type.title}

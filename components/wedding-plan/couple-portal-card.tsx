@@ -173,7 +173,7 @@ export function CouplePortalCard({ umbrellaId }: CouplePortalCardProps) {
               onClick={copy}
             >
               {copied ? (
-                <Check className="h-3.5 w-3.5 text-[#3F6B43]" />
+                <Check className="h-3.5 w-3.5 text-status-success" />
               ) : (
                 <Copy className="h-3.5 w-3.5" />
               )}
@@ -216,7 +216,7 @@ export function CouplePortalCard({ umbrellaId }: CouplePortalCardProps) {
             <Button
               size="sm"
               variant="ghost"
-              className="gap-1.5 text-bridal-text-soft hover:text-bridal-coral"
+              className="gap-1.5 text-bridal-text-soft hover:text-bridal-coral-dark"
               onClick={revoke}
               disabled={revoking}
             >

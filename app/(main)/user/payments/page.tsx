@@ -336,8 +336,8 @@ function PaymentsPageContent() {
                 ? "border-l-bridal-mauve"
                 : "border-l-bridal-gold";
               const badgeTone = isRemaining
-                ? "border-bridal-rose/45 bg-bridal-blush text-bridal-mauve"
-                : "border-bridal-gold/45 bg-bridal-gold/12 text-bridal-gold-dark";
+                ? "border-status-info-line bg-status-info-soft text-status-info"
+                : "border-status-warning-line bg-status-warning-soft text-status-warning";
 
               return (
                 <Card
@@ -478,7 +478,7 @@ function PaymentsPageContent() {
                 key={booking.bookingId || booking.id}
                 className="p-4 flex items-center gap-4 hover:shadow-sm transition-shadow"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bridal-sage/15 text-[#3F6B43]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bridal-sage/15 text-status-success">
                   <CheckCircle2 className="size-4" />
                 </div>
 
@@ -487,7 +487,7 @@ function PaymentsPageContent() {
                     <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-[0.18em] tabular-nums">
                       Booking #{booking.bookingId || booking.id}
                     </span>
-                    <span className="text-[10.5px] uppercase tracking-[0.18em] font-medium px-2 py-0.5 rounded-full border border-bridal-sage/45 bg-bridal-sage/15 text-[#3F6B43]">
+                    <span className="text-[10.5px] uppercase tracking-[0.18em] font-medium px-2 py-0.5 rounded-full border border-status-success-line bg-status-success-soft text-status-success">
                       Paid
                     </span>
                   </div>
@@ -511,7 +511,7 @@ function PaymentsPageContent() {
                 </div>
 
                 <div className="text-right flex-shrink-0">
-                  <p className="font-display italic text-[18px] text-[#3F6B43] tabular-nums leading-none">
+                  <p className="font-display italic text-[18px] text-status-success tabular-nums leading-none">
                     {fmt(figuresOf(booking).total)}
                   </p>
                   <p className="text-[10.5px] text-muted-foreground mt-1">

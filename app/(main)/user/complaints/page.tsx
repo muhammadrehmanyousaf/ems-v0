@@ -54,7 +54,7 @@ export default function UserComplaintsPage() {
     <PageContainer>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">My complaints</h1>
+          <h1 className="text-2xl font-bold text-bridal-charcoal">My complaints</h1>
           <p className="text-sm text-neutral-600 mt-1">
             Complaints you&apos;ve raised with Wedding Wala, and where each one stands.
           </p>
@@ -85,7 +85,7 @@ export default function UserComplaintsPage() {
         <Card>
           <CardContent className="p-12 text-center">
             <MessageSquareWarning className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-            <p className="font-medium text-neutral-900">You haven&apos;t raised any complaints</p>
+            <p className="font-medium text-bridal-charcoal">You haven&apos;t raised any complaints</p>
             <p className="text-sm text-neutral-500 mt-1 max-w-md mx-auto">
               If something goes wrong — a vendor, a payment, or us — tell us and we&apos;ll
               give you a reference number and a date by which we&apos;ll have answered.
@@ -107,7 +107,7 @@ export default function UserComplaintsPage() {
                   <StatusIcon status={row.status} />
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className="font-mono text-sm font-semibold text-neutral-900">
+                      <span className="font-mono text-sm font-semibold text-bridal-charcoal">
                         {row.reference}
                       </span>
                       <Badge variant={isOpen ? "secondary" : "outline"}>
@@ -116,7 +116,7 @@ export default function UserComplaintsPage() {
                       <Badge variant="outline">{CATEGORY_LABEL[row.category]}</Badge>
                     </div>
 
-                    <p className="font-medium text-neutral-900">{row.subject}</p>
+                    <p className="font-medium text-bridal-charcoal">{row.subject}</p>
 
                     <p className="text-sm text-neutral-500 mt-1">
                       Raised {formatDate(row.createdAt)}

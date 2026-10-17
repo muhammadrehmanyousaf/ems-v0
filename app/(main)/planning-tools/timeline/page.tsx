@@ -190,7 +190,7 @@ export default function TimelinePage() {
             <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-bridal-gold-dark" />
           </div>
           <div className="flex-1">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900 mb-2">Timeline Creator</h1>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-bridal-charcoal mb-2">Timeline Creator</h1>
             <p className="text-sm sm:text-base text-neutral-600">Create a detailed timeline for your wedding day</p>
           </div>
           
@@ -271,7 +271,7 @@ export default function TimelinePage() {
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div>
-            <h2 className="text-lg sm:text-xl font-bold text-neutral-900 mb-1">Wedding Day Timeline</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-bridal-charcoal mb-1">Wedding Day Timeline</h2>
             <p className="text-sm text-neutral-600">
               {timeline.length} events scheduled for your special day
             </p>
@@ -371,7 +371,7 @@ export default function TimelinePage() {
                           {item.time}
                         </div>
                         <div>
-                          <h3 className="text-sm sm:text-base font-medium text-neutral-900">
+                          <h3 className="text-sm sm:text-base font-medium text-bridal-charcoal">
                             {item.event}
                           </h3>
                           <p className="text-xs text-neutral-500">{item.duration}</p>
@@ -427,7 +427,7 @@ export default function TimelinePage() {
             <div className="text-neutral-400 mb-4">
               <Clock className="w-12 h-12 mx-auto" />
             </div>
-            <h3 className="text-lg font-medium text-neutral-900 mb-2">No events found</h3>
+            <h3 className="text-lg font-medium text-bridal-charcoal mb-2">No events found</h3>
             <p className="text-neutral-600 mb-4">
               {searchTerm || selectedCategory !== 'all' || selectedPriority !== 'all'
                 ? 'Try adjusting your search or filters'

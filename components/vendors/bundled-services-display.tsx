@@ -240,7 +240,7 @@ export function BundledServicesDisplay({
                     {s.included && (
                       <Badge
                         variant="outline"
-                        className="text-[10px] border-bridal-sage/55 bg-bridal-sage/15 text-[#3F6B43]"
+                        className="text-[10px] border-bridal-sage/55 bg-bridal-sage/15 text-status-success"
                       >
                         <CheckCircle2 className="w-2.5 h-2.5 mr-1" />
                         Included in price

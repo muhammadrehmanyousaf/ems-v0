@@ -191,7 +191,7 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
               <Building className="w-4 h-4 text-bridal-gold-dark" />
             </div>
             <div>
-            <div className="font-semibold text-neutral-900 dark:text-neutral-100">Dashboard</div>
+            <div className="font-semibold text-bridal-charcoal dark:text-neutral-100">Dashboard</div>
               <div className="text-xs text-neutral-500">Manage platform</div>
             </div>
           </Link>
@@ -202,7 +202,7 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
               <Settings className="w-4 h-4 text-bridal-gold-dark" />
             </div>
             <div>
-            <div className="font-semibold text-neutral-900 dark:text-neutral-100">Settings</div>
+            <div className="font-semibold text-bridal-charcoal dark:text-neutral-100">Settings</div>
               <div className="text-xs text-neutral-500">Configure system</div>
             </div>
           </Link>
@@ -231,7 +231,7 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
-            <div className="font-bold text-neutral-900 dark:text-neutral-100 text-lg truncate">{displayUser.fullName}</div>
+            <div className="font-bold text-bridal-charcoal dark:text-neutral-100 text-lg truncate">{displayUser.fullName}</div>
               <div className="text-sm text-neutral-500 break-words leading-tight">{displayUser.email}</div>
             </div>
           </DropdownMenuLabel>
@@ -256,7 +256,7 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
                     <item.icon className={`w-4 h-4 ${item.color === "gold" ? "text-bridal-gold-dark" : "text-bridal-gold-dark"}`} />
                   </div>
                   <div>
-                  <div className="font-semibold text-neutral-900 dark:text-neutral-100">{item.name}</div>
+                  <div className="font-semibold text-bridal-charcoal dark:text-neutral-100">{item.name}</div>
                     <div className="text-xs text-neutral-500">{item.desc}</div>
                   </div>
                 </Link>
@@ -326,7 +326,7 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
               <Award className="w-6 h-6 text-bridal-gold" />
             </div>
             <div>
-              <div className="font-bold text-neutral-900 dark:text-neutral-100 text-lg">Join Our Platform</div>
+              <div className="font-bold text-bridal-charcoal dark:text-neutral-100 text-lg">Join Our Platform</div>
               <div className="text-sm text-neutral-500">Grow your business</div>
             </div>
           </DropdownMenuLabel>
@@ -341,7 +341,7 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
                   <Building className="w-4 h-4 text-bridal-gold-dark" />
                 </div>
                 <div>
-                  <div className="font-semibold text-neutral-900 dark:text-neutral-100">Register Business</div>
+                  <div className="font-semibold text-bridal-charcoal dark:text-neutral-100">Register Business</div>
                   <div className="text-xs text-neutral-500">Create new account</div>
                 </div>
               </Link>
@@ -356,7 +356,7 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
                   <Star className="w-4 h-4 text-bridal-gold-dark" />
                 </div>
                 <div>
-                  <div className="font-semibold text-neutral-900 dark:text-neutral-100">Vendor Guide</div>
+                  <div className="font-semibold text-bridal-charcoal dark:text-neutral-100">Vendor Guide</div>
                   <div className="text-xs text-neutral-500">Learn how to succeed</div>
                 </div>
               </Link>

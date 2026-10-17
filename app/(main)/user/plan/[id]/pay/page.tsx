@@ -235,7 +235,7 @@ export default function PlanPayPage() {
         />
         <SectionCard>
           <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-bridal-sage/20 text-[#3F6B43]">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-bridal-sage/20 text-status-success">
               {everythingPaid ? (
                 <PartyPopper className="h-5 w-5" />
               ) : (
@@ -284,7 +284,7 @@ export default function PlanPayPage() {
       {allDone ? (
         <SectionCard>
           <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-bridal-sage/20 text-[#3F6B43]">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-bridal-sage/20 text-status-success">
               <PartyPopper className="h-5 w-5" />
             </div>
             <div>
@@ -413,7 +413,7 @@ export default function PlanPayPage() {
                             {fmtPKR(b.dueNow)}
                           </p>
                           {outcome === "paid" ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-[#3F6B43]">
+                            <span className="inline-flex items-center gap-1 text-[11px] text-status-success">
                               <CheckCircle2 className="h-3 w-3" />
                               Paid
                             </span>

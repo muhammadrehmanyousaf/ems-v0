@@ -50,7 +50,7 @@ const config: Config = {
   			// where noted in scripts/brand-colour-check.mts). Prefer the helpers in
   			// components/ui/status-tones.ts over writing these classes by hand.
   			status: {
-  				success: { DEFAULT: '#3B6B3F', soft: '#EEF4EC', line: '#BBD3B6', solid: '#4F7F52' },
+  				success: { DEFAULT: '#3F6B43', soft: '#EEF4EC', line: '#BBD3B6', solid: '#4F7F52' },
   				warning: { DEFAULT: '#7E5630', soft: '#FBF1DE', line: '#E3C28E', solid: '#916539' },
   				danger: { DEFAULT: '#B6462B', soft: '#FCEEEA', line: '#EDB4A5', solid: '#B6462B' },
   				info: { DEFAULT: '#7C4D65', soft: '#F7EEF2', line: '#D9BACB', solid: '#8B5A72' },

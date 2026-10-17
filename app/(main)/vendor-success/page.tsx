@@ -35,7 +35,7 @@ export default function VendorSuccessPage() {
 
       <section className="py-12 px-4 bg-white border-t">
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-2xl font-bold text-neutral-900 mb-3">Start Your Success Story</h2>
+          <h2 className="text-2xl font-bold text-bridal-charcoal mb-3">Start Your Success Story</h2>
           <p className="text-neutral-600 mb-6">Join the fastest-growing vendor network in Pakistan.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/business-registration">
