@@ -9,5 +9,6 @@ sed -e "s#^cd /c/Projects/ems-v0-backend#cd $WT#" \
     /c/Projects/WW-PAYMENT-TEST/tools/pay-backend.sh > /tmp/ple-backend-$SLOT.sh
 export BILLING_ENFORCE=on BILLING_NOTICES=0 SUBSCRIPTION_TRIAL_DAYS=30
 export SAFEPAY_HOST=http://127.0.0.1:19834 SAFEPAY_ENV=sandbox SAFEPAY_CHECKOUT_HOST=http://127.0.0.1:19834
+export PUBLIC_REVALIDATE_URL=http://localhost:3011/api/revalidate PUBLIC_REVALIDATE_SECRET=lab-revalidate-secret-pl-e
 export MANUAL_PAYMENT_METHODS='[{"key":"bank","label":"Bank transfer","accountTitle":"WeddingWala (Pvt) Ltd","accountNumber":"PK00LAB0000000000001","bankName":"Lab Bank","note":"Send the exact amount"},{"key":"jazzcash","label":"JazzCash","accountTitle":"WeddingWala","accountNumber":"0300-0000001","note":""},{"key":"easypaisa","label":"Easypaisa","accountTitle":"WeddingWala","accountNumber":"0345-0000002","note":""}]'
 exec bash /tmp/ple-backend-$SLOT.sh $SLOT

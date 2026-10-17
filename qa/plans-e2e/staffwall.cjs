@@ -32,4 +32,5 @@ const ROUTES = ["/staff/today", "/staff/leave", "/staff/payslips", "/staff/profi
     await page.close()
   }
   await b.close()
+  process.exit(0)
 })().catch((e) => { console.error("FAILED", e); process.exit(1) })

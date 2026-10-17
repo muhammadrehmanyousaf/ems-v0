@@ -21,4 +21,5 @@ const L = require("./lib.cjs")
       await ctx.close()
     }
   } finally { await b.close() }
+  process.exit(0)
 })().catch((e) => { console.error("FAILED", e); process.exit(1) })

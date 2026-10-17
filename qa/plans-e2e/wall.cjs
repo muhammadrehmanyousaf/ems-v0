@@ -16,7 +16,7 @@ const NEVERLOCK_API = /\/(subscriptions\/(status|manual-payment|live-venues|me|p
   const ctx = await L.uiLogin(b, email, { width: +w, height: +h })
   const results = []
   const leaks = {}
-  for (const route of [...ROUTES, ...OPEN]) {
+  for (const route of process.env.ONLY ? process.env.ONLY.split(",") : [...ROUTES, ...OPEN]) {
     const page = await ctx.newPage()
     const api = []
     page.on("response", (r) => { const u = r.url(); if (u.includes(":5134/api/v1/")) api.push({ s: r.status(), m: r.request().method(), u: u.replace(/^.*\/api\/v1/, "").split("?")[0] }) })
@@ -41,4 +41,5 @@ const NEVERLOCK_API = /\/(subscriptions\/(status|manual-payment|live-venues|me|p
   fs.writeFileSync(`${L.OUT}/${tag}-wall-routes.json`, JSON.stringify({ results, leaks }, null, 1))
   console.log("LEAKS (200 responses outside the never-lock list):", JSON.stringify(leaks, null, 1))
   await b.close()
+  process.exit(0)
 })().catch((e) => { console.error("FAILED", e); process.exit(1) })

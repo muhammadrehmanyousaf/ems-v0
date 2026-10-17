@@ -103,7 +103,7 @@ export default function AdminManualPaymentsView() {
             <div>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Banknote className="h-4 w-4 text-bridal-gold-dark" />
-                Manual payments
+                Payment proofs
               </CardTitle>
               <p className="text-xs text-muted-foreground">
                 Vendors who paid a plan by bank transfer, JazzCash or Easypaisa. Check the proof against your account, then approve; the vendor is unlocked at once with every record intact.

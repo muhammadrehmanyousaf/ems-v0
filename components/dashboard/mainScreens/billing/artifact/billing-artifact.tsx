@@ -205,7 +205,9 @@ function statusCard(status: BillingStatus | null): string {
   const s = status.subscription
   // PAY-UI_VENDOR-007 — a lapsed plan said "<date> tak access rahegi" with a date in the
   // PAST. The sentence is chosen by whether that date has gone by.
-  const endsMs = status.subscriptionEndsAt ? new Date(status.subscriptionEndsAt).getTime() : NaN
+  // PL-E: once a trial or plan has lapsed the server's subscriptionEndsAt is null; the row's own end date is the day the portal closed.
+  const endIso = status.subscriptionEndsAt || (s.status === "lapsed" ? s.currentPeriodEndsAt : null)
+  const endsMs = endIso ? new Date(endIso).getTime() : NaN
   const accessEnded = Number.isFinite(endsMs) && endsMs < Date.now()
   const pill: Record<string, [string, string]> = {
     active: ["ok", "Active"], past_due: ["warn", "Payment fail — retry ho rahi hai"], pending: ["info", "Payment ka intezaar"], none: ["bad", "Koi active plan nahi"],
@@ -235,7 +237,7 @@ function statusCard(status: BillingStatus | null): string {
     : ""
   return `<div class="sp" role="status">${svg(IC.lock)}<div style="flex:1;min-width:0">
     <div class="sp-t">Subscription <span class="st ${tone}" style="margin-left:8px">${escHtml(label)}</span>${status.environment === "sandbox" ? ` <span class="st mut" style="margin-left:6px">Sandbox</span>` : ""}</div>
-    <dl class="sp-grid"><div><dt>${s.status === "trialing" ? "Trial until" : "Paid until"}</dt><dd>${escHtml(fmtDate(s.status === "trialing" ? s.trialEndsAt || s.currentPeriodEndsAt : s.currentPeriodEndsAt))}</dd></div><div><dt>${accessEnded ? "Portal closed on" : "Portal open until"}</dt><dd>${escHtml(fmtDate(status.subscriptionEndsAt))}</dd></div><div><dt>Billing</dt><dd>${s.status === "cancelled" ? "Band — koi charge nahi" : s.status === "trialing" ? "Free trial · koi charge nahi" : "Monthly · Safepay"}</dd></div></dl>
+    <dl class="sp-grid"><div><dt>${s.status === "trialing" ? "Trial until" : s.trialEndsAt && s.status === "lapsed" ? "Trial ended" : "Paid until"}</dt><dd>${escHtml(fmtDate(s.status === "trialing" || s.status === "lapsed" ? s.trialEndsAt || s.currentPeriodEndsAt : s.currentPeriodEndsAt))}</dd></div><div><dt>${accessEnded ? "Portal closed on" : "Portal open until"}</dt><dd>${escHtml(fmtDate(endIso))}</dd></div><div><dt>Billing</dt><dd>${s.status === "cancelled" ? "Band — koi charge nahi" : s.status === "trialing" ? "Free trial · koi charge nahi" : "Monthly · Safepay"}</dd></div></dl>
     ${extra}${cancelBtn}</div></div>`
 }
 
