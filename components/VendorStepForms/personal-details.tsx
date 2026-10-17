@@ -6,6 +6,8 @@ import { Input } from "../ui/input";
 import { PasswordInput } from "../ui/password-input";
 import { Flag, Camera, User, X } from "lucide-react";
 import { useFormContext } from "@/lib/context/form-context";
+import axios from "axios";
+import { BACKEND_URL } from "@/lib/backend-url";
 
 const PersonalDetails = ({
   errors,
@@ -121,6 +123,21 @@ const PersonalDetails = ({
           ...prevErrors,
           email: "Please enter a valid email address",
         }));
+      } else if (value) {
+        // WP36 / PUBLIC-031: learn on THIS step that the address is taken, not after the last one
+        axios
+          .get(`${BACKEND_URL}api/v1/auth/email-available`, { params: { email: value.trim() } })
+          .then((res) => {
+            if (res.data?.data?.available === false) {
+              setErrors((prevErrors) => ({
+                ...prevErrors,
+                email: "An account with this e-mail already exists. Sign in instead (Login page) or use another e-mail.",
+              }));
+            }
+          })
+          .catch(() => {
+            /* a failed probe never blocks the form; the final submit still answers ACCOUNT_EXISTS */
+          });
       }
     }
     if (fieldName === "phoneNumber") {

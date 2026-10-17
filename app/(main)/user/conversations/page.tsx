@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
 import { PageContainer, PageHeader, SectionCard } from '@/components/user-dashboard';
+import { loginUrl } from "@/lib/auth/go-login"
 
 export default function CustomerConversationsPage() {
   const { isAuthenticated, isLoading } = useUser();
@@ -21,7 +22,7 @@ export default function CustomerConversationsPage() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/login');
+      router.push(loginUrl());
     }
   }, [isLoading, isAuthenticated, router]);
 

@@ -48,5 +48,9 @@ async function fetchVendor(id: string) {
 export async function VendorDetailRoute({ id }: { id: string }) {
   const vendor = await fetchVendor(id)
   if (!vendor) notFound()
-  return <VendorDetailsMobile vendor={vendor} />
+  // WP36 / VENDORTYPES-012: this server route passes the raw API row, which has no `type` (the client transform that
+  // sets it never runs here), so every type-conditional block of the page and the "Vendor" badge fell back to the
+  // generic one. The type is the owner's vendorType.
+  const type = typeof vendor.type === "string" && vendor.type.trim() ? vendor.type : vendor.vendor?.vendorType || ""
+  return <VendorDetailsMobile vendor={{ ...vendor, type }} />
 }

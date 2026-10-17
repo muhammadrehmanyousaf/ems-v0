@@ -78,6 +78,7 @@ import { PaymentInstructionsAPI } from "@/lib/api/paymentInstructions";
 import { paymentNotDueYet, customerDepositLine } from "@/lib/payment-status";
 import { BookingAPI, type DepositPosition } from "@/lib/api/bookings";
 import { dayTextCustomer } from "@/lib/utils/qist";
+import { loginUrl } from "@/lib/auth/go-login"
 import { cancelRouteFor, cancelErrorMessage, isPaymentAlreadyReceived, isClosedBookingStatus } from "@/lib/bookings/cancel-route";
 
 interface BookingDetail {
@@ -541,7 +542,7 @@ export default function BookingDetailPage() {
           title="Sign in required"
           description="Please log in to view booking details."
           action={
-            <Button onClick={() => router.push("/login")} size="sm">
+            <Button onClick={() => router.push(loginUrl())} size="sm">
               Log in
             </Button>
           }
@@ -924,6 +925,11 @@ export default function BookingDetailPage() {
                         <p className="font-display italic text-[18px] text-foreground">
                           {detail.business?.name}
                         </p>
+                        {(detail as { status?: string }).status === "declined" ? (
+                          <p className="mt-1 inline-block rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
+                            Could not take your booking
+                          </p>
+                        ) : null}
                         {(detail.business?.city || detail.business?.subArea) ? (
                           <p className="inline-flex items-center gap-1 text-[11.5px] text-muted-foreground mt-0.5">
                             <MapPin className="size-3" />
@@ -934,8 +940,14 @@ export default function BookingDetailPage() {
                         ) : null}
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="font-display italic text-[18px] text-foreground tabular-nums leading-none">
-                          {fmt(detail.totalAmount)}
+                        <p
+                          className={`font-display italic text-[18px] text-foreground tabular-nums leading-none${
+                            (detail as { status?: string }).status === "declined" ? " line-through opacity-60" : ""
+                          }`}
+                        >
+                          {(detail as { status?: string }).status === "declined"
+                            ? fmt((detail as { declinedAmount?: number | string }).declinedAmount ?? 0)
+                            : fmt(detail.totalAmount)}
                         </p>
                         <p className="text-[11px] text-muted-foreground mt-1">
                           Down{" "}

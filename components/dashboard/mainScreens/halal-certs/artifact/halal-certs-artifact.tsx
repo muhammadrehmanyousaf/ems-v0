@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { HalalCertAPI, type HalalCert, type CertStatus, type CreateCertInput, type IssuingAuthority, ISSUING_AUTHORITY_LABELS } from "@/lib/api/halalCerts"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
+import { useScopedBusinessId } from "@/hooks/use-scoped-business-id"
 import { useArtifactShell, escHtml, initTablePager, loadPref, savePref, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const ST_LABEL: Record<CertStatus, string> = { active: "Active", expiring_soon: "Jald khatam", expired: "Khatam", revoked: "Radd", pending_renewal: "Renewal baaki" }
@@ -83,7 +84,8 @@ export function HalalCertsArtifact() {
   const { shadowRef, ready } = useArtifactShell(hostRef, { activeHref: "/dashboard/halal-certs", crumbBold: "Compliance", crumbSub: "Halal certs", extraCss: EXTRA_CSS })
   const qc = useQueryClient()
   const activeBusinessId = useActiveBusinessId()
-  const bizRef = React.useRef(activeBusinessId); bizRef.current = activeBusinessId
+  const scopedBusinessId = useScopedBusinessId()
+  const bizRef = React.useRef(scopedBusinessId); bizRef.current = scopedBusinessId
   const { data, isError, refetch } = useQuery({ queryKey: ["halal-art", activeBusinessId], queryFn: () => HalalCertAPI.list(activeBusinessId != null ? { businessId: activeBusinessId } : {}) })
   const list = React.useMemo(() => (data?.certs ?? []) as HalalCert[], [data])
   const [filter, setFilter] = React.useState(() => loadPref("tab:halal-certs", "all"))

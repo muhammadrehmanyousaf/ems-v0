@@ -22,6 +22,7 @@ import { SlotTemplatesAPI } from "@/lib/api/businessAvailability";
 import { useUser } from "@/context/UserContext";
 import { useNavPersona } from "@/lib/nav/nav-persona";
 import { VENDOR_TYPES } from "@/lib/vendor-types";
+import { quickSignupSubTypes } from "@/lib/quick-signup-subtypes";
 import { BridalButton } from "@/components/bridal/bridal-button";
 import { BridalField, BridalInput } from "@/components/bridal/bridal-input";
 import { BridalTitle } from "@/components/bridal/bridal-card";
@@ -60,6 +61,8 @@ export default function OnboardingPage() {
       fd.append("phoneNumber", phone.trim());
       fd.append("password", password);
       fd.append("vendorType", vendorType);
+      // WP36: the server refuses a registration with no business type; send the wizard's own value for this type
+      fd.append("subBusinessType", JSON.stringify(quickSignupSubTypes(vendorType)));
       fd.append("city", city.trim());
       fd.append("isVendor", "true");
       fd.append("roleIds", JSON.stringify([2]));
