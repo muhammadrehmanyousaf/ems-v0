@@ -216,6 +216,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
       Cookies.set(STORAGE_KEYS.USER_ID, userToStore.id.toString(), { expires: 1 });
       Cookies.set(STORAGE_KEYS.TOKEN, token, { expires: 1 });
+      // WP36 / PUBLIC-035: a non-sensitive role HINT for middleware.ts (it cannot read storage): a customer account has no
+      // dashboard, so /login and /business-registration must not send it there. Never used for authorization.
+      Cookies.set("ww_role", userToStore.isVendor === true || userToStore.isSuperAdmin ||
+        userToStore.roles?.some((r: any) => ["vendor", "admin", "super admin"].includes(String(r?.name || "").toLowerCase()) || r?.id === 1 || r?.id === 2)
+        ? "vendor" : "customer", { expires: 1 });
       Cookies.set(STORAGE_KEYS.SESSION_EXPIRY, sessionExpiry.toString(), { expires: 1 });
 
       // 01-VR-ENHANCE-V1-FE: persist jti + flags so the dashboard can render

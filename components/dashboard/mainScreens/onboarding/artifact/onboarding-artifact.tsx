@@ -11,6 +11,7 @@
  * activation signals, and the data-migration nudge.
  */
 
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import * as React from "react"
 import { useQuery } from "@tanstack/react-query"
 import {
@@ -200,7 +201,10 @@ export function OnboardingArtifact() {
   })
   const { data, isError, refetch } = useQuery({ queryKey: ["onboarding-completeness"], queryFn: () => CompletenessAPI.listMine() })
   const all = React.useMemo(() => (data ?? []) as BusinessCompleteness[], [data])
-  const [sel, setSel] = React.useState<number | null>(null)
+  // WP36 / SETUP-010: the venue switcher decides which venue's score is shown (it used to open on the first venue)
+  const switcherBizId = useActiveBusinessId()
+  const [sel, setSel] = React.useState<number | null>(switcherBizId)
+  React.useEffect(() => { if (switcherBizId != null) setSel(switcherBizId) }, [switcherBizId])
   const active = all.find((b) => b.businessId === sel) || all[0] || null
 
   React.useEffect(() => {

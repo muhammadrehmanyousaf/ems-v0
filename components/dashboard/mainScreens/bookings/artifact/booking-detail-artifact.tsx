@@ -502,6 +502,14 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
   const service = booking.bookingDetails?.[0]?.package?.name || booking.bookingDetails?.[0]?.business?.name || "Booking"
   const space = spaceNameOf(booking)
   const guests = booking.guestCount ?? null
+  // WP36 / VENDORTYPES-049 + 024: the function the customer named, and the "Quantity: 3 vehicles" the booking form writes
+  // into the request text (the server keeps no separate column for it)
+  const eventTypeText = String((booking as { eventType?: string | null }).eventType || "").trim()
+  const quantityText = (() => {
+    const hay = [booking.additionalRequests, ...(booking.bookingDetails || []).map((d) => (d as { specialRequests?: string | null }).specialRequests)].filter(Boolean).join(" ")
+    const m = /Quantity:\s*(\d+)\s*([A-Za-z ]{0,30})/.exec(hay)
+    return m ? `${m[1]}${m[2] ? ` ${m[2].trim()}` : ""}` : ""
+  })()
 
   // WW money-truth: read the amount columns through the shared util, NOT the
   // legacy /payments/booking-status endpoint. That endpoint reports paid=0 /
@@ -514,11 +522,12 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
   // customer's page can never show three different numbers. The shared util stays
   // as the fallback while it loads (or if it failed), exactly as before.
   const m = schedule?.money
-  const total = m ? m.total : bookedOn(booking) || Number(booking.totalAmount ?? 0)
-  const paid = m ? m.received : receivedOn(booking)
-  const due = m ? m.outstanding : outstandingOn(booking) // already 0 for cancelled
+  const sl = schedule?.slice // WP36 / MONEY-046: this vendor's own part of a multi-vendor booking
+  const total = sl ? sl.total : m ? m.total : bookedOn(booking) || Number(booking.totalAmount ?? 0)
+  const paid = sl ? sl.received : m ? m.received : receivedOn(booking)
+  const due = m ? (sl ? (m.cancelled ? 0 : sl.outstanding) : m.outstanding) : outstandingOn(booking) // already 0 for cancelled
   const refundOwed = Number(pay?.cashRefundOwedTotal ?? 0)
-  const pct = m ? m.percentPaid : total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0
+  const pct = sl ? (sl.total > 0 ? Math.min(100, Math.round((sl.received / sl.total) * 100)) : 0) : m ? m.percentPaid : total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0
   const ev = eventWhen(booking.bookingDate)
 
   const recAttrs = `data-rec="${booking.id}" data-rec-name="${escHtml(booking.customerName || "")}" data-rec-due="${Math.round(due)}"`
@@ -699,6 +708,8 @@ function buildDetail(booking: BookingData, pay: { totalAmount?: number; paidAmou
           <div class="dl-row"><span class="k">Service</span><span class="v">${escHtml(service)}</span></div>
           <div class="dl-row"><span class="k">Taareekh</span><span class="v">${escHtml(fmtYmd(booking.bookingDate, "weekday"))}</span></div>
           <div class="dl-row"><span class="k">Waqt</span><span class="v">${escHtml(bookingSlotText(booking, "vendor"))}</span></div>
+          ${eventTypeText ? `<div class="dl-row"><span class="k">Function</span><span class="v">${escHtml(eventTypeText)}</span></div>` : ""}
+          ${quantityText ? `<div class="dl-row"><span class="k">Quantity</span><span class="v tnum">${escHtml(quantityText)}</span></div>` : ""}
           <div class="dl-row"><span class="k">Hall</span><span class="v">${escHtml(space || "—")}</span></div>
           <div class="dl-row"><span class="k">Mehmaan</span><span class="v tnum">${guests != null ? guests : "—"}</span></div>
           ${booking.serviceLocationAddress ? `<div class="dl-row"><span class="k">${svg(I.pin)} Jagah</span><span class="v">${escHtml(booking.serviceLocationAddress)}</span></div>` : ""}

@@ -28,6 +28,7 @@ export const AUTH_KEYS = [
   "session_expiry",
   "auth_jti",
   "auth_flags",
+  "ww_role", // WP36: the role hint middleware.ts reads (customer | vendor)
 ] as const
 
 /** The persisted active-venue store belongs to the account that picked it. */

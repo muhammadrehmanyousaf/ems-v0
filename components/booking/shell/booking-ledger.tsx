@@ -17,6 +17,7 @@
 import { Check } from "lucide-react"
 import type { BookingFormData, EventBooking, EventVenue, Vendor } from "@/lib/types"
 import { slotText } from "@/lib/booking/slot-vocabulary"
+import { venueOffersPerHeadPackage } from "@/lib/pricing/package"
 import { describeUnitQty, readUnitConfig, unitLineFor } from "@/lib/pricing/per-unit"
 import { computeBreakdown, formatPKR } from "@/lib/booking/breakdown"
 
@@ -62,7 +63,8 @@ const GUEST_COUNT_VENDOR_TYPES = new Set<string>([
 
 export function guestRowApplies(venue: EventVenue | null): boolean {
   const type = venue?.vendor?.vendorType || ""
-  return GUEST_COUNT_VENDOR_TYPES.has(type) && (!!venue?.maxCapacity || !!venue?.minCapacity)
+  // WP36 / CUSTOMER-005: a per-head package makes the guest count part of the price, whatever the vendor type
+  return (GUEST_COUNT_VENDOR_TYPES.has(type) && (!!venue?.maxCapacity || !!venue?.minCapacity)) || venueOffersPerHeadPackage(venue as any)
 }
 
 export function formatLedgerDate(d: unknown): string | null {

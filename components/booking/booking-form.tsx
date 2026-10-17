@@ -64,6 +64,7 @@ import { RequirementsAPI } from "@/lib/api/requirements"
 // 03-DRAFT-RESILIENCE — couples lose laborious vendor/package/menu
 // choices on refresh because useBookingDraft's load was never wired.
 import { DraftResumeBanner, relativeTimeAgo } from "@/components/shared/DraftResumeBanner"
+import { loginUrl } from "@/lib/auth/go-login"
 
 export default function BookingForm() {
   // Global steps: 1=Event Selection; Afterwards, per-event steps tracked in each event
@@ -608,6 +609,12 @@ export default function BookingForm() {
       payload.dropoffAddress = currentForm.dropoffAddress.trim();
     }
 
+    // WP36 / VENDORTYPES-049: which function this booking is for (Barat, Walima, Mehndi ...), so the vendor can see it.
+    // A label for the vendor only; the server trims it and never lets it change a rule.
+    if (typeof currentForm.eventType === "string" && currentForm.eventType.trim()) {
+      payload.eventType = currentForm.eventType.trim().slice(0, 40);
+    }
+
     try {
       setIsSubmitting(true)
       setSlotConflict(null)
@@ -759,7 +766,15 @@ export default function BookingForm() {
   // ── Booking type detection (single source of truth) ──
   // Venue = has menus (banquet halls, wedding venues, restaurants)
   // Vendor = everything else (photographers, decorators, caterers, etc.)
-  const isVenueBooking = !!venue && Array.isArray((venue as any)?.menus) && ((venue as any)?.menus?.length ?? 0) > 0
+  // WP36 / VENDORTYPES-030: "has menus" is not "is a venue" - a caterer with one menu was routed into the venue flow (set-up
+  // questions, outside vendors) and a Wedding venue with no menu into the vendor flow. The vendor TYPE decides; the menu
+  // step still follows `hasMenus` below.
+  const FOOD_VENDOR_TYPES = ["Catering", "Mithai and sweets", "Wedding cakes", "Live cooking stall"]
+  const venueVendorType = String((venue as any)?.vendor?.vendorType || "")
+  const isVenueBooking =
+    !!venue &&
+    (venueVendorType === "Wedding venue" ||
+      (Array.isArray((venue as any)?.menus) && ((venue as any)?.menus?.length ?? 0) > 0 && !FOOD_VENDOR_TYPES.includes(venueVendorType)))
   const hasPackages = !!venue?.packages && Array.isArray(venue.packages) && venue.packages.length > 0
   // WW-PKG-UNIT — the Menu step's existence and its title are derived from
   // configuration rather than hardcoded into the venue flow.
@@ -1079,7 +1094,7 @@ export default function BookingForm() {
             onEdit={(k: string) => onJump(k)}
             onTotalsChange={setReviewTotals}
             requiresApproval={requiresVendorApproval(venue)}
-            onSignIn={() => router.push("/login")}
+            onSignIn={() => router.push(loginUrl())}
           />
         )
         break
@@ -1132,7 +1147,7 @@ export default function BookingForm() {
     // A signed-out customer cannot send — the API needs a session. Say so at
     // the door rather than after a failed request.
     if (isReviewStep && !user && !userLoading) {
-      router.push("/login")
+      router.push(loginUrl())
       return
     }
 

@@ -52,6 +52,7 @@ import { cn } from "@/lib/utils";
 import { bookingSlotText } from "@/lib/booking/slot-vocabulary";
 import { useLiveRefresh } from "@/lib/hooks/useLiveRefresh";
 import { cancelRouteFor, cancelErrorMessage, isPaymentAlreadyReceived } from "@/lib/bookings/cancel-route";
+import { loginUrl } from "@/lib/auth/go-login"
 
 interface BookingDetail {
   id: number;
@@ -394,7 +395,7 @@ export default function BookingsPage() {
           title="Sign in required"
           description="Please log in to view your bookings."
           action={
-            <Button onClick={() => router.push("/login")} size="sm">
+            <Button onClick={() => router.push(loginUrl())} size="sm">
               Log in
             </Button>
           }
