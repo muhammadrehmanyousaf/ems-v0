@@ -37,7 +37,7 @@ export const MONEY_STALE_MS = 30_000
 export const MONEY_BOOKING_KEYS = [
   // vendor console, booking page
   "bk-detail", "bk-detail-pay", "bk-detail-schedule", "bk-detail-hist",
-  "bk-detail-settle", "bk-detail-deposit", "bk-detail-refunds", "bk-detail-cr",
+  "bk-detail-settle", "bk-detail-deposit", "bk-detail-refunds", "bk-detail-cr", "bk-detail-claims",
   // cards mounted on the customer's booking page (the same app serves both)
   "refund-requests", "policy-acceptance", "payment-claims", "settlement",
   "refund-preview", "dispute-evidence", "booking-order", "paisa-reconcile", "beo",
