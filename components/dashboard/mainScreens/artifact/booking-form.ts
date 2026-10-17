@@ -79,7 +79,10 @@ function bookingFormBody(prefill?: BookingPrefill, businesses?: BizLite[], activ
   const picked = safeDateValue(p.bookingDate)
   const today = escHtml(picked ? picked : todayInKarachi())
   const selBiz = p.businessId ?? activeBiz ?? (businesses && businesses[0]?.id) ?? ""
-  const bizOpts = (businesses || []).map((b) => `<option value="${b.id}"${b.id === selBiz ? " selected" : ""}>${escHtml(b.name || `Venue #${b.id}`)}</option>`).join("")
+  let bizOpts = (businesses || []).map((b) => `<option value="${b.id}"${b.id === selBiz ? " selected" : ""}>${escHtml(b.name || `Venue #${b.id}`)}</option>`).join("")
+  // FLAGGED-002: a caller that knows the venue but not the list (a hold's "Book karein") still gets that venue selected;
+  // an empty select read as venue 0 and the booking failed.
+  if (!bizOpts && selBiz !== "" && selBiz != null) bizOpts = `<option value="${selBiz}" selected>Venue #${selBiz}</option>`
   const genderOpts = GENDER.map(([k, l]) => `<option value="${k}">${l}</option>`).join("")
   const methodOpts = METHODS.map(([k, l]) => `<option value="${k}">${l}</option>`).join("")
   return `${p.leadId ? `<div style="font-size:12px;color:var(--ink-3);background:var(--accent-wash);border-radius:8px;padding:8px 11px;margin-bottom:14px">Lead se booking ban rahi hai — details bhari hain, confirm karein.</div>` : ""}
