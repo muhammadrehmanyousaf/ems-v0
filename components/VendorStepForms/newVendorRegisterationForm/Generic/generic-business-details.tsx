@@ -44,6 +44,7 @@ import RadioButton from "@/components/VendorStepForms/components/radio-button";
 import PartialRefundFields from "@/components/VendorStepForms/components/partial-refund-fields";
 import MultipleSelect from "@/components/VendorStepForms/components/multiple-select";
 import { useFormContext } from "@/lib/context/form-context";
+import MaxGuestsField, { MAX_GUEST_TYPES } from "@/components/VendorStepForms/components/max-guests-field";
 
 interface Errors {
   [key: string]: string | undefined;
@@ -97,7 +98,7 @@ const GenericBusinessDetails = ({
   errors,
   setErrors,
 }: GenericBusinessDetailsProps) => {
-  const { formData, setFormData } = useFormContext();
+  const { formData, setFormData, businessType } = useFormContext();
 
   const handleChange = <K extends keyof typeof formData>(
     key: K,
@@ -156,6 +157,7 @@ const GenericBusinessDetails = ({
               <p className="text-xs text-red-500 mt-1">{errors.description}</p>
             )}
           </div>
+          {MAX_GUEST_TYPES.includes(String(businessType)) && <MaxGuestsField />}
         </div>
       </SectionCard>
 
