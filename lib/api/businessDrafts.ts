@@ -78,12 +78,17 @@ export async function saveDraft(args: {
   /** Merge into the existing payload server-side (default false → full replace). */
   merge?: boolean
 }): Promise<{ id: string | number; currentStep: number; expiresAt: string; vendorType: string | null; resumeToken?: string }> {
+  // WP33 / PUBLIC-001: present the resume token we hold for this e-mail. The server gives an existing draft's token only back to
+  // its holder and answers 403 DRAFT_TOKEN_REQUIRED to anyone else who merely knows the e-mail (the caller treats a failed save as
+  // non-fatal: the wizard itself carries on).
+  const held = readResumeToken(args.ownerEmail)
   const res = await axiosInstance.post("/api/v1/businesses/draft", {
     ownerEmail: args.ownerEmail,
     payload: args.payload,
     currentStep: typeof args.currentStep === "number" ? args.currentStep : 0,
     vendorType: args.vendorType ?? null,
     merge: !!args.merge,
+    ...(held ? { resumeToken: held } : {}),
   })
   const data = unwrap<{ resumeToken?: string }>(res) as any
   // Persist the capability secret so a later resume can unlock the payload.

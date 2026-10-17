@@ -93,6 +93,10 @@ export function VendorQueueActionDialog({
   const kind = pending?.kind
   // Same copy rule as the original: these three states email the vendor.
   const emailsVendor = kind === "reject" || kind === "request_changes" || kind === "suspend"
+  // WP33 / PUBLIC-010: a rejection, a change request or a suspension cannot go out without a reason (the server also refuses a
+  // blank request-changes). The reason is kept in the audit log and sent to the vendor in the app and by e-mail.
+  const reasonRequired = emailsVendor
+  const reasonOk = !reasonRequired || notes.trim().length >= 3
 
   return (
     <Dialog open={!!pending} onOpenChange={(o) => !o && onCancel()}>
@@ -110,7 +114,8 @@ export function VendorQueueActionDialog({
         <Textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Notes for the vendor (optional)"
+          placeholder={reasonRequired ? "Reason for the vendor (required)" : "Notes for the vendor (optional)"}
+          aria-required={reasonRequired}
           rows={4}
         />
         <DialogFooter>
@@ -119,7 +124,7 @@ export function VendorQueueActionDialog({
           </Button>
           <Button
             onClick={() => onConfirm(notes.trim() || undefined)}
-            disabled={submitting}
+            disabled={submitting || !reasonOk}
             variant={kind === "reject" ? "destructive" : "default"}
           >
             {submitting ? (

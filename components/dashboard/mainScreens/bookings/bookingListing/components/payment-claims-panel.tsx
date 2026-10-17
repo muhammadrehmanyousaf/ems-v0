@@ -171,7 +171,7 @@ export function PaymentClaimsPanel({ bookingId }: { bookingId: number }) {
             )}
             {claim.proofUrl && (
               <a
-                href={claim.proofUrl}
+                href={/^https?:\/\//i.test(String(claim.proofUrl)) ? claim.proofUrl : undefined /* WP33 / FLAGGED-048: never a javascript: / data: link */}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-1.5 inline-flex items-center gap-1 text-sm text-primary hover:underline"

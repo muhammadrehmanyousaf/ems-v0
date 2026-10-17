@@ -11,7 +11,8 @@
  */
 
 import * as React from 'react';
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
 import { BACKEND_URL } from '@/lib/backend-url';
@@ -49,12 +50,11 @@ interface Payload {
   businesses: BizRow[];
 }
 
-interface PageProps {
-  params: Promise<{ token: string }>;
-}
-
-export default function Page({ params }: PageProps) {
-  const { token } = use(params);
+// WP33 / PUBLIC-005: this was `params: Promise<...>` + React `use(params)`. In Next 14 a client page's params is a plain object, and
+// `use()` throws on a non-thenable, so EVERY emailed review link answered HTTP 500. Read the route param the way /sign/[token] does.
+export default function Page() {
+  const routeParams = useParams() as { token?: string } | null;
+  const token = String(routeParams?.token ?? '');
   const [data, setData] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadErr, setLoadErr] = useState<string | null>(null);

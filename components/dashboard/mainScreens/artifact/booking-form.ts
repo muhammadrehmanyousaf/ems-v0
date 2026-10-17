@@ -26,6 +26,8 @@ import { slotPickerField, bindSlotPicker, loadSlotPicker, recheckPicker, pickerC
 import { invalidateMoney } from "@/lib/query/money-keys"
 import { isAmbiguousFailure } from "@/lib/utils/idempotency"
 import { todayInKarachi } from "@/lib/utils/pk-date"
+import { safeDateValue } from "@/lib/lead-form-safety"
+import { phoneIssue, nameIssue, emailIssue, dateIssue, maxBookingDay, guestsRequired, bookingErrorMessage } from "@/lib/booking-input"
 
 /** The picker's element id; the date, venue and hall controls below drive it. */
 const SLOTS_ID = "bf-slots"
@@ -71,20 +73,24 @@ const METHODS = [["cash", "Cash"], ["jazzcash", "JazzCash"], ["easypaisa", "Easy
 function bookingFormBody(prefill?: BookingPrefill, businesses?: BizLite[], activeBiz?: number | null): string {
   const p = prefill || {}
   const v = (x: unknown) => (x != null && x !== "" ? escHtml(String(x)) : "")
-  const today = p.bookingDate ? String(p.bookingDate).slice(0, 10) : todayInKarachi() // WP24: the UTC day is yesterday until 05:00 PKT
+  // WP24: the UTC day is yesterday until 05:00 PKT. WP33 / LEADS-060: a prefilled date is a value from a URL or a record - only a
+  // real YYYY-MM-DD survives, and it is attribute-escaped like every other field.
+  const minDay = todayInKarachi()
+  const picked = safeDateValue(p.bookingDate)
+  const today = escHtml(picked ? picked : todayInKarachi())
   const selBiz = p.businessId ?? activeBiz ?? (businesses && businesses[0]?.id) ?? ""
   const bizOpts = (businesses || []).map((b) => `<option value="${b.id}"${b.id === selBiz ? " selected" : ""}>${escHtml(b.name || `Venue #${b.id}`)}</option>`).join("")
   const genderOpts = GENDER.map(([k, l]) => `<option value="${k}">${l}</option>`).join("")
   const methodOpts = METHODS.map(([k, l]) => `<option value="${k}">${l}</option>`).join("")
   return `${p.leadId ? `<div style="font-size:12px;color:var(--ink-3);background:var(--accent-wash);border-radius:8px;padding:8px 11px;margin-bottom:14px">Lead se booking ban rahi hai — details bhari hain, confirm karein.</div>` : ""}
     <div class="bf-sec">Customer</div>
-    <div class="dfield"><label class="dlabel">Naam <span class="req">*</span></label><input id="bf-name" value="${v(p.customerName)}" placeholder="Customer ka naam"/></div>
-    <div class="dfield row2"><div><label class="dlabel">Phone <span class="req">*</span></label><input id="bf-phone" value="${v(p.customerPhone)}" placeholder="0300…"/></div><div><label class="dlabel">Email</label><input id="bf-email" value="${v(p.customerEmail)}" placeholder="optional"/></div></div>
+    <div class="dfield"><label class="dlabel">Naam <span class="req">*</span></label><input id="bf-name" maxlength="120" value="${v(p.customerName)}" placeholder="Customer ka naam"/></div>
+    <div class="dfield row2"><div><label class="dlabel">Phone <span class="req">*</span></label><input id="bf-phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="30" value="${v(p.customerPhone)}" placeholder="0300…"/></div><div><label class="dlabel">Email</label><input id="bf-email" type="email" inputmode="email" autocomplete="email" maxlength="160" value="${v(p.customerEmail)}" placeholder="optional"/></div></div>
 
     <div class="bf-sec">Event</div>
-    <div class="dfield"><label class="dlabel">Tareekh <span class="req">*</span></label><input type="date" id="bf-date" value="${today}"/></div>
+    <div class="dfield"><label class="dlabel">Tareekh <span class="req">*</span></label><input type="date" id="bf-date" min="${minDay}" max="${maxBookingDay(minDay)}" value="${today}"/></div>
     <div id="bf-datewarn" style="font-size:12px;line-height:1.5;margin:-6px 0 12px"></div>
-    <div class="dfield row2"><div><label class="dlabel">Mehmaan</label><input type="number" id="bf-guests" value="${p.guestCount != null ? p.guestCount : ""}" placeholder="e.g. 400"/></div><div><label class="dlabel">Gender mode</label><select id="bf-gender">${genderOpts}</select></div></div>
+    <div class="dfield row2"><div><label class="dlabel">Mehmaan</label><input type="number" id="bf-guests" min="1" step="1" value="${p.guestCount != null ? p.guestCount : ""}" placeholder="e.g. 400"/></div><div><label class="dlabel">Gender mode</label><select id="bf-gender">${genderOpts}</select></div></div>
     <div class="dfield"><label class="dlabel">Event city <span style="color:var(--ink-4);font-weight:400">(agar doosre shehar mein)</span></label><input id="bf-city" placeholder="optional — travel surcharge"/></div>
 
     <div class="bf-sec">Venue, hall &amp; waqt</div>
@@ -122,12 +128,12 @@ async function populateBookingDeps(shadow: ShadowRoot, businessId: number, prefi
   try {
     const pkgs: ApiPackage[] = await PackagesAPI.getAll(businessId)
     if (pkgSel) pkgSel.innerHTML = `<option value="">— koi nahi —</option>` +
-      pkgs.map((p) => `<option value="${p.id}" data-price="${p.price}" data-unit="${p.pricingUnit || "per_event"}">${escHtml(p.name)} — Rs ${Number(p.price).toLocaleString("en-PK")}${p.pricingUnit === "per_head" ? "/head" : ""}</option>`).join("")
+      pkgs.map((p) => `<option value="${p.id}" data-price="${p.price}" data-unit="${p.pricingUnit || "per_event"}" data-min="${Number((p as { minGuaranteeCount?: number | null }).minGuaranteeCount) || 0}">${escHtml(p.name)} — Rs ${Number(p.price).toLocaleString("en-PK")}${p.pricingUnit === "per_head" ? "/head" : ""}</option>`).join("")
   } catch { /* no packages */ }
   try {
     const menus: ApiMenu[] = await MenusAPI.getAll(businessId)
     if (menuSel) menuSel.innerHTML = `<option value="">— koi nahi —</option>` +
-      menus.map((m) => `<option value="${m.id}" data-price="${m.price}" data-unit="${m.pricingUnit || "per_event"}">${escHtml(m.title)} — Rs ${Number(m.price).toLocaleString("en-PK")}${m.pricingUnit === "per_head" ? "/head" : ""}</option>`).join("")
+      menus.map((m) => `<option value="${m.id}" data-price="${m.price}" data-unit="${m.pricingUnit || "per_event"}" data-min="${Number((m as { minGuaranteeCount?: number | null }).minGuaranteeCount) || 0}">${escHtml(m.title)} — Rs ${Number(m.price).toLocaleString("en-PK")}${m.pricingUnit === "per_head" ? "/head" : ""}</option>`).join("")
   } catch { /* no menus */ }
   refreshPriceHint(shadow)
 }
@@ -253,6 +259,7 @@ function ensureBound(shadow: ShadowRoot) {
   })
   shadow.addEventListener("input", (e) => {
     const id = (e.target as HTMLElement).id
+    if (id.startsWith("bf-")) clearFieldError(shadow, id)
     if (id === "bf-guests") refreshPriceHint(shadow)
     else if (id === "bf-agreed") refreshAgreedHint(shadow)
   })
@@ -263,14 +270,49 @@ function ensureBound(shadow: ShadowRoot) {
 
 const val = (shadow: ShadowRoot, id: string) => (shadow.getElementById(id) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null)?.value?.trim() ?? ""
 
+/** WP33: a refusal is shown ON the field (BOOKINGS-003/005/014), not only in a toast that covers the drawer. */
+function clearFieldError(shadow: ShadowRoot, id: string) {
+  shadow.querySelectorAll(`[data-bf-err="${id}"]`).forEach((n) => n.remove())
+  shadow.getElementById(id)?.removeAttribute("aria-invalid")
+}
+function fieldError(shadow: ShadowRoot, id: string, message: string): false {
+  clearFieldError(shadow, id)
+  const el = shadow.getElementById(id) as HTMLElement | null
+  if (el) {
+    el.setAttribute("aria-invalid", "true")
+    const note = document.createElement("div")
+    note.setAttribute("data-bf-err", id)
+    note.setAttribute("role", "alert")
+    note.style.cssText = "color:var(--bad);font-size:11.5px;line-height:1.4;margin-top:4px"
+    note.textContent = message
+    el.insertAdjacentElement("afterend", note)
+    el.focus?.()
+  } else {
+    toast.error(message)
+  }
+  return false
+}
+
 async function submitBookingForm(shadow: ShadowRoot) {
   const opts = BF_STATE.get(shadow) || {}
   const name = val(shadow, "bf-name"), phone = val(shadow, "bf-phone")
-  if (!name) return toast.error("Customer ka naam likhein")
-  if (!phone) return toast.error("Phone likhein")
+  // WP33: the same rules the server applies, checked beside the field BEFORE anything is sent
+  for (const id of ["bf-name", "bf-phone", "bf-email", "bf-date", "bf-guests"]) clearFieldError(shadow, id)
+  const nameMsg = nameIssue(name); if (nameMsg) return void fieldError(shadow, "bf-name", nameMsg)
+  const phoneMsg = phoneIssue(phone); if (phoneMsg) return void fieldError(shadow, "bf-phone", phoneMsg)
+  const emailMsg = emailIssue(val(shadow, "bf-email")); if (emailMsg) return void fieldError(shadow, "bf-email", emailMsg)
   const bizId = Number(val(shadow, "bf-biz")) || Number(opts.activeBiz) || 0
   if (!bizId) return toast.error("Venue select karein")
-  if (!val(shadow, "bf-date")) return toast.error("Tareekh chunein")
+  if (!val(shadow, "bf-date")) return void fieldError(shadow, "bf-date", "Tareekh chunein")
+  const dateMsg = dateIssue(val(shadow, "bf-date"), todayInKarachi()); if (dateMsg) return void fieldError(shadow, "bf-date", dateMsg)
+  {
+    const guestsTyped = Number(val(shadow, "bf-guests")) || 0
+    if (val(shadow, "bf-guests") && (!Number.isInteger(guestsTyped) || guestsTyped < 1)) return void fieldError(shadow, "bf-guests", "Mehmaan poora adad hona chahiye (kam az kam 1)")
+    const chosen = ["bf-package", "bf-menu"].map((id) => (shadow.getElementById(id) as HTMLSelectElement | null)?.selectedOptions?.[0]).filter((o): o is HTMLOptionElement => !!o && !!o.value)
+    if (guestsRequired(chosen.map((o) => ({ unit: o.dataset.unit, minGuarantee: Number(o.dataset.min) || 0 })), guestsTyped)) {
+      return void fieldError(shadow, "bf-guests", "Is package/menu ki qeemat per mehmaan hai — mehmaan ki tadaad likhein")
+    }
+  }
 
   /**
    * SLOT-PICKER — the time is one of the venue's own open slots, or nothing.
@@ -336,14 +378,14 @@ async function submitBookingForm(shadow: ShadowRoot) {
     if (isAmbiguousFailure(err)) void invalidateMoney({})
     const e = err as { response?: { data?: { message?: string; code?: string; data?: { code?: string } } } }
     const code = e.response?.data?.code || e.response?.data?.data?.code
-    const msg = code === "SPACE_CONFLICT" || code === "PARTITION_CONFLICT" ? "Ye hall us din pehle se booked hai — doosra space/date chunein."
+    const msg = bookingErrorMessage(code) ?? (code === "SPACE_CONFLICT" || code === "PARTITION_CONFLICT" ? "Ye hall us din pehle se booked hai — doosra space/date chunein."
       : code === "DATE_BLOCKED" ? "Ye date block hai — pehle unblock karein."
       : code === "CLOSURE_CUTOFF" ? "Event raat 10 baje ke baad ja raha hai — duration kam karein ya legal ack chahiye."
       : code === "capacity_full" ? "Ye slot abhi bhar gaya — list dobara dekh kar doosra slot chunein."
       : code === "blocked" ? "Ye slot band hai — pehle calendar se kholein, ya doosra slot chunein."
       : code === "capacity_zero" || code === "closed_weekday" || code === "SLOT_CLOSED_THIS_DAY" ? "Is din ye slot nahi chal raha — doosra slot chunein."
       : /^(TIME_OUTSIDE_SLOTS?|SLOT_NOT_(FOUND|IN_SPACE|OFFERED)|slot_not_found)$/.test(String(code || "")) ? "Ye waqt venue ke slots mein nahi hai — list se slot chunein."
-      : (e.response?.data?.message || "Booking nahi bani")
+      : (e.response?.data?.message || "Booking nahi bani"))
     // Whatever the slot-shaped refusal was, the list the vendor is looking at is stale.
     if (/^(capacity_full|blocked|capacity_zero|closed_weekday|SLOT_|TIME_OUTSIDE_|slot_not_found)/.test(String(code || ""))) void reloadSlots(shadow)
     toast.error(msg)

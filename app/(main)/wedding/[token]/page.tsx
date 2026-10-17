@@ -18,7 +18,8 @@
 import { bookingSlotText } from "@/lib/booking/slot-vocabulary"
 import { dateOnlyOf, fmtYmd } from "@/lib/utils/ymd"
 import * as React from 'react';
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
 import {
@@ -128,12 +129,10 @@ function fmtDate(iso: string | null): string {
     return iso;
   }
 }
-interface PageProps {
-  params: Promise<{ token: string }>;
-}
-
-export default function Page({ params }: PageProps) {
-  const { token } = use(params);
+// WP33 / PUBLIC-005: see review/[token]/page.tsx - `use(params)` on a plain params object crashed every shared-plan link (HTTP 500).
+export default function Page() {
+  const routeParams = useParams() as { token?: string } | null;
+  const token = String(routeParams?.token ?? '');
   const [data, setData] = useState<PortalPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

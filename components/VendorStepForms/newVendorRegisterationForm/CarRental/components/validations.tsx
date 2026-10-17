@@ -1,5 +1,6 @@
 import { FormType } from '@/lib/context/form-context';
 import { partialRefundErrors } from '@/lib/cancellation-policy';
+import { packagePriceIssue, fleetIssues } from '@/lib/package-input';
 
 function fleetMaxUnits(pkg: { features: Record<string, string[]> }): number {
     const raw = pkg.features?.unitsAvailable?.[0] ?? '';
@@ -85,6 +86,16 @@ export const CarRentalValidations = ({ currentStep, formData, currentErrors }: V
             }
             if (!pkg.price) {
                 currentErrors[`packages[${index}].price`] = 'Price per event is required';
+            } else {
+                // WP33 / VENDORTYPES-035: a negative or absurd price made an unbookable listing
+                const priceMsg = packagePriceIssue(pkg.price);
+                if (priceMsg) currentErrors[`packages[${index}].price`] = priceMsg;
+            }
+            if (pkg.name?.trim()) {
+                const fleet = fleetIssues(pkg.features as unknown as Record<string, unknown>);
+                if (fleet.year) currentErrors[`packages[${index}].year`] = fleet.year;
+                if (fleet.seatingCapacity) currentErrors[`packages[${index}].seatingCapacity`] = fleet.seatingCapacity;
+                if (fleet.unitsAvailable) currentErrors[`packages[${index}].unitsAvailable`] = fleet.unitsAvailable;
             }
         });
     } else if (currentStep === 5) {

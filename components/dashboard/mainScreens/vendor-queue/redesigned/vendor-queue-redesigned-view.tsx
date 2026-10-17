@@ -58,6 +58,7 @@ const STATUS_TONE: Record<BusinessStatus, StatusTone> = {
   approved: "success",
   rejected: "error",
   suspended: "warning",
+  changes_requested: "warning", // WP33 / PUBLIC-009: listed under the "Drafts" tab (the server's draft bucket includes it)
 }
 const statusTone = (s?: string | null): StatusTone =>
   STATUS_TONE[(s as BusinessStatus)] ?? "neutral"
@@ -111,6 +112,8 @@ function actionsFor(status: BusinessStatus): ActionKind[] {
       return ["approve", "request_changes", "reject"]
     case "draft":
       return ["approve"]
+    case "changes_requested":
+      return ["approve", "reject"]
     case "approved":
       return ["suspend"]
     case "suspended":

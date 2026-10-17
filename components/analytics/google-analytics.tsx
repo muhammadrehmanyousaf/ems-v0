@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react"
 import Script from "next/script"
+import { usePathname } from "next/navigation"
+import { getConsent } from "@/components/cookie-consent"
+import { analyticsAllowed, CONSENT_EVENT } from "@/lib/analytics-consent"
 
 /**
  * GA4 (gtag.js), loaded on first interaction or after the page has been idle —
@@ -71,9 +74,28 @@ const TRIGGERS = ["pointerdown", "keydown", "touchstart", "scroll", "wheel"] as 
 export function GoogleAnalytics() {
   const id = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "G-SGNECTNX2B"
   const [load, setLoad] = useState(false)
+  // WP33 / PUBLIC-003: nothing from Google loads, and no _ga cookie is written, until the visitor chose analytics in the banner
+  // (and a choice made later loads it without a reload). WP33 / PUBLIC-004: never on a route whose URL is a one-time secret.
+  const pathname = usePathname()
+  const [consented, setConsented] = useState(false)
+  useEffect(() => {
+    const read = () => setConsented(getConsent()?.analytics === true)
+    read()
+    window.addEventListener(CONSENT_EVENT, read)
+    window.addEventListener("storage", read)
+    return () => {
+      window.removeEventListener(CONSENT_EVENT, read)
+      window.removeEventListener("storage", read)
+    }
+  }, [])
+  const allowed = analyticsAllowed({ analyticsConsent: consented, pathname })
+  // A script that is already running is switched off with Google's documented kill-switch while a choice or a route says no.
+  useEffect(() => {
+    ;(window as unknown as Record<string, unknown>)[`ga-disable-${id}`] = !allowed
+  }, [allowed, id])
 
   useEffect(() => {
-    if (load) return
+    if (load || !allowed) return
     let done = false
     const fire = () => {
       if (done) return
@@ -133,9 +155,9 @@ export function GoogleAnalytics() {
       clearTimeout(backstop)
       cleanup()
     }
-  }, [load])
+  }, [load, allowed])
 
-  if (!load) return null
+  if (!load || !consented) return null
 
   return (
     <>
