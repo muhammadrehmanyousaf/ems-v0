@@ -17,6 +17,7 @@ import { UsersAPI, type ApiUser } from "@/lib/api/dashboard"
 import { useUser } from "@/context/UserContext"
 import { CITIES } from "@/lib/seo/constants"
 import { validatePkPhone, normalizePkPhone, validateEmail, normalizeEmail } from "@/lib/validation/pk-fields"
+import { passwordProblem } from "@/lib/validation/password"
 import { useArtifactShell, escHtml, initialsOf, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const STR_FIELDS = ["fullName", "phoneNumber", "city", "subArea", "bookingEmail", "primaryContactNumber", "secondaryContactNumber", "website", "officeAddress"] as const
@@ -112,7 +113,7 @@ function buildContent(u: ApiUser & Record<string, unknown>): string {
       <div class="sec-row"><div class="sec-main"><div class="sec-t">Password</div><div class="sec-s">Account ko mazboot password se mehfooz rakhein.</div>
         <div class="pwform" id="pwform">
           <div class="field" style="margin-top:12px"><label class="flabel">Mojooda password</label><input type="password" id="pw-cur" autocomplete="current-password"/></div>
-          <div class="frow"><div class="field"><label class="flabel">Naya password</label><input type="password" id="pw-new" autocomplete="new-password"/><span class="fhint">Kam se kam 6 characters</span></div>
+          <div class="frow"><div class="field"><label class="flabel">Naya password</label><input type="password" id="pw-new" autocomplete="new-password"/><span class="fhint">Kam se kam 10 characters: chhota harf, aur bada harf, number ya symbol</span></div>
             <div class="field"><label class="flabel">Dobara likhein</label><input type="password" id="pw-conf" autocomplete="new-password"/></div></div>
           <button class="btn btn-primary sm" id="pwsave">Password update karein</button>
         </div></div>
@@ -196,7 +197,9 @@ export function ProfileArtifact() {
       const nw = (s.getElementById("pw-new") as HTMLInputElement | null)?.value || ""
       const cf = (s.getElementById("pw-conf") as HTMLInputElement | null)?.value || ""
       if (!cur || !nw) { toast.error("Mojooda aur naya password dono likhein"); return }
-      if (nw.length < 6) { toast.error("Password kam se kam 6 characters ka ho"); return }
+      // WP34 (SETUP-001): the same rule the server enforces (lib/validation/password).
+      const pwProblem = passwordProblem(nw)
+      if (pwProblem) { toast.error(pwProblem); return }
       if (nw !== cf) { toast.error("Naye password match nahi karte"); return }
       const btn = s.getElementById("pwsave") as HTMLButtonElement | null
       if (btn) { btn.disabled = true; btn.textContent = "Update ho raha…" }
@@ -205,7 +208,11 @@ export function ProfileArtifact() {
         toast.success("Password badal gaya")
         ;["pw-cur", "pw-new", "pw-conf"].forEach((id) => { const el = s.getElementById(id) as HTMLInputElement | null; if (el) el.value = "" })
         s.getElementById("pwform")?.classList.remove("on")
-      } catch { toast.error("Password nahi badla — mojooda password check karein") }
+      } catch (e) {
+        // The server says WHY (wrong current password, too weak, same as current): show it.
+        const why = (e as any)?.response?.data?.message
+        toast.error(typeof why === "string" && why ? why : "Password nahi badla — mojooda password check karein")
+      }
       finally { if (btn) { btn.disabled = false; btn.textContent = "Password update karein" } }
     }
 

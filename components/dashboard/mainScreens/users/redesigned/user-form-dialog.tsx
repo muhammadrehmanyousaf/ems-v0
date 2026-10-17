@@ -20,6 +20,7 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { passwordProblem } from "@/lib/validation/password"
 import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
@@ -90,7 +91,7 @@ export function UserFormDialog({
   const emailProblem = validateEmail(email, { label: "Email", required: true })
   const phoneProblem = phoneNumber.trim() ? validatePkPhone(phoneNumber) : undefined
   const canSave =
-    !!fullName.trim() && !emailProblem && !phoneProblem && (isEdit || password.length >= 6)
+    !!fullName.trim() && !emailProblem && !phoneProblem && (isEdit || !passwordProblem(password))
 
 
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
@@ -105,7 +106,7 @@ export function UserFormDialog({
           <Field label="Email"><input className={inputCls} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" /></Field>
           <Field label="Phone"><input className={inputCls} value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="03001234567" /></Field>
           {!isEdit && (
-            <Field label="Password"><input className={inputCls} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Minimum 6 characters" /></Field>
+            <Field label="Password"><input className={inputCls} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Minimum 10 characters" /></Field>
           )}
           <div className="space-y-1.5">
             <label className={labelCls}>Roles</label>

@@ -73,8 +73,18 @@ export interface MyShift {
 
 export const StaffPortalAPI = {
   /** Log in via the shared auth endpoint, but store the token under the staff key. */
-  async login(email: string, password: string): Promise<StaffProfile> {
-    const res = await axios.post(`${BACKEND_URL}api/v1/auth/login`, { email, password });
+  async login(
+    email: string,
+    password: string,
+    // WP34 (PUBLIC-017): the second step the shared sign-in asks for. The server
+    // answers 401 EMAIL_OTP_REQUIRED (or TWO_FACTOR_REQUIRED) when it wants a code;
+    // the staff page then calls this again with the code. Omitted = the old call.
+    code?: { emailOtp?: string; totp?: string },
+  ): Promise<StaffProfile> {
+    const body: Record<string, string> = { email, password };
+    if (code?.emailOtp) body.emailOtp = code.emailOtp;
+    if (code?.totp) body.totp = code.totp;
+    const res = await axios.post(`${BACKEND_URL}api/v1/auth/login`, body);
     const token = res.data?.data?.token;
     if (!token) throw new Error("Login failed");
     if (typeof window !== "undefined") localStorage.setItem(STAFF_TOKEN_KEY, token);

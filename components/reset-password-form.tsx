@@ -23,6 +23,7 @@ import { BridalButton } from "@/components/bridal/bridal-button"
 import { BridalField, BridalInput } from "@/components/bridal/bridal-input"
 import { BridalCrown, BridalTitle } from "@/components/bridal/bridal-card"
 import { FloralDivider } from "@/components/bridal/floral-divider"
+import { passwordProblem, PASSWORD_MIN_LENGTH } from "@/lib/validation/password"
 import {
   AuthShell,
   AuthAsideChecklist,
@@ -31,9 +32,11 @@ import {
 // ── Validation ──────────────────────────────────────────────────────────────
 const formSchema = z
   .object({
-    password: z
-      .string()
-      .min(8, { message: "Password must be at least 8 characters" }),
+    // WP34 (PUBLIC-006): mirrors the server's passwordPolicy (lib/validation/password).
+    password: z.string().superRefine((v, ctx) => {
+      const problem = passwordProblem(v)
+      if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, message: problem })
+    }),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -46,7 +49,7 @@ type FormData = z.infer<typeof formSchema>
 function strengthScore(p: string): number {
   if (!p) return 0
   let s = 0
-  if (p.length >= 8) s++
+  if (p.length >= PASSWORD_MIN_LENGTH) s++
   if (p.length >= 12) s++
   if (/[a-z]/.test(p) && /[A-Z]/.test(p)) s++
   if (/\d/.test(p)) s++
@@ -112,9 +115,9 @@ export function ResetPasswordForm() {
   }
 
   const checklistItems = [
-    { icon: <CheckCircle2 className="w-4 h-4" />, label: "8+ characters" },
-    { icon: <CheckCircle2 className="w-4 h-4" />, label: "Letters & numbers" },
-    { icon: <CheckCircle2 className="w-4 h-4" />, label: "Mix the case" },
+    { icon: <CheckCircle2 className="w-4 h-4" />, label: "10+ characters" },
+    { icon: <CheckCircle2 className="w-4 h-4" />, label: "A lowercase letter" },
+    { icon: <CheckCircle2 className="w-4 h-4" />, label: "An uppercase letter or a number" },
     { icon: <CheckCircle2 className="w-4 h-4" />, label: "A symbol or two" },
   ]
 
@@ -132,7 +135,7 @@ export function ResetPasswordForm() {
           <span className="text-bridal-rose">securely.</span>
         </>
       }
-      asideSubtitle="Choose a strong password — at least 8 characters, a mix of letters and numbers makes it memorable yet secure."
+      asideSubtitle="Choose a strong password — at least 10 characters, with a lowercase letter and an uppercase letter, number or symbol."
       asideExtra={<AuthAsideChecklist items={checklistItems} />}
       mobileCrestIcon={<KeyRound className="w-5 h-5 text-bridal-gold" />}
     >
