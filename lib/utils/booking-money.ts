@@ -69,7 +69,9 @@ export function bookedOn(row: MoneyRow | null | undefined): number {
     const bill = Number(row.finalBill);
     if (Number.isFinite(bill)) return Math.max(0, bill);
   }
-  const lines = row.bookingDetails || [];
+  // WP37 (MONEY-026): a payments-history row carries bookingDetails as a display OBJECT, not the lines; only an
+  // array is read as lines (`.reduce` on the object threw and emptied the whole Payments page).
+  const lines = Array.isArray(row.bookingDetails) ? row.bookingDetails : [];
   // WP36 / LOGIC-026: a DECLINED line left the booking (the server also reads it as 0); never add it back
   const fromLines = lines.reduce((sum, d) => sum + (String(d?.status ?? '') === 'declined' ? 0 : amount(d?.totalAmount)), 0);
   return Math.max(0, fromLines > 0 ? fromLines : amount(row.totalAmount));
@@ -86,7 +88,7 @@ export function bookedOn(row: MoneyRow | null | undefined): number {
  */
 export function receivedOn(row: MoneyRow | null | undefined): number {
   if (!row) return 0;
-  const lines = row.bookingDetails || [];
+  const lines = Array.isArray(row.bookingDetails) ? row.bookingDetails : [];
   const fromLines = lines.reduce((sum, d) => sum + amount(d?.downPayment), 0);
   return Math.max(0, fromLines > 0 ? fromLines : amount(row.downPayment));
 }

@@ -361,6 +361,19 @@ export async function markRefundPaid(
   return (data?.data as { request: RefundRequestRow; outstanding: number });
 }
 
+/**
+ * WP37 (MONEY-022): the vendor hands back money that is not owed (an over-payment) - POST /bookings/:id/refund.
+ * Writes one NEGATIVE receipt through the refund door (capped at what the ledger holds).
+ */
+export async function recordCashRefund(
+  bookingId: number,
+  body: { amount: number; refundMethod: string; reason?: string },
+  opts?: IdempotencyOptions,
+) {
+  const { data } = await axiosInstance.post(`${v1}/${bookingId}/refund`, body, idempotencyConfig(opts?.idempotencyKey));
+  return data?.data;
+}
+
 /** CUSTOMER: "I received it." The only path to ACKNOWLEDGED. */
 export async function acknowledgeRefund(bookingId: number, reqId: number, note?: string) {
   const { data } = await axiosInstance.patch(`${v1}/${bookingId}/refund-requests/${reqId}/acknowledge`, { note });
@@ -398,6 +411,9 @@ export async function withdrawRefundRequest(bookingId: number, reqId: number, no
 export interface RefundObligation extends RefundRequestRow { outstanding: number }
 export interface RefundObligations {
   businessId: number | null; count: number; totalOutstanding: number; obligations: RefundObligation[];
+  /** WP37 (MONEY-022, additive): money paid above the booking total that no obligation covers. Absent on an older server. */
+  overpayments?: { bookingId: number; customerName?: string | null; bookingDate?: string | null; overpaid: number }[];
+  overpaymentsTotal?: number;
 }
 
 /** VENDOR worklist: refunds this venue owes and has not been confirmed as paying. */
@@ -597,6 +613,10 @@ export interface RefundBreakdown {
 export interface RefundPreview {
   bookingId: number; eventDate: string | null; daysBefore: number;
   grand: number; totalPaid: number;
+  /** WP37 (FLAGGED-063): what comes back if the VENUE agrees to cancel (the vendor-cancel path refunds in full). Absent on an older server. */
+  ifVenueAgrees?: { refund: number; forfeit: number };
+  /** WP37: what the cancellation policy gives back if it is applied (the same figure as `preview`). */
+  ifPolicyApplied?: { refund: number; forfeit: number };
   /**
    * WP16: money the booking's roll-up shows but no receipt backs (a legacy advance never ledgered). Not in
    * `totalPaid` or the refund: only what the ledger holds can be handed back. Absent when there is none.

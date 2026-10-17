@@ -64,7 +64,7 @@ interface ArtData {
   occ: { pct: number; bookedDays: number; emptyDays: number } | null
   profile: { score: number; title: string; body: string; items: { label: string; pts: number }[]; remaining: number } | null
   rating: { avg: number; count: number; newThisMonth: number; quote: string; by: string; avatars: string[] } | null
-  wapsi: { total: number; rows: { id: number; booking: number; amount: number; disputed: boolean; days: number }[]; oldestDays: number; oldestBooking: number } | null
+  wapsi: { total: number; rows: { id: number; booking: number; amount: number; disputed: boolean; days: number; over?: boolean }[]; oldestDays: number; oldestBooking: number } | null
   /** OPS-003 - "unknown" = the refund-obligations request failed / is unavailable. Never rendered as "all settled". */
   wapsiState: "ok" | "unknown" | "loading"
 }
@@ -128,10 +128,13 @@ function wapsiCard(w: ArtData["wapsi"], state: ArtData["wapsiState"] = "ok"): st
   }
   const rows = w.rows.map((o) => {
     const badge = o.disputed ? `<span class="st bad"><i></i> Nahi mila</span>` : `<span class="st warn"><i></i> Dena hai</span>`
-    const meta = o.disputed
+    // WP37 (MONEY-022): money paid above the booking total is owed back too, though no refund request exists for it
+    const meta = o.over
+      ? `<span class="mi">Customer ne zyada diya — wapas karna hai</span>`
+      : o.disputed
       ? `<span class="mi">Customer kehta hai paisa nahi aya</span><span class="mi">· ${o.days} din se atka</span>`
       : `<span class="mi">Refund tay hua — abhi diya nahi</span><span class="mi">· ${o.days} din</span>`
-    const cap = o.disputed ? "proof bhejein" : "aaj settle karein"
+    const cap = o.over ? "booking par refund likhein" : o.disputed ? "proof bhejein" : "aaj settle karein"
     return `<div class="row${o.disputed ? " hl urgent" : ""}" data-nav-btn="/dashboard/bookings/${o.booking}"><span class="ava" aria-hidden="true">${o.booking}</span>
       <div class="r-main"><div class="r-title">Booking #${o.booking} ${badge}</div><div class="r-meta">${meta}</div></div>
       <div class="r-amt"><div class="a-val tnum">Rs ${pkNum(o.amount)}</div><div class="a-cap due">${cap}</div></div></div>`
@@ -543,9 +546,15 @@ export function OverviewArtifact() {
         const days = since ? Math.max(0, Math.floor((Date.now() - new Date(since).getTime()) / 86400000)) : 0
         return { id: n(x.id), booking: n(x.bookingId), amount, disputed: !!(x as { disputedAt?: string | null }).disputedAt, days }
       }).filter((r) => r.amount > 0)
-      if (rows.length) {
-        const oldest = rows.reduce((m, r) => (r.days > m.days ? r : m), rows[0])
-        wapsi = { total: n(ob.totalOutstanding) || rows.reduce((s, r) => s + r.amount, 0), rows: rows.slice(0, 3), oldestDays: oldest.days, oldestBooking: oldest.booking }
+      // WP37 (MONEY-022): over-payments no obligation covers (server: `overpayments`, additive)
+      const over = (Array.isArray((ob as { overpayments?: unknown[] }).overpayments) ? (ob as { overpayments: { bookingId: number; overpaid: number }[] }).overpayments : [])
+        .map((x) => ({ id: -n(x.bookingId), booking: n(x.bookingId), amount: n(x.overpaid), disputed: false, days: 0, over: true }))
+        .filter((r) => r.amount > 0)
+      const all = [...rows, ...over]
+      if (all.length) {
+        const oldest = (rows.length ? rows : all).reduce((m, r) => (r.days > m.days ? r : m), (rows.length ? rows : all)[0])
+        const overTotal = over.reduce((s, r) => s + r.amount, 0)
+        wapsi = { total: (n(ob.totalOutstanding) || rows.reduce((s, r) => s + r.amount, 0)) + overTotal, rows: all.slice(0, 3), oldestDays: oldest.days, oldestBooking: oldest.booking }
       }
     }
 

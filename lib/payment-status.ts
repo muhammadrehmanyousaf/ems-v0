@@ -181,7 +181,8 @@ export function paymentNotDueYet(i: NotDueYetInput | null | undefined): { amount
   // WP17: the server now says it outright. `basis: "none"` with `dueNow: 0` = nothing is due today (the
   // figure quoted is only the NEXT qist). Anything else is due. No schedule needs to be read.
   if (typeof i.basis === "string" && i.basis !== "" && i.dueNow !== undefined && i.dueNow !== null) {
-    if (i.basis !== "none" || Number(i.dueNow) > 0) return null;
+    // WP37 (CUSTOMER-007): `awaiting_approval` = the venue has not accepted yet, so nothing is due today either.
+    if ((i.basis !== "none" && i.basis !== "awaiting_approval") || Number(i.dueNow) > 0) return null;
     return { amount: Number(i.amountDue), dueDate: i.nextInstallment?.dueDate ?? null };
   }
   // Older server (no dueNow / basis): read the schedule states, as before.

@@ -33,6 +33,7 @@ import { openRecordPaymentDrawer } from "@/components/dashboard/mainScreens/arti
 import { openAdoptDrawer, openZeroDrawer, type PhantomCtx } from "@/components/dashboard/mainScreens/artifact/phantom-advance"
 import { ADOPT_BUTTON, ZERO_BUTTON, phantomNoticeText } from "@/lib/utils/phantom-advance"
 import { dayText, groupPk, moneyOf, qistHeading, qistStateVendor, rsText } from "@/lib/utils/qist"
+import { toKarachiDateString } from "@/lib/utils/pk-date"
 
 const svg = (p: string, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}">${p}</svg>`
 const IC = {
@@ -140,7 +141,7 @@ function qistRowHtml(q: BookingInstallment, pay: Map<number, SchedulePayment>, c
   let meta = ""
   if (q.state === "paid") {
     const last = (q.allocations || []).map((a) => pay.get(a.receiptId)).filter(Boolean).pop()
-    meta = `Mil gaya${last ? ` · ${dayText(last.receivedDate)} · ${escHtml(methodText(last.method))}` : q.paidAt ? ` · ${dayText(String(q.paidAt).slice(0, 10))}` : ""}`
+    meta = `Mil gaya${last ? ` · ${dayText(last.receivedDate)} · ${escHtml(methodText(last.method))}` : q.paidAt ? ` · ${dayText(toKarachiDateString(q.paidAt))}` : ""}`
   } else if (waived) {
     meta = `${dayText(q.dueDate)} ki qist maaf kar di gayi${q.waivedReason ? ` — ${escHtml(q.waivedReason)}` : ""}`
   } else if (q.state === "cancelled") {
@@ -152,7 +153,7 @@ function qistRowHtml(q: BookingInstallment, pay: Map<number, SchedulePayment>, c
   const flags: string[] = []
   if ((q.warnings || []).includes("due_after_event")) flags.push("Ye taareekh event ke baad ki hai.")
   if ((q.warnings || []).includes("due_before_booking")) flags.push("Ye taareekh booking banne se pehle ki hai.")
-  const reminded = q.lastRemindedAt ? `Aakhri yaad-dehani ${dayText(String(q.lastRemindedAt).slice(0, 10))}${moneyOf(q.reminderCount) > 1 ? ` · ${moneyOf(q.reminderCount)} baar` : ""}` : ""
+  const reminded = q.lastRemindedAt ? `Aakhri yaad-dehani ${dayText(toKarachiDateString(q.lastRemindedAt))}${moneyOf(q.reminderCount) > 1 ? ` · ${moneyOf(q.reminderCount)} baar` : ""}` : ""
   const a = q.actions
   // Calm by default: the one thing a vendor does most (take the payment) and, when it is
   // late or due, the nudge. Everything else is one tap away under "Aur".
@@ -237,7 +238,8 @@ export function paymentsCardHtml(view: BookingSchedule | null, opts: PaymentsCar
     notes.push(`<div class="q-note warn" data-q-phantom><span>${escHtml(phantomNoticeText(m.unledgered, cancelled))}</span><span style="display:flex;gap:8px;flex-wrap:wrap">${cancelled ? "" : `<button class="btn btn-ghost" data-q-adopt="${Math.round(m.unledgered)}">${escHtml(ADOPT_BUTTON)}</button>`}<button class="btn btn-ghost" data-q-zero="${Math.round(m.unledgered)}">${escHtml(ZERO_BUTTON)}</button></span></div>`)
   }
   if (moneyOf(m.overpaid) > 0) {
-    notes.push(`<div class="q-note info"><span>${rsText(m.overpaid)} zyada mil gaya hai. Wapas karna ho to "Refund" se likhein.</span></div>`)
+    // WP37 (MONEY-022): the note used to tell the vendor to write a "Refund" that no control on the page could write
+    notes.push(`<div class="q-note info"><span>${rsText(m.overpaid)} zyada mil gaya hai. Wapas karna ho to "Refund" se likhein.</span><button class="btn btn-ghost" data-q-refund-over="${Math.round(moneyOf(m.overpaid))}">Refund likhein</button></div>`)
   }
   if (moneyOf(m.waived) > 0) {
     notes.push(`<div class="q-note"><span>${rsText(m.waived)} maaf kiya ja chuka hai — Kul raqam usi hisaab se kam hai.</span></div>`)
@@ -643,7 +645,7 @@ export async function handleQistClick(t: HTMLElement, s: ShadowRoot, ctx: QistCt
     const q = find(view, remindId)
     if (!q) return true
     openDrawer(s, "Yaad dilayein", `
-      <div class="bf-hint"><b>${escHtml(qistHeading(q))}</b> — ${escHtml(qistStateVendor(q).detail)}${q.lastRemindedAt ? `<br/>Aakhri yaad-dehani: ${dayText(String(q.lastRemindedAt).slice(0, 10))}.` : ""}</div>
+      <div class="bf-hint"><b>${escHtml(qistHeading(q))}</b> — ${escHtml(qistStateVendor(q).detail)}${q.lastRemindedAt ? `<br/>Aakhri yaad-dehani: ${dayText(toKarachiDateString(q.lastRemindedAt))}.` : ""}</div>
       <div style="display:flex;flex-direction:column;gap:10px">
         <button class="btn btn-primary" data-qr-send="whatsapp" data-qr-id="${q.id}" type="button">${svg(IC.wa)} WhatsApp par bhejein</button>
         <button class="btn btn-ghost" data-qr-send="in_app" data-qr-id="${q.id}" type="button">App mein notification bhejein</button>

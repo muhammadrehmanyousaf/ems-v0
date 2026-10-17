@@ -87,6 +87,8 @@ export interface PlanItem {
   status: PlanItemStatus;
   quotedAmount: number | string | null;
   agreedAmount: number | string | null;
+  /** WP37 (FLAGGED-024, additive): what the server actually booked this line at, once it is booked. */
+  bookedAmount?: number | string | null;
   /** Package / menu selection — the customer picked WHICH package; the server
    * prices it. Lets a package-only vendor (NULL minimumPrice) be cart-booked. */
   packageId: number | null;

@@ -60,6 +60,7 @@ import {
 
 import { REQUIREMENT_TAG_LABELS, type RequirementTag, type RequirementSetup } from "@/lib/api/requirements"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { effectiveAdvance } from "@/lib/booking/advance"
 
 /** Mirrors SETUP_LABELS on the vendor's card, so both name the same thing. */
 const SETUP_REVIEW_LABELS: Record<string, string> = {
@@ -352,9 +353,8 @@ export default function ReviewStep({
 
   let downPayment = 0
   if (venue) {
-    const dpType = (venue.downPaymentType || "").toLowerCase()
-    const dpValue = Number(venue.downPayment) || 0
-    downPayment = dpType === "percentage" || dpType === "percent" ? Math.round(total * (dpValue / 100)) : dpValue
+    // WP37 (CUSTOMER-006): the server's rule, default advance included (a venue with none set still asks 10%)
+    downPayment = effectiveAdvance(venue as any, total)
   }
 
   // BK-100.2 Layer 2d — umbrella picker state. Only fetched when the

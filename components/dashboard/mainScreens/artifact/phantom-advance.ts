@@ -26,6 +26,7 @@ import { openDrawer, closeDrawer, openConfirm, escHtml } from "./artifact-shell"
 import { invalidateMoney } from "@/lib/query/money-keys"
 import { SubmitKey, isAmbiguousFailure, isRetrySameKey } from "@/lib/utils/idempotency"
 import { ADOPT_BUTTON, PHANTOM_EXPLAIN, PHANTOM_STALE_CODES, ZERO_BUTTON, phantomNoticeText, rsOf, type UnledgeredInfo } from "@/lib/utils/phantom-advance"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 export interface PhantomCtx {
   bookingId: number
@@ -51,7 +52,7 @@ const METHODS: { v: string; l: string }[] = [
   { v: "easypaisa", l: "EasyPaisa" }, { v: "raast", l: "Raast" }, { v: "ibft", l: "IBFT" }, { v: "other", l: "Other" },
 ]
 const DIGITAL = ["bank_transfer", "jazzcash", "easypaisa", "raast", "ibft"]
-const todayStr = () => new Date().toISOString().slice(0, 10)
+const todayStr = () => todayInKarachi() // WP37 (MONEY-014): the Pakistan day; the UTC day is yesterday until 05:00 PKT
 
 const errMsg = (err: unknown): string | undefined =>
   (err as { response?: { data?: { message?: string } } })?.response?.data?.message

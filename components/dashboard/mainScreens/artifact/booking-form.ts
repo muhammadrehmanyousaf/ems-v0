@@ -55,6 +55,8 @@ export function bookingIdFromSaved(res: unknown): number | null {
   return null
 }
 
+import { agreedPriceField, bookedTotalFromSaved } from "./booking-form-payload"
+
 export type BizLite = { id: number; name?: string | null }
 export type BookingPrefill = {
   customerName?: string; customerPhone?: string; customerEmail?: string
@@ -350,7 +352,7 @@ async function submitBookingForm(shadow: ShadowRoot) {
    * which is how business is actually done here, and was impossible to record.
    */
   const agreed = Number(val(shadow, "bf-agreed"))
-  if (agreed > 0) { if (pkg) vendor.negotiatedAmount = agreed; else vendor.agreedAmount = agreed }
+  Object.assign(vendor, agreedPriceField(agreed))
   const adv = Number(val(shadow, "bf-advance")); if (adv) vendor.downPayment = adv
   const special = val(shadow, "bf-special"); if (special) vendor.specialRequests = special
 
@@ -368,7 +370,10 @@ async function submitBookingForm(shadow: ShadowRoot) {
   if (btn) { btn.disabled = true; btn.textContent = "Ban rahi…" }
   try {
     const res = await BookingsAPI.create(payload)
-    toast.success("Booking ban gayi")
+    // WP37 (BOOKINGS-001): say what the server booked, so any difference from the typed figure is visible at once.
+    const booked = bookedTotalFromSaved(res)
+    toast.success(booked != null ? `Booking ban gayi - total Rs ${booked.toLocaleString("en-PK")}` : "Booking ban gayi")
+    if (agreed > 0 && booked != null && Math.abs(booked - agreed) > 0.5) toast.error(`Tay raqam Rs ${agreed.toLocaleString("en-PK")} lagu nahi hui - booking Rs ${booked.toLocaleString("en-PK")} par bani. Booking kholkar qeemat badlein.`)
     closeDrawer(shadow)
     // PAY-UI_VENDOR-001 — a new booking arrives with its advance receipt: it must show up
     // in the Bookings list, Khata, Payments, Receipts, Receivables and the Overview totals

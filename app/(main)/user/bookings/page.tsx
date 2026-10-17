@@ -530,7 +530,10 @@ export default function BookingsPage() {
             // did, so a confirmed-but-unpaid or delivered-but-part-paid booking
             // sat here with no prompt at all.
             const outstanding = bookingMoney(booking).outstanding;
+            // WP37 (CUSTOMER-007): a request the venue has not accepted yet has nothing to pay today
+            const awaitingVenue = (booking as { paymentView?: { awaitingVendorApproval?: boolean } }).paymentView?.awaitingVendorApproval === true;
             const showPay =
+              !awaitingVenue &&
               !["cancelled", "rejected", "declined", "refunded"].includes(sk) &&
               payKey !== "paid" &&
               outstanding > 0 &&

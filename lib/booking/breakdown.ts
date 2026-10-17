@@ -16,6 +16,7 @@ import type { BookingFormData, EventVenue, Vendor } from "@/lib/types"
 import { menuChargeFor, menuIsPerHead, menuBillableHeads } from "@/lib/pricing/menu"
 import { composeLineTotal, packageIsPerHead, packageBillableHeads } from "@/lib/pricing/package"
 import { readUnitConfig, sellsByTheUnit, unitLineFor, describeUnitQty } from "@/lib/pricing/per-unit"
+import { effectiveAdvance } from "@/lib/booking/advance"
 
 export interface BreakdownItem {
   label: string
@@ -101,9 +102,8 @@ export function computeBreakdown({
   const subtotal = items.reduce((s, i) => s + i.amount, 0)
   let downPayment = 0
   if (venue) {
-    const dpType = (venue.downPaymentType || "").toLowerCase()
-    const dpValue = Number(venue.downPayment) || 0
-    downPayment = dpType === "percentage" || dpType === "percent" ? Math.round(subtotal * (dpValue / 100)) : dpValue
+    // WP37 (CUSTOMER-006): the server's rule, default advance included (a venue with none set still asks 10%)
+    downPayment = effectiveAdvance(venue as any, subtotal)
   }
   const startingPrice = Number((venue as any)?.minimumPrice) || 0
   return {

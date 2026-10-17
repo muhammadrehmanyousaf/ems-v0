@@ -24,7 +24,18 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-type Row = { id: number; date: string; name: string; phone: string; rakam: string };
+type Row = { id: number; date: string; name: string; phone: string; rakam: string; error?: string };
+
+/**
+ * WP37 (OPS-038): what one Booking Shield row sends. The typed Rakam is the booking's price, so it travels as
+ * `negotiatedAmount` (the key the server reads; `totalAmount` was ignored and the booking was made at the venue's
+ * minimum while the row promised "Rs 2,00,000"). No `downPayment` is sent: Shield records a date, not a payment.
+ * (OPS-039) no fake phone: a row without a number is refused here, not saved as 0000000000.
+ */
+export function shieldVendorLine(businessId: number, rakam: string): { businessId: number; negotiatedAmount?: number } {
+  const amount = rakam.trim() ? parseUrduAmount(rakam) : null;
+  return { businessId, ...(amount != null && amount > 0 ? { negotiatedAmount: amount } : {}) };
+}
 
 const PKR = (n: number) => "Rs " + Math.round(n).toLocaleString("en-PK");
 const SPARSE_THRESHOLD = 5; // fewer confirmed future dates than this looks suspicious for a venue
@@ -55,31 +66,44 @@ export function MigrationSprintView() {
     // PAY-CLOCK-018: a typed amount that cannot be read must not become a Rs 0 booking.
     const unreadable = ready.find((r) => r.rakam.trim() && parseUrduAmount(r.rakam) == null);
     if (unreadable) { toast.error(`"${unreadable.rakam.trim()}" ki rakam samajh nahi aayi — number likhein (jaise 2 lakh ya 250000)`); return; }
+    // WP37 (OPS-039): a customer needs a real phone number; a made-up one merged every such booking into one customer.
+    const noPhone = ready.filter((r) => !r.phone.trim());
+    if (noPhone.length) {
+      setRows((rs) => rs.map((r) => (noPhone.some((n) => n.id === r.id) ? { ...r, error: "Phone number likhein" } : { ...r, error: undefined })));
+      toast.error(`${noPhone.length} row mein phone nahi hai — har customer ka asli number likhein`);
+      return;
+    }
     if (sparse && !ackSparse) { setAckSparse(true); return; } // one-tap confirm on suspiciously few
     setSaving(true);
     let ok = 0;
-    const failures: string[] = [];
+    const savedIds: number[] = [];
+    const errors = new Map<number, string>();
     for (const r of ready) {
       try {
         await BookingsAPI.create({
           customerName: r.name.trim(),
-          customerPhone: r.phone.trim() || "0000000000",
+          customerPhone: r.phone.trim(),
           bookingDate: r.date,
           bookingTime: "18:00",
           isOfflineBooking: true,
-          vendors: [{ businessId, totalAmount: parseUrduAmount(r.rakam) ?? 0, downPayment: 0 }],
+          vendors: [shieldVendorLine(businessId, r.rakam)],
           notes: "MIGRATED — confirmed future date (booking shield)",
         } as any);
         ok += 1;
+        savedIds.push(r.id);
       } catch (e: any) {
-        failures.push(`${format(new Date(r.date + "T00:00:00"), "d MMM")}: ${e?.response?.data?.message || "error"}`);
+        errors.set(r.id, e?.response?.data?.message || "error");
       }
     }
     setSaving(false);
+    // WP37 (OPS-039): a saved row leaves the form (a second Save no longer duplicates it) and every failed row keeps its own reason.
+    setRows((rs) => {
+      const left = rs.filter((r) => !savedIds.includes(r.id)).map((r) => ({ ...r, error: errors.get(r.id) }));
+      return left.length ? left : [blankRow(format(addDays(new Date(), 14), "yyyy-MM-dd")), blankRow(), blankRow()];
+    });
     await qc.invalidateQueries();
     if (ok) toast.success(`${ok} date${ok === 1 ? "" : "s"} shield par aa gayi — double-booking se mehfooz`);
-    if (failures.length) toast.error(`${failures.length} skip: ${failures[0]}`);
-    if (!failures.length) setRows([blankRow(format(addDays(new Date(), 14), "yyyy-MM-dd")), blankRow(), blankRow()]);
+    if (errors.size) toast.error(`${errors.size} skip - har row ke neeche wajah likhi hai`);
     setAckSparse(false);
   };
 
@@ -111,11 +135,12 @@ export function MigrationSprintView() {
               <div key={r.id} className="flex flex-wrap sm:flex-nowrap items-center gap-2">
                 <Input type="date" value={r.date} onChange={(e) => patch(r.id, { date: e.target.value })} className="h-9 w-36" />
                 <Input value={r.name} onChange={(e) => patch(r.id, { name: e.target.value })} placeholder="Customer" className="h-9 flex-1 min-w-[120px]" />
-                <Input value={r.phone} onChange={(e) => patch(r.id, { phone: e.target.value })} placeholder="03xx (optional)" inputMode="tel" className="h-9 w-full sm:w-32" />
+                <Input value={r.phone} onChange={(e) => patch(r.id, { phone: e.target.value })} placeholder="03xx" inputMode="tel" className="h-9 w-full sm:w-32" />
                 <div className="w-full sm:w-28">
                   <Input value={r.rakam} onChange={(e) => patch(r.id, { rakam: e.target.value })} placeholder="e.g. 2 lakh" className="h-9" />
                   {r.rakam.trim() && parsed != null && <p className="text-[10px] text-emerald-600 mt-0.5">{PKR(parsed)}</p>}
                 </div>
+                {r.error && <p role="alert" data-row-error className="w-full text-[11px] text-destructive">{r.error}</p>}
                 <button onClick={() => removeRow(r.id)} className="text-muted-foreground hover:text-destructive p-1" aria-label="Remove row">
                   <Trash2 className="size-4" />
                 </button>
