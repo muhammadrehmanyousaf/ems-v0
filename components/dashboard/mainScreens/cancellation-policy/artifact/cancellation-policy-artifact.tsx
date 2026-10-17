@@ -27,7 +27,11 @@ function slabLadder(slabs: PolicySlab[]): string {
   return `<div class="ladder">${sorted.map((s, i) => {
     const next = sorted[i + 1]
     // one band from day 0 (a flat cut, e.g. a venue's "Partially Refundable") applies on every day
-    const range = sorted.length === 1 && s.daysToEvent === 0 ? "Kisi bhi din" : i === 0 ? `${s.daysToEvent}+ din pehle` : next ? `${next.daysToEvent + 1}–${s.daysToEvent} din pehle` : `${s.daysToEvent} din tak`
+    // WP29: the engine's own bands. A slab {daysToEvent: 15} applies from 15 days out until the previous (higher) slab starts, and the
+    // LAST slab also covers everything closer to the event; the rows used to read the slab as an UPPER bound (8 to 15 days for the 15-day slab),
+    // which contradicted both the engine and the plain-words line above them.
+    const upper = i > 0 ? sorted[i - 1].daysToEvent - 1 : 0
+    const range = sorted.length === 1 && s.daysToEvent === 0 ? "Kisi bhi din" : i === 0 ? `${s.daysToEvent}+ din pehle` : !next ? `${upper} din ya kam pehle` : s.daysToEvent === upper ? `${s.daysToEvent} din pehle` : `${s.daysToEvent}–${upper} din pehle`
     const pct = Number(s.pctForfeit) || 0
     // WP20: a flat amount the venue keeps ("PKR 20,000 kata") has no percentage to draw, so no bar and the amount in words
     const fixed = Number(s.venueKeepsFixed) || 0
