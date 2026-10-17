@@ -36,7 +36,16 @@ const inputCls =
   "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 
 function getFieldValue(business: ApiBusiness, key: string): unknown {
-  return (business as unknown as Record<string, unknown>)[key]
+  const row = business as unknown as Record<string, unknown>
+  if (row[key] !== undefined && row[key] !== null) return row[key]
+  // WP36 / VENDORTYPES-016: the newer categories' own fields (numberOfDholis, ...) are not Business columns; the server
+  // keeps them in typeSpecificDetails, so a saved value read back from the top level was always empty.
+  const tsd = row.typeSpecificDetails
+  if (tsd && typeof tsd === "object" && !Array.isArray(tsd)) {
+    const v = (tsd as Record<string, unknown>)[key]
+    if (v !== undefined) return v
+  }
+  return row[key]
 }
 
 /**

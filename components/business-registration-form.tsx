@@ -54,6 +54,23 @@ import { BACKEND_URL } from "@/lib/backend-url";
 const IMAGE_UPLOADS_ENABLED =
   true;
 
+/* WP36 / VENDORTYPES-005: the Car Rental flow has no "business type" step, so the server refused the registration
+   ("At least one business type is required") after nine steps. The business types of a car rental are its fleet's
+   vehicle types; anything the vendor chose explicitly is kept. */
+function carRentalSubTypes(businessType: unknown, current: unknown, packages: any[] | undefined): string[] {
+  const chosen = Array.isArray(current) ? current.filter(Boolean) : current ? [String(current)] : [];
+  if (chosen.length > 0 || businessType !== "Car rental") return chosen as string[];
+  const out: string[] = [];
+  for (const p of packages || []) {
+    const vt = p?.features?.vehicleType;
+    for (const v of Array.isArray(vt) ? vt : vt ? [vt] : []) {
+      const s = String(v).trim();
+      if (s && !out.includes(s)) out.push(s);
+    }
+  }
+  return out;
+}
+
 /* Survives a remount of this component so a successful registration can never
    present itself as a failure. Session-scoped, so it dies with the tab. */
 const REG_SUCCESS_KEY = "ww_vendor_reg_success";
@@ -679,97 +696,25 @@ export function BusinessRegistrationForm() {
     });
 
     try {
-      // Single tempId used for both logo and image uploads
+      // WP36 / VENDORTYPES-001: the logo, the gallery and the package photos used to be POSTed to
+      // /businesses/upload-images BEFORE the account existed. That route needs a login (rightly), so every upload
+      // answered 401, the catch below swallowed it, and every new listing went live without a photo. The files now
+      // travel WITH the registration request (multipart) and the server stores them once the business exists.
       const uploadTempId = crypto.randomUUID();
-      let uploadedImageUrls: string[] = [];
-
-      // Upload brand logo if a file was selected.
-      // Skipped entirely while IMAGE_UPLOADS_ENABLED is off — image
-      // storage isn't wired up on production yet, so we silently
-      // drop any selected logo and submit without one. Vendor can
-      // upload from the dashboard later once storage is ready.
-      //
-      // BELT-AND-BRACES: Even when the flag is ON, an upload failure
-      // is treated as a soft warning, NOT a submission blocker. A
-      // photographer doesn't lose their entire registration because
-      // the image bucket had a 5-second hiccup.
-      if (IMAGE_UPLOADS_ENABLED && file) {
-        const logoFormData = new FormData();
-        logoFormData.append("images", file);
-        try {
-          await axios.post(
-            `${BACKEND_URL}api/v1/businesses/upload-images?tempId=${uploadTempId}&type=logo`,
-            logoFormData,
-            { headers: { "Content-Type": "multipart/form-data" } },
-          );
-        } catch (e) {
-          // eslint-disable-next-line no-console
-          console.warn("[business-registration] logo upload failed:", e);
-        }
-      }
-
-      // Upload business images. Skipped while uploads are disabled
-      // (see comment above). uploadedImageUrls stays [] and the
-      // payload further down sends an empty images array.
-      if (
-        IMAGE_UPLOADS_ENABLED &&
-        formData.imageFiles &&
-        formData.imageFiles.length > 0
-      ) {
-        const imageFiles = formData.imageFiles.slice(0, 20); // hard cap at 20
-        const imgFormData = new FormData();
-        imageFiles.forEach((f: File) => {
-          imgFormData.append("images", f);
-        });
-        try {
-          const uploadRes = await axios.post(
-            `${BACKEND_URL}api/v1/businesses/upload-images?tempId=${uploadTempId}`,
-            imgFormData,
-            { headers: { "Content-Type": "multipart/form-data" } },
-          );
-          uploadedImageUrls = uploadRes.data?.data || [];
-        } catch (e) {
-          // Non-fatal — log and submit the business without images.
-          // eslint-disable-next-line no-console
-          console.warn("[business-registration] image upload failed:", e);
-        }
-      }
-
-      // Upload per-package images (Car Rental fleet / Bridal Wear outfits)
-      // Keep original-index mapping so filtered packages use the right image array.
       const allRawPackages: any[] = formData.packages || [];
       const rawPkgImageFiles: File[][] = formData.packageImageFiles || [];
       const validPkgsWithIdx = allRawPackages
         .map((p: any, originalIdx: number) => ({ p, originalIdx }))
         .filter(({ p }) => p.name && p.price);
-
-      let packagesWithImages: any[] = validPkgsWithIdx.map(({ p }) => ({ ...p }));
-
-      // Per-package image uploads (Car Rental fleet / Bridal Wear
-      // outfits). Same kill-switch — when off, selected files are
-      // dropped and packages submit with their text fields only.
-      if (
-        IMAGE_UPLOADS_ENABLED &&
-        rawPkgImageFiles.some((files) => files?.length > 0)
-      ) {
-        packagesWithImages = await Promise.all(
-          validPkgsWithIdx.map(async ({ p, originalIdx }) => {
-            const files: File[] = rawPkgImageFiles[originalIdx] ?? [];
-            if (!files.length) return p;
-            const fd = new FormData();
-            files.slice(0, 10).forEach((f) => fd.append("images", f));
-            try {
-              const res = await axios.post(
-                `${BACKEND_URL}api/v1/businesses/upload-images?tempId=${uploadTempId}`,
-                fd,
-                { headers: { "Content-Type": "multipart/form-data" } },
-              );
-              return { ...p, images: res.data?.data ?? [] };
-            } catch {
-              return p;
-            }
-          })
-        );
+      const packagesWithImages: any[] = validPkgsWithIdx.map(({ p }) => ({ ...p }));
+      // field name -> files; packageImages_<n> is the position in the SUBMITTED packages list
+      const registrationFiles: Array<[string, File]> = [];
+      if (IMAGE_UPLOADS_ENABLED) {
+        if (file) registrationFiles.push(["brandLogoFile", file]);
+        (formData.imageFiles || []).slice(0, 20).forEach((f: File) => registrationFiles.push(["galleryImages", f]));
+        validPkgsWithIdx.forEach(({ originalIdx }, k) => {
+          (rawPkgImageFiles[originalIdx] ?? []).slice(0, 10).forEach((f: File) => registrationFiles.push([`packageImages_${k}`, f]));
+        });
       }
 
       const socialLinks = (formData.instagram || formData.facebook)
@@ -807,12 +752,15 @@ export function BusinessRegistrationForm() {
         name: formData.name,
         brandLogo: formData.profilePicture,
         roleIds: [2],
-        subBusinessType: formData.subBusinessType,
+        subBusinessType: carRentalSubTypes(formData.businessType, formData.subBusinessType, formData.packages),
         cityCovered: formData.cityCovered,
         expertise: formData.expertise,
         amenities: formData.amenities,
         staff: formData.staff,
-        maxCapacity: formData.maxCapacity || 1,
+        // WP36 / VENDORTYPES-003: never invent a capacity (the wizard sent 1, which refused every cart above one guest)
+        maxCapacity: formData.maxCapacity ? Number(formData.maxCapacity) : undefined,
+        // WP36 / VENDORTYPES-006: the venue's minimum guests was collected and never sent
+        minCapacity: formData.minCapacity ? Number(formData.minCapacity) : undefined,
         description: formData.description,
         additionalInfo: formData.additionalInfo || undefined,
         downPaymentType: formData.downPaymentType,
@@ -854,8 +802,7 @@ export function BusinessRegistrationForm() {
         instruction: formData.instruction || undefined,
         serviceProvided: formData.serviceProvided,
         minimumPrice: formData.minimumPrice || undefined,
-        images:
-          uploadedImageUrls.length > 0 ? uploadedImageUrls : formData.images,
+        images: formData.images,
         packages: packagesWithImages,
         carRentalPackages: (formData.carRentalPackages ?? [])
           .filter((pkg) => pkg.name?.trim() && pkg.totalPrice > 0)
@@ -918,7 +865,7 @@ export function BusinessRegistrationForm() {
       let requestBody: FormData | object = submitPayload;
       let requestHeaders: Record<string, string> = {};
 
-      if (formData.profileImageFile) {
+      if (formData.profileImageFile || registrationFiles.length > 0) {
         const fd = new globalThis.FormData();
         // Append simple scalar fields
         Object.entries(submitPayload).forEach(([key, val]) => {
@@ -930,7 +877,8 @@ export function BusinessRegistrationForm() {
             fd.append(key, String(val));
           }
         });
-        fd.append("profileImage", formData.profileImageFile);
+        if (formData.profileImageFile) fd.append("profileImage", formData.profileImageFile);
+        registrationFiles.forEach(([field, f]) => fd.append(field, f));
         requestBody = fd;
         requestHeaders["Content-Type"] = "multipart/form-data";
       }
@@ -1040,6 +988,14 @@ export function BusinessRegistrationForm() {
           "Your business has been registered. Sign in to access your dashboard.";
         try { sessionStorage.setItem(REG_SUCCESS_KEY, successMsg); } catch {}
         setSuccessMessage(successMsg);
+        // WP36 / VENDORTYPES-001: never lose photos silently
+        const failedUploads = (vendorData as any)?.uploads?.failed;
+        if (Array.isArray(failedUploads) && failedUploads.length > 0) {
+          toast({
+            title: "Some photos could not be uploaded",
+            description: "Your registration is saved. Add the missing photos from Settings > Images after you sign in.",
+          });
+        }
         setOpenModal(true);
         setCurrentStep(0);
 
