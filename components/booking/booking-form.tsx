@@ -65,6 +65,7 @@ import { RequirementsAPI } from "@/lib/api/requirements"
 // choices on refresh because useBookingDraft's load was never wired.
 import { DraftResumeBanner, relativeTimeAgo } from "@/components/shared/DraftResumeBanner"
 import { loginUrl } from "@/lib/auth/go-login"
+import { effectiveAdvance } from "@/lib/booking/advance"
 
 export default function BookingForm() {
   // Global steps: 1=Event Selection; Afterwards, per-event steps tracked in each event
@@ -360,14 +361,8 @@ export default function BookingForm() {
       return;
     }
 
-    const calculateDownPayment = (amount: number, business: any): number => {
-      const dpType = (business?.downPaymentType || '').toLowerCase()
-      const dpValue = parseFloat(business?.downPayment) || 0
-      if (dpType === 'percentage' || dpType === 'percent') {
-        return Math.round(amount * (dpValue / 100))
-      }
-      return dpValue
-    }
+    // WP37 (CUSTOMER-006): the same advance rule the server applies (incl. its default for a venue with none set)
+    const calculateDownPayment = (amount: number, business: any): number => effectiveAdvance(business, amount)
 
     const vendorsPayload: any[] = []
 

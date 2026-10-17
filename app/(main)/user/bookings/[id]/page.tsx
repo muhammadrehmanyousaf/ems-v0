@@ -275,6 +275,8 @@ export default function BookingDetailPage() {
   const [dueState, setDueState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
   // PAY-UI_CUSTOMER-010: set when the server's figure is only the NEXT qist, not due yet (a venue that asks no advance).
   const [nextPayment, setNextPayment] = useState<{ amount: number; dueDate: string | null } | null>(null);
+  // WP37 (CUSTOMER-007): the venue has not accepted the request yet, so nothing is due (the pay page says the same)
+  const [awaitingApproval, setAwaitingApproval] = useState(false);
   useEffect(() => {
     if (!booking) return;
     if (isClosedBookingStatus((booking.status || "").toLowerCase()) || bookingMoney(booking as never).outstanding <= 0) {
@@ -286,6 +288,7 @@ export default function BookingDetailPage() {
       .then((d) => {
         if (!live) return;
         const notYet = paymentNotDueYet(d);
+        setAwaitingApproval(!!d?.awaitingVendorApproval);
         setNextPayment(notYet);
         setDueNow(notYet ? 0 : Number(d?.amountDue ?? 0));
         setDueState("ready");
@@ -623,6 +626,9 @@ export default function BookingDetailPage() {
   const showPayCta =
     !isClosedStatus &&
     !isFullyPaid &&
+    // WP37 (CUSTOMER-029): "until the vendor accepts there is nothing to pay into" - a part-paid PENDING booking
+    // (its header total was never written) used to show "Pay remaining" next to "Nothing is due right now".
+    statusKey !== "pending" &&
     outstanding > 0 &&
     (PAYABLE_STATUSES.includes(statusKey) || isPartiallyPaid);
   // Nothing is due right now when the server says so (for example the advance is waived), even though a balance
@@ -1021,7 +1027,8 @@ export default function BookingDetailPage() {
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Total amount</span>
                 <span className="font-medium text-foreground tabular-nums">
-                  {fmt(booking.totalAmount)}
+                  {/* WP37 (CUSTOMER-029): the same figure Paid / Remaining are worked from (final bill, header, or the lines) */}
+                  {fmt(money.booked)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -1072,7 +1079,9 @@ export default function BookingDetailPage() {
 
             {showPayCta && nothingDueNow ? (
               <div className="mt-4 pt-4 border-t border-border/60 text-[12.5px] leading-snug text-muted-foreground">
-                {nextPayment ? (
+                {awaitingApproval ? (
+                  <>The venue is reviewing your request. Nothing is due, and nothing has been charged, until they accept it. We will ask for the advance then.</>
+                ) : nextPayment ? (
                   <>
                     Nothing is due right now. Your next payment, <span className="font-medium text-foreground tabular-nums">{fmt(nextPayment.amount)}</span>
                     {nextPayment.dueDate ? <> is due on {dayTextCustomer(nextPayment.dueDate)}.</> : <> is due later.</>}
