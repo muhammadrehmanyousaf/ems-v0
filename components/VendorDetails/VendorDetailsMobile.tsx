@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ratingLabel as ratingLabelOf } from "@/lib/rating-label";
 import {
   Star,
   MapPin,
@@ -172,14 +173,7 @@ function CircularRating({
 
   const ratingColor = "text-bridal-gold-dark";
   const strokeColor = "#C9956A"; // bridal gold
-  const ratingLabel =
-    rating >= 4.5
-      ? "Exceptional"
-      : rating >= 4
-        ? "Excellent"
-        : rating >= 3
-          ? "Very Good"
-          : "Good";
+  const ratingLabel = ratingLabelOf(rating); // WP39 / PUBLIC-026: the one five-step scale (lib/rating-label.ts)
 
   return (
     <div ref={ref} className="flex flex-col items-center gap-2">

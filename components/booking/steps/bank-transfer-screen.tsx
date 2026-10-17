@@ -61,6 +61,14 @@ interface BankTransferScreenProps {
   compact?: boolean
 }
 
+/** PK number -> wa.me digits (leading 0 -> 92). */
+function waDigitsOf(n: string | null | undefined): string {
+  let d = String(n || "").replace(/\D/g, "")
+  if (d.startsWith("0")) d = "92" + d.slice(1)
+  else if (!d.startsWith("92") && d.length === 10) d = "92" + d
+  return d
+}
+
 const METHOD_LABELS: Record<ClaimMethod, string> = {
   bank_transfer: "Bank transfer",
   raast: "Raast",
@@ -208,6 +216,19 @@ export default function BankTransferScreen({
   // venue; name the ones that cannot be paid here. (It does not yet return a per-venue amount.)
   const allVendors = instructions?.vendors || []
   const vendorsWithoutAccounts = allVendors.filter((v) => v.accounts.length === 0)
+  // WP39 / FLAGGED-050: only the rails some venue on this booking really takes (the form offered every method, even bank transfer for a
+  // venue that published no account). Raast / IBFT ride on a bank account. An older server sends no `methods`: then everything, as before.
+  const allMethods = Object.keys(METHOD_LABELS) as ClaimMethod[]
+  const offered = (() => {
+    const lists = allVendors.map((v) => v.methods).filter((m): m is string[] => Array.isArray(m))
+    if (!lists.length) return allMethods
+    const have = new Set(lists.flat())
+    const out = allMethods.filter((m) => (m === "raast" || m === "ibft" ? have.has("bank_transfer") : have.has(m)))
+    return out.length ? out : allMethods
+  })()
+  useEffect(() => {
+    if (!offered.includes(method)) setMethod(offered[0])
+  }, [offered.join(","), method]) // eslint-disable-line react-hooks/exhaustive-deps
   // A reference is what the venue matches against their statement, so every
   // rail except cash needs one before this can be submitted.
   const refRequired = method !== "cash"
@@ -249,9 +270,10 @@ export default function BankTransferScreen({
         </h2>
         <p className="mt-3 max-w-[640px] font-bridal text-[14px] leading-[20px] text-bridal-text-soft">
           {/* Accurate description of the arrangement. The venue collects; we record
-              it and hold the date. Nothing is held by Wedding Wala. */}
+              the payment for them to confirm. Nothing is held by Wedding Wala (WP39 / FLAGGED-050: the old
+              "we'll hold your date" promised a hold this screen does not make). */}
           Your venue collects this payment directly. Tell us once you&apos;ve sent it and
-          we&apos;ll hold your date while they confirm.
+          we&apos;ll record it for them to confirm.
         </p>
       </header>
 
@@ -424,7 +446,7 @@ export default function BankTransferScreen({
               <strong className="font-medium text-bridal-charcoal">{v.businessName || "A venue"}</strong>
               {shareOf(v.businessId) ? <> ({"Rs. " + Number(shareOf(v.businessId)!.amountDue).toLocaleString()})</> : null} hasn&apos;t published
               bank details yet. Contact them to arrange payment
-              {v.whatsappNumber ? <> — WhatsApp <strong className="font-medium text-bridal-charcoal">{v.whatsappNumber}</strong></> : null}.
+              {v.whatsappNumber ? <> — <a className="font-medium text-bridal-charcoal underline" href={`https://wa.me/${waDigitsOf(v.whatsappNumber)}`} target="_blank" rel="noopener noreferrer">WhatsApp {v.whatsappNumber}</a></> : null}.
             </p>
           ))}
         </div>
@@ -437,7 +459,7 @@ export default function BankTransferScreen({
           <p className="font-bridal text-[13px] leading-[18px] text-bridal-text">
             This venue hasn&apos;t published bank details yet. Contact them to arrange
             payment{instructions?.vendors?.[0]?.whatsappNumber
-              ? <> — WhatsApp <strong className="font-medium text-bridal-charcoal">{instructions.vendors[0].whatsappNumber}</strong></>
+              ? <> — <a className="font-medium text-bridal-charcoal underline" href={`https://wa.me/${waDigitsOf(instructions.vendors[0].whatsappNumber)}`} target="_blank" rel="noopener noreferrer">WhatsApp {instructions.vendors[0].whatsappNumber}</a></>
               : null}.
           </p>
         </div>
@@ -478,7 +500,7 @@ export default function BankTransferScreen({
                 onChange={(e) => setMethod(e.target.value as ClaimMethod)}
                 className={INPUT}
               >
-                {(Object.keys(METHOD_LABELS) as ClaimMethod[]).map((m) => (
+                {offered.map((m) => (
                   <option key={m} value={m}>{METHOD_LABELS[m]}</option>
                 ))}
               </select>

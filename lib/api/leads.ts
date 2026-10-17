@@ -256,6 +256,15 @@ export class LeadAPI {
     return res.data?.data?.lead;
   }
 
+  /**
+   * WP39 / LEADS-004: POST /api/v1/leads, keeping the additive `possibleDuplicates` the server returns when an OPEN lead of the same
+   * venue already has this phone (any spelling). `create` above is unchanged for every other caller.
+   */
+  static async createWithMeta(body: CreateLeadInput): Promise<{ lead: Lead; possibleDuplicates: { id: number; contactName: string | null; status: LeadStatus }[] }> {
+    const res = await axiosInstance.post(`/api/v1/leads`, body);
+    return { lead: res.data?.data?.lead, possibleDuplicates: res.data?.data?.possibleDuplicates ?? [] };
+  }
+
   /** PATCH /api/v1/leads/:id — content edits only (status uses /transition). */
   static async update(id: number, body: UpdateLeadInput): Promise<Lead> {
     const res = await axiosInstance.patch(`/api/v1/leads/${id}`, body);

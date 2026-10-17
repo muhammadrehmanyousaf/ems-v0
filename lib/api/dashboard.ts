@@ -879,6 +879,8 @@ export interface ApiCustomer {
   total_booking: number;
   last_booking: string;
   first_booking?: string;
+  /** WP39 / LEADS-021: when the customer entered the book (Customer.firstSeenAt), NOT the first event date (first_booking). */
+  first_seen?: string;
 }
 
 export interface CustomerProfileBooking {
@@ -1153,6 +1155,7 @@ export class CustomersAPI {
         total_booking: Number(c.totalBookings) || 0,
         last_booking: (c.lastBookingAt as string) ?? "",
         first_booking: (c.firstBookingAt as string) ?? undefined,
+        first_seen: (c.firstSeenAt as string) ?? undefined,
       }));
       return {
         customers,
@@ -1187,10 +1190,16 @@ export class CustomersAPI {
     if (params.phone) qs.set("phone", params.phone);
     if (params.offlineId != null) qs.set("offlineId", String(params.offlineId));
     if (qs.toString() === "") return null;
-    const res = await axiosInstance.get(
-      `/api/v1/analytics/customers/profile?${qs.toString()}`,
-    );
-    return res.data?.data ?? null;
+    try {
+      const res = await axiosInstance.get(
+        `/api/v1/analytics/customers/profile?${qs.toString()}`,
+      );
+      return res.data?.data ?? null;
+    } catch (err) {
+      // WP39 / LEADS-022: the server now answers 404 for a number / address nobody has; that is "not found", not a failure to retry
+      if ((err as { response?: { status?: number } })?.response?.status === 404) return null;
+      throw err;
+    }
   }
 
   /**

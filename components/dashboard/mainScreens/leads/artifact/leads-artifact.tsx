@@ -12,7 +12,8 @@ import { useSearchParams } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { LeadAPI, type Lead, type LeadStatus, type LeadSource, type LeadEventType, type CreateLeadInput, type UpdateLeadInput } from "@/lib/api/leads"
-import { LEAD_STAGE } from "@/lib/lead-stage"
+import { LEAD_STAGE, nextStageOf, LEAD_CLOSED } from "@/lib/lead-stage"
+import { callNumber, waNumber, followUpInputValue, followUpPayload, changedLeadFields, LOST_REASONS } from "@/lib/lead-tail"
 import { leadBudgetError, leadGuestsError, leadNumberMessageUr } from "@/lib/lead-numbers"
 import { venueSpacesApi, type SubVenueNode } from "@/lib/api/venueSpaces"
 import { openBookingForm, bookingIdFromSaved } from "@/components/dashboard/mainScreens/artifact/booking-form"
@@ -106,12 +107,23 @@ const SOURCE: Record<LeadSource, { label: string; color: string }> = {
 }
 const stageOf = (s?: LeadStatus) => STAGE[s || "new"] || STAGE.new
 const sourceOf = (s?: LeadSource) => SOURCE[s || "other"] || SOURCE.other
-/** Linear pipeline; the plain one-tap advance covers the mid stages (booked
- * goes through the convert-to-booking flow, not a bare transition). */
-const FLOW: LeadStatus[] = ["new", "contacted", "qualified", "quoted", "booked"]
-function nextStageOf(s?: LeadStatus): LeadStatus | null {
-  const i = FLOW.indexOf(s || "new"); if (i < 0 || i >= FLOW.length - 1) return null
-  const nx = FLOW[i + 1]; return nx === "booked" ? null : nx
+// WP39 / LEADS-010: the pipeline order and the plain one-tap advance live in lib/lead-stage.ts (nextStageOf), shared with the detail page.
+
+/**
+ * WP39 / LEADS-011 (decision): marking a lead Khoya asks WHY (a mis-tap no longer closes a wedding enquiry in one tap, and the reason
+ * is stored). Shared by the list quick view and the detail page.
+ */
+export function lostReasonFormHtml(leadId: number): string {
+  const opts = LOST_REASONS.map((r) => `<option value="${escHtml(r)}">${escHtml(r)}</option>`).join("")
+  return `<div class="dfield"><label class="dlabel">Lead kyun khoyi?</label><select id="lost-reason">${opts}</select></div>
+    <div class="dfield"><label class="dlabel">Mazeed baat (optional)</label><textarea id="lost-note" placeholder="Kuch likhna ho to…"></textarea></div>
+    <div class="qv-note">Khoya lead baad mein \"Dobara kholein\" se wapas khul sakti hai.</div>
+    <div class="ww-dfoot"><button class="btn btn-ghost" data-drawer-close>Rehne dein</button><button class="btn btn-danger" data-lead-lost-go="${leadId}">Haan, khoya mark karein</button></div>`
+}
+/** The text stored as the lead's status reason for a lost lead: the picked reason, plus the note when one was typed. */
+export function lostReasonText(reason: string, note: string): string {
+  const n = (note || "").trim()
+  return n ? `${reason} — ${n}` : reason
 }
 
 const EXTRA_CSS = String.raw`
@@ -166,11 +178,13 @@ export function waDigits(phone?: string | null): string {
 function rowHtml(l: Lead): string {
   const st = stageOf(l.status), src = sourceOf(l.source)
   const name = l.contactName || "Lead"
-  const phone = l.contactPhone || ""
+  const phone = callNumber(l)
+  const waPhone = waNumber(l)
   const editBtn = `<button class="iconbtn" data-lead-edit="${l.id}" title="Edit" aria-label="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`
   const canBook = !["booked", "lost", "archived"].includes(l.status || "")
   const bookBtn = canBook ? `<button class="iconbtn book" data-lead-book="${l.id}" title="Booking banayein" aria-label="Booking banayein"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M12 13v4M10 15h4"/></svg></button>` : ""
-  const telWa = phone ? `<button class="iconbtn" data-tel="${escHtml(phone)}" data-lead-id="${l.id}" title="Call" aria-label="Call">${callSvg}</button><button class="iconbtn wa" data-wa="${escHtml(phone)}" data-lead-id="${l.id}" title="WhatsApp" aria-label="WhatsApp">${waSvg}</button>` : ""
+  // WP39 / LEADS-013: a WhatsApp-only lead still has a number to ring / message
+  const telWa = `${phone ? `<button class="iconbtn" data-tel="${escHtml(phone)}" data-lead-id="${l.id}" title="Call" aria-label="Call">${callSvg}</button>` : ""}${waPhone ? `<button class="iconbtn wa" data-wa="${escHtml(waPhone)}" data-lead-id="${l.id}" title="WhatsApp" aria-label="WhatsApp">${waSvg}</button>` : ""}`
   const acts = `<div class="lead-acts">${telWa}${bookBtn}${editBtn}</div>`
   return `<tr data-status="${st.tab}">
     <td><div class="c-couple" data-lead-view="${l.id}" style="cursor:pointer"><span class="ava">${escHtml(initialsOf(name))}</span><div><div class="cc-nm">${escHtml(name)}</div><div class="cc-ev">${escHtml(phone || "—")}</div></div></div></td>
@@ -189,18 +203,21 @@ function rowHtml(l: Lead): string {
 function leadQuickViewHtml(l: Lead, businesses?: BizLite[]): string {
   const lx = l as unknown as LeadExtra
   const st = stageOf(l.status), src = sourceOf(l.source)
-  const phone = l.contactPhone || ""
+  const phone = callNumber(l)
+  const waPhone = waNumber(l)
   const venue = businesses?.find((b) => b.id === lx.businessId)?.name
   const fu = lx.nextFollowUpAt ? new Date(lx.nextFollowUpAt) : null
   const fuTxt = fu && !isNaN(fu.getTime()) ? fu.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) : "—"
   const item = (k: string, v: string) => `<div class="qv-item"><div class="k">${k}</div><div class="v">${escHtml(v || "—")}</div></div>`
-  const telWa = phone
-    ? `<button class="btn btn-ghost sm" data-tel="${escHtml(phone)}" data-lead-id="${l.id}">${callSvg} Call</button><button class="btn btn-ghost sm" data-wa="${escHtml(phone)}" data-lead-id="${l.id}">${waSvg} WhatsApp</button>`
+  const telWa = phone || waPhone
+    ? `${phone ? `<button class="btn btn-ghost sm" data-tel="${escHtml(phone)}" data-lead-id="${l.id}">${callSvg} Call</button>` : ""}${waPhone ? `<button class="btn btn-ghost sm" data-wa="${escHtml(waPhone)}" data-lead-id="${l.id}">${waSvg} WhatsApp</button>` : ""}`
     : `<span style="font-size:12px;color:var(--ink-3)">Koi phone nahi</span>`
   const canBook = !["booked", "lost", "archived"].includes(l.status || "")
   const nx = nextStageOf(l.status)
-  const isTerminal = ["booked", "lost", "archived"].includes(l.status || "")
-  const advBtns = `${nx ? `<button class="btn btn-primary sm" data-lead-adv="${nx}" data-adv-id="${l.id}">✓ ${escHtml(STAGE[nx].label)} mark karein</button>` : ""}${!isTerminal ? `<button class="btn btn-ghost sm" data-lead-adv="lost" data-adv-id="${l.id}" style="color:var(--bad)">Khoya</button>` : ""}`
+  const isTerminal = LEAD_CLOSED.includes((l.status || "new") as LeadStatus)
+  // WP39 / LEADS-011: a lost / archived lead can be re-opened (booked cannot: it has a booking)
+  const canReopen = l.status === "lost" || l.status === "archived"
+  const advBtns = `${nx ? `<button class="btn btn-primary sm" data-lead-adv="${nx}" data-adv-id="${l.id}">✓ ${escHtml(STAGE[nx].label)} mark karein</button>` : ""}${!isTerminal ? `<button class="btn btn-ghost sm" data-lead-adv="lost" data-adv-id="${l.id}" style="color:var(--bad)">Khoya</button>` : ""}${canReopen ? `<button class="btn btn-primary sm" data-lead-adv="new" data-adv-id="${l.id}">Dobara kholein</button>` : ""}`
   const bookingId = l.booking?.id ?? l.bookingId ?? null
   const bookingLink = bookingId ? `<button class="btn btn-ghost sm" data-nav-btn="/dashboard/bookings/${bookingId}">Booking dekhein ›</button>` : ""
   return `<div class="qv-top"><span class="st ${st.tone}"><i></i> ${escHtml(st.label)}</span><span class="qv-src"><span class="srcdot" style="background:${src.color}"></span> ${escHtml(src.label)}</span><span style="margin-left:auto;font-size:11.5px;color:var(--ink-3)">${escHtml(relTime(l.updatedAt || l.createdAt))}</span></div>
@@ -270,7 +287,8 @@ function leadFormHtml(l?: Lead, prefillDate?: string, businesses?: BizLite[], cu
   const dateVal = escHtml(l?.eventDate ? String(l.eventDate).slice(0, 10) : safeDateValue(prefillDate))
   const selBiz = lx.businessId ?? curBiz ?? (businesses && businesses[0]?.id) ?? ""
   const bizOpts = (businesses || []).map((b) => `<option value="${b.id}"${b.id === selBiz ? " selected" : ""}>${escHtml(b.name || `Venue #${b.id}`)}</option>`).join("")
-  const fuVal = lx.nextFollowUpAt ? String(lx.nextFollowUpAt).slice(0, 16) : ""
+  // WP39 / LEADS-008: prefilled in Karachi wall time (the stored instant sliced as text was the UTC time, five hours early)
+  const fuVal = followUpInputValue(lx.nextFollowUpAt)
   return `<input type="hidden" id="ld-id" value="${l ? l.id : ""}"/><input type="hidden" id="ld-upd" value="${l ? escHtml(l.updatedAt || "") : ""}"/>
     <div class="dfield"><label class="dlabel">Naam <span class="req">*</span></label><input id="ld-name" value="${v(l?.contactName)}" placeholder="Customer ka naam"/></div>
     <div class="dfield row2"><div><label class="dlabel">Phone</label><input id="ld-phone" value="${v(l?.contactPhone)}" placeholder="0300…"/></div><div><label class="dlabel">WhatsApp</label><input id="ld-wa" value="${v(l?.contactWhatsapp)}" placeholder="agar alag ho"/></div></div>
@@ -367,9 +385,19 @@ export function LeadsArtifact() {
         const adv = t.closest("[data-lead-adv]") as HTMLElement | null
         if (adv?.dataset.leadAdv) {
           const id = Number(adv.dataset.advId); const to = adv.dataset.leadAdv as LeadStatus
+          // WP39 / LEADS-011: closing a lead as lost asks why first (one deliberate step, reason stored)
+          if (to === "lost") { openDrawer(s, "Lead khoya mark karein", lostReasonFormHtml(id)); return }
           adv.setAttribute("disabled", "true")
           try { await LeadAPI.transition(id, { to }); toast.success(`Status: ${STAGE[to]?.label || to}`); closeDrawer(s); qc.invalidateQueries({ queryKey: ["leads-artifact"] }) }
           catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Status nahi badla"); adv.removeAttribute("disabled") }
+          return
+        }
+        const lostGo = t.closest("[data-lead-lost-go]") as HTMLButtonElement | null
+        if (lostGo?.dataset.leadLostGo) {
+          const id = Number(lostGo.dataset.leadLostGo)
+          lostGo.disabled = true
+          try { await LeadAPI.transition(id, { to: "lost", statusReason: lostReasonText(val("lost-reason"), val("lost-note")) }); toast.success("Status: Khoya"); closeDrawer(s); qc.invalidateQueries({ queryKey: ["leads-artifact"] }) }
+          catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Status nahi badla"); lostGo.disabled = false }
           return
         }
         const led = t.closest("[data-lead-edit]") as HTMLElement | null
@@ -380,7 +408,7 @@ export function LeadsArtifact() {
           const l = leadsRef.current.find((x) => x.id === Number(lbk.dataset.leadBook)); if (!l) return
           const lx = l as unknown as LeadExtra
           openBookingForm(s, {
-            prefill: { customerName: l.contactName || undefined, customerPhone: l.contactPhone || undefined, customerEmail: l.contactEmail || undefined, bookingDate: l.eventDate ? String(l.eventDate).slice(0, 10) : undefined, guestCount: l.estimatedGuests ?? undefined, businessId: lx.businessId ?? Number(bizRef.current), subVenueId: lx.subVenueId ?? undefined, leadId: l.id },
+            prefill: { customerName: l.contactName || undefined, customerPhone: callNumber(l) || undefined, customerEmail: l.contactEmail || undefined, bookingDate: l.eventDate ? String(l.eventDate).slice(0, 10) : undefined, guestCount: l.estimatedGuests ?? undefined, businessId: lx.businessId ?? Number(bizRef.current), subVenueId: lx.subVenueId ?? undefined, leadId: l.id },
             businesses: bizListRef.current, activeBiz: bizRef.current,
             // WW-LEADLINK — same fix as the lead-detail screen: record WHICH
             // booking the lead became, and say so if the link fails. This wrote
@@ -412,16 +440,33 @@ export function LeadsArtifact() {
             source: val("ld-source") as LeadSource, status: val("ld-status") as LeadStatus, inquiry: val("ld-inquiry") || undefined,
             subVenueId: val("ld-subvenue") ? Number(val("ld-subvenue")) : null,
             assignedToUserId: val("ld-rep") ? Number(val("ld-rep")) : null,
-            nextFollowUpAt: val("ld-followup") || null,
+            nextFollowUpAt: followUpPayload(val("ld-followup")), // WP39 / LEADS-008: Karachi wall time as typed, no offset
           }
           const btn = t.closest("[data-lead-save]") as HTMLButtonElement; btn.disabled = true; btn.textContent = "Save ho raha…"
+          let dupWarn = ""
           try {
-            // CONCURRENCY-009: the updatedAt the drawer was opened on; the server refuses the save if the lead moved on
-            if (editId) await LeadAPI.update(editId, { ...common, businessId: bizPick || undefined, ...(val("ld-upd") ? { expectedUpdatedAt: val("ld-upd") } : {}) } as UpdateLeadInput)
-            else { if (!bizPick) { toast.error("Venue select karein"); btn.disabled = false; return } await LeadAPI.create({ businessId: bizPick, ...common } as CreateLeadInput) }
+            if (editId) {
+              // WP39 / LEADS-005: send only what the vendor changed. The drawer used to re-send every field, so a closed lead got
+              // content it cannot take (the server now answers that with a 409 instead of a silent 200).
+              const orig = leadsRef.current.find((x) => x.id === editId)
+              const diff = orig ? changedLeadFields(common as unknown as Record<string, unknown>, orig as unknown as Record<string, unknown>) : common
+              const lxo = orig as unknown as LeadExtra | undefined
+              const bizChanged = !!(bizPick && lxo?.businessId && bizPick !== lxo.businessId)
+              if (orig && !Object.keys(diff).length && !bizChanged) { toast.info("Kuch badla nahi"); closeDrawer(s); return }
+              // a field the vendor emptied is CLEARED (null), not silently left out of the request
+              for (const k of Object.keys(diff)) if ((diff as Record<string, unknown>)[k] === undefined) (diff as Record<string, unknown>)[k] = null
+              // CONCURRENCY-009: the updatedAt the drawer was opened on; the server refuses the save if the lead moved on
+              await LeadAPI.update(editId, { ...diff, ...(bizChanged ? { businessId: bizPick } : {}), ...(val("ld-upd") ? { expectedUpdatedAt: val("ld-upd") } : {}) } as UpdateLeadInput)
+            } else {
+              if (!bizPick) { toast.error("Venue select karein"); btn.disabled = false; return }
+              const made = await LeadAPI.createWithMeta({ businessId: bizPick, ...common } as CreateLeadInput)
+              // WP39 / LEADS-004: the same number is already an open lead at this venue: say so (the lead is still saved)
+              if (made.possibleDuplicates.length) dupWarn = made.possibleDuplicates.map((d) => `${d.contactName || "Lead"} #${d.id}`).join(", ")
+            }
             // WP21 — the list shows the venue picked in the sidebar. A lead saved under ANOTHER venue is real, but it is not in
             // this list: say where it went instead of a plain "ban gaya" next to a list that did not change.
             const elsewhere = bizPick && bizRef.current != null && Number(bizRef.current) !== bizPick
+            if (dupWarn) toast.warning(`Is number ki lead pehle se khuli hai: ${dupWarn}. Dobara to nahi?`)
             toast.success(editId ? "Lead update ho gaya" : elsewhere ? `Naya lead ban gaya — ${bizListRef.current.find((b) => b.id === bizPick)?.name || "doosre venue"} mein (sidebar se wo venue chunein)` : "Naya lead ban gaya"); closeDrawer(s); qc.invalidateQueries({ queryKey: ["leads-artifact"] })
           } catch (err: unknown) { if (!showLeadFieldError(s, err)) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua"); if ((err as { response?: { status?: number } })?.response?.status === 409) qc.invalidateQueries({ queryKey: ["leads-artifact"] }); btn.disabled = false; btn.textContent = editId ? "Update karein" : "Lead add karein" }
           return

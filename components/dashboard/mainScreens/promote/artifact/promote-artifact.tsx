@@ -13,7 +13,7 @@ import { toast } from "sonner"
 import { PromotionsAPI, type PromotionRequestRow, type PromotionPlacement, type PromotionStatus, type PricingPlacement } from "@/lib/api/promotions"
 import { useBusiness } from "@/context/BusinessContext"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
-import { useArtifactShell, pkNum, escHtml, initTablePager, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, pkNum, escHtml, initTablePager, errorBannerHtml, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const PLACEMENT_LABEL: Record<PromotionPlacement, string> = { homepage: "Homepage", category: "Category page", city: "Sheher page", search: "Search results" }
 const STATUS_UI: Record<PromotionStatus, { label: string; tone: string }> = {
@@ -47,8 +47,8 @@ const EXTRA_CSS = String.raw`
 .loadwrap{ display:grid; place-items:center; padding:80px 16px; color:var(--ink-3); font-size:13px; }
 `
 
-function placementCard(p: PricingPlacement): string {
-  const opts = (p.prices || []).sort((a, b) => a.windowDays - b.windowDays).map((pr) => `<button class="pl-opt" data-boost="${p.placement}" data-days="${pr.windowDays}"><div><div class="pl-days">${pr.windowDays} din <span class="u">boost</span></div></div><span class="pl-price tnum"><span class="rs">Rs</span> ${pkNum(money(pr.priceQuoted))}</span><span class="pl-go">${svg(IC.bolt)}</span></button>`).join("")
+function placementCard(p: PricingPlacement, locked = false): string {
+  const opts = (p.prices || []).sort((a, b) => a.windowDays - b.windowDays).map((pr) => `<button class="pl-opt" data-boost="${p.placement}" data-days="${pr.windowDays}" data-price="${pkNum(money(pr.priceQuoted))}" data-label="${escHtml(p.label || PLACEMENT_LABEL[p.placement])}"${locked ? ' disabled title="Ek request pehle se review mein hai"' : ""}><div><div class="pl-days">${pr.windowDays} din <span class="u">boost</span></div></div><span class="pl-price tnum"><span class="rs">Rs</span> ${pkNum(money(pr.priceQuoted))}</span><span class="pl-go">${svg(IC.bolt)}</span></button>`).join("")
   return `<div class="plcard"><div class="pl-h"><span class="pl-ic">${svg(PL_ICON[p.placement] || IC.trend, 1.8)}</span><div><div class="pl-nm">${escHtml(p.label || PLACEMENT_LABEL[p.placement])}</div><div class="pl-sub">Yahan aapki listing upar dikhegi</div></div></div>
     <div class="pl-body">${opts || `<div style="padding:10px;color:var(--ink-3);font-size:12px">Abhi pricing available nahi.</div>`}</div></div>`
 }
@@ -65,10 +65,10 @@ function requestRow(r: PromotionRequestRow): string {
   </tr>`
 }
 
-function buildContent(requests: PromotionRequestRow[], pricing: PricingPlacement[]): string {
-  const hero = `<div class="card promo-hero"><span class="ph-ic">${svg(IC.rocket, 1.8)}</span><div><div class="ph-t">Apni listing ko boost karein</div><div class="ph-s">Homepage, search aur category pages par upar aayein — is mahine 3× zyada log dekhte hain. Koi chhupi fees nahi.</div></div></div>`
+function buildContent(requests: PromotionRequestRow[], pricing: PricingPlacement[], locked = false): string {
+  const hero = `<div class="card promo-hero"><span class="ph-ic">${svg(IC.rocket, 1.8)}</span><div><div class="ph-t">Apni listing ko boost karein</div><div class="ph-s">Homepage, search aur category pages par upar aayein. Koi chhupi fees nahi.</div></div></div>`
   const active = requests.filter((r) => r.status === "approved").length
-  const plCards = pricing.length ? `<div class="sec-h">Placement chunein</div><div class="pl-grid">${pricing.map(placementCard).join("")}</div>` : ""
+  const plCards = pricing.length ? `<div class="sec-h">Placement chunein</div><div class="pl-grid">${pricing.map((p) => placementCard(p, locked)).join("")}</div>` : ""
   const reqTable = requests.length ? `<div class="sec-h">Aapki boost requests${active ? ` · <b style="color:var(--ok)">${active} chal rahi</b>` : ""}</div>
     <div class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Placement</th><th>Muddat</th><th>Kab</th><th>Status</th><th class="r">Qeemat</th></tr></thead>
     <tbody>${requests.map(requestRow).join("")}</tbody></table></div><div class="tbl-foot"><span>${requests.length} requests</span></div></div>`
@@ -92,6 +92,9 @@ export function PromoteArtifact() {
   const { data, isError } = useQuery({ queryKey: ["promote-art"], queryFn: () => PromotionsAPI.listMine() })
   const requests = React.useMemo(() => (data?.requests ?? []) as PromotionRequestRow[], [data])
   const pricing = React.useMemo(() => (data?.pricing ?? []) as PricingPlacement[], [data])
+  // WP39 / LEADS-040: while a request is pending the server refuses another ("already pending"); the buttons say so instead of inviting it
+  const hasPending = requests.some((r) => r.status === "pending")
+  const pendingRef = React.useRef(hasPending); pendingRef.current = hasPending
 
   React.useEffect(() => {
     const s = shadowRef.current
@@ -99,7 +102,7 @@ export function PromoteArtifact() {
     const wwc = s.getElementById("wwc"); if (!wwc) return
     if (isError) { wwc.innerHTML = `<div class="head"><div><h1>Promote</h1></div></div>${errorBannerHtml()}`; return }
     if (!data) { wwc.innerHTML = `<div class="loadwrap">Promote load ho raha hai…</div>`; return }
-    wwc.innerHTML = buildContent(requests, pricing)
+    wwc.innerHTML = buildContent(requests, pricing, hasPending)
     initTablePager(s, { pageSize: 25 })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, data, isError])
@@ -117,15 +120,24 @@ export function PromoteArtifact() {
       const bId = Number(bizRef.current); if (!bId) { toast.error("Pehle business select karein"); return }
       const placement = b.dataset.boost as PromotionPlacement
       const windowDays = Number(b.dataset.days)
-      b.setAttribute("disabled", "true")
-      try {
-        await PromotionsAPI.create({ businessId: bId, placement, windowDays })
-        toast.success("Boost request bhej di — team review karegi")
-        qc.invalidateQueries({ queryKey: ["promote-art"] })
-      } catch (err: unknown) {
-        toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Request nahi gayi — dobara koshish karein")
-        b.removeAttribute("disabled")
-      }
+      if (pendingRef.current) { toast.info("Ek boost request pehle se review mein hai — uske faisle ka intezar karein"); return }
+      // WP39 / LEADS-040: one deliberate step before a paid request: what, how long, how much
+      openConfirm(s, {
+        title: `${b.dataset.label || "Boost"} — ${windowDays} din ka boost bhejein?`,
+        message: `Quote: Rs ${b.dataset.price || "—"}. Ye abhi sirf request hai: team review karegi aur manzoori ke baad hi boost chalega.`,
+        confirmLabel: "Haan, request bhejein", danger: false,
+        onConfirm: async () => {
+          b.setAttribute("disabled", "true")
+          try {
+            await PromotionsAPI.create({ businessId: bId, placement, windowDays })
+            toast.success("Boost request bhej di — team review karegi")
+            qc.invalidateQueries({ queryKey: ["promote-art"] })
+          } catch (err: unknown) {
+            toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Request nahi gayi — dobara koshish karein")
+            b.removeAttribute("disabled")
+          }
+        },
+      })
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready])

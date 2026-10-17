@@ -120,7 +120,7 @@ export function ReviewsArtifact() {
       const tab = t.closest(".tab") as HTMLElement | null
       if (tab?.dataset.f) { savePref("tab:reviews", tab.dataset.f); setFilter(tab.dataset.f); return }
       const del = t.closest("[data-del]") as HTMLElement | null
-      if (del?.dataset.del) { const rid = del.dataset.del; openConfirm(s, { title: "Review delete karein?", message: "Ye review hat jayega — wapas nahi aayega.", danger: true, onConfirm: async () => { try { await ReviewsAPI.delete(rid); toast.success("Review hata diya"); qc.invalidateQueries({ queryKey: ["reviews-art"] }) } catch { toast.error("Delete nahi hua") } } }); return }
+      if (del?.dataset.del) { const rid = del.dataset.del; openConfirm(s, { title: "Review delete karein?", message: "Ye review hat jayega — wapas nahi aayega.", danger: true, onConfirm: async () => { try { await ReviewsAPI.delete(rid); toast.success("Review hata diya"); qc.invalidateQueries({ queryKey: ["reviews-art"] }) } catch (err: unknown) { /* WP39 / LEADS-039: say WHY (the server refuses a business deleting a customer's review) */ toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Delete nahi hua") } } }); return }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready])

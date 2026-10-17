@@ -665,7 +665,7 @@ export function PromotedDeals() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TRUST STRIP — verified vendors, secure payments, money-back
+// TRUST STRIP — verified vendors, secure payments, clear refund terms
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function TrustStrip() {
@@ -677,7 +677,7 @@ export function TrustStrip() {
     // venue to confirm. Leaving the old line up would have been a security
     // claim about a system that does not exist.
     { icon: Lock,        title: "Payments You Control", desc: "Pay the venue directly — we record it and hold your date" },
-    { icon: Shield,      title: "Money-Back Guarantee", desc: "Full refund if your vendor cancels last-minute" },
+    { icon: Shield,      title: "Clear Refund Terms",  desc: "If your vendor cancels, they refund what you paid" },
     { icon: Quote,       title: "Real Reviews",        desc: "Reviews only from couples who actually booked" },
   ]
   return (

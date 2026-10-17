@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useRouter } from "next/navigation"
+import { ratingLabel as ratingLabelOf } from "@/lib/rating-label"
 import { useFavorites } from "@/hooks/use-favorites"
 import { getFirstImage } from "@/lib/utils/image-utils"
 import { VENDOR_TYPE_PATHS } from "@/lib/vendor-types"
@@ -239,12 +240,7 @@ export default function VendorCard({
     return `Rs. ${Math.round(n).toLocaleString("en-PK")}`;
   }
 
-  const getRatingLabel = (rating: number) => {
-    if (rating >= 4.5) return "Exceptional"
-    if (rating >= 4.0) return "Excellent"
-    if (rating >= 3.5) return "Very Good"
-    return "Good"
-  }
+  const getRatingLabel = ratingLabelOf // WP39 / PUBLIC-026: the one five-step scale (lib/rating-label.ts)
 
   // ── 3D Tilt ──
   const cardRef = useRef<HTMLDivElement>(null)

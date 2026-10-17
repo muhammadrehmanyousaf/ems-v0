@@ -264,7 +264,7 @@ export async function VendorTypeCityPage({
     },
     {
       question: `What if my ${vt.singular.toLowerCase()} cancels?`,
-      answer: `${SITE_NAME} holds the deposit until the vendor confirms. If a vendor cancels last-minute, we help you find a replacement and refund per our cancellation policy.`,
+      answer: `You pay the deposit directly to the vendor once they confirm — ${SITE_NAME} never takes or holds your money. If a vendor cancels last-minute, we help you find a replacement, and the vendor refunds what you paid per the cancellation policy on your booking.`,
     },
     ...(pricing
       ? [
