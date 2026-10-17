@@ -51,7 +51,7 @@ check("an upload failure is shown to the vendor", /Some photos could not be uplo
 check("capacity is never defaulted to 1", !/maxCapacity:\s*formData\.maxCapacity\s*\|\|\s*1/.test(reg));
 check("minCapacity is sent", /minCapacity:\s*formData\.minCapacity/.test(reg));
 check("car rental derives its business types from the fleet", /carRentalSubTypes\(formData\.businessType/.test(reg));
-check("signed-in customer gets a notice, not a silent hop", /signedInCustomer/.test(reg) && /isCustomerSession/.test(read("middleware.ts")));
+check("signed-in customer gets a notice, not a silent hop", /signedInCustomer/.test(reg) && /!isCustomerSession &&/.test(read("middleware.ts")));
 const personal = read("components/VendorStepForms/personal-details.tsx");
 check("account step asks if the e-mail is taken", /auth\/email-available/.test(personal));
 check("food categories can state a maximum guest count", /MaxGuestsField/.test(read("components/VendorStepForms/newVendorRegisterationForm/Catering/cateringComponents/business-details.tsx")) && /MaxGuestsField/.test(read("components/VendorStepForms/newVendorRegisterationForm/Generic/generic-business-details.tsx")));
@@ -69,9 +69,9 @@ check("a caterer with one menu is not a venue booking", /FOOD_VENDOR_TYPES/.test
 check("vendor page gets its type", /vendor\.vendor\?\.vendorType/.test(read("components/VendorDetails/vendor-detail-route.tsx")));
 check("package card shows its own unit", /pricingUnit === "per_head"/.test(read("components/VendorDetails/VendorDetailsMobile.tsx")));
 check("declined line leaves the customer total", /=== 'declined' \? 0/.test(read("lib/utils/booking-money.ts")));
-check("anonymous deep links return after login", /loginUrl\(\)/.test(read("components/VendorDetails/VendorDetailsMobile.tsx")) && /redirect=/.test(read("lib/auth/go-login.ts")));
+check("anonymous deep links return after login", (read("components/VendorDetails/VendorDetailsMobile.tsx").match(/router\.push\(loginUrl\(\)\)/g) || []).length >= 3 && !/router\.push\("\/login"\)/.test(read("components/VendorDetails/VendorDetailsMobile.tsx")) && /redirect=/.test(read("lib/auth/go-login.ts")));
 check("booking request carries the function name", /payload\.eventType/.test(read("components/booking/booking-form.tsx")));
-check("vendor Payments card reads the server slice", /view\.slice/.test(read("components/dashboard/mainScreens/bookings/artifact/qist-payments.ts")));
+check("vendor Payments card reads the server slice", /const sl = view\.slice/.test(read("components/dashboard/mainScreens/bookings/artifact/qist-payments.ts")));
 
 console.log(`registration-wp36-check: ${total - failed}/${total} checks passed`);
 if (failed) process.exit(1);
