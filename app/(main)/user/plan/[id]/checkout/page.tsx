@@ -415,6 +415,10 @@ export default function PlanCheckoutPage() {
                     {fmtPKR(selectedSubtotal)}
                   </span>
                 </div>
+                {/* WP37 (FLAGGED-024): the figure above is the couple's own budget; the venue's price decides what is booked */}
+                <p className="text-[11px] text-bridal-text-soft leading-relaxed" data-budget-note>
+                  This is the budget you set. Each venue&apos;s own price applies when you book, and the booking shows the real total.
+                </p>
                 {full.discount.percent > 0 && (
                   <p className="text-[11px] text-bridal-gold-dark leading-relaxed">
                     A whole-wedding discount (up to {full.discount.percent}%) is
