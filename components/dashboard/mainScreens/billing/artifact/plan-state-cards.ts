@@ -42,10 +42,11 @@ export const STATE_CARDS_CSS = String.raw`
 .mp-m{ border:1px solid var(--border); border-radius:var(--r-sm); padding:11px 12px; background:var(--surface-2); }
 .mp-m b{ font-size:12.5px; font-weight:600; } .mp-m dl{ margin:6px 0 0; display:grid; grid-template-columns:auto 1fr; gap:3px 12px; font-size:12px; }
 .mp-m dt{ color:var(--ink-3); } .mp-m dd{ margin:0; font-weight:600; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; } .mp-m .note{ margin-top:6px; font-size:11.5px; color:var(--ink-3); }
-.mp-radio{ display:flex; gap:8px; flex-wrap:wrap; } .mp-radio label{ display:inline-flex; align-items:center; gap:7px; border:1px solid var(--border-2); border-radius:9px; padding:7px 11px; font-size:12.5px; font-weight:600; cursor:pointer; background:var(--surface); }
+.mp-radio{ display:flex; gap:8px; flex-wrap:wrap; } .mp-radio label{ white-space:nowrap; display:inline-flex; align-items:center; gap:7px; border:1px solid var(--border-2); border-radius:9px; padding:7px 11px; font-size:12.5px; font-weight:600; cursor:pointer; background:var(--surface); }
 .mp-radio input{ margin:0; }
 .mp-hint{ font-size:11.5px; color:var(--ink-3); margin-top:4px; }
 .ol-list{ display:flex; flex-direction:column; gap:6px; margin:12px 0 4px; }
+.sp .ol-list{ max-height:236px; overflow-y:auto; padding-right:4px; }
 .ol-row{ display:flex; align-items:center; gap:10px; padding:9px 11px; border:1px solid var(--border); border-radius:var(--r-sm); background:var(--surface); }
 .ol-row .nm{ flex:1; min-width:0; font-weight:600; font-size:12.5px; } .ol-row .nm span{ display:block; font-weight:400; color:var(--ink-3); font-size:11.5px; }
 .ol-pick .ol-row{ cursor:pointer; } .ol-pick .ol-row input{ margin:0; width:16px; height:16px; }
@@ -169,12 +170,12 @@ export function overLimitCardHtml(o: {
   canChoose: boolean
   venueLimit: number | null
 }): string {
-  const lines = o.rows.map((r) => `<div class="sp-s" style="color:var(--ink-2)"><b>${escHtml(r.label)}</b>: ${r.used} ${escHtml(r.used === 1 ? r.nouns[0] : r.nouns[1])}, ${escHtml(o.planName)} allows ${r.max}</div>`).join("")
+  const lines = o.rows.map((r) => `<div class="sp-s" style="color:var(--ink-2)"><b>${escHtml(r.label)}</b>: ${r.used} in use, ${escHtml(o.planName)} allows ${r.max}</div>`).join("")
   const venueRows = o.venues.length
     ? `<div class="ol-list">${o.venues.map((v) => `<div class="ol-row"><div class="nm">${escHtml(v.name)}${v.city ? `<span>${escHtml(v.city)}</span>` : ""}</div>${v.live === null ? "" : v.live ? '<span class="st ok"><i></i>Live</span>' : '<span class="st mut"><i></i>Paused</span>'}</div>`).join("")}</div>`
     : ""
   const body = o.rows.length
-    ? bi("over.body", (l) => ({ planName: o.planName, max: o.rows[0].max, noun: l === "en" ? o.rows[0].nouns[1] : o.rows[0].nouns[1], used: o.rows[0].used }))
+    ? bi("over.body", () => ({ planName: o.planName, max: o.rows[0].max, noun: o.rows[0].max === 1 ? o.rows[0].nouns[0] : o.rows[0].nouns[1], used: o.rows[0].used }))
     : ""
   const action = o.canChoose
     ? `<button class="btn btn-primary sm" data-live-open>${escHtml(say("over.pick", "en"))}</button>`
@@ -182,7 +183,7 @@ export function overLimitCardHtml(o: {
   return `<div class="sp warn" role="status" id="over" data-testid="over-limit-card">${svg(IC.alert)}<div style="flex:1;min-width:0">
     <div class="sp-t">${bi("over.title")}</div>
     <div class="sp-s">${body}</div>${lines ? `<div style="margin-top:6px">${lines}</div>` : ""}
-    ${o.venues.length ? `<div class="sp-s" style="margin-top:8px">${bi("over.paused_note")}</div>${venueRows}` : ""}
+    ${o.canChoose && o.venues.length ? `<div class="sp-s" style="margin-top:8px">${bi("over.paused_note")}</div>${venueRows}` : ""}
     <div class="sp-acts">${action}<button class="btn btn-ghost sm" data-nav-btn="/dashboard/billing#plans">${escHtml(say("over.upgrade", "en"))}</button></div>
   </div></div>`
 }
@@ -190,7 +191,6 @@ export function overLimitCardHtml(o: {
 export function liveVenuesDrawerHtml(o: { limit: number | null; venues: { id: number; name: string; city: string | null; live: boolean }[] }): string {
   const rows = o.venues.map((v) => `<label class="ol-row${v.live ? " on" : ""}"><input type="checkbox" value="${v.id}"${v.live ? " checked" : ""}><div class="nm">${escHtml(v.name)}${v.city ? `<span>${escHtml(v.city)}</span>` : ""}</div></label>`).join("")
   return `<form data-live-form novalidate>
-    <div class="dlabel" style="margin-bottom:4px">${escHtml(say("over.pick", "en"))}</div>
     <div class="ol-count" data-live-count>${o.limit !== null ? escHtml(say("over.pick_hint", "en", { max: o.limit })) : ""}</div>
     <div class="ol-list ol-pick">${rows}</div>
     <div class="mp-hint">${escHtml(say("over.paused_note", "en"))}</div>
