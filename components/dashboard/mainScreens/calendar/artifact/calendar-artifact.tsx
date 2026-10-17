@@ -128,8 +128,10 @@ function slotDrawerBody(k: string, slots: SlotAvailabilityRow[], blocks: SlotBlo
   const freeCount = runs.filter((s) => !(s.blocked || blockIdOf(s.slotTemplateId) != null) && s.used <= 0).length
   const dayRow = `<div class="sd-day ${wholeDayBlocked ? "on" : ""}">
     <span class="sd-dico">${banIcon}</span>
-    <div class="sd-dmain"><div class="sd-dt">${wholeDayBlocked ? "Poora din band hai" : "Poora din khula hai"}</div><div class="sd-dm">${wholeDayBlocked ? "Is din koi nayi booking nahi le sakti" : anyBooked ? "Purani bookings rahengi — sirf nayi rukengi" : "Neeche se ek ek slot band karein, ya poora din"}</div></div>
-    <button class="sd-act ${wholeDayBlocked ? "" : "danger"}" data-dayblock="${k}" data-dayblocked="${wholeDayBlocked ? "1" : "0"}">${wholeDayBlocked ? "Kholein" : "Poora din band"}</button>
+    <div class="sd-dmain"><div class="sd-dt">${wholeDayBlocked ? "Poora din band hai" : "Poora din khula hai"}</div><div class="sd-dm">${wholeDayBlocked ? "Is din koi nayi booking nahi le sakti" : anyBooked ? "Is din booking ya hold hai — poora din band nahi ho sakta" : "Neeche se ek ek slot band karein, ya poora din"}</div></div>
+    ${!wholeDayBlocked && anyBooked
+      ? `<button class="sd-act" disabled title="Pehle is din ki booking ko cancel ya move karein">Booking hai</button>`
+      : `<button class="sd-act ${wholeDayBlocked ? "" : "danger"}" data-dayblock="${k}" data-dayblocked="${wholeDayBlocked ? "1" : "0"}">${wholeDayBlocked ? "Kholein" : "Poora din band"}</button>`}
   </div>`
   const slotRows = runs.length
     ? runs.map((s) => {
@@ -155,7 +157,7 @@ function slotDrawerBody(k: string, slots: SlotAvailabilityRow[], blocks: SlotBlo
   const hint = wholeDayBlocked
     ? `Poora din band hai — kholne ke baad ek-ek slot manage kar saktay hain.`
     : anyBooked
-      ? `Jis slot par booking hai woh band nahi ho sakti — pehle us booking ko cancel ya move karein. ${freeCount > 0 ? "Baaqi khali slots band ho saktay hain." : ""} Poora din band karne se purani bookings rahengi, sirf nayi rukengi.`
+      ? `Jis slot par booking hai woh band nahi ho sakti — pehle us booking ko cancel ya move karein. ${freeCount > 0 ? "Baaqi khali slots band ho saktay hain." : ""} Poora din tab hi band hoga jab is din koi booking ya hold na ho.`
       : `Sirf khali slot band ho saktay hain. Booking wali slot band nahi hoti.`
   return `${venuePick}${dayRow}<div class="sd-note">Slots — ${longDate(k)}</div>${slotRows}<div class="sd-hint">${hint}</div>`
 }
@@ -302,6 +304,8 @@ export function CalendarArtifact() {
     }
     const conflictMsg = (err: unknown) => {
       const r = (err as { response?: { status?: number; data?: { message?: string } } })?.response
+      // BOOKINGS-054: a day with a live booking or hold cannot be closed whole (the server refuses it, BK-007)
+      if (r?.status === 409 && (r as { data?: { data?: { code?: string } } }).data?.data?.code === "block_conflicts_existing_holds_or_bookings") return "Is din booking ya hold hai — poora din band nahi ho sakta. Pehle us booking ko cancel ya move karein."
       if (r?.status === 409) return r.data?.message || "Is slot par pehle se booking/hold hai — band nahi kar sakte"
       return r?.data?.message || "Ye kaam nahi hua"
     }
@@ -365,6 +369,10 @@ export function CalendarArtifact() {
         if (blk) {
           e.stopPropagation(); closeMenu()
           const k = blk.dataset.block!
+          // BOOKINGS-039: with no venue chosen ("Sabhi venue") the server blocks / unblocks the day on EVERY venue the vendor
+          // owns. A multi-venue vendor therefore picks the venue first: the slot drawer has the venue select and a per-venue
+          // "Poora din band / Kholein". Never send a destructive call with no venue.
+          if (activeBizRef.current == null && bizListRef.current.length > 1) { void openSlotDrawer(k); return }
           const was = blockedSetRef.current.has(k)
           const p = was ? BlockedDatesAPI.unblock(k, activeBizRef.current) : BlockedDatesAPI.block(k, undefined, activeBizRef.current)
           Promise.resolve(p)

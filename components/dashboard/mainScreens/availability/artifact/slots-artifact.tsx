@@ -16,7 +16,8 @@ import { toast } from "sonner"
 import { SlotTemplatesAPI, type SlotTemplate, type UpsertSlotTemplateInput } from "@/lib/api/businessAvailability"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useBusiness } from "@/context/BusinessContext"
-import { useArtifactShell, escHtml, openDrawer, closeDrawer, venuePickerHtml, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, escHtml, openDrawer, closeDrawer, openConfirm, venuePickerHtml, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { findSlotById, slotErrorInfo } from "./slot-helpers"
 
 /* Mon=1, Tue=2, … Sun=64 (mirrors BusinessSlotTemplate.weekdayMask). */
 const DAYS: [string, number][] = [["Pir", 1], ["Man", 2], ["Bud", 4], ["Jum", 8], ["Jum'a", 16], ["Haf", 32], ["Itw", 64]]
@@ -81,7 +82,7 @@ function slotFormBody(t?: SlotTemplate | null): string {
   <div class="dfield"><label class="dlabel">Slot ka naam <span class="req">*</span></label><input id="sl-label" value="${t ? escHtml(t.label) : ""}" placeholder="e.g. Shaam ka function, Dopeher"/></div>
   <div class="dfield row2">
     <div><label class="dlabel">Shuru <span class="req">*</span></label><input id="sl-start" type="time" value="${t?.startTime ? String(t.startTime).slice(0, 5) : "19:00"}"/></div>
-    <div><label class="dlabel">Khatam <span class="req">*</span></label><input id="sl-end" type="time" value="${t?.endTime ? String(t.endTime).slice(0, 5) : "23:00"}"/></div>
+    <div><label class="dlabel">Khatam <span class="req">*</span></label><input id="sl-end" type="time" value="${t?.endTime ? String(t.endTime).slice(0, 5) : "22:00"}"/></div>
   </div>
   <div class="dfield row2">
     <div><label class="dlabel">Aik waqt kitni booking</label><input id="sl-cap" type="number" min="1" value="${t?.capacity ?? 1}"/><div class="dhint">Aksar 1 — ek slot par ek shaadi.</div></div>
@@ -123,7 +124,7 @@ export function SlotsArtifact() {
     enabled: !!activeBusinessId,
     queryFn: () => SlotTemplatesAPI.list(activeBusinessId as number, { onlyActive: false }),
   })
-  const templates = React.useMemo(() => (tplQ.data ?? []).slice().sort((a, b) => (a.sortOrder - b.sortOrder) || a.id - b.id), [tplQ.data])
+  const templates = React.useMemo(() => (tplQ.data ?? []).slice().sort((a, b) => (a.sortOrder - b.sortOrder) || Number(a.id) - Number(b.id)), [tplQ.data])
   const tplRef = React.useRef(templates); tplRef.current = templates
 
   React.useEffect(() => {
@@ -151,6 +152,7 @@ export function SlotsArtifact() {
       const label = val("sl-label"); const start = val("sl-start"); const end = val("sl-end")
       if (!label) { toast.error("Slot ka naam likhein"); return null }
       if (!start || !end) { toast.error("Shuru aur khatam ka waqt daalein"); return null }
+      if (end <= start) { toast.error("Khatam ka waqt shuru ke baad hona chahiye (raat paar karne wala slot do slot mein banayein)"); return null }
       const mask = Number((s.getElementById("sl-days") as HTMLElement | null)?.dataset.mask || ALL_MASK)
       if (!mask) { toast.error("Kam az kam ek din chunein"); return null }
       const guests = val("sl-guests")
@@ -171,7 +173,7 @@ export function SlotsArtifact() {
 
       if (t.closest("[data-slot-new]")) { openDrawer(s, "Naya slot", slotFormBody(null)); return }
       const ed = t.closest("[data-slot-edit]") as HTMLElement | null
-      if (ed?.dataset.slotEdit) { const tpl = tplRef.current.find((x) => x.id === Number(ed.dataset.slotEdit)); if (tpl) openDrawer(s, "Slot edit", slotFormBody(tpl)); return }
+      if (ed?.dataset.slotEdit) { const tpl = findSlotById(tplRef.current, ed.dataset.slotEdit); if (tpl) openDrawer(s, "Slot edit", slotFormBody(tpl)); return }
 
       // weekday toggles inside the drawer
       const wd = t.closest("[data-bit]") as HTMLElement | null
@@ -199,13 +201,24 @@ export function SlotsArtifact() {
         const body = readForm(); if (!body) return
         const id = save.dataset.slotSave
         save.disabled = true; const orig = save.textContent; save.textContent = "Save ho raha…"
-        try {
+        const doSave = async (force: boolean) => {
           if (id === "new") await SlotTemplatesAPI.create(biz, body)
-          else await SlotTemplatesAPI.update(biz, Number(id), body)
+          else await SlotTemplatesAPI.update(biz, Number(id), force ? { ...body, force: true } : body)
           toast.success(id === "new" ? "Slot ban gaya" : "Slot update ho gaya")
           closeDrawer(s); refresh()
-        } catch (err: unknown) {
-          toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua")
+        }
+        try { await doSave(false) } catch (err: unknown) {
+          const info = slotErrorInfo(err, "Save nahi hua")
+          // an edit that would leave upcoming bookings without a valid slot: the server names them and lets the vendor confirm
+          if (info.code === "SLOT_HAS_BOOKINGS" && id !== "new") {
+            save.disabled = false; if (orig) save.textContent = orig
+            openConfirm(s, { title: "Is slot par aane wali bookings hain", message: info.message, confirmLabel: "Phir bhi badlein", danger: false, onConfirm: async () => {
+              save.disabled = true; save.textContent = "Save ho raha…"
+              try { await doSave(true) } catch (e2: unknown) { toast.error(slotErrorInfo(e2, "Save nahi hua").message); save.disabled = false; if (orig) save.textContent = orig }
+            } })
+            return
+          }
+          toast.error(info.message)
           save.disabled = false; if (orig) save.textContent = orig
         }
         return
@@ -216,11 +229,23 @@ export function SlotsArtifact() {
       if (tg?.dataset.slotToggle) {
         const id = Number(tg.dataset.slotToggle); const isActive = tg.dataset.slotActive === "1"
         tg.disabled = true
-        try {
-          if (isActive) await SlotTemplatesAPI.deactivate(biz, id)
+        const doToggle = async (force: boolean) => {
+          if (isActive) await SlotTemplatesAPI.deactivate(biz, id, force)
           else await SlotTemplatesAPI.update(biz, id, { isActive: true })
           toast.success(isActive ? "Slot band ho gaya" : "Slot chalu ho gaya"); refresh()
-        } catch (err: unknown) { toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua"); tg.disabled = false }
+        }
+        try { await doToggle(false) } catch (err: unknown) {
+          const info = slotErrorInfo(err, "Nahi hua")
+          tg.disabled = false
+          if (info.code === "SLOT_HAS_BOOKINGS" && isActive) {
+            openConfirm(s, { title: "Is slot par aane wali bookings hain", message: info.message, confirmLabel: "Phir bhi band karein", danger: false, onConfirm: async () => {
+              tg.disabled = true
+              try { await doToggle(true) } catch (e2: unknown) { toast.error(slotErrorInfo(e2, "Nahi hua").message); tg.disabled = false }
+            } })
+            return
+          }
+          toast.error(info.message)
+        }
         return
       }
     })

@@ -340,6 +340,22 @@ export function slotStartHour(b: unknown): number | null {
  * plumbing and is never shown. Same rule as a booking, so a hold turned into a booking does not
  * change its wording.
  */
+/**
+ * WP35 (FLAGGED-002): the booking time a hold turns into. A vendor holds a date for "Evening" or "18:00";
+ * "Book karein" used to cut the label to five characters ("Eveni") and hand it to the booking form as a time.
+ * A clock time keeps its HH:MM; a platform period word maps to the clock time it is stored with; a function
+ * name ("Baraat", "Mehndi") has no clock time, so the vendor picks one (undefined).
+ */
+export function holdBookingTime(holdTime: string | null | undefined): string | undefined {
+  const raw = String(holdTime ?? "").replace(/#\d+\s*$/, "").trim();
+  if (!raw) return undefined;
+  const hm = toHHMM(raw);
+  if (hm) return hm;
+  const key = raw.toLowerCase().replace(/\s+/g, " ");
+  const WORDS: Record<string, string> = { morning: "09:00", midday: "12:00", afternoon: "14:00", evening: "18:00", "whole day": "10:00", "full day": "10:00", "all day": "10:00" };
+  return WORDS[key];
+}
+
 export function holdSlotText(holdTime: string | null | undefined, audience: "vendor" | "customer" = "vendor"): string {
   const raw = String(holdTime ?? "").replace(/#\d+\s*$/, "").trim();
   return slotTextFor({ bookingTime: raw }, audience);

@@ -33,6 +33,7 @@ import { LEGACY_PERIODS, formatSlotRange } from "@/lib/booking/slot-vocabulary"
 // vendor's Nayi booking form and reschedule dialog (lib/booking/slot-picker-model.ts).
 import { isSlotOpen } from "@/lib/booking/slot-picker-model"
 import { pktTodayCell } from "@/lib/utils/event-day"
+import { dayKnowledgeOf, type DayKnowledge } from "@/lib/booking/day-knowledge"
 // 10.13 / 10.16 — the arrangement a family needs, and rain on an open lawn.
 // A mirror of src/utils/spaceRequirements.js, held to it by
 // scripts/space-fit-parity.mts. The server re-runs the same check at booking
@@ -332,7 +333,7 @@ export default function DateTimeStep({
     const m = ymOf(d)
     setMonthState((prev) => (prev[m] === "ready" ? prev : { ...prev, [m]: "loading" }))
     try {
-      const data = await VendorAPI.getMonthAvailability([venue.id], m)
+      const data = await VendorAPI.getMonthAvailability([venue.id], m, { strict: true })
       setAvailability((prev) => ({ ...prev, ...(data[venue.id] || {}) }))
       setMonthState((prev) => ({ ...prev, [m]: "ready" }))
     } catch {
@@ -445,19 +446,15 @@ export default function DateTimeStep({
    * The whole point is that `unavailable` and `pending` used to be
    * indistinguishable from `free`, because both produced `undefined`.
    */
-  type DayKnowledge = "free" | "partial" | "unavailable" | "pending" | "unknown"
   const dayKnowledge = useCallback((d: Date): DayKnowledge => {
     const key = toKey(d)
     const a = dayAvail(key)
-    if (a) {
-      if (a.isBlocked || a.availableSlots.length === 0) return "unavailable"
-      return a.bookedSlots.length > 0 ? "partial" : "free"
-    }
+    if (a) return dayKnowledgeOf(a, undefined, useTemplates)
     const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
     const state = useTemplates ? templateMonthState[ym] : monthState[ym]
-    if (state === "ready") return "unavailable"
-    if (state === "error") return "unknown"
-    return "pending"
+    // CUSTOMER-003/004/017: one rule (lib/booking/day-knowledge) - an absent day is closed for slot templates and free for
+    // fixed periods (the exceptions list), and a failed request is "unknown", not "closed"
+    return dayKnowledgeOf(undefined, state, useTemplates)
   }, [dayAvail, useTemplates, templateMonthState, monthState])
 
   // The 6×7 grid of dates for the visible month (Airbnb / Booking.com pattern).
