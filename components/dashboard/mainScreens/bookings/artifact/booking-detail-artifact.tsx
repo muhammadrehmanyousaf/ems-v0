@@ -37,7 +37,8 @@ import { bookedOn, receivedOn, outstandingOn } from "@/lib/utils/booking-money"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
 import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { paymentsCardHtml, handleQistClick, QIST_CSS } from "./qist-payments"
-import { phantomPanelHtml, wirePhantomButtons } from "@/components/dashboard/mainScreens/artifact/phantom-advance"
+import { phantomPanelHtml, wirePhantomButtons, openPhantomDrawer, phantomCtxFrom } from "@/components/dashboard/mainScreens/artifact/phantom-advance"
+import { unledgered409 } from "@/lib/utils/phantom-advance"
 import { moneyOf } from "@/lib/utils/qist"
 import { fmtYmd, ymdOf, ymdToUtcDate } from "@/lib/utils/ymd"
 import { bookingSlotText } from "@/lib/booking/slot-vocabulary"
@@ -1517,6 +1518,13 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
           rotateKey(`claim-confirm:${claimId}`)
           toast.success(out?.data?.id ? "Payment record ho gayi" : (out?.message || "Payment record ho gayi")); invalidateAll()
         } catch (err: unknown) {
+          // a booking whose advance no receipt backs: the same two explicit taps every money screen offers (PAY-RECEIPTS-001)
+          const ph = unledgered409(err)
+          if (ph) {
+            openPhantomDrawer(s, phantomCtxFrom(ph, { bookingId, customerName: custRef.current, onSettled: invalidateAll, onStale: invalidateAll }))
+            pcConfirm.disabled = false; if (o) pcConfirm.textContent = o
+            return
+          }
           if (!lostAnswer(err, "Payment", `claim-confirm:${claimId}`)) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Nahi hua")
           pcConfirm.disabled = false; if (o) pcConfirm.textContent = o
         }
