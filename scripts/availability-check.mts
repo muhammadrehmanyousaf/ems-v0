@@ -99,6 +99,7 @@ const eq = (a: unknown, b: unknown, label: string) => ok(JSON.stringify(a) === J
   eq(holdBookingTime(""), undefined, "empty");
   const holds = read("components/dashboard/mainScreens/holds/artifact/holds-artifact.tsx");
   ok(holds.includes("holdBookingTime(bk.dataset.hbTime)") && !holds.includes('.slice(0, 5)\n        openBookingForm'), "holds screen converts the label with holdBookingTime");
+  ok(holds.includes("businesses: bizListRef.current"), "holds screen hands the booking form the vendor's venue list (the held venue shows by name)");
   ok(holds.includes("featureOff"), "holds screen shows a feature-off notice (404 + flag), not the money-style banner");
   const form = read("components/dashboard/mainScreens/artifact/booking-form.ts");
   ok(form.includes("Venue #${selBiz}") && form.includes("if (!bizOpts"), "booking form selects the prefilled venue when no venue list is passed");

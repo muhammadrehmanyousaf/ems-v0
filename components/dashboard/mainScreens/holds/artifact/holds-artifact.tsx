@@ -12,6 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { VendorHoldsAPI, type VendorHold } from "@/lib/api/vendorHolds"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
+import { useBusiness } from "@/context/BusinessContext"
 import { useArtifactShell, escHtml, initTablePager, errorBannerHtml, openDrawer, closeDrawer } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { openBookingForm } from "@/components/dashboard/mainScreens/artifact/booking-form"
 import { fmtYmd } from "@/lib/utils/ymd"
@@ -86,6 +87,10 @@ export function HoldsArtifact() {
   const qc = useQueryClient()
   const activeBusinessId = useActiveBusinessId()
   const bizRef = React.useRef(activeBusinessId); bizRef.current = activeBusinessId
+  // FLAGGED-002: the booking form needs the vendor's venues to show (and select) the held one by name
+  const { businesses } = useBusiness()
+  const bizListRef = React.useRef<{ id: number; name?: string | null }[]>([])
+  bizListRef.current = ((businesses ?? []) as { id: number; name?: string | null }[]).map((b) => ({ id: b.id, name: b.name }))
   const { data, isError, error } = useQuery({ queryKey: ["holds-art", activeBusinessId], queryFn: () => VendorHoldsAPI.list(activeBusinessId ?? undefined) })
   // BOOKINGS-042: the server answers 404 { data: { flag } } when date holds are not switched on for this account;
   // that is not a "load failed" (retrying never helps), it is the feature being off.
@@ -121,6 +126,7 @@ export function HoldsArtifact() {
         openBookingForm(s, {
           prefill: { bookingDate: bk.dataset.hbDate || undefined, bookingTime: time || undefined, businessId: Number(bk.dataset.hbBiz) || bizRef.current || undefined },
           activeBiz: Number(bk.dataset.hbBiz) || bizRef.current || undefined,
+          businesses: bizListRef.current,
           onSaved: () => { toast.success("Booking ban gayi — hold pakki ho gayi"); refetch() },
         })
         return
