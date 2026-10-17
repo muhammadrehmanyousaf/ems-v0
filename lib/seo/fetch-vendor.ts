@@ -47,6 +47,8 @@ export interface VendorDetail {
   amenities?: string[]
   serviceProvided?: string[]
   cancellationPolicy?: string
+  /** WP29: the engine's own summary of the governing policy (headline + plain-words detail). */
+  cancellationSummary?: { kind: string; headline: string; detail: string; source?: string } | null
   staff?: any[]
   raw: any // escape hatch for fields the page might want
 }
@@ -244,6 +246,7 @@ function normalize(raw: any): VendorDetail {
     amenities: Array.isArray(raw?.amenities) ? raw.amenities : [],
     serviceProvided: Array.isArray(raw?.serviceProvided) ? raw.serviceProvided : [],
     cancellationPolicy: cancellationLabel(raw?.cancellationPolicy ?? raw?.cancelationPolicy ?? ""),
+    cancellationSummary: raw?.cancellationSummary ?? null,
     staff: Array.isArray(raw?.staff) ? raw.staff : [],
     raw,
   }

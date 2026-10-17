@@ -56,7 +56,7 @@ export function TwoFactorDisableModal({ open, onOpenChange, onDisabled }: TwoFac
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <ShieldOff className="w-5 h-5 text-bridal-coral" />
+            <ShieldOff className="w-5 h-5 text-bridal-coral-dark" />
             <DialogTitle>Turn off two-factor authentication</DialogTitle>
           </div>
           <DialogDescription>

@@ -232,7 +232,7 @@ function PaymentsPageContent() {
           description="Track pending payments and view your payment history."
           actions={headerActions}
         />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 max-[419px]:grid-cols-1 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
             <KpiCard key={i} label="" value={0} isLoading />
           ))}
@@ -254,7 +254,7 @@ function PaymentsPageContent() {
         actions={headerActions}
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 max-[419px]:grid-cols-1 lg:grid-cols-4 gap-4">
         <KpiCard
           label="Pending payments"
           value={pending.length}
@@ -336,8 +336,8 @@ function PaymentsPageContent() {
                 ? "border-l-bridal-mauve"
                 : "border-l-bridal-gold";
               const badgeTone = isRemaining
-                ? "border-bridal-rose/45 bg-bridal-blush text-bridal-mauve"
-                : "border-bridal-gold/45 bg-bridal-gold/12 text-bridal-gold-dark";
+                ? "border-status-info-line bg-status-info-soft text-status-info"
+                : "border-status-warning-line bg-status-warning-soft text-status-warning";
 
               return (
                 <Card
@@ -407,28 +407,28 @@ function PaymentsPageContent() {
                       ) : null}
                     </div>
 
-                    <div className="rounded-lg bg-muted/30 border border-border/60 p-3 mb-4 grid grid-cols-3 gap-3 text-center">
-                      <div>
+                    <div className="rounded-lg bg-muted/30 border border-border/60 p-3 mb-4 grid grid-cols-1 gap-2 min-[480px]:grid-cols-3 min-[480px]:gap-3 min-[480px]:text-center">
+                      <div className="flex items-baseline justify-between gap-3 min-[480px]:block">
                         <p className="text-[10px] uppercase tracking-[0.18em] font-medium text-muted-foreground">
                           Total
                         </p>
-                        <p className="font-display italic text-[16px] text-foreground tabular-nums mt-0.5">
+                        <p className="font-display italic text-[16px] text-foreground tabular-nums whitespace-nowrap min-[480px]:mt-0.5">
                           {fmt(figuresOf(booking).total)}
                         </p>
                       </div>
-                      <div className="border-x border-border/60">
+                      <div className="flex items-baseline justify-between gap-3 max-[479px]:border-y max-[479px]:border-border/60 max-[479px]:py-2 min-[480px]:block min-[480px]:border-x min-[480px]:border-border/60">
                         <p className="text-[10px] uppercase tracking-[0.18em] font-medium text-muted-foreground">
                           Paid so far
                         </p>
-                        <p className="font-display italic text-[16px] text-foreground tabular-nums mt-0.5">
+                        <p className="font-display italic text-[16px] text-foreground tabular-nums whitespace-nowrap min-[480px]:mt-0.5">
                           {fmt(figuresOf(booking).received)}
                         </p>
                       </div>
-                      <div>
+                      <div className="flex items-baseline justify-between gap-3 min-[480px]:block">
                         <p className="text-[10px] uppercase tracking-[0.18em] font-medium text-muted-foreground">
                           Remaining
                         </p>
-                        <p className="font-display italic text-[16px] text-foreground tabular-nums mt-0.5">
+                        <p className="font-display italic text-[16px] text-foreground tabular-nums whitespace-nowrap min-[480px]:mt-0.5">
                           {fmt(figuresOf(booking).outstanding)}
                         </p>
                       </div>
@@ -478,7 +478,7 @@ function PaymentsPageContent() {
                 key={booking.bookingId || booking.id}
                 className="p-4 flex items-center gap-4 hover:shadow-sm transition-shadow"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bridal-sage/15 text-[#3F6B43]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bridal-sage/15 text-status-success">
                   <CheckCircle2 className="size-4" />
                 </div>
 
@@ -487,7 +487,7 @@ function PaymentsPageContent() {
                     <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-[0.18em] tabular-nums">
                       Booking #{booking.bookingId || booking.id}
                     </span>
-                    <span className="text-[10.5px] uppercase tracking-[0.18em] font-medium px-2 py-0.5 rounded-full border border-bridal-sage/45 bg-bridal-sage/15 text-[#3F6B43]">
+                    <span className="text-[10.5px] uppercase tracking-[0.18em] font-medium px-2 py-0.5 rounded-full border border-status-success-line bg-status-success-soft text-status-success">
                       Paid
                     </span>
                   </div>
@@ -511,7 +511,7 @@ function PaymentsPageContent() {
                 </div>
 
                 <div className="text-right flex-shrink-0">
-                  <p className="font-display italic text-[18px] text-[#3F6B43] tabular-nums leading-none">
+                  <p className="font-display italic text-[18px] text-status-success tabular-nums leading-none">
                     {fmt(figuresOf(booking).total)}
                   </p>
                   <p className="text-[10.5px] text-muted-foreground mt-1">

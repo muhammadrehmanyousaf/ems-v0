@@ -214,7 +214,7 @@ export default function PublicSignPage() {
       <div className="mx-auto max-w-xl px-4 py-12">
         <Card>
           <CardContent className="space-y-3 py-10 text-center">
-            <AlertTriangle className="mx-auto h-10 w-10 text-amber-600" />
+            <AlertTriangle className="mx-auto h-10 w-10 text-status-warning" />
             <h1 className="text-lg font-semibold">
               {isExpired
                 ? 'Link expired or revoked'
@@ -382,18 +382,18 @@ export default function PublicSignPage() {
               <span>{fmtPKR(sheet.subtotal)}</span>
             </div>
             {Number(sheet.discountAmount) > 0 && (
-              <div className="flex items-center justify-between text-rose-700">
+              <div className="flex items-center justify-between text-status-danger">
                 <span>− Discount</span>
                 <span>{fmtPKR(sheet.discountAmount)}</span>
               </div>
             )}
             {Number(sheet.taxAmount) > 0 && (
-              <div className="flex items-center justify-between text-blue-700">
+              <div className="flex items-center justify-between text-status-info">
                 <span>+ Sales tax</span>
                 <span>{fmtPKR(sheet.taxAmount)}</span>
               </div>
             )}
-            <div className="flex items-center justify-between pt-1 text-sm font-bold text-emerald-700">
+            <div className="flex items-center justify-between pt-1 text-sm font-bold text-status-success">
               <span>Grand total</span>
               <span>{fmtPKR(sheet.grandTotal)}</span>
             </div>
@@ -492,7 +492,7 @@ export default function PublicSignPage() {
                     {sheet.signatures.vendor!.name || '—'}
                   </div>
                   <div className="text-[11px] text-muted-foreground">
-                    <CheckCircle2 className="mr-1 inline h-3 w-3 text-emerald-700" />
+                    <CheckCircle2 className="mr-1 inline h-3 w-3 text-status-success" />
                     Signed {fmtDateTime(sheet.signatures.vendor!.signedAt)}
                   </div>
                 </>
@@ -504,7 +504,7 @@ export default function PublicSignPage() {
             </div>
             <div
               className={`rounded-md border p-3 ${
-                customerSigned ? 'border-emerald-300 bg-emerald-50/40' : ''
+                customerSigned ? 'border-status-success-line bg-emerald-50/40' : ''
               }`}
             >
               <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -515,7 +515,7 @@ export default function PublicSignPage() {
                   <div className="font-medium">
                     {sheet.signatures.customer!.name || '—'}
                   </div>
-                  <div className="text-[11px] text-emerald-700">
+                  <div className="text-[11px] text-status-success">
                     <CheckCircle2 className="mr-1 inline h-3 w-3" />
                     Signed {fmtDateTime(sheet.signatures.customer!.signedAt)}
                   </div>

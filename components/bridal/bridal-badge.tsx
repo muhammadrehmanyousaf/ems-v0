@@ -9,7 +9,7 @@ const variants: Record<BridalBadgeVariant, string> = {
   rose:  "bg-bridal-blush text-bridal-mauve border-bridal-rose/60",
   gold:  "bg-[#FFF8EE] text-[#8B5E2E] border-bridal-gold/60",
   coral: "bg-[#FFF1EC] text-[#9B4A38] border-bridal-coral/60",
-  sage:  "bg-[#EFF5EC] text-[#3F6B43] border-bridal-sage/70",
+  sage:  "bg-[#EFF5EC] text-status-success border-bridal-sage/70",
   mauve: "bg-bridal-mauve/10 text-bridal-mauve border-bridal-mauve/30",
 }
 

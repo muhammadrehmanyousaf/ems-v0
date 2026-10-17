@@ -47,7 +47,7 @@ export function BookingModal({ isOpen, onClose, vendorId, vendorName }: BookingM
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl text-neutral-900 dark:text-neutral-100">
+      <DialogContent className="max-w-2xl text-bridal-charcoal dark:text-neutral-100">
         {/* The local X here is what caused the shared close button to be
             commented out app-wide in Jan 2025. It was a bare icon with an
             onClick — not a button, so it took no keyboard focus and announced

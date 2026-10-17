@@ -161,14 +161,14 @@ export function LinkBookingDialog({
                   className={cn(
                     "rounded-md border p-3",
                     alreadyLinked
-                      ? "border-emerald-200 bg-emerald-50/50"
+                      ? "border-status-success-line bg-emerald-50/50"
                       : "border-neutral-200 bg-white",
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium text-neutral-900">
+                        <span className="text-sm font-medium text-bridal-charcoal">
                           Booking #{b.id}
                         </span>
                         <Badge variant="outline" className="text-[10px]">
@@ -204,7 +204,7 @@ export function LinkBookingDialog({
                       )}
                     </div>
                     {alreadyLinked ? (
-                      <Badge className="shrink-0 gap-1 text-[10px] bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+                      <Badge className="shrink-0 gap-1 text-[10px] bg-status-success-soft text-status-success hover:bg-status-success-soft">
                         <CheckCircle2 className="h-3 w-3" />
                         Linked
                       </Badge>

@@ -77,13 +77,13 @@ export function RefundPreviewCard({ bookingId }: { bookingId: number }) {
 
         {/* The rupee split */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/50 p-3">
+          <div className="rounded-lg border border-status-success-line dark:border-emerald-900/50 p-3">
             <p className="text-xs text-muted-foreground">Customer ko wapas</p>
-            <p className="text-xl font-bold tabular-nums text-emerald-700 dark:text-emerald-400 mt-0.5">{rs(parts.total)}</p>
+            <p className="text-xl font-bold tabular-nums text-status-success dark:text-emerald-400 mt-0.5">{rs(parts.total)}</p>
           </div>
-          <div className="rounded-lg border border-amber-300 dark:border-amber-900/50 p-3">
+          <div className="rounded-lg border border-status-warning-line dark:border-amber-900/50 p-3">
             <p className="text-xs text-muted-foreground">Zabt (aap ke paas)</p>
-            <p className="text-xl font-bold tabular-nums text-amber-700 dark:text-amber-400 mt-0.5">{rs(preview.forfeit)}</p>
+            <p className="text-xl font-bold tabular-nums text-status-warning dark:text-amber-400 mt-0.5">{rs(preview.forfeit)}</p>
           </div>
         </div>
 
@@ -93,19 +93,19 @@ export function RefundPreviewCard({ bookingId }: { bookingId: number }) {
           <div className="flex justify-between"><span>Booking deposit ({data.policy.depositPct}% — non-refundable)</span><span className="tabular-nums">−{rs(preview.breakdown.deposit)}</span></div>
           <div className="flex justify-between">
             <span>Advance wapsi ({preview.tier.venueKeepsFixed ? `venue keeps ${rs(preview.tier.venueKeepsFixed)}` : `${preview.tier.refundPct}% tier`})</span>
-            <span className="tabular-nums text-emerald-700 dark:text-emerald-400">{rs(preview.breakdown.advanceRefund)}</span>
+            <span className="tabular-nums text-status-success dark:text-emerald-400">{rs(preview.breakdown.advanceRefund)}</span>
           </div>
           {(data.unledgeredAdvance ?? 0) > 0 && (
             <div className="flex justify-between" data-unledgered-advance><span>Advance bina receipt (refund mein shamil nahi)</span><span className="tabular-nums">{rs(data.unledgeredAdvance as number)}</span></div>
           )}
           {preview.breakdown.overpayment > 0 && (
-            <div className="flex justify-between"><span>Zyada jama (wapas)</span><span className="tabular-nums text-emerald-700 dark:text-emerald-400">{rs(preview.breakdown.overpayment)}</span></div>
+            <div className="flex justify-between"><span>Zyada jama (wapas)</span><span className="tabular-nums text-status-success dark:text-emerald-400">{rs(preview.breakdown.overpayment)}</span></div>
           )}
           {parts.priceDrop > 0 && (
-            <div className="flex justify-between" data-price-drop-refund><span>Price kam karne par zyada jama (wapas)</span><span className="tabular-nums text-emerald-700 dark:text-emerald-400">{rs(parts.priceDrop)}</span></div>
+            <div className="flex justify-between" data-price-drop-refund><span>Price kam karne par zyada jama (wapas)</span><span className="tabular-nums text-status-success dark:text-emerald-400">{rs(parts.priceDrop)}</span></div>
           )}
           {parts.declinedLine > 0 && (
-            <div className="flex justify-between" data-declined-line-refund><span>Decline hui service ka jama paisa (wapas)</span><span className="tabular-nums text-emerald-700 dark:text-emerald-400">{rs(parts.declinedLine)}</span></div>
+            <div className="flex justify-between" data-declined-line-refund><span>Decline hui service ka jama paisa (wapas)</span><span className="tabular-nums text-status-success dark:text-emerald-400">{rs(parts.declinedLine)}</span></div>
           )}
         </div>
 

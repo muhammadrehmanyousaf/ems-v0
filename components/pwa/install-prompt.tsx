@@ -190,7 +190,7 @@ export function PwaInstallPrompt() {
         <Smartphone className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1 space-y-1.5">
-        <p className="text-sm font-semibold text-neutral-900">
+        <p className="text-sm font-semibold text-bridal-charcoal">
           Install Wedding Wala
         </p>
         {showIosHint ? (

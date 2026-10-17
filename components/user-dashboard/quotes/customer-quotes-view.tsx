@@ -150,7 +150,7 @@ export function CustomerQuotesView() {
                 {q.status === "accepted" && q.bookingId && (
                   <Link
                     href={`/user/bookings/${q.bookingId}`}
-                    className="mt-3 block rounded-lg border border-emerald-300 bg-emerald-50/60 px-3 py-2 text-sm text-emerald-900 hover:bg-emerald-50 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300"
+                    className="mt-3 block rounded-lg border border-status-success-line bg-emerald-50/60 px-3 py-2 text-sm text-status-success hover:bg-status-success-soft dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300"
                   >
                     Your date is held — booking #{q.bookingId}. Pay the advance to confirm it.
                   </Link>

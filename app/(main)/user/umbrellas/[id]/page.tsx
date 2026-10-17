@@ -289,7 +289,7 @@ export default function UmbrellaDetailPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="gap-1.5 text-bridal-coral hover:text-bridal-coral border-bridal-coral/30"
+                  className="gap-1.5 text-bridal-coral-dark hover:text-bridal-coral-dark border-bridal-coral/30"
                   onClick={() => {
                     setCancelReason("");
                     setCancelOutcome(null);
@@ -303,7 +303,7 @@ export default function UmbrellaDetailPage() {
             <Button
               size="sm"
               variant="outline"
-              className="gap-1.5 text-bridal-coral hover:text-bridal-coral border-bridal-coral/30"
+              className="gap-1.5 text-bridal-coral-dark hover:text-bridal-coral-dark border-bridal-coral/30"
               onClick={() => setDeleteOpen(true)}
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -415,7 +415,7 @@ export default function UmbrellaDetailPage() {
                       variant="ghost"
                       onClick={() => handleUnlink(b.id)}
                       disabled={unlinkingBooking === b.id}
-                      className="shrink-0 text-neutral-500 hover:text-bridal-coral"
+                      className="shrink-0 text-neutral-500 hover:text-bridal-coral-dark"
                       aria-label="Unlink booking"
                     >
                       {unlinkingBooking === b.id ? (
@@ -494,13 +494,13 @@ export default function UmbrellaDetailPage() {
                 </div>
                 <div className="flex justify-between gap-2">
                   <dt className="text-bridal-text-soft">Paid so far</dt>
-                  <dd className="font-medium text-emerald-700 tabular-nums">
+                  <dd className="font-medium text-status-success tabular-nums">
                     Rs. {stats.totalPaid.toLocaleString()}
                   </dd>
                 </div>
                 <div className="flex justify-between gap-2">
                   <dt className="text-bridal-text-soft">Outstanding</dt>
-                  <dd className="font-medium text-amber-700 tabular-nums">
+                  <dd className="font-medium text-status-warning tabular-nums">
                     Rs. {stats.outstanding.toLocaleString()}
                   </dd>
                 </div>
@@ -603,7 +603,7 @@ export default function UmbrellaDetailPage() {
                 Removing a booking from the umbrella never cancels it.
               </li>
               <li className="flex items-start gap-2">
-                <Ban className="h-3.5 w-3.5 mt-0.5 shrink-0 text-bridal-coral" />
+                <Ban className="h-3.5 w-3.5 mt-0.5 shrink-0 text-bridal-coral-dark" />
                 Cancel the whole umbrella to cancel every linked
                 booking in one step — vendors get notified
                 automatically.
@@ -642,7 +642,7 @@ export default function UmbrellaDetailPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <Ban className="h-5 w-5 text-bridal-coral" />
+              <Ban className="h-5 w-5 text-bridal-coral-dark" />
               {cancelOutcome ? "Cancellation summary" : "Cancel this umbrella?"}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
@@ -663,7 +663,7 @@ export default function UmbrellaDetailPage() {
                       const already = children.filter((b) => b.status === "Cancelled").length;
                       return (
                         <div className="rounded-md border border-bridal-coral/40 bg-bridal-coral/5 p-3 text-sm">
-                          <p className="font-medium text-bridal-coral">
+                          <p className="font-medium text-bridal-coral-dark">
                             {active} booking{active === 1 ? "" : "s"} will be cancelled.
                           </p>
                           {(completed > 0 || already > 0) && (
@@ -748,18 +748,18 @@ export default function UmbrellaDetailPage() {
                     )}
                     {cancelOutcome.failed.length > 0 && (
                       <div>
-                        <p className="text-xs font-medium text-red-700 uppercase tracking-wider mb-1.5">
+                        <p className="text-xs font-medium text-status-danger uppercase tracking-wider mb-1.5">
                           Couldn&apos;t cancel ({cancelOutcome.failed.length})
                         </p>
                         <ul className="space-y-1 text-sm">
                           {cancelOutcome.failed.map((o) => (
                             <li
                               key={o.id}
-                              className="px-2 py-1 rounded bg-red-50 border border-red-200"
+                              className="px-2 py-1 rounded bg-status-danger-soft border border-status-danger-line"
                             >
                               <p>Booking #{o.id}</p>
                               {o.error && (
-                                <p className="text-[10px] text-red-700 mt-0.5 italic">
+                                <p className="text-[10px] text-status-danger mt-0.5 italic">
                                   {o.error}
                                 </p>
                               )}
@@ -806,7 +806,7 @@ export default function UmbrellaDetailPage() {
                     handleCancel();
                   }}
                   disabled={cancelling}
-                  className="bg-bridal-coral hover:bg-bridal-coral/90 text-white"
+                  className="bg-bridal-coral-dark hover:bg-bridal-coral-dark/95 text-white"
                 >
                   {cancelling ? (
                     <>
@@ -839,7 +839,7 @@ export default function UmbrellaDetailPage() {
                 handleDelete();
               }}
               disabled={deleting}
-              className="bg-bridal-coral hover:bg-bridal-coral/90 text-white"
+              className="bg-bridal-coral-dark hover:bg-bridal-coral-dark/95 text-white"
             >
               {deleting ? (
                 <>

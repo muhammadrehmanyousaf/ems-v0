@@ -364,7 +364,45 @@ export interface RefundRequest {
   [key: string]: unknown;
 }
 
+/**
+ * WP31 - a phantom advance: the booking says money was received that no receipt backs. The vendor settles it
+ * with ONE of two explicit taps. The AMOUNT is always the server's (the gap it measures under the booking lock);
+ * `expectedUnledgered` is the figure the vendor was shown, so a stale screen is refused (409 UNLEDGERED_CHANGED).
+ *   adopt  "Haan, ye mila tha"      -> one receipt of exactly the gap
+ *   void   "Yeh advance mila hi nahi" -> the received figure comes down to the receipts (needs a reason)
+ */
+export interface AdoptAdvanceInput {
+  expectedUnledgered: number;
+  method?: "cash" | "jazzcash" | "easypaisa" | "raast" | "ibft" | "bank_transfer" | "other";
+  /** YYYY-MM-DD; the server defaults to the day the booking was created. */
+  receivedDate?: string;
+  transactionRef?: string;
+  note?: string;
+}
+export interface VoidAdvanceInput {
+  expectedUnledgered: number;
+  reason: string;
+}
+export interface PhantomSettled {
+  bookingId: number;
+  /** adopt: the receipt amount; void: the amount taken off the received figure. */
+  adopted?: number;
+  voided?: number;
+  received?: number;
+  ledger?: number;
+}
+
 export class BookingAPI {
+  static async adoptAdvance(bookingId: number, body: AdoptAdvanceInput, opts?: IdempotencyOptions): Promise<PhantomSettled> {
+    const res = await axiosInstance.post(`${v1}/${bookingId}/adopt-advance`, body, idempotencyConfig(opts?.idempotencyKey));
+    return res.data?.data;
+  }
+
+  static async voidAdvance(bookingId: number, body: VoidAdvanceInput, opts?: IdempotencyOptions): Promise<PhantomSettled> {
+    const res = await axiosInstance.post(`${v1}/${bookingId}/void-advance`, body, idempotencyConfig(opts?.idempotencyKey));
+    return res.data?.data;
+  }
+
   // BK-042 — read down_payment + remaining installment schedule
   static async getInstallments(
     bookingId: number,

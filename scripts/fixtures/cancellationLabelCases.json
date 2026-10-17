@@ -1,0 +1,114 @@
+{
+  "_comment": "WP29 shared cases. The backend (src/utils/cancellationLabelPolicy.js) and the frontend (lib/cancellation-policy.ts, guard scripts/cancellation-policy-check.mts, which keeps a copy in scripts/fixtures) both run these, so the wording a couple reads cannot drift. Expected strings are written by hand, not generated.",
+  "ladder": [
+    {
+      "name": "platform default (35 / 15 / 7)",
+      "slabs": [{ "daysToEvent": 35, "pctForfeit": 50 }, { "daysToEvent": 15, "pctForfeit": 75 }, { "daysToEvent": 7, "pctForfeit": 100 }],
+      "text": "50% back 35 or more days before the event; 25% back 15 to 34 days before the event; nothing back 14 days or fewer before the event"
+    },
+    {
+      "name": "four bands, full refund first, order of slabs does not matter",
+      "slabs": [{ "daysToEvent": 0, "pctForfeit": 100 }, { "daysToEvent": 7, "pctForfeit": 70 }, { "daysToEvent": 30, "pctForfeit": 0 }, { "daysToEvent": 14, "pctForfeit": 40 }],
+      "text": "full refund 30 or more days before the event; 60% back 14 to 29 days before the event; 30% back 7 to 13 days before the event; nothing back 6 days or fewer before the event"
+    },
+    {
+      "name": "one flat band",
+      "slabs": [{ "daysToEvent": 0, "pctForfeit": 100 }],
+      "text": "nothing back whenever you cancel"
+    },
+    {
+      "name": "one flat band, 40%",
+      "slabs": [{ "daysToEvent": 0, "pctForfeit": 40 }],
+      "text": "60% back whenever you cancel"
+    },
+    {
+      "name": "adjacent day bands read as one day, singular",
+      "slabs": [{ "daysToEvent": 3, "pctForfeit": 10 }, { "daysToEvent": 2, "pctForfeit": 50 }, { "daysToEvent": 0, "pctForfeit": 100 }],
+      "text": "90% back 3 or more days before the event; 50% back 2 days before the event; nothing back 1 day or fewer before the event"
+    },
+    { "name": "no slabs", "slabs": [], "text": "" }
+  ],
+  "shape": [
+    { "slabs": [{ "daysToEvent": 0, "pctForfeit": 100 }], "kind": "non_refundable" },
+    { "slabs": [{ "daysToEvent": 0, "pctForfeit": 40 }], "kind": "partial_percent", "value": 40 },
+    { "slabs": [{ "daysToEvent": 0, "pctForfeit": 100, "venueKeepsFixed": 20000 }], "kind": "partial_fixed", "value": 20000 },
+    { "slabs": [{ "daysToEvent": 30, "pctForfeit": 100 }], "kind": "ladder" },
+    { "slabs": [{ "daysToEvent": 0, "pctForfeit": 0 }], "kind": "ladder" },
+    { "slabs": [{ "daysToEvent": 30, "pctForfeit": 0 }, { "daysToEvent": 0, "pctForfeit": 100 }], "kind": "ladder" },
+    { "slabs": null, "kind": "ladder" }
+  ],
+  "summary": [
+    {
+      "name": "Non-Refundable by label, no stored row",
+      "source": "business_label",
+      "labelKey": "non_refundable",
+      "slabs": [{ "daysToEvent": 0, "pctForfeit": 100 }],
+      "kind": "non_refundable",
+      "headline": "Non-Refundable",
+      "detail": "If you cancel, the venue keeps everything you have paid toward the booking. Money that is not the venue's to keep still comes back to you: any overpayment beyond the agreed price, your refundable security deposit, and everything you paid if the venue cancels or force majeure applies."
+    },
+    {
+      "name": "Non-Refundable with its own stored row",
+      "source": "business",
+      "labelKey": "non_refundable",
+      "slabs": [{ "daysToEvent": 0, "pctForfeit": 100 }],
+      "kind": "non_refundable",
+      "headline": "Non-Refundable",
+      "detail": "If you cancel, the venue keeps everything you have paid toward the booking. Money that is not the venue's to keep still comes back to you: any overpayment beyond the agreed price, your refundable security deposit, and everything you paid if the venue cancels or force majeure applies."
+    },
+    {
+      "name": "Refundable = the platform schedule",
+      "source": "platform_default",
+      "labelKey": "refundable",
+      "slabs": [{ "daysToEvent": 35, "pctForfeit": 50 }, { "daysToEvent": 15, "pctForfeit": 75 }, { "daysToEvent": 7, "pctForfeit": 100 }],
+      "kind": "standard",
+      "headline": "Refundable",
+      "detail": "Refunds follow Wedding Wala's standard schedule: 50% back 35 or more days before the event; 25% back 15 to 34 days before the event; nothing back 14 days or fewer before the event."
+    },
+    {
+      "name": "bare Partially Refundable label with no stored detail",
+      "source": "platform_default",
+      "labelKey": "partially_refundable",
+      "slabs": [{ "daysToEvent": 35, "pctForfeit": 50 }, { "daysToEvent": 15, "pctForfeit": 75 }, { "daysToEvent": 7, "pctForfeit": 100 }],
+      "kind": "standard",
+      "headline": "Partially Refundable",
+      "detail": "Refunds follow Wedding Wala's standard schedule: 50% back 35 or more days before the event; 25% back 15 to 34 days before the event; nothing back 14 days or fewer before the event."
+    },
+    {
+      "name": "no label, platform schedule",
+      "source": "preset_fallback",
+      "labelKey": null,
+      "slabs": [{ "daysToEvent": 30, "pctForfeit": 0 }, { "daysToEvent": 14, "pctForfeit": 50 }, { "daysToEvent": 7, "pctForfeit": 75 }, { "daysToEvent": 0, "pctForfeit": 100 }],
+      "kind": "standard",
+      "headline": "Standard refund schedule",
+      "detail": "Refunds follow Wedding Wala's standard schedule: full refund 30 or more days before the event; 50% back 14 to 29 days before the event; 25% back 7 to 13 days before the event; nothing back 6 days or fewer before the event."
+    },
+    {
+      "name": "Partially Refundable, venue keeps 40%",
+      "source": "business",
+      "labelKey": "partially_refundable",
+      "slabs": [{ "daysToEvent": 0, "pctForfeit": 40 }],
+      "kind": "partial_percent",
+      "headline": "Partially Refundable: venue keeps 40%",
+      "detail": "If you cancel, the venue keeps 40% of what you have paid toward the booking and you get the rest back."
+    },
+    {
+      "name": "Partially Refundable, venue keeps PKR 20,000",
+      "source": "business",
+      "labelKey": "partially_refundable",
+      "slabs": [{ "daysToEvent": 0, "pctForfeit": 100, "venueKeepsFixed": 20000 }],
+      "kind": "partial_fixed",
+      "headline": "Partially Refundable: venue keeps PKR 20,000",
+      "detail": "If you cancel, the venue keeps PKR 20,000 of what you have paid toward the booking and you get back anything above it."
+    },
+    {
+      "name": "a preset ladder saved later, the label was Non-Refundable",
+      "source": "business",
+      "labelKey": "non_refundable",
+      "slabs": [{ "daysToEvent": 30, "pctForfeit": 0 }, { "daysToEvent": 14, "pctForfeit": 50 }, { "daysToEvent": 0, "pctForfeit": 100 }],
+      "kind": "ladder",
+      "headline": "Refund schedule",
+      "detail": "Full refund 30 or more days before the event; 50% back 14 to 29 days before the event; nothing back 13 days or fewer before the event."
+    }
+  ]
+}

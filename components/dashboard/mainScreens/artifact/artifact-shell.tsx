@@ -695,6 +695,8 @@ table.tbl{ width:100%; border-collapse:collapse; }
 .vpick-t{ font-size:16px; font-weight:660; letter-spacing:-.01em; }
 .vpick-s{ font-size:12.5px; color:var(--ink-3); margin-top:4px; }
 .vpick-list{ display:grid; gap:8px; }
+/* Wide windows: the venue picker is a grid of the same cards instead of one 440px strip in the middle. */
+@media (min-width:1280px){ .vpick-wrap{ max-width:1020px; } .vpick-list{ grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:10px; } }
 .vpick{ display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); cursor:pointer; font:inherit; color:var(--ink); }
 .vpick:hover{ border-color:var(--accent-line); background:var(--surface-3); }
 .vp-ava{ width:34px; height:34px; border-radius:9px; background:var(--accent-wash); border:1px solid var(--accent-line); color:var(--accent-ink); display:grid; place-items:center; font-weight:700; font-size:14px; flex:none; }

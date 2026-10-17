@@ -76,7 +76,7 @@ export function BeoSheetCard({ bookingId }: { bookingId: number }) {
             <Printer className="size-4 mr-1.5" /> Print {tab === "customer" ? "customer" : "kitchen"} sheet
           </Button>
           {tab === "customer" && waHref && (
-            <Button asChild size="sm" variant="outline" className="text-emerald-700 border-emerald-300">
+            <Button asChild size="sm" variant="outline" className="text-status-success border-status-success-line">
               <a href={waHref} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-4 mr-1.5" /> WhatsApp</a>
             </Button>
           )}
@@ -99,7 +99,7 @@ function CustomerView({ data }: { data: BeoSheets }) {
       <div className="rounded-lg border divide-y">
         {lines.map((l, i) => (
           <div key={i} className="flex items-center justify-between px-3 py-1.5">
-            <span className={cn(l.isDiscount && "text-emerald-700")}>{l.name}{l.basis === "per_head" ? ` · ${l.qty} × ${PKR(l.rate)}` : ""}</span>
+            <span className={cn(l.isDiscount && "text-status-success")}>{l.name}{l.basis === "per_head" ? ` · ${l.qty} × ${PKR(l.rate)}` : ""}</span>
             <span className="tabular-nums">{l.isDiscount ? "−" : ""}{PKR(l.lineTotal)}</span>
           </div>
         ))}
@@ -155,7 +155,7 @@ function EventHeader({ name, date, time, type, pax, kitchen }: { name: string | 
 }
 
 const Row = ({ label, value, bold, amber }: { label: string; value: string; bold?: boolean; amber?: boolean }) => (
-  <div className="flex justify-between"><span className={cn("text-muted-foreground", bold && "font-semibold text-foreground")}>{label}</span><span className={cn("tabular-nums", bold && "font-semibold", amber && "text-amber-600")}>{value}</span></div>
+  <div className="flex justify-between"><span className={cn("text-muted-foreground", bold && "font-semibold text-foreground")}>{label}</span><span className={cn("tabular-nums", bold && "font-semibold", amber && "text-status-warning")}>{value}</span></div>
 );
 
 // ── print + share helpers ──────────────────────────────────────────────────

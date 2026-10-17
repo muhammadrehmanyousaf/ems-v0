@@ -65,7 +65,7 @@ const STRENGTH_HUES = [
   "bg-bridal-coral",
   "bg-bridal-gold",
   "bg-bridal-sage",
-  "bg-[#3F6B43]",
+  "bg-status-success",
 ]
 
 export function ClaimSetPasswordForm() {
@@ -149,7 +149,7 @@ export function ClaimSetPasswordForm() {
           <BridalCrown className="mb-3">Link Invalid</BridalCrown>
           <BridalTitle size="h2" className="mb-3">
             This link is{" "}
-            <span className="text-bridal-coral">missing or expired</span>
+            <span className="text-bridal-coral-dark">missing or expired</span>
           </BridalTitle>
           <p className="font-bridal text-bridal-text-soft text-sm mb-7">
             The set-password link in your approval email may have expired.
@@ -178,7 +178,7 @@ export function ClaimSetPasswordForm() {
         // ── Success state ───────────────────────────────────────────
         <div className="text-center">
           <div className="mx-auto mb-5 w-16 h-16 rounded-full bg-bridal-sage/20 border border-bridal-sage/40 flex items-center justify-center">
-            <CheckCircle2 className="w-7 h-7 text-[#3F6B43]" />
+            <CheckCircle2 className="w-7 h-7 text-status-success" />
           </div>
           <BridalCrown className="mb-3">All Set</BridalCrown>
           <BridalTitle size="h2" className="mb-3">

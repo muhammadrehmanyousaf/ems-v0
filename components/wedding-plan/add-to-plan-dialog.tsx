@@ -280,7 +280,7 @@ export function AddToPlanDialog({
                           </p>
                         </div>
                         {already ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-[#3F6B43] shrink-0">
+                          <span className="inline-flex items-center gap-1 text-[11px] text-status-success shrink-0">
                             <CheckCircle2 className="h-3.5 w-3.5" />
                             Added
                           </span>

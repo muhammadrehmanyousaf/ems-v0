@@ -190,7 +190,7 @@ export default function SuccessStep({
           type="button"
           variant="outline"
           size="lg"
-          className="border-bridal-sage/50 text-[#3F6B43] hover:border-[#3F6B43] hover:text-[#3F6B43] xl:flex-1"
+          className="border-bridal-sage/50 text-status-success hover:border-status-success hover:text-status-success xl:flex-1"
           onClick={() => (window.location.href = "/user/payments")}
         >
           <DollarSign className="h-3.5 w-3.5" aria-hidden />

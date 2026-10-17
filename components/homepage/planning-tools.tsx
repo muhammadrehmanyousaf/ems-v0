@@ -56,7 +56,7 @@ const tools = [
     title: "Wedding Checklist",
     description: "Stay organized with our comprehensive wedding planning checklist",
     icon: CalendarDays,
-    gradient: "from-bridal-gold via-bridal-gold-dark to-violet-800",
+    gradient: "from-bridal-gold via-bridal-gold-dark to-bridal-mauve",
     accentColor: "text-bridal-gold",
     step: "01",
   },
@@ -73,7 +73,7 @@ const tools = [
     description: "Organize your guest list and track RSVPs in one place",
     icon: Users,
     gradient: "from-bridal-gold via-bridal-gold-dark to-bridal-charcoal",
-    accentColor: "text-indigo-200",
+    accentColor: "text-bridal-rose",
     step: "03",
   },
   {
@@ -138,7 +138,7 @@ function ChecklistTool() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-xl font-bold text-neutral-900">Wedding Checklist</h3>
+          <h3 className="text-xl font-bold text-bridal-charcoal">Wedding Checklist</h3>
           <p className="text-sm text-neutral-600">
             {completedCount} of {items.length} tasks completed
           </p>
@@ -191,7 +191,7 @@ function ChecklistTool() {
               )}
             </button>
             <div className="flex-1">
-              <p className={`font-medium ${item.completed ? 'line-through text-neutral-500' : 'text-neutral-900'}`}>
+              <p className={`font-medium ${item.completed ? 'line-through text-neutral-500' : 'text-bridal-charcoal'}`}>
                 {item.title}
               </p>
               <Badge variant="secondary" className="mt-1 bg-bridal-gold/15 text-bridal-gold-dark border-0">
@@ -266,15 +266,15 @@ function BudgetCalculator() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-6 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl text-white shadow-lg">
-          <h4 className="font-semibold text-green-100">Total Budget</h4>
+        <div className="p-6 bg-gradient-to-br from-status-success-solid to-status-success rounded-xl text-white shadow-lg">
+          <h4 className="font-semibold text-white">Total Budget</h4>
           <p className="text-3xl font-bold">Rs. {totalBudget.toLocaleString()}</p>
         </div>
-        <div className="p-6 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl text-white shadow-lg">
-          <h4 className="font-semibold text-blue-100">Estimated</h4>
+        <div className="p-6 bg-gradient-to-br from-bridal-mauve to-status-info rounded-xl text-white shadow-lg">
+          <h4 className="font-semibold text-white">Estimated</h4>
           <p className="text-3xl font-bold">Rs. {totalEstimated.toLocaleString()}</p>
         </div>
-        <div className={`p-6 rounded-xl text-white shadow-lg ${overBudget ? 'bg-gradient-to-br from-red-500 to-red-600' : 'bg-gradient-to-br from-orange-500 to-amber-600'}`}>
+        <div className={`p-6 rounded-xl text-white shadow-lg ${overBudget ? 'bg-gradient-to-br from-bridal-coral-dark to-bridal-coral-dark' : 'bg-gradient-to-br from-bridal-text to-bridal-text-soft'}`}>
           <h4 className="font-semibold">Remaining</h4>
           <p className="text-3xl font-bold">Rs. {remaining.toLocaleString()}</p>
         </div>
@@ -434,15 +434,15 @@ function GuestListManager() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl text-white text-center shadow-lg">
+        <div className="p-4 bg-gradient-to-br from-status-success-solid to-status-success rounded-xl text-white text-center shadow-lg">
           <p className="text-3xl font-bold">{rsvpStats.confirmed}</p>
-          <p className="text-sm text-green-100">Confirmed</p>
+          <p className="text-sm text-white">Confirmed</p>
         </div>
         <div className="p-4 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-xl text-white text-center shadow-lg">
           <p className="text-3xl font-bold">{rsvpStats.pending}</p>
           <p className="text-sm text-yellow-100">Pending</p>
         </div>
-        <div className="p-4 bg-gradient-to-br from-red-500 to-red-600 rounded-xl text-white text-center shadow-lg">
+        <div className="p-4 bg-gradient-to-br from-bridal-coral-dark to-bridal-coral-dark rounded-xl text-white text-center shadow-lg">
           <p className="text-3xl font-bold">{rsvpStats.declined}</p>
           <p className="text-sm text-red-100">Declined</p>
         </div>
@@ -501,7 +501,7 @@ function GuestListManager() {
           <div key={guest.id} className="p-4 border border-neutral-200 rounded-xl space-y-3 bg-white hover:shadow-md transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-semibold text-neutral-900">{guest.name}</p>
+                <p className="font-semibold text-bridal-charcoal">{guest.name}</p>
                 <p className="text-sm text-neutral-600">{guest.email}</p>
               </div>
               <div className="flex items-center gap-3">
@@ -642,7 +642,7 @@ function TimelineCreator() {
               <div className="text-xs text-neutral-500">{event.duration}</div>
             </div>
             <div className="flex-1">
-              <h5 className="font-semibold text-neutral-900">{event.event}</h5>
+              <h5 className="font-semibold text-bridal-charcoal">{event.event}</h5>
               <p className="text-sm text-neutral-600">Responsible: {event.responsible}</p>
               {event.notes && (
                 <p className="text-sm text-neutral-500 mt-1">{event.notes}</p>

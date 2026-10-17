@@ -17,8 +17,8 @@ import { venueSpacesApi, type DateAvailability } from "@/lib/api/venueSpaces";
 const PKR = (n: number | string | null | undefined): string => (n == null || n === "" ? "" : "PKR " + Math.round(Number(n)).toLocaleString("en-PK"));
 
 const CARD: Record<string, string> = {
-  AVAILABLE: "border-emerald-500/60 bg-emerald-50",
-  PARTIAL: "border-amber-400/60 bg-amber-50",
+  AVAILABLE: "border-emerald-500/60 bg-status-success-soft",
+  PARTIAL: "border-amber-400/60 bg-status-warning-soft",
   UNAVAILABLE: "border-gray-200 bg-gray-50 opacity-60",
 };
 const DOT: Record<string, string> = { AVAILABLE: "bg-emerald-500", PARTIAL: "bg-amber-400", UNAVAILABLE: "bg-gray-400" };
@@ -108,7 +108,7 @@ export function VenueSpaceSelector({ businessId, hasMultiSpace }: { businessId: 
       {!date && <p className="text-sm text-gray-500">Pick a date to see which halls, floors and partitions are free.</p>}
       {busy && <p className="text-sm text-gray-500">Checking availability…</p>}
       {failed && !busy && (
-        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p className="rounded-lg bg-status-warning-soft px-3 py-2 text-sm text-status-warning">
           We couldn’t check this date just now. Please try again, or message the venue to confirm.
         </p>
       )}
@@ -117,7 +117,7 @@ export function VenueSpaceSelector({ businessId, hasMultiSpace }: { businessId: 
           tied to one space. Saying nothing here is how a couple ended up
           enquiring for a hall with a wedding already in it. */}
       {loaded && date && (avail?.unmappedBookings ?? 0) > 0 && (
-        <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p className="mb-3 rounded-lg bg-status-warning-soft px-3 py-2 text-sm text-status-warning">
           This venue already has {avail?.unmappedBookings === 1 ? "an event" : `${avail?.unmappedBookings} events`} booked on{" "}
           {date}. Some spaces may not be free — please confirm with the venue before you plan around this date.
         </p>
@@ -146,7 +146,7 @@ export function VenueSpaceSelector({ businessId, hasMultiSpace }: { businessId: 
                     {s.bookingMode === "WHOLE_DAY" ? " · whole-day" : ""}
                   </span>
                 </span>
-                {on && <span className="flex-none text-sm font-semibold text-emerald-700">✓</span>}
+                {on && <span className="flex-none text-sm font-semibold text-status-success">✓</span>}
               </button>
             );
           })}

@@ -76,7 +76,7 @@ export default function VendorGuidePage() {
 
       <section className="py-12 px-4 bg-neutral-50">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-neutral-900 text-center mb-10">How It Works</h2>
+          <h2 className="text-2xl font-bold text-bridal-charcoal text-center mb-10">How It Works</h2>
           <div className="space-y-6">
             {steps.map((item) => (
               <Card key={item.step} className="border-0 shadow-sm">
@@ -86,7 +86,7 @@ export default function VendorGuidePage() {
                   </div>
                   <div>
                     <p className="text-xs text-bridal-gold-dark font-semibold mb-1">Step {item.step}</p>
-                    <h3 className="text-lg font-semibold text-neutral-900 mb-1">{item.title}</h3>
+                    <h3 className="text-lg font-semibold text-bridal-charcoal mb-1">{item.title}</h3>
                     <p className="text-sm text-neutral-600">{item.description}</p>
                   </div>
                 </CardContent>
@@ -98,7 +98,7 @@ export default function VendorGuidePage() {
 
       <section className="py-12 px-4 bg-white">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-neutral-900 text-center mb-8">Vendor Benefits</h2>
+          <h2 className="text-2xl font-bold text-bridal-charcoal text-center mb-8">Vendor Benefits</h2>
           <div className="grid sm:grid-cols-2 gap-3">
             {benefits.map((b) => (
               <div key={b} className="flex items-start gap-3 p-3">
@@ -112,7 +112,7 @@ export default function VendorGuidePage() {
 
       <section className="py-12 px-4 bg-neutral-50 border-t">
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-2xl font-bold text-neutral-900 mb-3">Ready to Grow Your Business?</h2>
+          <h2 className="text-2xl font-bold text-bridal-charcoal mb-3">Ready to Grow Your Business?</h2>
           <p className="text-neutral-600 mb-6">Join hundreds of vendors already thriving on Wedding Wala.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/business-registration">

@@ -59,7 +59,7 @@ import { getLocationImagery } from "@/lib/seo/location-imagery"
 import { VenueAnswers } from "@/components/seo/venue-answers"
 import { resolveAmenityLabels } from "@/lib/amenities"
 import { StickyQuoteBar } from "@/components/seo/sticky-quote-bar"
-import { cancellationLabel } from "@/lib/cancellation-policy"
+import { cancellationDisplay } from "@/lib/cancellation-policy"
 
 interface PageInput {
   typeSlug: VendorTypeSlug
@@ -215,6 +215,8 @@ export async function VendorDetailPage(input: PageInput) {
     }),
   )
 
+  // WP29: the policy as the refund engine will apply it (server summary), not only the registration label
+  const cancelShown = cancellationDisplay(vendor)
   const faqs = [
     {
       question: `How do I book ${vendor.name}?`,
@@ -223,8 +225,8 @@ export async function VendorDetailPage(input: PageInput) {
     {
       question: `What's ${vendor.name}'s cancellation policy?`,
       answer:
-        vendor.cancellationPolicy
-          ? `${cancellationLabel(vendor.cancellationPolicy)}. Full details on our Cancellation Policy page.`
+        cancelShown
+          ? `${cancelShown.headline.replace(/[.\s]+$/, "")}. ${cancelShown.detail ? `${cancelShown.detail} ` : ""}Full details on our Cancellation Policy page.`
           : `See ${SITE_NAME}'s default Cancellation Policy. Tier (Flexible / Moderate / Strict) is shown at checkout.`,
     },
     {

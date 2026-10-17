@@ -49,7 +49,7 @@ export default function CareersPage() {
 
       <section className="py-12 px-4 bg-neutral-50">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl font-bold text-neutral-900 text-center mb-8">Why Work With Us?</h2>
+          <h2 className="text-2xl font-bold text-bridal-charcoal text-center mb-8">Why Work With Us?</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
             {perks.map((perk) => (
               <Card key={perk.title} className="border-0 shadow-sm text-center">
@@ -57,20 +57,20 @@ export default function CareersPage() {
                   <div className="w-12 h-12 bg-bridal-gold/15 rounded-xl flex items-center justify-center mx-auto mb-4">
                     <perk.icon className="w-6 h-6 text-bridal-gold-dark" />
                   </div>
-                  <h3 className="font-semibold text-neutral-900 mb-2">{perk.title}</h3>
+                  <h3 className="font-semibold text-bridal-charcoal mb-2">{perk.title}</h3>
                   <p className="text-sm text-neutral-600">{perk.desc}</p>
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          <h2 className="text-2xl font-bold text-neutral-900 text-center mb-8">Open Positions</h2>
+          <h2 className="text-2xl font-bold text-bridal-charcoal text-center mb-8">Open Positions</h2>
           <div className="space-y-4 max-w-3xl mx-auto">
             {openings.map((job) => (
               <Card key={job.title} className="border-0 shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <h3 className="font-semibold text-neutral-900 mb-2">{job.title}</h3>
+                    <h3 className="font-semibold text-bridal-charcoal mb-2">{job.title}</h3>
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="secondary">{job.department}</Badge>
                       <span className="flex items-center gap-1 text-xs text-neutral-500">

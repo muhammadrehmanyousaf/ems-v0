@@ -18,7 +18,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { cancellationKey, cancellationLabel, cancellationText, fixedRefundCeiling, isGeneratedPartialText, partialPolicyText, partialRefundErrors, validatePartialRefund } from "../lib/cancellation-policy.ts";
+import { CANCELLATION_HELP, CUSTOM_SCHEDULE_LABEL, cancellationDisplay, cancellationKey, cancellationLabel, cancellationText, fixedRefundCeiling, isGeneratedPartialText, ladderText, partialPolicyText, partialRefundErrors, shapeOfSlabs, summarisePolicy, validatePartialRefund } from "../lib/cancellation-policy.ts";
 import { humanizeKey } from "../lib/humanize-key.ts";
 import { refundParts, refundPin, refundTotal } from "../lib/refund-total.ts";
 
@@ -147,6 +147,49 @@ check("REFUND_CHANGED: the toast names the same total as the refreshed dialog (n
 const vendorCard = read("components/bookings/refund-preview-card.tsx");
 check("the vendor refund card and its WhatsApp line use the same total", /refundParts\(data\)/.test(vendorCard) && /Wapas: \$\{rs\(parts\.total\)\}/.test(vendorCard) && /\{rs\(parts\.total\)\}<\/p>/.test(vendorCard) && !/rs\(preview\.refund\)/.test(vendorCard));
 check("the preview type carries the two additive fields", /priceDropRefund\?: number/.test(read("lib/api/bookingOrder.ts")) && /declinedLineRefund\?: number/.test(read("lib/api/bookingOrder.ts")));
+
+// ── WP29: Refundable / Non-Refundable are real policies (the refund engine reads them) ──
+// The same shared cases the server runs (backend tests/fixtures/cancellationLabelCases.json, copied to scripts/fixtures).
+const labelCases = JSON.parse(readFileSync(path.join(HERE, "fixtures", "cancellationLabelCases.json"), "utf8")) as {
+  ladder: { name: string; slabs: unknown; text: string }[];
+  shape: { slabs: unknown; kind: string; value?: number }[];
+  summary: { name: string; source: string; labelKey: "refundable" | "non_refundable" | "partially_refundable" | null; slabs: unknown; kind: string; headline: string; detail: string }[];
+};
+for (const c of labelCases.ladder) check(`ladder text: ${c.name}`, ladderText(c.slabs) === c.text, ladderText(c.slabs));
+labelCases.shape.forEach((c, i) => { const s = shapeOfSlabs(c.slabs); check(`slab shape ${i}`, s.kind === c.kind && (c.value === undefined || s.value === c.value), JSON.stringify(s)); });
+for (const c of labelCases.summary) {
+  const s = summarisePolicy({ source: c.source, slabs: c.slabs, labelKey: c.labelKey });
+  check(`summary: ${c.name}`, s.kind === c.kind && s.headline === c.headline && s.detail === c.detail, JSON.stringify(s));
+}
+// registration step 4: each answer is explained to the vendor, in what it means for the couple
+check("step-4 helper: Non-Refundable says the venue keeps everything paid, and what still goes back", /keeps everything they have paid/.test(CANCELLATION_HELP.non_refundable) && /overpayment/.test(CANCELLATION_HELP.non_refundable) && /security deposit/.test(CANCELLATION_HELP.non_refundable));
+check("step-4 helper: Refundable says the standard schedule", /standard schedule/.test(CANCELLATION_HELP.refundable) && /Wedding Wala/.test(CANCELLATION_HELP.refundable));
+check("the shared fields render the helper for Refundable and Non-Refundable (so all ten forms show it)", /CANCELLATION_HELP\[policyKey\]/.test(fields) && /policyKey === "refundable" \|\| policyKey === "non_refundable"/.test(fields) && /data-testid="cancellation-policy-helper"/.test(fields));
+// what a venue page / booking page prints: the engine's summary wins; the vendor's own words stay the headline
+const sumNR = { kind: "non_refundable", headline: "Non-Refundable", detail: "D-NR" };
+const sumStd = { kind: "standard", headline: "Standard refund schedule", detail: "D-STD" };
+check("display: a known answer prints the engine's headline and detail", JSON.stringify(cancellationDisplay({ cancelationPolicy: "non_refundable", cancellationSummary: sumNR })) === JSON.stringify({ headline: "Non-Refundable", detail: "D-NR" }));
+check("display: the stored row beats the label (label Refundable, row says ladder)", cancellationDisplay({ cancelationPolicy: "Refundable", cancellationSummary: { kind: "ladder", headline: "Refund schedule", detail: "D-L" } })?.headline === "Refund schedule");
+check("display: the vendor's own words stay the headline, the engine's schedule is the detail", JSON.stringify(cancellationDisplay({ cancelationPolicy: "Advance non-refundable within 30 days.", cancellationSummary: sumStd })) === JSON.stringify({ headline: "Advance non-refundable within 30 days.", detail: "D-STD" }));
+check("display: no label and only the platform schedule: nothing printed (as before)", cancellationDisplay({ cancelationPolicy: "", cancellationSummary: sumStd }) === null);
+check("display: no label but the venue has its own stored policy: printed", cancellationDisplay({ cancelationPolicy: null, cancellationSummary: { kind: "partial_percent", headline: "Partially Refundable: venue keeps 40%", detail: "D" } })?.headline === "Partially Refundable: venue keeps 40%");
+check("display: an older API (no summary) still shows the label as before", JSON.stringify(cancellationDisplay({ cancelationPolicy: "non_refundable" })) === JSON.stringify({ headline: "Non-Refundable", detail: "" }) && cancellationDisplay({}) === null);
+check("a ladder saved later gives the label a truthful name", CUSTOM_SCHEDULE_LABEL === "Custom refund schedule");
+for (const f of ["components/VendorDetails/VendorDetails.tsx", "components/VendorDetails/VendorDetailsMobile.tsx", "components/seo/vendor-detail-page.tsx", "components/booking/steps/preview-step.tsx"]) {
+  const src = read(f);
+  check(`${f} prints the policy through cancellationDisplay (the engine's summary), not the bare label`, /cancellationDisplay\(/.test(src) && !/cancellationLabel\(/.test(src));
+}
+const previewStep = read("components/booking/steps/preview-step.tsx");
+check("the booking confirmation reads the venue's and every added vendor's policy through cancellationDisplay", /cancellationDisplay\(venue\)/.test(previewStep) && /cancellationDisplay\(v\)/.test(previewStep));
+const liveReview = read("components/booking/steps-v2/review-step.tsx");
+check("the LIVE booking review (steps-v2) tells the couple what a cancellation costs before they commit", /cancellationDisplay\(venue\)/.test(liveReview) && /data-cancellation-review/.test(liveReview) && /Cancellation · \{cancelShown\.headline\}/.test(liveReview));
+check("the venue page prints the plain-words detail under the headline (both layouts and the booking confirmation)", ["components/VendorDetails/VendorDetails.tsx", "components/VendorDetails/VendorDetailsMobile.tsx", "components/booking/steps/preview-step.tsx"].every((f) => /data-cancellation-detail/.test(read(f))));
+check("the vendor payload mappers carry the server summary", /cancellationSummary: raw\.cancellationSummary/.test(read("lib/api/vendors.ts")) && /cancellationSummary: raw\?\.cancellationSummary/.test(read("lib/seo/fetch-vendor.ts")));
+const policyScreen = read("components/dashboard/mainScreens/cancellation-policy/artifact/cancellation-policy-artifact.tsx");
+check("the vendor Cancellation policy screen says what couples read (the engine's summary) and names a label-derived source", /data-policy-says/.test(policyScreen) && /d\.summary/.test(policyScreen) && /business_label/.test(policyScreen));
+check("the vendor screen's ladder rows are the engine's bands (N+ din pehle, A-B din pehle, X din ya kam pehle), not the old 8-15 / 7 din tak reading", /din ya kam pehle/.test(policyScreen) && !/din tak/.test(policyScreen));
+check("the vendor screen can edit the partial keep value: same rules as registration, same server door", /data-keep-edit>/.test(policyScreen) && /closest\("\[data-keep-edit\]"\)/.test(policyScreen) && /validatePartialRefund\(/.test(policyScreen) && /partialRefund: \{ type: v\.type, value: v\.value \}/.test(policyScreen) && /Venue Keeps \(PKR\)/.test(policyScreen) && /Venue Keeps \(%\)/.test(policyScreen) && /partialRefund\?: \{ type: "percent" \| "fixed"/.test(read("lib/api/bookingOrder.ts")));
+check("the customer cancel dialog states the governing policy in words (policySummary)", /data-policy-summary/.test(cancelPage) && /\{refundPreview\.policySummary\?\.detail && \(/.test(cancelPage) && /policySummary\?:/.test(read("lib/api/bookingOrder.ts")));
 
 // no component prints the stored policy raw: a JSX expression that is just the field, or a Field/StatTile value, must go through the label helper
 // (form controls such as <Select value={formData.cancelationPolicy}> hold the KEY on purpose: they are not display)

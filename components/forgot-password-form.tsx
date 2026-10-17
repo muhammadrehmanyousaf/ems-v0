@@ -170,7 +170,7 @@ export function ForgotPasswordForm() {
       ) : (
         <div className="text-center">
           <div className="mx-auto mb-5 w-16 h-16 rounded-full bg-bridal-sage/20 border border-bridal-sage/40 flex items-center justify-center">
-            <MailCheck className="w-7 h-7 text-[#3F6B43]" />
+            <MailCheck className="w-7 h-7 text-status-success" />
           </div>
           <BridalCrown className="mb-3">Check Your Inbox</BridalCrown>
           <BridalTitle size="h2" className="mb-3">

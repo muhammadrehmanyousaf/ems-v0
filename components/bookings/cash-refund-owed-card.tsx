@@ -90,18 +90,18 @@ export function CashRefundOwedCard({
   };
 
   return (
-    <Card className="border-amber-300 bg-amber-50/60">
+    <Card className="border-status-warning-line bg-amber-50/60">
       <CardContent className="p-5 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-700" />
-            <span className="text-sm font-semibold text-amber-900">
+            <AlertTriangle className="h-4 w-4 text-status-warning" />
+            <span className="text-sm font-semibold text-status-warning">
               You owe this customer a refund
             </span>
           </div>
           <Badge
             variant="outline"
-            className="border-amber-300 bg-white text-amber-900 text-xs"
+            className="border-status-warning-line bg-white text-status-warning text-xs"
           >
             {fmtPKR(total)}
           </Badge>
@@ -117,7 +117,7 @@ export function CashRefundOwedCard({
           {outstanding.map((r) => (
             <li
               key={r.id}
-              className="flex items-center justify-between gap-3 rounded-md border border-amber-200 bg-white px-2.5 py-2"
+              className="flex items-center justify-between gap-3 rounded-md border border-status-warning-line bg-white px-2.5 py-2"
             >
               <div className="min-w-0">
                 <div className="text-sm font-medium text-neutral-800">
@@ -131,7 +131,7 @@ export function CashRefundOwedCard({
               <Button
                 size="sm"
                 variant="outline"
-                className="h-7 shrink-0 gap-1.5 border-amber-300 text-xs"
+                className="h-7 shrink-0 gap-1.5 border-status-warning-line text-xs"
                 disabled={settling === r.id}
                 onClick={() => settle(r.id)}
               >

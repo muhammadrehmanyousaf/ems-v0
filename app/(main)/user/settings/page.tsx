@@ -70,7 +70,7 @@ function PasswordStrengthBar({ password }: { password: string }) {
     "bg-bridal-coral/70",
     "bg-bridal-gold/70",
     "bg-bridal-sage",
-    "bg-[#3F6B43]",
+    "bg-status-success",
   ]
 
   return (
@@ -492,7 +492,7 @@ export default function UserSettingsPage() {
               logout()
               router.push("/")
             }}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-border bg-card px-4 py-2.5 text-[12.5px] font-medium text-muted-foreground hover:text-bridal-coral hover:border-bridal-coral/35 hover:bg-bridal-coral/5 transition-colors"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-border bg-card px-4 py-2.5 text-[12.5px] font-medium text-muted-foreground hover:text-bridal-coral-dark hover:border-bridal-coral/35 hover:bg-bridal-coral/5 transition-colors"
           >
             <LogOut className="size-3.5" />
             Sign out
@@ -610,7 +610,7 @@ export default function UserSettingsPage() {
               ) : null}
 
               {!isEditing && savedAt ? (
-                <div className="mt-5 inline-flex items-center gap-2 rounded-md border border-bridal-sage/45 bg-bridal-sage/15 px-3 py-2 text-[12px] text-[#3F6B43]">
+                <div className="mt-5 inline-flex items-center gap-2 rounded-md border border-bridal-sage/45 bg-bridal-sage/15 px-3 py-2 text-[12px] text-status-success">
                   <CheckCircle className="size-3.5" />
                   Saved at {savedAt.toLocaleTimeString()}
                 </div>
@@ -728,7 +728,7 @@ export default function UserSettingsPage() {
                   </div>
                   {passwords.repeatPassword &&
                   passwords.repeatPassword !== passwords.newPassword ? (
-                    <p className="text-[11px] text-bridal-coral">
+                    <p className="text-[11px] text-bridal-coral-dark">
                       Passwords do not match
                     </p>
                   ) : null}

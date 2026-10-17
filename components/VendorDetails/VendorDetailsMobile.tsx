@@ -75,7 +75,7 @@ import { VendorBranches } from "@/components/VendorDetails/vendor-branches";
 // null while the flag is off, so this vendor page stays byte-identical.
 import { AddToPlanButton } from "@/components/wedding-plan/add-to-plan-button";
 import { featureMap } from "@/lib/packages/features";
-import { cancellationLabel } from "@/lib/cancellation-policy";
+import { cancellationDisplay } from "@/lib/cancellation-policy";
 
 interface VendorDetailsMobileProps {
   vendor: Vendor;
@@ -723,7 +723,8 @@ export default function VendorDetailsMobile({
   };
 
   const vendorSpecificDetails = getVendorSpecificDetails();
-  const cancellationPolicy = cancellationLabel(vendor.cancelationPolicy || vendor.cancellationPolicy);
+  // WP29: the policy as the refund engine will apply it (the server's summary), not only the registration label
+  const cancelShown = cancellationDisplay(vendor);
 
   const BACKEND_BASE = BACKEND_URL.replace(/\/$/, "");
   const resolveImg = (url: string) => {
@@ -1310,19 +1311,19 @@ export default function VendorDetailsMobile({
                       <BridalStatTile
                         icon={<span className="font-bridal font-medium text-[11px]">Rs</span>}
                         iconBg="bg-bridal-coral/20"
-                        iconColor="text-bridal-coral"
+                        iconColor="text-bridal-coral-dark"
                         label="Advance"
                         value={vendor.downPaymentType === "Percentage" ? `${vendor.downPayment}%` : formatPrice(vendor.downPayment)}
                       />
                     )}
-                    {cancellationPolicy && (
+                    {cancelShown && (
                       <BridalStatTile
                         icon={<Clock className="w-4 h-4" />}
                         iconBg="bg-bridal-sage/25"
-                        iconColor="text-[#3F6B43]"
+                        iconColor="text-status-success"
                         label="Cancellation"
-                        value={cancellationPolicy}
-                        wide={cancellationPolicy.length > 20}
+                        value={cancelShown.headline}
+                        wide={cancelShown.headline.length > 20}
                       />
                     )}
                   </div>
@@ -1674,7 +1675,7 @@ export default function VendorDetailsMobile({
                   )}
 
                   {/* Booking Terms */}
-                  {(vendor.downPayment || cancellationPolicy) && (
+                  {(vendor.downPayment || cancelShown) && (
                     <div className="bg-bridal-cream rounded-md border border-bridal-beige shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] p-5">
                       <h3 className="font-display italic text-[20px] text-bridal-charcoal mb-4">
                         Booking Terms
@@ -1693,12 +1694,15 @@ export default function VendorDetailsMobile({
                             </div>
                           </div>
                         ) : null}
-                        {cancellationPolicy && (
+                        {cancelShown && (
                           <div className="flex items-center gap-3 p-3 bg-bridal-ivory rounded-md border border-bridal-beige">
-                            <Clock className="w-4 h-4 text-[#3F6B43] flex-shrink-0" />
+                            <Clock className="w-4 h-4 text-status-success flex-shrink-0" />
                             <div>
                               <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Cancellation Policy</p>
-                              <p className="font-bridal text-[13px] font-medium text-bridal-charcoal mt-0.5">{cancellationPolicy}</p>
+                              <p className="font-bridal text-[13px] font-medium text-bridal-charcoal mt-0.5">{cancelShown.headline}</p>
+                              {cancelShown.detail && (
+                                <p className="font-bridal text-[12px] leading-relaxed text-bridal-text-soft mt-1" data-cancellation-detail>{cancelShown.detail}</p>
+                              )}
                             </div>
                           </div>
                         )}
@@ -1738,7 +1742,7 @@ export default function VendorDetailsMobile({
                         {[...enabledBridalServices, ...enabledTypeServices].map((s, i) => (
                           <div
                             key={i}
-                            className="flex items-center gap-1.5 bg-bridal-sage/20 border border-bridal-sage/40 text-[#3F6B43] rounded-full px-3 py-1 font-bridal text-[12px] font-medium"
+                            className="flex items-center gap-1.5 bg-bridal-sage/20 border border-bridal-sage/40 text-status-success rounded-full px-3 py-1 font-bridal text-[12px] font-medium"
                           >
                             <CheckCircle className="w-3.5 h-3.5" />
                             {s.label}
@@ -2068,7 +2072,7 @@ export default function VendorDetailsMobile({
                                     </span>
                                   )}
                                   {units && (
-                                    <span className="inline-flex items-center gap-1 bg-bridal-sage/20 text-[#3F6B43] text-xs px-2 py-0.5 rounded-full border border-bridal-sage/40">
+                                    <span className="inline-flex items-center gap-1 bg-bridal-sage/20 text-status-success text-xs px-2 py-0.5 rounded-full border border-bridal-sage/40">
                                       🚗 {units} available
                                     </span>
                                   )}
@@ -2081,7 +2085,7 @@ export default function VendorDetailsMobile({
                                     ❄️ {hasAC ? "AC" : "No AC"}
                                   </span>
                                   {hasDecor && (
-                                    <span className="inline-flex items-center gap-1 text-[11px] bg-bridal-coral/15 text-bridal-coral px-2 py-0.5 rounded-full border border-bridal-coral/30">
+                                    <span className="inline-flex items-center gap-1 text-[11px] bg-bridal-coral/15 text-bridal-coral-dark px-2 py-0.5 rounded-full border border-bridal-coral/30">
                                       🌸 Decoration
                                     </span>
                                   )}
@@ -2417,7 +2421,7 @@ export default function VendorDetailsMobile({
               )}
 
               {isAuthenticated && alreadyReviewed && (
-                <div className="flex items-center gap-2 font-bridal text-[13px] text-[#3F6B43] bg-bridal-sage/15 border border-bridal-sage/40 rounded-md px-4 py-3 mb-4">
+                <div className="flex items-center gap-2 font-bridal text-[13px] text-status-success bg-bridal-sage/15 border border-bridal-sage/40 rounded-md px-4 py-3 mb-4">
                   <CheckCircle className="w-4 h-4 shrink-0" />
                   You've already reviewed this vendor. Thank you!
                 </div>
@@ -2499,7 +2503,7 @@ export default function VendorDetailsMobile({
               <ScrollReveal>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="font-display italic text-[22px] text-bridal-charcoal">Check Availability</h2>
-                  <span className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-[#3F6B43] bg-bridal-sage/15 border border-bridal-sage/40 px-3 py-1 rounded-full">
+                  <span className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-status-success bg-bridal-sage/15 border border-bridal-sage/40 px-3 py-1 rounded-full">
                     Live Calendar
                   </span>
                 </div>
@@ -2605,7 +2609,7 @@ export default function VendorDetailsMobile({
                                     : isBlocked
                                     ? "bg-bridal-beige/50 text-bridal-text-soft line-through cursor-not-allowed"
                                     : isFullyBooked
-                                    ? "bg-bridal-coral/15 text-bridal-coral line-through cursor-not-allowed"
+                                    ? "bg-bridal-coral/15 text-bridal-coral-dark line-through cursor-not-allowed"
                                     : selectable
                                       ? "hover:bg-bridal-blush text-bridal-charcoal cursor-pointer"
                                       : "text-bridal-text-soft/60 cursor-not-allowed"
@@ -2663,7 +2667,7 @@ export default function VendorDetailsMobile({
                         }`}>
                           <div className="flex items-start gap-3">
                             <CalendarCheck className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
-                              isBlocked ? "text-bridal-text-soft" : isFullyBooked ? "text-bridal-coral" : "text-[#3F6B43]"
+                              isBlocked ? "text-bridal-text-soft" : isFullyBooked ? "text-bridal-coral-dark" : "text-status-success"
                             }`} />
                             <div className="flex-1">
                               <h4 className="font-display italic text-[18px] text-bridal-charcoal mb-1">
@@ -2674,11 +2678,11 @@ export default function VendorDetailsMobile({
                                   {avail?.blockReason || "Vendor not available this day"}
                                 </p>
                               ) : isFullyBooked ? (
-                                <p className="font-bridal text-[12px] uppercase tracking-[0.2em] font-medium text-bridal-coral">All time slots are fully booked</p>
+                                <p className="font-bridal text-[12px] uppercase tracking-[0.2em] font-medium text-bridal-coral-dark">All time slots are fully booked</p>
                               ) : (
                                 <>
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="inline-flex items-center font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium px-2.5 py-1 rounded-full bg-bridal-sage/25 text-[#3F6B43] border border-bridal-sage/40">
+                                    <span className="inline-flex items-center font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium px-2.5 py-1 rounded-full bg-bridal-sage/25 text-status-success border border-bridal-sage/40">
                                       {avail ? `${avail.availableSlots.length} slot${avail.availableSlots.length !== 1 ? "s" : ""} available` : "Available"}
                                     </span>
                                   </div>

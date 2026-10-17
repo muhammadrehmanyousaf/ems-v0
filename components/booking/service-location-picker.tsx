@@ -75,7 +75,7 @@ const MODES: ModeMeta[] = [
     title: "At the vendor's place",
     blurb: "We come to the vendor — their studio, hall, or address.",
     Icon: Building2,
-    accentClass: "border-blue-300 bg-blue-50/30",
+    accentClass: "border-bridal-gold/55 bg-bridal-cream/70",
     example: "Banquet hall, makeup studio, photography studio",
     needsAddress: false,
   },
@@ -84,7 +84,7 @@ const MODES: ModeMeta[] = [
     title: "At our home",
     blurb: "The vendor travels to our house — typical for mehndi, dholki, family-makeup days.",
     Icon: Home,
-    accentClass: "border-emerald-300 bg-emerald-50/30",
+    accentClass: "border-status-success-line bg-status-success-soft/50",
     example: "Mehndi artist at bride's home, dholki photographer at home",
     needsAddress: true,
   },
@@ -93,7 +93,7 @@ const MODES: ModeMeta[] = [
     title: "At our plot / lawn",
     blurb: "Vendor brings a setup to a piece of land we've arranged — marquee tents, home-lawn decor.",
     Icon: Tent,
-    accentClass: "border-amber-300 bg-amber-50/30",
+    accentClass: "border-bridal-gold-dark/35 bg-bridal-sand/50",
     example: "Marquee company on family lawn, lawn decorator for outdoor walima",
     needsAddress: true,
   },
@@ -102,7 +102,7 @@ const MODES: ModeMeta[] = [
     title: "Different venue we picked",
     blurb: "Nikah at a masjid, ceremony at a farmhouse, or any other location we arranged.",
     Icon: MapPinned,
-    accentClass: "border-purple-300 bg-purple-50/30",
+    accentClass: "border-status-info-line bg-status-info-soft/50",
     example: "Faisal Masjid Nikah, family farmhouse, public lawn",
     needsAddress: true,
   },
@@ -297,7 +297,7 @@ export function ServiceLocationPicker({
                 the empty case is already said by the row outside ("Address
                 needed") and by the required mark on the label. */}
             {addressTooShort && (address || "").trim().length > 0 && (
-              <p className="text-[11px] text-red-600">
+              <p className="text-[11px] text-status-danger">
                 Please enter at least {ADDRESS_MIN} characters.
               </p>
             )}

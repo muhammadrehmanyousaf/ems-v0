@@ -381,7 +381,7 @@ export default function VendorCard({
                         className={`w-4 h-4 transition-all duration-200 ${
                           isFavorite
                             ? "fill-bridal-coral text-bridal-coral"
-                            : "text-bridal-text-soft hover:text-bridal-coral"
+                            : "text-bridal-text-soft hover:text-bridal-coral-dark"
                         }`}
                       />
                     )}
@@ -471,7 +471,7 @@ export default function VendorCard({
                       )}
                     </p>
                   </div>
-                  <div className="flex items-center font-bridal text-[11px] text-[#3F6B43] font-medium">
+                  <div className="flex items-center font-bridal text-[11px] text-status-success font-medium">
                     <div className="w-1.5 h-1.5 bg-bridal-sage rounded-full mr-1.5 animate-pulse" />
                     Available
                   </div>

@@ -74,7 +74,7 @@ export const vendorCardClasses = {
   badge: "bg-white/90 text-gray-800 border-0",
   sponsoredBadge: "bg-gradient-to-r from-gold-500 to-gold-600 text-white border-0",
   favoriteButton: "absolute top-3 right-3 h-8 w-8 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white p-0",
-  bookButton: "w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-2.5 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg",
+  bookButton: "w-full bg-gradient-to-r from-bridal-gold-dark to-bridal-gold-deep hover:from-bridal-gold-deep hover:to-bridal-gold-deep text-white font-semibold py-2.5 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg",
 }
 
 // Responsive breakpoints

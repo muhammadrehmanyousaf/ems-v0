@@ -30,6 +30,8 @@ import { toast } from "sonner"
 import { BookingAPI, type BookingSchedule, type BookingInstallment, type PlanRowInput, type ScheduleConfirm, type SchedulePayment } from "@/lib/api/bookings"
 import { openDrawer, closeDrawer, openConfirm, escHtml, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { openRecordPaymentDrawer } from "@/components/dashboard/mainScreens/artifact/record-payment"
+import { openAdoptDrawer, openZeroDrawer, type PhantomCtx } from "@/components/dashboard/mainScreens/artifact/phantom-advance"
+import { ADOPT_BUTTON, ZERO_BUTTON, phantomNoticeText } from "@/lib/utils/phantom-advance"
 import { dayText, groupPk, moneyOf, qistHeading, qistStateVendor, rsText } from "@/lib/utils/qist"
 
 const svg = (p: string, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}">${p}</svg>`
@@ -225,7 +227,9 @@ export function paymentsCardHtml(view: BookingSchedule | null, opts: PaymentsCar
   const pay = new Map<number, SchedulePayment>((view.payments || []).map((p) => [p.id, p]))
   const notes: string[] = []
   if (moneyOf(m.unledgered) > 0) {
-    notes.push(`<div class="q-note warn"><span>${rsText(m.unledgered)} booking par likha hai magar iski receipt nahi hai. Receipt bana dein taake hisaab mukammal ho.</span><button class="btn btn-ghost" data-q-adopt="${Math.round(m.unledgered)}">Receipt darj karein</button></div>`)
+    // WP31: a booking that says money was received which no receipt backs. Two explicit taps, never automatic:
+    // Adopt ("haan, mila tha": one receipt of exactly this amount) or Zero ("mila hi nahi": the figure comes off).
+    notes.push(`<div class="q-note warn" data-q-phantom><span>${escHtml(phantomNoticeText(m.unledgered, cancelled))}</span><span style="display:flex;gap:8px;flex-wrap:wrap">${cancelled ? "" : `<button class="btn btn-ghost" data-q-adopt="${Math.round(m.unledgered)}">${escHtml(ADOPT_BUTTON)}</button>`}<button class="btn btn-ghost" data-q-zero="${Math.round(m.unledgered)}">${escHtml(ZERO_BUTTON)}</button></span></div>`)
   }
   if (moneyOf(m.overpaid) > 0) {
     notes.push(`<div class="q-note info"><span>${rsText(m.overpaid)} zyada mil gaya hai. Wapas karna ho to "Refund" se likhein.</span></div>`)
@@ -497,14 +501,25 @@ export async function handleQistClick(t: HTMLElement, s: ShadowRoot, ctx: QistCt
     openRecordPaymentDrawer(s, { bookingId: ctx.bookingId, customerName: ctx.customerName || undefined, installmentId: payId, schedule: view, onSaved: () => ctx.refresh() })
     return true
   }
-  const adopt = t.closest("[data-q-adopt]") as HTMLElement | null
-  if (adopt) {
-    const gap = Number(adopt.dataset.qAdopt) || 0
-    openRecordPaymentDrawer(s, {
-      bookingId: ctx.bookingId, customerName: ctx.customerName || undefined, schedule: view, amount: gap,
-      note: "[Adopted] pehle se likhi hui advance", hint: "Ye raqam booking par pehle se likhi hui hai. Iski asli receipt yahan darj karein taake khata aur booking ek jaisay rahein.",
-      onSaved: () => ctx.refresh(),
-    })
+  // WP31: Adopt / Zero of a phantom advance (the figure is the server's, read from the schedule on screen)
+  const phantomCtx = (): PhantomCtx | null => {
+    const m = view?.money
+    if (!m || !(moneyOf(m.unledgered) > 0)) return null
+    return {
+      bookingId: ctx.bookingId, customerName: ctx.customerName || undefined,
+      unledgered: moneyOf(m.unledgered), received: moneyOf(m.received), ledger: moneyOf(m.received) - moneyOf(m.unledgered), total: moneyOf(m.total),
+      cancelled: !!m.cancelled, createdDate: m.createdDate || null,
+      onSettled: () => ctx.refresh(), onStale: () => ctx.refresh(),
+    }
+  }
+  if (t.closest("[data-q-adopt]")) {
+    const p = phantomCtx()
+    if (p) openAdoptDrawer(s, p); else { toast.info("Ye advance pehle hi theek ho chuki hai"); ctx.refresh() }
+    return true
+  }
+  if (t.closest("[data-q-zero]")) {
+    const p = phantomCtx()
+    if (p) openZeroDrawer(s, p); else { toast.info("Ye advance pehle hi theek ho chuki hai"); ctx.refresh() }
     return true
   }
 

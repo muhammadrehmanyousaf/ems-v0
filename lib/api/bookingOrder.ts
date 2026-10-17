@@ -421,7 +421,8 @@ export interface PolicyTemplate {
   minNoticeHours?: number | null;
 }
 export interface ActivePolicy {
-  id: number; name: string; slabs: PolicySlab[]; forceMajeureRule: string;
+  /** null for the flat band a Non-Refundable label means when the venue has no stored policy row (effectiveSource "business_label"). */
+  id: number | null; name: string; slabs: PolicySlab[]; forceMajeureRule: string;
   partialRefundPct: number | null; isDefault: boolean; effectiveFrom: string;
   /** WW-CANCELWINDOW — hours before the event inside which a customer may not self-cancel. */
   minNoticeHours?: number | null;
@@ -437,7 +438,9 @@ export interface CancellationPolicyState {
    * platform default a vendor inherits without ever having seen it.
    */
   effective?: ActivePolicy | null;
-  effectiveSource?: "business" | "platform_default" | "none";
+  effectiveSource?: "business" | "business_label" | "platform_default" | "none";
+  /** WP29: the governing policy in plain words, from the refund engine's own resolver (what a couple reads). */
+  summary?: { kind: string; headline: string; detail: string; source?: string } | null;
   templates: PolicyTemplate[];
 }
 
@@ -466,6 +469,8 @@ export async function saveCancellationPolicy(body: {
   /** Hours. Null or 0 clears the cutoff, which is the platform default. */
   minNoticeHours?: number | null;
   refundPolicyNote?: string | null;
+  /** WP29: change what a Partially Refundable venue KEEPS after registration (same rules as registration; the server builds the slab and keeps the notice window / force-majeure rule). `slabs` is then ignored. */
+  partialRefund?: { type: "percent" | "fixed"; value: number | string };
 }) {
   const { data } = await axiosInstance.post(`${v1}/policy`, body);
   return data?.data as { id: number; name: string; slabs: PolicySlab[]; forceMajeureRule: string; minNoticeHours: number | null };
@@ -617,6 +622,8 @@ export interface RefundPreview {
   refundPolicyNote?: string | null;
   /** The name of the policy actually governing this booking. */
   policyName?: string | null;
+  /** WP29: that policy in plain words (headline + detail), from the same resolver that computed the refund. */
+  policySummary?: { kind: string; headline: string; detail: string } | null;
   /** PAY-CLOCK-014: the moment this figure was computed and when it stops being true (next tier boundary). */
   validAt?: string;
   validUntil?: string | null;
