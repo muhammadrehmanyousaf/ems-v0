@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { GeneratorFuelAPI, type FuelEntry, type EntryType, type FuelType, type CreateEntryInput, type TankStatusRow } from "@/lib/api/generatorFuel"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
+import { useScopedBusinessId } from "@/hooks/use-scoped-business-id"
 import { useArtifactShell, pkNum, escHtml, initTablePager, loadPref, savePref, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const TYPE_LABEL: Record<EntryType, string> = { delivery: "Fuel aaya", consumption: "Istemaal", tank_reading: "Tank reading", maintenance: "Maintenance" }
@@ -94,7 +95,8 @@ export function GeneratorFuelArtifact() {
   const { shadowRef, ready } = useArtifactShell(hostRef, { activeHref: "/dashboard/generator-fuel", crumbBold: "Ops", crumbSub: "Generator fuel", extraCss: EXTRA_CSS })
   const qc = useQueryClient()
   const activeBusinessId = useActiveBusinessId()
-  const bizRef = React.useRef(activeBusinessId); bizRef.current = activeBusinessId
+  const scopedBusinessId = useScopedBusinessId()
+  const bizRef = React.useRef(scopedBusinessId); bizRef.current = scopedBusinessId
   const { data, isError, refetch } = useQuery({ queryKey: ["fuel-art", activeBusinessId], queryFn: () => GeneratorFuelAPI.list(activeBusinessId != null ? { businessId: activeBusinessId } : {}) })
   const tanksQ = useQuery({ queryKey: ["fuel-tanks", activeBusinessId], queryFn: () => GeneratorFuelAPI.tanks(activeBusinessId != null ? { businessId: activeBusinessId } : {}).catch(() => ({ tanks: [] })) })
   const list = React.useMemo(() => (data?.entries ?? []) as FuelEntry[], [data])
