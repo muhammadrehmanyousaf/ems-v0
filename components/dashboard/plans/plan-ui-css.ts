@@ -113,7 +113,7 @@ export const PLAN_UI_CSS = String.raw`
 }
 
 /* ── banners (inside the console) ── */
-.wwp-banners{ position:sticky; top:0; z-index:30; display:flex; flex-direction:column; gap:8px; padding:10px 12px 0; background:linear-gradient(var(--bg) 70%,transparent); }
+.wwp-banners{ position:sticky; top:0; z-index:30; display:flex; flex-direction:column; gap:8px; padding:10px 12px 18px; background:linear-gradient(var(--bg) 70%,transparent); }
 .wwp-banner{ display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:var(--r-sm); border:1px solid var(--border); background:var(--surface); box-shadow:var(--shadow-xs); font-size:13px; }
 .wwp-banner > svg{ width:17px; height:17px; flex:none; color:var(--ink-3); }
 .wwp-banner .tx{ flex:1; min-width:0; } .wwp-banner .en{ font-weight:600; color:var(--ink); line-height:1.4; } .wwp-banner .ru{ font-size:12px; color:var(--ink-3); margin-top:1px; line-height:1.4; }
@@ -124,7 +124,7 @@ export const PLAN_UI_CSS = String.raw`
 .wwp-banner.warn{ background:var(--warn-wash); border-color:transparent; } .wwp-banner.warn > svg{ color:var(--warn); }
 .wwp-banner.bad{ background:var(--bad-wash); border-color:transparent; } .wwp-banner.bad > svg{ color:var(--bad); } .wwp-banner.bad .en{ color:var(--bad); }
 .wwp-banner.ok{ background:var(--ok-wash); border-color:transparent; } .wwp-banner.ok > svg{ color:var(--ok); }
-@media (max-width:640px){ .wwp-banner{ flex-wrap:wrap; align-items:flex-start; } .wwp-banner .acts{ width:100%; justify-content:flex-end; } .wwp-banners{ padding:8px 8px 0; position:static; background:none; } }
+@media (max-width:640px){ .wwp-banner{ flex-wrap:wrap; align-items:flex-start; } .wwp-banner .acts{ width:100%; justify-content:flex-end; } .wwp-banners{ padding:8px 8px 14px; position:static; background:none; } }
 
 /* ── the quiet chip ── */
 .wwp-chip{ display:inline-flex; align-items:center; gap:7px; height:26px; padding:0 10px 0 8px; border-radius:20px; border:1px solid var(--border-2); background:var(--surface); color:var(--ink-2); font:inherit; font-size:11.5px; font-weight:600; cursor:pointer; text-decoration:none; white-space:nowrap; max-width:100%; }
