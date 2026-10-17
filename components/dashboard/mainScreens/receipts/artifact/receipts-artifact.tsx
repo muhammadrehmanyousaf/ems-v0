@@ -69,7 +69,7 @@ function receiptForm(bookings: BkOpt[], r?: PaymentReceipt | null): string {
     <div><label class="dlabel">Amount <span class="req">*</span></label><div class="suffix"><span class="rs">Rs</span><input type="number" id="r-amount" min="0" placeholder="0" value="${r ? escHtml(money(r.amount)) : ""}"/></div></div>
     <div><label class="dlabel">Tareeqa <span class="req">*</span></label><select id="r-method">${methodOpts}</select></div>
   </div>
-  <div class="dfield"><label class="dlabel">Kis booking ke liye <span class="req">*</span></label><select id="r-booking">${bkOpts}</select></div>
+  <div class="dfield"><label class="dlabel">Kis booking ke liye <span class="req">*</span></label><select id="r-booking"${r ? ' disabled title="Receipt doosri booking par nahi ja sakti — hata kar naye sire se darj karein"' : ""}>${bkOpts}</select></div>
   <div class="dfield row2">
     <div><label class="dlabel">Taareekh <span class="req">*</span></label><input type="date" id="r-date" value="${r?.receivedDate ? escHtml(String(r.receivedDate).slice(0, 10)) : todayIso()}"/></div>
     <div><label class="dlabel">Reference #</label><input type="text" id="r-ref" placeholder="transaction ref" value="${r?.transactionRef ? escHtml(r.transactionRef) : ""}"/></div>

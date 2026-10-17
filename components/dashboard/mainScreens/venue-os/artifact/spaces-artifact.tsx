@@ -94,8 +94,8 @@ function spaceFormBody(flat: SubVenueNode[], node?: SubVenueNode | null, parentI
     <div><label class="dlabel">Kis ke andar? <span class="fhint">(hall/floor)</span></label><select id="sv-parent">${parentOpts}</select></div>
   </div>
   <div class="dfield row2">
-    <div><label class="dlabel">Comfortable seating <span class="fhint">(advisory)</span></label><input type="number" id="sv-comfort" min="0" value="${node?.comfortCapacity != null ? node.comfortCapacity : ""}" placeholder="500"/></div>
-    <div><label class="dlabel">Maximum mehmaan <span class="fhint">(enforced — khaali = koi limit nahi)</span></label><input type="number" id="sv-fire" min="0" value="${node?.fireRatedCapacity != null ? node.fireRatedCapacity : ""}" placeholder="800"/></div>
+    <div><label class="dlabel">Comfortable seating <span class="fhint">(advisory)</span></label><input type="number" id="sv-comfort" min="0" step="1" value="${node?.comfortCapacity != null ? node.comfortCapacity : ""}" placeholder="500"/></div>
+    <div><label class="dlabel">Maximum mehmaan <span class="fhint">(enforced — khaali = koi limit nahi)</span></label><input type="number" id="sv-fire" min="0" step="1" value="${node?.fireRatedCapacity != null ? node.fireRatedCapacity : ""}" placeholder="800"/></div>
   </div>
   <div class="dfield row2">
     <div><label class="dlabel">Base rent (Rs)</label><input type="number" id="sv-price" min="0" value="${node?.basePricePkr != null ? money(node.basePricePkr) : ""}" placeholder="0"/></div>
@@ -294,6 +294,12 @@ export function SpacesArtifact() {
         const comfort = val("sv-comfort") ? Number(val("sv-comfort")) : null
         const fire = val("sv-fire") ? Number(val("sv-fire")) : null
         const price = val("sv-price") ? Number(val("sv-price")) : null
+        // WP33 / SETUP-058: the server refuses these with a 400 naming the field; say so here before the request
+        if (name.length > 120) { toast.error("Naam bohat lamba hai (120 se kam)"); return }
+        for (const [label, n] of [["Comfortable seating", comfort], ["Maximum mehmaan", fire]] as const) {
+          if (n != null && (!Number.isInteger(n) || n < 0 || n > 200000)) { toast.error(`${label}: poora adad likhein (0 se 200000 tak)`); return }
+        }
+        if (price != null && (!Number.isFinite(price) || price < 0 || price > 100000000)) { toast.error("Base rent 0 se 10 crore ke darmiyan likhein"); return }
         const backup = val("sv-backup") ? Number(val("sv-backup")) : null
         const parent = val("sv-parent") ? Number(val("sv-parent")) : null
         const btn = s.getElementById("af-save") as HTMLButtonElement | null; const btnOrig = btn?.textContent; if (btn) { btn.disabled = true; btn.textContent = "Save ho raha…" }

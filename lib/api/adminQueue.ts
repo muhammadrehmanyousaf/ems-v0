@@ -15,6 +15,8 @@ import type { VendorDocument, VendorDocumentStatus } from "./vendorDocuments"
  */
 export type BusinessStatus =
   | "draft" | "pending_review" | "submitted" | "approved" | "rejected" | "suspended"
+  // WP33 / PUBLIC-009: what "Changes" sets - hidden from the catalog like pending_review (it used to set `draft`, which is public)
+  | "changes_requested"
 
 export interface QueueBusiness {
   id: number

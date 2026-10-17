@@ -77,6 +77,17 @@ const INFO: Record<BusinessStatus, BusinessStatusInfo> = {
       "This business is saved but is not waiting for review. If our team asked for changes, " +
       "check your notifications and email for what to update.",
   },
+  // WP33 / PUBLIC-009: what the admin's "Changes" button now sets (it used to set `draft`, which the public catalog shows)
+  changes_requested: {
+    label: "Needs changes",
+    headline: "Needs changes",
+    tone: "warn",
+    inReview: false,
+    summary: "Our team asked for changes.",
+    detail:
+      "Our team asked for changes before this business can go live. It stays hidden until they are made and our team approves it. " +
+      "The reason is in your notifications and email. Update the details, then contact support so we look at it again.",
+  },
   rejected: {
     label: "Not approved",
     headline: "Not approved",

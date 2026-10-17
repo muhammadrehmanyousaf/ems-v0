@@ -59,6 +59,8 @@ export function getConsent(): ConsentState | null {
 function persist(consent: ConsentState) {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(consent))
+    // WP33 / PUBLIC-003: tell the analytics loader a choice was made (same tab; other tabs get the `storage` event)
+    window.dispatchEvent(new CustomEvent("ww-consent-change", { detail: consent }))
     // Mirror to a cookie so server actions / middleware can read it.
     const encoded = encodeURIComponent(JSON.stringify(consent))
     const maxAge = TTL_DAYS * 24 * 60 * 60

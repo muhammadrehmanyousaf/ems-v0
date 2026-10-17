@@ -1008,7 +1008,11 @@ export function BusinessSettingsHubView() {
                   <input id="biz-name" className={inputCls} value={form.name ?? ""} onChange={(e) => set("name", e.target.value)} />
                 </Row>
                 <Row id="biz-desc" label="Description" help="businessDescription">
-                  <textarea id="biz-desc" className={cn(inputCls, "h-28 resize-y py-2")} value={form.description ?? ""} onChange={(e) => set("description", e.target.value)} placeholder="Tell couples what makes you special…" />
+                  <>
+                    {/* WP33 / SETUP-007: the server bound is 2,000 characters; a longer text used to be a bare 500 "Update failed" */}
+                    <textarea id="biz-desc" className={cn(inputCls, "h-28 resize-y py-2")} value={form.description ?? ""} maxLength={2000} onChange={(e) => set("description", e.target.value)} placeholder="Tell couples what makes you special…" />
+                    <p className="mt-1 text-right text-[11px] text-muted-foreground tabular-nums">{String(form.description ?? "").length}/2000</p>
+                  </>
                 </Row>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Row id="biz-city" label="City" help="city">
@@ -1249,7 +1253,7 @@ export function BusinessSettingsHubView() {
                   <FieldError id="biz-advance" message={pricingErrs.downPayment} />
                 </Row>
               </div>
-              <Row id="biz-cancellation" label="Cancellation policy" help="cancellationPolicyText"><textarea id="biz-cancellation" className={cn(inputCls, "h-24 resize-y py-2")} value={form.cancelationPolicy ?? ""} onChange={(e) => set("cancelationPolicy", e.target.value)} placeholder="e.g. Advance non-refundable within 30 days of event." /></Row>
+              <Row id="biz-cancellation" label="Cancellation policy" help="cancellationPolicyText"><><textarea id="biz-cancellation" className={cn(inputCls, "h-24 resize-y py-2")} value={form.cancelationPolicy ?? ""} maxLength={2000} onChange={(e) => set("cancelationPolicy", e.target.value)} placeholder="e.g. Advance non-refundable within 30 days of event." /><p className="mt-1 text-right text-[11px] text-muted-foreground tabular-nums">{String(form.cancelationPolicy ?? "").length}/2000</p></></Row>
 
               {/* WW-BOOKING-MODE — the flow has been instant-book: a customer
                   picks a date, pays, and the vendor finds out afterwards. No
