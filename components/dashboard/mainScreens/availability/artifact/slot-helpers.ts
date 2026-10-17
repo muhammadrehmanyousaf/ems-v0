@@ -12,10 +12,18 @@ export function findSlotById<T extends { id: number | string }>(list: readonly T
   return list.find((x) => String(x.id) === want)
 }
 
-/** What a failed slot request says: the server's own sentence and machine code (data.code), else a fallback. */
+const looksLikeCode = (s: string) => /^[A-Za-z0-9_]+$/.test(s.trim())
+
+/**
+ * What a failed slot request says (BOOKINGS-024): the server's sentence, else its machine code's sentence
+ * (`data.details.reason`: "Wedding halls have to be closed by 10 PM..."; the top-level message of a slot-policy
+ * refusal is the bare code 'SLOT_ENDS_AFTER_CLOSURE'), else a fallback; plus the machine code (data.code).
+ */
 export function slotErrorInfo(err: unknown, fallback: string): { message: string; code: string | null } {
-  const data = (err as { response?: { data?: { message?: unknown; data?: { code?: unknown; reason?: unknown } } } })?.response?.data
-  const message = typeof data?.message === "string" && data.message.trim() ? data.message : fallback
+  const data = (err as { response?: { data?: { message?: unknown; data?: { code?: unknown; details?: { reason?: unknown } } } } })?.response?.data
+  const top = typeof data?.message === "string" ? data.message.trim() : ""
+  const reason = typeof data?.data?.details?.reason === "string" ? data.data.details.reason.trim() : ""
+  const message = reason && (!top || looksLikeCode(top)) ? reason : top || fallback
   const code = typeof data?.data?.code === "string" ? data.data.code : null
   return { message, code }
 }

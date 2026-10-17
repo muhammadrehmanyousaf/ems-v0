@@ -45,6 +45,8 @@ const eq = (a: unknown, b: unknown, label: string) => ok(JSON.stringify(a) === J
   eq(findSlotById(list, "9"), undefined, "unknown id");
   eq(slotErrorInfo({ response: { data: { message: "Slot has bookings", data: { code: "SLOT_HAS_BOOKINGS" } } } }, "x"), { message: "Slot has bookings", code: "SLOT_HAS_BOOKINGS" }, "server sentence + code");
   eq(slotErrorInfo(new Error("net"), "Save nahi hua"), { message: "Save nahi hua", code: null }, "no response -> fallback");
+  eq(slotErrorInfo({ response: { data: { message: "SLOT_ENDS_AFTER_CLOSURE", data: { code: "SLOT_CONFLICT", details: { reason: "Wedding halls have to be closed by 10 PM" } } } } }, "x").message, "Wedding halls have to be closed by 10 PM", "a bare machine-code message is replaced by the server's sentence (BOOKINGS-024)");
+  eq(slotErrorInfo({ response: { data: { message: "Slot has 2 bookings. Move them first.", data: { code: "SLOT_HAS_BOOKINGS", details: { reason: "other" } } } } }, "x").message, "Slot has 2 bookings. Move them first.", "a real sentence is kept");
   const src = read("components/dashboard/mainScreens/availability/artifact/slots-artifact.tsx");
   ok(!/x\.id === Number\(ed\.dataset/.test(src), "slots-artifact no longer compares x.id === Number(dataset.slotEdit)");
   ok(src.includes("findSlotById(tplRef.current, ed.dataset.slotEdit)"), "slots-artifact looks the slot up with findSlotById");
