@@ -1,12 +1,6 @@
 const L = require("./lib.cjs")
 ;(async () => {
   const b = await L.launch()
-  const v = await L.uiLogin(b, "ple.vendor.61855850@localhost.test")
-  const vp = await v.newPage()
-  await vp.goto(L.BASE + "/dashboard/bookings", { waitUntil: "domcontentloaded", timeout: 180000 })
-  await vp.waitForTimeout(8000)
-  console.log("vendor in shadow: wall", await vp.locator("[data-testid=access-wall]").count(), "banners", await vp.locator("[data-kind]").count(), "rows visible:", /Later Customer/.test(await vp.evaluate(() => document.body.innerText)) || "check shadow DOM")
-  await L.shot(vp, "t02-shadow-vendor-sees-nothing")
   const ctx = await L.uiLogin(b, L.K.CREDS.admin.email, { width: 1536, height: 864 }, L.K.CREDS.admin.password)
   const page = await ctx.newPage()
   await page.goto(`${L.BASE}/dashboard/admin/billing-tools`, { waitUntil: "domcontentloaded", timeout: 180000 })
