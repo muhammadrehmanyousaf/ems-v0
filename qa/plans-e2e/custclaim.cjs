@@ -1,0 +1,20 @@
+/** The customer reports a payment on a booking at a venue that has just been locked: the web says the venue is offline. node custclaim.cjs <tag> <bookingId> */
+const L = require("./lib.cjs")
+;(async () => {
+  const [tag, id] = process.argv.slice(2)
+  const b = await L.launch()
+  const ctx = await L.uiLogin(b, L.K.CREDS.customer.email, { width: 1536, height: 864 }, L.K.CREDS.customer.password)
+  const page = await ctx.newPage()
+  const calls = []
+  page.on("response", async (r) => { const u = r.url(); if (u.includes(":5134/api/v1/") && r.request().method() !== "GET") calls.push(`${r.status()} ${r.request().method()} ${u.replace(/^.*\/api\/v1/, "").split("?")[0]} venueNotice=${/venueNotice/.test(await r.text().catch(() => ""))}`) })
+  await page.goto(`${L.BASE}/user/bookings/${id}/pay`, { waitUntil: "domcontentloaded", timeout: 180000 })
+  await page.waitForTimeout(8000)
+  const ess = page.getByRole("button", { name: /essential only/i }).first(); if (await ess.count()) await ess.click().catch(() => {})
+  await page.getByRole("button", { name: /I.ve sent the payment/i }).click()
+  await page.waitForTimeout(2200)
+  await L.shot(page, `${tag}-claim-toast`, { wait: 200 })
+  console.log("toast:", await page.evaluate(() => (document.querySelector("[data-sonner-toast]")?.innerText || "none").replace(/\s+/g, " ")))
+  console.log("non-GET:", calls.join(" || "))
+  await b.close()
+  process.exit(0)
+})().catch((e) => { console.error("FAILED", e); process.exit(1) })

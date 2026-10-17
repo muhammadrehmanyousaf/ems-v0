@@ -1,0 +1,11 @@
+const L = require("./lib.cjs")
+;(async () => {
+  const off = Number(process.argv[2] || 35)
+  const endsAt = new Date(Date.now() + (off + 40) * L.DAY).toISOString().slice(0, 10)
+  const c = await L.adminApi("POST", "/subscriptions/admin/billing/5/comp", { tier: "premium", endsAt, reason: "PL-E over-limit scenario" })
+  console.log("comp", c.status, c.body && c.body.message, JSON.stringify(c.body && c.body.data && c.body.data.access && { state: c.body.data.access.state, plan: c.body.data.access.planName }))
+  await L.restartBackend(off * L.DAY, { PLAN_LIMITS_ENFORCE: "all" })
+  const lv = await L.K.api("vendor", "GET", "/subscriptions/live-venues")
+  console.log("live-venues", lv.status, JSON.stringify(lv.body && lv.body.data && { limit: lv.body.data.limit, planName: lv.body.data.planName, over: lv.body.data.over, needsChoice: lv.body.data.needsChoice, enforced: lv.body.data.enforced, n: lv.body.data.venues.length }))
+  process.exit(0)
+})()
