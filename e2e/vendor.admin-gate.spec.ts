@@ -25,6 +25,8 @@ const ADMIN_ROUTES = [
   "/dashboard/admin/platform-pulse",
   "/dashboard/admin/promotions",
   "/dashboard/admin/subscriptions",
+  "/dashboard/admin/manual-payments",
+  "/dashboard/admin/billing-tools",
   "/dashboard/admin/vendor-queue",
 ];
 

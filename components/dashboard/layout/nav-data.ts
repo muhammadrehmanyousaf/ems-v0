@@ -1,4 +1,5 @@
 import {
+  Banknote,
   Bell,
   Boxes,
   BriefcaseBusiness,
@@ -40,6 +41,7 @@ import {
   UserCheck,
   Users,
   Wallet,
+  Wrench,
   AlertCircle,
   Zap,
 } from "lucide-react"
@@ -156,6 +158,9 @@ export const data = {
     { name: "Activity & audit", url: "/dashboard/admin/activity",   icon: Activity },
     { name: "Promotions",     url: "/dashboard/admin/promotions",   icon: Megaphone },
     { name: "Subscriptions",  url: "/dashboard/admin/subscriptions", icon: CreditCard },
+    // Plans programme (PL-E): the manual (bank / JazzCash / Easypaisa) payment queue and the billing tools. Super-admin only.
+    { name: "Manual payments", url: "/dashboard/admin/manual-payments", icon: Banknote },
+    { name: "Billing tools",   url: "/dashboard/admin/billing-tools",   icon: Wrench },
     // NO Bookings / Payments here. Both routes render VENDOR-scoped screens
     // (/dashboard/payments calls PaymentsAPI.getVendorRevenue()), so an admin
     // — who owns no business — got empty tables and Rs 0 tiles. The

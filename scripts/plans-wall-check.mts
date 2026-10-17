@@ -502,6 +502,50 @@ await check("the frontend has a secret-protected /api/revalidate branch for PL-A
   ok(/Authorization|authorization/.test(src), "the session-based path for vendors is still there");
 });
 
+console.log("\nsuper-admin screens: the manual payment queue and the billing tools (PL-E)");
+await check("the two admin pages exist under the admin layout and are super-admin only (page guard + nav + sidebar filter)", () => {
+  for (const f of ["app/(dashboard)/dashboard/admin/manual-payments/page.tsx", "app/(dashboard)/dashboard/admin/billing-tools/page.tsx"]) {
+    ok(exists(f), `${f} is missing`);
+    ok(/<AdminGuard requireSuperAdmin>/.test(read(f)), `${f} must wrap the screen in <AdminGuard requireSuperAdmin>: the endpoints are super-admin only`);
+  }
+  const nav = read("components/dashboard/layout/nav-data.ts");
+  ok(/url: "\/dashboard\/admin\/manual-payments"/.test(nav) && /url: "\/dashboard\/admin\/billing-tools"/.test(nav), "both screens need a sidebar entry (an unreachable screen is how a dead rule is born)");
+  const side = read("components/dashboard/layout/app-sidebar.tsx");
+  ok(/"Manual payments"/.test(side) && /"Billing tools"/.test(side), "the sidebar must hide both entries from a plain admin");
+  for (const f of ["e2e/vendor.admin-gate.spec.ts", "e2e/superadmin.render.spec.ts"]) ok(/admin\/manual-payments/.test(read(f)) && /admin\/billing-tools/.test(read(f)), `${f} must list both routes`);
+});
+await check("the admin client calls exactly the endpoints the backend has (PL-A billing tools, PL-B manual payments, shadow report)", () => {
+  const src = read("lib/api/billing-admin.ts");
+  for (const p of ["/manual-payments", "/manual-payments/${id}/approve", "/manual-payments/${id}/reject", "/billing/vendor/${userId}", "/billing/${userId}/${action}", "/billing/expiring", "/billing/locked-with-future-events", "/billing/metrics", "/billing/audit", "/billing/shadow-report"]) ok(src.includes("`${BASE}" + p + "`"), `missing call ${p}`);
+  ok(/BASE = "\/api\/v1\/subscriptions\/admin"/.test(src), "base path");
+  for (const a of ["grant-trial", "extend-trial", "comp", "force-unlock", "suspend", "unsuspend"]) ok(src.includes(`"${a}"`), `action ${a}`);
+});
+await check("every write on the billing tools carries a reason of at least 3 characters (the server refuses less) and the button waits for it", () => {
+  const v = read("components/dashboard/mainScreens/admin/subscriptions/admin-billing-tools-view.tsx");
+  ok(/reason: reason\.trim\(\)/.test(v), "billingAction body must carry the reason");
+  ok(/const reasonOk = reason\.trim\(\)\.length >= 3/.test(v) && /disabled=\{busy \|\| !reasonOk\}/.test(v), "the submit button must stay disabled until the reason is long enough");
+  ok(/type="date"[^>]*max=\{pkDay\(90\)\}/.test(v) && /min=\{pkDay\(1\)\}/.test(v), "a comp has a required end date, at most 90 days (PKT days)");
+  const m = read("components/dashboard/mainScreens/admin/subscriptions/admin-manual-payments-view.tsx");
+  ok(/reason\.trim\(\)\.length < 3/.test(m), "a rejection needs a reason");
+  ok(/rejectManualPayment\(r\.id, reason\.trim\(\)\)/.test(m), "the reason goes to the server");
+});
+await check("approving a manual payment asks first, shows the proof and sets the amount beside the plan price", () => {
+  const m = read("components/dashboard/mainScreens/admin/subscriptions/admin-manual-payments-view.tsx");
+  ok(/Yes, approve/.test(m) && /setApprovingId/.test(m), "approve must be a two-step action");
+  ok(/proofUrl/.test(m) && /<img/.test(m), "the proof image");
+  ok(/pricePkrMonthly/.test(m) && /Matches the plan price/.test(m), "amount against the plan price");
+  ok(/listManualPayments\(s\)/.test(m) && /pending/.test(m) && /approved/.test(m) && /rejected/.test(m), "the three statuses");
+});
+await check("the admin screens never turn a failed read into an empty list or a zero (missing-not-zero)", () => {
+  for (const f of ["components/dashboard/mainScreens/admin/subscriptions/admin-billing-tools-view.tsx", "components/dashboard/mainScreens/admin/subscriptions/admin-manual-payments-view.tsx"]) {
+    const src = stripComments(read(f));
+    ok(!/\.catch\(\(\)\s*=>\s*(\[\]|\{\}|null|0)\)/.test(src), `${f} swallows a failed read`);
+    ok(/Try again/.test(src), `${f} needs a retry on a failed read`);
+  }
+  const api = stripComments(read("lib/api/billing-admin.ts"));
+  ok(!/catch\s*\{[^}]*return (\[\]|null|0)/.test(api), "the client must let a failure throw");
+});
+
 console.log("\nthis guard is wired into the build");
 await check("package.json runs it in `guards` and has guard:plans-wall", () => {
   const pkg = JSON.parse(read("package.json"));
