@@ -14,6 +14,8 @@ import { ReceiptsAPI, type PaymentReceipt, type ReceiptMethod, type CreateReceip
 import { PaymentsAPI } from "@/lib/api/dashboard"
 import { invalidateMoney } from "@/lib/query/money-keys"
 import { SubmitKey, isAmbiguousFailure } from "@/lib/utils/idempotency"
+import { unledgered409 } from "@/lib/utils/phantom-advance"
+import { openPhantomDrawer, phantomCtxFrom, prependPhantomPanel } from "@/components/dashboard/mainScreens/artifact/phantom-advance"
 import { useArtifactShell, pkNum, escHtml, errorBannerHtml, initTablePager, loadPref, savePref, openDrawer, closeDrawer, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 type BkOpt = { bookingId: number; customerName?: string; due?: number }
@@ -193,7 +195,12 @@ export function ReceiptsArtifact() {
             refetch(bk)
           } else {
             submitKey.rotate()
-            toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua — booking # sahi hai?")
+            // WP31: the booking holds an advance no receipt backs - put the two explicit taps (Adopt / Zero) at the top of this form
+            const ph = unledgered409(err)
+            const settled = () => refetch(bk)
+            if (!(ph && prependPhantomPanel(s, phantomCtxFrom(ph, { bookingId: bk, onSettled: settled, onStale: settled })))) {
+              toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua — booking # sahi hai?")
+            }
           }
           save.disabled = false; if (orig) save.textContent = orig
         }
@@ -207,7 +214,12 @@ export function ReceiptsArtifact() {
           btn.disabled = true; btn.innerHTML = "…"
           const gone = listRef.current.find((y) => y.id === id)
           try { await ReceiptsAPI.remove(id); toast.success("Receipt hata diya"); refetch(gone?.bookingId ?? null) }
-          catch { toast.error("Delete nahi hua"); btn.disabled = false; btn.innerHTML = svg(IC.trash) }
+          catch (err: unknown) {
+            const ph = unledgered409(err)
+            if (ph) { const settled = () => refetch(gone?.bookingId ?? null); openPhantomDrawer(s, phantomCtxFrom(ph, { bookingId: gone?.bookingId, onSettled: settled, onStale: settled })) }
+            else toast.error("Delete nahi hua")
+            btn.disabled = false; btn.innerHTML = svg(IC.trash)
+          }
         } })
         return
       }

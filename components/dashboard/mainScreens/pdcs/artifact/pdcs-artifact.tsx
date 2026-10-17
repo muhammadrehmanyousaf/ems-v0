@@ -13,6 +13,8 @@ import { PdcAPI, type PostDatedCheque, type PdcStatus, type CreatePdcInput } fro
 import { PaymentsAPI } from "@/lib/api/dashboard"
 import { invalidateMoney } from "@/lib/query/money-keys"
 import { SubmitKey, isAmbiguousFailure } from "@/lib/utils/idempotency"
+import { unledgered409 } from "@/lib/utils/phantom-advance"
+import { openPhantomDrawer, phantomCtxFrom } from "@/components/dashboard/mainScreens/artifact/phantom-advance"
 import { useActiveBusinessStore } from "@/lib/store/active-business-store"
 
 type BkOpt = { bookingId: number; customerName?: string; due?: number }
@@ -183,7 +185,13 @@ export function PdcsArtifact() {
       }
       catch (err: unknown) {
         if (isAmbiguousFailure(err)) { toast.error("Jawab nahi aaya — cheque ka status shayad badal chuka hai. List dekh kar check karein.", { duration: 9000 }); refetch(bookingId) }
-        else { k.rotate(); toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Update nahi hua") }
+        else {
+          k.rotate()
+          // WP31: clearing a cheque is a money write; on a booking that holds an advance no receipt backs it is refused (409)
+          const ph = unledgered409(err)
+          if (ph) openPhantomDrawer(s, phantomCtxFrom(ph, { bookingId, onSettled: () => refetch(bookingId), onStale: () => refetch(bookingId) }))
+          else toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Update nahi hua")
+        }
         if (btn) { btn.disabled = false; btn.innerHTML = orig }
       }
     }

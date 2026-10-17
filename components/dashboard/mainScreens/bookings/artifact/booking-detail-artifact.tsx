@@ -36,6 +36,8 @@ import { bookedOn, receivedOn, outstandingOn } from "@/lib/utils/booking-money"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
 import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, openConfirm, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 import { paymentsCardHtml, handleQistClick, QIST_CSS } from "./qist-payments"
+import { phantomPanelHtml, wirePhantomButtons } from "@/components/dashboard/mainScreens/artifact/phantom-advance"
+import { moneyOf } from "@/lib/utils/qist"
 import { fmtYmd, ymdOf, ymdToUtcDate } from "@/lib/utils/ymd"
 import { bookingSlotText } from "@/lib/booking/slot-vocabulary"
 import { slotPickerField, bindSlotPicker, loadSlotPicker, refreshPicker, recheckPicker, pickerChoice } from "@/components/dashboard/mainScreens/artifact/slot-picker"
@@ -920,8 +922,9 @@ function priceEditWarn(s: ShadowRoot, paid: number): void {
   }
 }
 
-function cancelBookingHtml(id: number): string {
-  return `<div style="font-size:12px;color:var(--bad);background:var(--bad-wash);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.5">⚠️ Cancel karne par cancellation policy ke mutabiq refund ban sakta hai. Ye amal wapas nahi hoga.</div>
+/** WP31: a booking whose received figure no receipt backs: cancelling it would price the refund on the receipts only. Say so, with the two taps. */
+function cancelBookingHtml(id: number, unledgered = 0): string {
+  return `${unledgered > 0 ? phantomPanelHtml({ unledgered }) : ""}<div style="font-size:12px;color:var(--bad);background:var(--bad-wash);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.5">⚠️ Cancel karne par cancellation policy ke mutabiq refund ban sakta hai. Ye amal wapas nahi hoga.</div>
     <div class="dfield"><label class="dlabel">Cancel ki wajah</label><textarea id="bc-reason" placeholder="Optional — record ke liye"></textarea></div>
     <div class="ww-dfoot"><button class="btn btn-ghost" data-drawer-close type="button">Waapas</button><button class="btn btn-primary" data-bk-cancel-save="${id}" type="button" style="background:var(--bad);border-color:transparent">Haan, cancel karein</button></div>`
 }
@@ -1280,7 +1283,19 @@ export function BookingDetailArtifact({ bookingId }: { bookingId: number }) {
         return
       }
       const cx = t.closest("[data-bk-cancel]") as HTMLElement | null
-      if (cx?.dataset.bkCancel) { openDrawer(s, "Booking cancel karein", cancelBookingHtml(Number(cx.dataset.bkCancel))); return }
+      if (cx?.dataset.bkCancel) {
+        const m = scheduleRef.current?.money
+        const gap = m && !m.cancelled ? moneyOf(m.unledgered) : 0
+        openDrawer(s, "Booking cancel karein", cancelBookingHtml(Number(cx.dataset.bkCancel), gap))
+        if (gap > 0 && m) {
+          const body = s.getElementById("ww-drawer-body")
+          if (body) wirePhantomButtons(s, body, {
+            bookingId, customerName: custRef.current, unledgered: gap, received: moneyOf(m.received), ledger: moneyOf(m.received) - gap, total: moneyOf(m.total),
+            cancelled: false, createdDate: m.createdDate || null, onSettled: invalidateAll, onStale: invalidateAll,
+          })
+        }
+        return
+      }
       // close a past event — forward-only, so confirm before committing
       const done = t.closest("[data-bk-complete]") as HTMLButtonElement | null
       if (done?.dataset.bkComplete) {
