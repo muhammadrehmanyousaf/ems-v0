@@ -78,6 +78,7 @@ import { PaymentInstructionsAPI } from "@/lib/api/paymentInstructions";
 import { paymentNotDueYet, customerDepositLine } from "@/lib/payment-status";
 import { BookingAPI, type DepositPosition } from "@/lib/api/bookings";
 import { dayTextCustomer } from "@/lib/utils/qist";
+import { loginUrl } from "@/lib/auth/go-login"
 import { cancelRouteFor, cancelErrorMessage, isPaymentAlreadyReceived, isClosedBookingStatus } from "@/lib/bookings/cancel-route";
 
 interface BookingDetail {
@@ -541,7 +542,7 @@ export default function BookingDetailPage() {
           title="Sign in required"
           description="Please log in to view booking details."
           action={
-            <Button onClick={() => router.push("/login")} size="sm">
+            <Button onClick={() => router.push(loginUrl())} size="sm">
               Log in
             </Button>
           }

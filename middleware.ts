@@ -96,8 +96,23 @@ export function middleware(request: NextRequest) {
   // page load; the login form clears the stale cookies itself.
   const sessionEnded = pathname === '/login' && request.nextUrl.searchParams.get('reason') === 'expired';
 
+  // WP36 / PUBLIC-035: is the signed-in account a CUSTOMER? The browser keeps the account in the `user_data` cookie; only an
+  // explicit isVendor:false counts (anything unreadable keeps the old behaviour). A customer has no dashboard, so /login and
+  // /register send them home, and /business-registration stays open to them (see below) instead of a silent hop.
+  const isCustomerSession = (() => {
+    try {
+      const raw = request.cookies.get("user_data")?.value;
+      if (!raw) return false;
+      let text = raw;
+      try { text = decodeURIComponent(raw); } catch { /* already decoded */ }
+      return JSON.parse(text)?.isVendor === false;
+    } catch {
+      return false;
+    }
+  })();
+
   if ((pathname === '/login' || pathname === '/register') && isAuthenticated && !sessionEnded) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return NextResponse.redirect(new URL(isCustomerSession ? '/' : '/dashboard', request.url));
   }
 
   // WW-ADDBIZ — /business-registration is a SIGNUP flow: it posts to
@@ -112,6 +127,7 @@ export function middleware(request: NextRequest) {
   if (
     pathname === '/business-registration' &&
     isAuthenticated &&
+    !isCustomerSession && // WP36 / PUBLIC-035: a signed-in CUSTOMER sees the page (with a notice), not a silent hop to the home page
     request.nextUrl.searchParams.get('continue') !== '1'
   ) {
     return NextResponse.redirect(new URL('/dashboard/business/new', request.url));

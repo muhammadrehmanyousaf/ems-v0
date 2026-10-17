@@ -64,6 +64,7 @@ import { RequirementsAPI } from "@/lib/api/requirements"
 // 03-DRAFT-RESILIENCE — couples lose laborious vendor/package/menu
 // choices on refresh because useBookingDraft's load was never wired.
 import { DraftResumeBanner, relativeTimeAgo } from "@/components/shared/DraftResumeBanner"
+import { loginUrl } from "@/lib/auth/go-login"
 
 export default function BookingForm() {
   // Global steps: 1=Event Selection; Afterwards, per-event steps tracked in each event
@@ -1087,7 +1088,7 @@ export default function BookingForm() {
             onEdit={(k: string) => onJump(k)}
             onTotalsChange={setReviewTotals}
             requiresApproval={requiresVendorApproval(venue)}
-            onSignIn={() => router.push("/login")}
+            onSignIn={() => router.push(loginUrl())}
           />
         )
         break
@@ -1140,7 +1141,7 @@ export default function BookingForm() {
     // A signed-out customer cannot send — the API needs a session. Say so at
     // the door rather than after a failed request.
     if (isReviewStep && !user && !userLoading) {
-      router.push("/login")
+      router.push(loginUrl())
       return
     }
 

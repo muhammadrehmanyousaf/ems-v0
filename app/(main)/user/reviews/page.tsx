@@ -26,6 +26,7 @@ import {
   KpiCard,
   EmptyState,
 } from "@/components/user-dashboard";
+import { loginUrl } from "@/lib/auth/go-login"
 
 interface ReviewData {
   id: number;
@@ -66,7 +67,7 @@ export default function UserReviewsPage() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push("/login");
+      router.push(loginUrl());
       return;
     }
     if (user) fetchReviews();

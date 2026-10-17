@@ -68,6 +68,7 @@ import { priceLabelFor, ctaLabelFor } from "@/lib/pricing/unpriced";
 // null while the flag is off, so this vendor surface stays byte-identical.
 import { AddToPlanButton } from "@/components/wedding-plan/add-to-plan-button";
 import { featureMap } from "@/lib/packages/features";
+import { loginUrl } from "@/lib/auth/go-login"
 
 interface VendorDetailsProps {
   vendor: Vendor;
@@ -235,7 +236,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
       localStorage.getItem("user_id") &&
       localStorage.getItem("auth_token");
     if (!isLoggedIn) {
-      router.push("/login");
+      router.push(loginUrl());
       return;
     }
     await toggleFavorite(vendor.id);
@@ -278,7 +279,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
 
   const handleMessageVendor = () => {
     if (!isAuthenticated) {
-      router.push("/login");
+      router.push(loginUrl());
       return;
     }
     if (!vendor.userId) {
@@ -341,7 +342,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
 
   const handleBookNow = () => {
     if (isLoggedIn) router.push(`/${vendor.id}/booking`);
-    else router.push("/login");
+    else router.push(loginUrl());
   };
 
   const handleShare = async () => {
@@ -1483,7 +1484,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
 
                       {!isAuthenticated && (
                         <p className="font-bridal text-[13px] text-bridal-text-soft text-center py-2">
-                          <button onClick={() => router.push("/login")} className="font-medium text-bridal-gold-dark hover:text-bridal-mauve underline-offset-4 hover:underline">
+                          <button onClick={() => router.push(loginUrl())} className="font-medium text-bridal-gold-dark hover:text-bridal-mauve underline-offset-4 hover:underline">
                             Log in
                           </button>{" "}
                           to leave a review after your booking.

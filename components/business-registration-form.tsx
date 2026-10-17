@@ -1,6 +1,7 @@
 "use client";
 
 import { HelpRow } from "@/components/ui/field-help";
+import { useUser } from "@/context/UserContext";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PersonalDetailsStep } from "./steps/personal-details-step";
 import { BusinessTypeStep } from "./steps/business-type-step";
@@ -130,6 +131,9 @@ import { FloralDivider } from "@/components/bridal/floral-divider";
 import { cancellationKey, partialRefundErrors, validatePartialRefund } from "@/lib/cancellation-policy";
 
 export function BusinessRegistrationForm() {
+  const { user: sessionUser, logout: logoutCustomer } = useUser();
+  const signedInCustomer = !!sessionUser && (sessionUser as { isVendor?: boolean }).isVendor === false;
+  const customerEmail = (sessionUser as { email?: string } | null)?.email || "";
   // const [currentStep, setCurrentStep] = useState(0);
   const {
     businessType,
@@ -1081,6 +1085,14 @@ export function BusinessRegistrationForm() {
           </div>
         </div>
       </header>
+
+      {/* WP36 / PUBLIC-035: a signed-in CUSTOMER who taps "List your business" used to be bounced to the home page without a word */}
+      {signedInCustomer && (
+        <div role="status" className="w-[92%] xl:w-[90%] max-w-7xl mx-auto mt-4 rounded-[4px] border border-bridal-gold/40 bg-bridal-cream px-4 py-3 font-bridal text-[13px] text-bridal-charcoal">
+          You are signed in as a customer{customerEmail ? ` (${customerEmail})` : ""}. A business account needs its own e-mail address: register below with a different e-mail, or{" "}
+          <button type="button" className="underline underline-offset-4 text-bridal-gold-dark" onClick={() => { void logoutCustomer(); }}>sign out</button> first.
+        </div>
+      )}
 
       {/* ── Main content ── */}
       <main className="w-[92%] xl:w-[90%] max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 lg:py-8 lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
