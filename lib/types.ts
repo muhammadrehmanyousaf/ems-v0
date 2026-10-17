@@ -40,6 +40,8 @@ export interface Vendor {
   amenities: string[];
   cancellationPolicy: string;
   cancelationPolicy?: string;
+  /** WP29: what the refund engine will really do on a cancellation (server resolver); the page prints this, not the registration label. */
+  cancellationSummary?: { kind: string; headline: string; detail: string; source?: string } | null;
   sponsored: boolean;
   staff: string[];
   description: string;
@@ -431,6 +433,7 @@ export interface EventVenue {
   downPayment: number;
   downPaymentType: "Percentage" | "Fixed" | string;
   cancelationPolicy: string;
+  cancellationSummary?: { kind: string; headline: string; detail: string; source?: string } | null;
   // WW-PRICING-OVERHAUL — vendor-declared pricing mode. NULL = legacy inferred
   // behaviour. One of flat | per_head | package | package_plus_menu | per_unit | quote.
   pricingMode?: string | null;

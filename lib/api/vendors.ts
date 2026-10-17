@@ -100,6 +100,7 @@ export function normalizeBusiness(raw: any): any {
     amenities: raw.amenities || [],
     serviceProvided: raw.serviceProvided || [],
     cancellationPolicy: cancellationLabel(raw.cancellationPolicy || raw.cancelationPolicy || ''),
+    cancellationSummary: raw.cancellationSummary ?? null,
     sponsored: raw.sponsored ?? false,
     description: raw.description || '',
     // `?view=card` returns one image as `primaryImage` rather than the whole

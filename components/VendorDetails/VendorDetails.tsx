@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
-import { cancellationLabel } from "@/lib/cancellation-policy";
+import { cancellationDisplay } from "@/lib/cancellation-policy";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import "swiper/css";
@@ -218,6 +218,8 @@ interface LiveReview {
 }
 
 export default function VendorDetails({ vendor }: VendorDetailsProps) {
+  // WP29: the policy as the refund engine will apply it (the server's summary), not only the registration label
+  const cancelShown = cancellationDisplay(vendor);
   const lowestPackagePrice =
     vendor.packages?.length > 0
       ? Math.min(...vendor.packages.map((p) => p.price).filter((p) => p > 0))
@@ -856,14 +858,14 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                           } guests`}
                         />
                       )}
-                    {(vendor.cancelationPolicy || vendor.cancellationPolicy) && (
+                    {cancelShown && (
                       <StatTile
                         icon={<Clock className="w-4 h-4" />}
                         iconBg="bg-bridal-sage/25"
                         iconColor="text-[#3F6B43]"
                         label="Cancellation"
-                        value={cancellationLabel(vendor.cancelationPolicy || vendor.cancellationPolicy)}
-                        wide={cancellationLabel(vendor.cancelationPolicy || vendor.cancellationPolicy).length > 20}
+                        value={cancelShown.headline}
+                        wide={cancelShown.headline.length > 20}
                       />
                     )}
                     <StatTile
@@ -1648,7 +1650,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
               </BridalSectionCard>
 
               {/* Booking Terms */}
-              {(vendor.downPayment || vendor.cancelationPolicy || vendor.cancellationPolicy) && (
+              {(vendor.downPayment || cancelShown) && (
                 <BridalSectionCard>
                   <CardHeader className="border-b border-bridal-beige bg-bridal-ivory rounded-t-md">
                     <CardTitle className="font-display italic text-[20px] text-bridal-charcoal flex items-center gap-2">
@@ -1670,14 +1672,19 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                         </div>
                       </div>
                     ) : null}
-                    {(vendor.cancelationPolicy || vendor.cancellationPolicy) && (
+                    {cancelShown && (
                       <div className="flex items-start gap-3 p-3 bg-bridal-ivory rounded-md border border-bridal-beige/70">
                         <Clock className="w-4 h-4 text-bridal-gold-dark mt-0.5 shrink-0" />
                         <div>
                           <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Cancellation Policy</p>
                           <p className="font-bridal text-[13.5px] font-medium text-bridal-charcoal mt-0.5">
-                            {cancellationLabel(vendor.cancelationPolicy || vendor.cancellationPolicy)}
+                            {cancelShown.headline}
                           </p>
+                          {cancelShown.detail && (
+                            <p className="font-bridal text-[12.5px] leading-relaxed text-bridal-text-soft mt-1" data-cancellation-detail>
+                              {cancelShown.detail}
+                            </p>
+                          )}
                         </div>
                       </div>
                     )}
