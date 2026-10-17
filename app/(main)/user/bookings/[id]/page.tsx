@@ -1328,7 +1328,9 @@ export default function BookingDetailPage() {
                         from the same resolver that computed the figure above */}
                     {refundPreview.policySummary?.detail && (
                       <p className="mt-1.5 text-[11px] text-bridal-text-soft leading-relaxed" data-policy-summary>
-                        <span className="font-medium">{refundPreview.policySummary.headline}.</span> {refundPreview.policySummary.detail}
+                        {/* the standard schedule's own sentence already names it; the others lead with their headline */}
+                        {refundPreview.policySummary.kind !== "standard" && <span className="font-medium">{refundPreview.policySummary.headline}. </span>}
+                        {refundPreview.policySummary.detail}
                       </p>
                     )}
                     <p className="mt-1.5 text-[11px] text-bridal-text-soft leading-relaxed">

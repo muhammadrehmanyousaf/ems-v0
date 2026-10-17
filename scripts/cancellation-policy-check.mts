@@ -181,6 +181,8 @@ for (const f of ["components/VendorDetails/VendorDetails.tsx", "components/Vendo
 }
 const previewStep = read("components/booking/steps/preview-step.tsx");
 check("the booking confirmation reads the venue's and every added vendor's policy through cancellationDisplay", /cancellationDisplay\(venue\)/.test(previewStep) && /cancellationDisplay\(v\)/.test(previewStep));
+const liveReview = read("components/booking/steps-v2/review-step.tsx");
+check("the LIVE booking review (steps-v2) tells the couple what a cancellation costs before they commit", /cancellationDisplay\(venue\)/.test(liveReview) && /data-cancellation-review/.test(liveReview) && /Cancellation · \{cancelShown\.headline\}/.test(liveReview));
 check("the venue page prints the plain-words detail under the headline (both layouts and the booking confirmation)", ["components/VendorDetails/VendorDetails.tsx", "components/VendorDetails/VendorDetailsMobile.tsx", "components/booking/steps/preview-step.tsx"].every((f) => /data-cancellation-detail/.test(read(f))));
 check("the vendor payload mappers carry the server summary", /cancellationSummary: raw\.cancellationSummary/.test(read("lib/api/vendors.ts")) && /cancellationSummary: raw\?\.cancellationSummary/.test(read("lib/seo/fetch-vendor.ts")));
 const policyScreen = read("components/dashboard/mainScreens/cancellation-policy/artifact/cancellation-policy-artifact.tsx");
