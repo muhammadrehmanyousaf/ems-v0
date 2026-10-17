@@ -14,7 +14,7 @@ export default function VendorSubscriptionPolicyPage() {
     <LegalPageShell
       eyebrow="Vendors"
       title="Vendor Subscription Policy"
-      lastUpdated="2026-10-02"
+      lastUpdated="2026-10-17"
       breadcrumbs={[{ name: "Vendor Subscription Policy", href: "/vendor-subscription-policy" }]}
       intro={
         <p>
@@ -34,7 +34,17 @@ export default function VendorSubscriptionPolicyPage() {
         the new price applies to their next renewal.
       </p>
 
-      <h2>2. How payment works</h2>
+      <h2>2. Your free first month</h2>
+      <p>
+        Every vendor gets one free month, automatically, when they submit their first
+        business. No card is needed and nothing is charged. The month ends at 11:59 PM
+        Pakistan time on its last day. If you subscribe before it ends, the days you have
+        left are added on top of your paid plan. We do not offer a free vendor plan: after
+        the free month, the portal needs a paid plan. A trial is given once per vendor, phone
+        number and business.
+      </p>
+
+      <h2>3. How payment works</h2>
       <ul>
         <li>
           <strong>Safepay.</strong> Subscriptions are billed through Safepay, a payment
@@ -48,22 +58,63 @@ export default function VendorSubscriptionPolicyPage() {
           change the card at any time from Billing (&quot;Card badlein&quot;).
         </li>
         <li>
+          <strong>Bank transfer, JazzCash or Easypaisa.</strong> If you cannot pay by card,
+          you can send the amount for your plan and upload the receipt on the Billing page.
+          We check it in business hours and open your portal as soon as it is approved.
+        </li>
+        <li>
           <strong>Receipts.</strong> Every successful charge produces a numbered receipt
           (for example WW-SUB-2026-00012). It is emailed to you and listed under Billing
           history, where you can print it or save it as a PDF.
         </li>
       </ul>
 
-      <h2>3. If a payment fails</h2>
+      <h2>4. If a payment fails</h2>
       <p>
         If Safepay cannot charge your card, we email you and show the plan as past due.
-        Safepay retries over the following days. Your portal stays open for a grace
-        period of 3 days after the paid period ends. If no payment goes through by then,
-        the portal closes until you subscribe again. Your listing stays visible to
-        couples, and your bookings, khata and records are kept.
+        Safepay retries over the following days. Your portal stays fully open for a grace
+        period of 7 days. If no payment goes through by the end of that period, the portal
+        locks until you subscribe again. There is no grace period after the free month.
       </p>
 
-      <h2>4. Cancelling</h2>
+      <h2>5. When your plan or free month ends</h2>
+      <ul>
+        <li>
+          <strong>Your data is safe.</strong> Locking never deletes anything. Your bookings,
+          leads, customers, khata and calendar are kept and come back exactly as you left
+          them when you renew. Every lock message shows the date until which we keep them.
+        </li>
+        <li>
+          <strong>What you see.</strong> The dashboard is replaced by a page that explains
+          what happened and how to renew. You can always open Billing, your receipts and
+          your account, download your money and tax records as a CSV, and see a short summary
+          of events and amounts still due.
+        </li>
+        <li>
+          <strong>Your listing.</strong> While the portal is locked your venue is removed
+          from search and shows a notice that it is not taking new enquiries. New enquiries
+          and bookings are not accepted. Customers who have already booked are not affected.
+        </li>
+        <li>
+          <strong>Your obligations to customers continue.</strong> Locking does not release
+          you from bookings you have confirmed. {SITE_NAME} may contact customers of a locked
+          venue about their existing bookings.
+        </li>
+        <li>
+          <strong>Staff.</strong> Staff accounts are locked with the owner&apos;s account and
+          see a message asking them to contact the owner.
+        </li>
+        <li>
+          <strong>How long we keep it.</strong> After 90 days locked, the account is marked
+          dormant and your records are still kept. We do not erase personal data within 12
+          months of the lock, and we keep financial records for the period the law requires
+          (six years). You can ask us to export or erase your data; erasure happens after
+          those periods, with a signed confirmation.
+        </li>
+      </ul>
+
+      <h2>6. Cancelling</h2>
+
       <ul>
         <li>You can cancel at any time from Billing. No further charge is taken.</li>
         <li>You keep full access until the end of the period you have already paid for.</li>
@@ -71,7 +122,7 @@ export default function VendorSubscriptionPolicyPage() {
         <li>You can subscribe again whenever you like; a new paid period starts on that day.</li>
       </ul>
 
-      <h2>5. Changing plans</h2>
+      <h2>7. Changing plans</h2>
       <p>
         You can move to a higher or lower plan at any time from Billing. The change is
         immediate: you pay the new plan&apos;s monthly price today, and the unused days of
@@ -80,7 +131,7 @@ export default function VendorSubscriptionPolicyPage() {
         is cancelled automatically, so you are never charged for two plans.
       </p>
 
-      <h2>6. Refunds</h2>
+      <h2>8. Refunds</h2>
       <ul>
         <li>Subscription charges are not refunded for partial months or unused days.</li>
         <li>
@@ -92,28 +143,28 @@ export default function VendorSubscriptionPolicyPage() {
         </li>
       </ul>
 
-      <h2>7. Pausing</h2>
+      <h2>9. Pausing</h2>
       <p>
         If your business closes for a season, write to us and we can pause collection.
         No charges are taken while a plan is paused; the portal stays open to the end of
         the paid period and reopens when the plan resumes and is paid.
       </p>
 
-      <h2>8. Your responsibilities</h2>
+      <h2>10. Your responsibilities</h2>
       <ul>
         <li>Keep a valid card saved with Safepay and enough balance for the monthly charge.</li>
         <li>Keep the email address on your account current; receipts and payment notices go there.</li>
         <li>The portal subscription is for your own business. One subscription covers one vendor account and its venues.</li>
       </ul>
 
-      <h2>9. Changes to this policy</h2>
+      <h2>11. Changes to this policy</h2>
       <p>
         We may update this policy. Material changes are announced in the portal and by
         email at least 30 days before they take effect. Continuing to use the portal after
         that date means you accept the updated policy.
       </p>
 
-      <h2>10. Contact</h2>
+      <h2>12. Contact</h2>
       <p>
         Questions about a charge, a receipt or your plan: {" "}
         <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.

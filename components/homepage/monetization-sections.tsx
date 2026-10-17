@@ -748,9 +748,9 @@ export function VendorCTABanner() {
           <span className="text-bridal-gold">premier wedding marketplace</span>
         </h2>
         <p className="mt-5 font-bridal text-[15px] sm:text-[17px] text-bridal-ivory/85 leading-relaxed">
-          Reach 10,000+ engaged couples a month. Free profile, paid promotion
-          options, calendar + booking tools, and a vendor success team
-          on-call.
+          Reach 10,000+ engaged couples a month. A free first month with no
+          card, then a simple monthly plan, with paid promotion options,
+          calendar + booking tools, and a vendor success team on-call.
         </p>
         <FloralDivider className="mt-7 [&>svg]:opacity-90" width={220} />
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
