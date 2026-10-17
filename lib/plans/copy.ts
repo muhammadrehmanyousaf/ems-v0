@@ -93,6 +93,11 @@ export const COPY = {
     en: "WeddingWala vendor plans are paid plans. Pick the plan that fits your venue.",
     ru: "WeddingWala vendor plans paid plans hain. Apne venue ke liye munasib plan chun lein.",
   },
+  "wall.trial_blocked.body": {
+    en: "A free month has already been used for this account, phone number or business. Choose a plan to open your dashboard.",
+    ru: "Is account, phone number ya business par muft mahina pehle istemal ho chuka hai. Dashboard kholne ke liye plan chun lein.",
+  },
+  "wall.cta.trial": { en: "Start your free trial", ru: "Muft trial shuru karein" },
   "wall.plan_ended.title": { en: "Your {planName} plan has ended", ru: "Aap ka {planName} plan khatam ho gaya" },
   "wall.plan_ended.body": {
     en: "Your {planName} plan ended on {lockedDate}. Renew to open your dashboard. Everything comes back exactly as you left it.",

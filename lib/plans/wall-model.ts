@@ -34,6 +34,8 @@ export interface WallModel {
   missed: boolean
   /** The obligations strip says "plan is paused" or, for a suspended account, "account is on hold". */
   onHold: boolean
+  /** The server says a free trial can still be started by hand (a fallback: the trial normally starts by itself). */
+  trial: boolean
 }
 
 export function planNameFor(a: Access): string | null {
@@ -52,21 +54,22 @@ export function wallVars(a: Access, extra: CopyVars = {}): CopyVars {
 
 export function wallModel(a: Access): WallModel {
   if (a.staff) {
-    return { variant: "staff", eyebrow: "wall.eyebrow.locked", title: "wall.staff.title", body: ["wall.staff.body"], cta: "none", manual: false, safe: false, owner: false, supportFirst: false, missed: false, onHold: false }
+    return { variant: "staff", eyebrow: "wall.eyebrow.locked", title: "wall.staff.title", body: ["wall.staff.body"], cta: "none", manual: false, safe: false, owner: false, supportFirst: false, missed: false, onHold: false, trial: false }
   }
   if (a.state === "suspended_admin") {
-    return { variant: "suspended", eyebrow: "wall.eyebrow.suspended", title: "wall.suspended.title", body: ["wall.suspended.body"], cta: "none", manual: false, safe: true, owner: true, supportFirst: true, missed: false, onHold: true }
+    return { variant: "suspended", eyebrow: "wall.eyebrow.suspended", title: "wall.suspended.title", body: ["wall.suspended.body"], cta: "none", manual: false, safe: true, owner: true, supportFirst: true, missed: false, onHold: true, trial: false }
   }
   const cta = (v: WallVariant): WallCta => (!a.canPay ? "none" : v === "trial_ended" || v === "no_plan" || !a.planName ? "choose" : "renew")
-  const base = { eyebrow: "wall.eyebrow.locked" as CopyKey, manual: a.canPay, safe: true, owner: true, supportFirst: false, missed: a.canPay, onHold: false }
+  const base = { eyebrow: "wall.eyebrow.locked" as CopyKey, manual: a.canPay, safe: true, owner: true, supportFirst: false, missed: a.canPay, onHold: false, trial: a.canStartTrial && a.canPay }
   if (a.state === "closed") return { ...base, variant: "closed", title: "wall.closed.title", body: ["wall.closed.body"], cta: cta("closed"), supportFirst: true }
   if (a.state === "dormant") return { ...base, variant: "dormant", title: "wall.dormant.title", body: ["wall.dormant.body"], cta: cta("dormant") }
   const reason = (a.lockReason || "").toLowerCase()
   if (reason === "trial_ended" || reason === "trial") return { ...base, variant: "trial_ended", title: "wall.trial_ended.title", body: ["wall.trial_ended.body"], cta: cta("trial_ended") }
   if (reason === "payment_failed" || reason === "grace_ended") return { ...base, variant: "payment_failed", title: "wall.payment_failed.title", body: ["wall.payment_failed.body"], cta: cta("payment_failed") }
   if (reason === "cancelled" || reason === "canceled") return { ...base, variant: "cancelled", title: "wall.cancelled.title", body: ["wall.cancelled.body"], cta: cta("cancelled") }
+  if (reason === "trial_blocked") return { ...base, variant: "no_plan", title: "wall.no_plan.title", body: ["wall.trial_blocked.body"], cta: cta("no_plan"), trial: false }
   if (reason === "no_plan" || (!a.planName && !reason)) return { ...base, variant: "no_plan", title: "wall.no_plan.title", body: ["wall.no_plan.body"], cta: cta("no_plan") }
-  // plan_ended, or a reason this build does not know: the safe, true sentence for a plan that is over.
+  // plan_ended, comp_ended, or a reason this build does not know: the safe, true sentence for a plan that is over.
   return a.planName
     ? { ...base, variant: "plan_ended", title: "wall.plan_ended.title", body: ["wall.plan_ended.body", "wall.plan_ended.body_nodate"], cta: cta("plan_ended") }
     : { ...base, variant: "trial_ended", title: "wall.trial_ended.title", body: ["wall.trial_ended.body"], cta: cta("trial_ended") }

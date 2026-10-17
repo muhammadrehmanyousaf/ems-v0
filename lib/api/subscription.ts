@@ -124,7 +124,8 @@ export interface BillingStatus {
    * read it through parseEntitlements / the PlanProvider, never by hand.
    */
   entitlements?: unknown;
-  /** The server's access object (PLANS-SPEC contract 1), raw. Read it with accessFromStatus; never by hand. */
+  /** The server's access object (PLANS-SPEC contract 1), raw. PL-A serves it as `accessState`. Read it with accessFromStatus; never by hand. */
+  accessState?: unknown;
   accessContext?: unknown;
   /** A manual-payment proof waiting for (or past) approval (PL-C contract, see lib/api/billing.ts). */
   manualPayment?: unknown;

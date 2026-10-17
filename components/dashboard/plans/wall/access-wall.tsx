@@ -23,7 +23,7 @@ import { CreditCard, FileText, Loader2, Lock, LogOut, Mail, MessageCircle, Phone
 import { useUser } from "@/context/UserContext"
 import { useResolvedThemeMode } from "@/lib/store/theme-prefs"
 import { useAccessStore } from "@/lib/plans/access-store"
-import type { Access } from "@/lib/plans/access"
+import { internalPath, type Access } from "@/lib/plans/access"
 import { wallModel, wallVars } from "@/lib/plans/wall-model"
 import { fill, firstFilled, say, type CopyKey, type Lang } from "@/lib/plans/copy"
 import { SubscriptionAPI } from "@/lib/api/subscription"
@@ -76,7 +76,8 @@ export function AccessWall({ access }: { access: Access }) {
     return () => { html.style.overflow = prevOverflow; html.style.scrollbarGutter = prevGutter }
   }, [])
 
-  const renewHref = access.renewUrl && access.renewUrl.startsWith("/") ? access.renewUrl : "/dashboard/billing"
+  // The server's renew link is absolute; the router wants the path (and only ever one of our own console pages).
+  const renewHref = internalPath(access.renewUrl) ?? "/dashboard/billing"
 
   const onPrimary = async () => {
     if (model.cta === "choose" || !access.plan) { router.push(renewHref); return }
@@ -171,6 +172,12 @@ export function AccessWall({ access }: { access: Access }) {
                 <div className="wwp-hint">
                   {show("en") && <div>{fill("wall.cta.hint", "en", { amount: price.toLocaleString("en-PK") })}</div>}
                   {show("ru") && <div style={{ marginTop: show("en") ? 2 : 0 }}>{fill("wall.cta.hint", "ru", { amount: price.toLocaleString("en-PK") })}</div>}
+                </div>
+              )}
+              {model.trial && (
+                <div className="wwp-act-sub">
+                  <Link className="wwp-textlink" href="/dashboard/billing#plans" data-testid="wall-trial">{say("wall.cta.trial", one)}</Link>
+                  {pref === "both" && <span className="wwp-hint" style={{ marginTop: 0 }}>{say("wall.cta.trial", "ru")}</span>}
                 </div>
               )}
               {model.manual && (

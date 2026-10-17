@@ -4,7 +4,8 @@
  *
  * Where it comes from (and nowhere else)
  * ---------------------------------------
- *   1. GET /subscriptions/status -> `access` (the server's accessContext: PLANS-SPEC.md contract 1).
+ *   1. GET /subscriptions/status -> `accessState` (the server's accessContext: PLANS-SPEC.md contract 1; PL-A serves it under
+ *      `accessState` because `access` is, and stays, the old one-word string old clients compare).
  *   2. Any vendor-route response of HTTP 402 { data: { code: "SUBSCRIPTION_REQUIRED", ... } } (contract 2).
  *
  * The portal never decides a lock on its own: no date maths, no tier rules. It only READS the server's `state`.
@@ -19,9 +20,11 @@
 export type AccessStateKey =
   | "trialing" | "active" | "past_due" | "cancelling"
   | "locked" | "dormant" | "closed" | "suspended_admin" | "comp"
+  /** PL-A extension: nothing to lock yet (no business submitted, or an admin-created vendor before first login). Open. */
+  | "unstarted"
 
 export const ACCESS_STATES: readonly AccessStateKey[] = [
-  "trialing", "active", "past_due", "cancelling", "locked", "dormant", "closed", "suspended_admin", "comp",
+  "trialing", "active", "past_due", "cancelling", "locked", "dormant", "closed", "suspended_admin", "comp", "unstarted",
 ]
 
 /** The states in which the vendor sees the Wall instead of the console. The server decides; this only names them. */
@@ -149,11 +152,26 @@ export function accessFromLegacy(raw: unknown): Access | null {
   }
 }
 
-/** The one reader of a /status payload: the server's `access` object when it sends one, else the legacy adapter. */
+/**
+ * The path (and query) of a link the server sent, when it is one of our own console pages. PL-A sends renewUrl as an absolute
+ * URL on the front-end host; the router wants the path. Anything else (another host, another section, junk) is null.
+ */
+export function internalPath(url: string | null | undefined): string | null {
+  if (!url) return null
+  try {
+    const u = new URL(url, "https://app.invalid")
+    if (u.host !== "app.invalid" && !/(^|\.)weddingwala\.pk$|^localhost(:\d+)?$/.test(u.host)) return null
+    return u.pathname.startsWith("/dashboard/") ? u.pathname + u.search + u.hash : null
+  } catch { return null }
+}
+
+/** The one reader of a /status payload: the server's access object when it sends one, else the legacy adapter. */
 export function accessFromStatus(raw: unknown): Access | null {
   if (!isRec(raw)) return null
-  // PLANS-SPEC contract 1 puts the object under `access`; a build that keeps the old string there may use `accessContext`.
-  const a = parseAccess(raw.accessContext) ?? parseAccess(raw.access)
+  // PL-A serves the object as `accessState` (PLANS-SPEC contract 1 says `access`, which stays the old string); the other two
+  // keys are accepted so a build that follows the spec to the letter works too. A vendor outside the plans system (an admin, an
+  // unclaimed listing shell) has state null: unknown, so open.
+  const a = parseAccess(raw.accessState) ?? parseAccess(raw.accessContext) ?? parseAccess(raw.access)
   if (a) return a.endsAt ? a : { ...a, endsAt: str(raw.subscriptionEndsAt) } // the status' own "portal open until" fills a missing end
   return accessFromLegacy(raw)
 }

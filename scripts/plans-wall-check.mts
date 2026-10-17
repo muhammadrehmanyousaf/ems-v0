@@ -25,7 +25,7 @@ import path from "node:path";
 
 import {
   ACCESS_STATES, LOCKED_STATES, isLockedState, parseAccess, accessFromStatus, lockFromError, legacyAccessWord,
-  fmtPkDate, fmtPkDateTime, fmtPkDateTimeRu, daysUntilPk, type Access, type AccessStateKey,
+  fmtPkDate, fmtPkDateTime, fmtPkDateTimeRu, daysUntilPk, internalPath, type Access, type AccessStateKey,
 } from "../lib/plans/access.ts";
 import { COPY, fill, say, firstFilled, placeholdersOf, type CopyKey } from "../lib/plans/copy.ts";
 import { wallModel, wallVars } from "../lib/plans/wall-model.ts";
@@ -206,14 +206,23 @@ await check("the access object parses; an unknown state is unknown (null), never
   eq([a.state, a.planName, a.lockReason, a.canPay, a.staff, a.source], ["locked", "Pro", "trial_ended", true, false, "status"]);
   for (const bad of [null, undefined, 0, "locked", [], {}, { state: "weird" }, { plan: "pro" }]) eq(parseAccess(bad), null);
 });
-await check("all nine states are known, and exactly four of them are locked", () => {
-  eq([...ACCESS_STATES].sort(), ["active", "cancelling", "closed", "comp", "dormant", "locked", "past_due", "suspended_admin", "trialing"]);
+await check("all ten states are known (the spec's nine and PL-A's open 'unstarted'), and exactly four of them are locked", () => {
+  eq([...ACCESS_STATES].sort(), ["active", "cancelling", "closed", "comp", "dormant", "locked", "past_due", "suspended_admin", "trialing", "unstarted"]);
+  eq(isLockedState("unstarted"), false);
+  eq(legacyAccessWord("unstarted"), "active");
   eq([...LOCKED_STATES].sort(), ["closed", "dormant", "locked", "suspended_admin"]);
   eq(ACCESS_STATES.filter(isLockedState).length, 4);
   eq(legacyAccessWord("trialing") + legacyAccessWord("comp") + legacyAccessWord("cancelling"), "activeactiveactive");
   eq([legacyAccessWord("past_due"), legacyAccessWord("locked"), legacyAccessWord("closed")], ["past_due", "none", "none"]);
 });
-await check("accessFromStatus: the object under `access`, the object under `accessContext`, and the legacy one-word string", () => {
+await check("accessFromStatus: PL-A's `accessState`, the spec's `access` object, `accessContext`, and the legacy one-word string", () => {
+  // what PL-A really serves: the object under accessState, the old word under access
+  const real = accessFromStatus({ access: "none", accessState: { state: "locked", plan: "premium", planName: "Pro", lockReason: "plan_ended", lockedAt: "2026-10-16T18:59:59.000Z", retainUntil: "2027-01-14T18:59:59.000Z", canPay: true, canStartTrial: false, renewUrl: "https://www.weddingwala.pk/dashboard/billing?renew=1&plan=premium", daysLeft: null, applies: true, isLocked: true, staff: false, periodEndsAt: null, accessEndsAt: null }, enforced: true })!;
+  eq([real.state, real.planName, real.lockReason, real.source], ["locked", "Pro", "plan_ended", "status"]);
+  eq(accessFromStatus({ access: "active", accessState: { state: "unstarted", applies: true } })!.state, "unstarted");
+  eq(accessFromStatus({ access: "active", accessState: { state: null, applies: false } })!.state, "active", "outside the plans system (state null): falls back to the legacy word, which is open");
+  eq(accessFromStatus({ access: "active", accessState: { state: "cancelling", accessEndsAt: "2026-11-01T18:59:59.000Z" } })!.endsAt, "2026-11-01T18:59:59.000Z");
+  eq(accessFromStatus({ access: "active", accessState: { state: "past_due", graceEndsAt: PKT_EOD("2026-10-24"), accessEndsAt: PKT_EOD("2026-10-24"), periodEndsAt: PKT_EOD("2026-10-17") } })!.graceEndsAt, PKT_EOD("2026-10-24"));
   eq(accessFromStatus({ access: { state: "trialing", trialEndsAt: PKT_EOD("2026-11-04"), daysLeft: 18 }, subscriptionEndsAt: PKT_EOD("2026-11-04") })!.state, "trialing");
   eq(accessFromStatus({ access: "active", accessContext: { state: "past_due", graceEndsAt: PKT_EOD("2026-10-22") } })!.state, "past_due");
   const legacyLocked = accessFromStatus({ access: "none", enforced: true, tier: "free", subscription: null })!;
@@ -302,6 +311,22 @@ await check("every locked state and reason picks the right sentence and the righ
   eq(w("locked", "plan_ended", { planName: null, plan: null }).cta, "choose", "no known plan: choose, never 'Renew null'");
   for (const reason of ["trial_ended", "plan_ended", "payment_failed", "cancelled"]) eq(w("locked", reason, { canPay: false }).cta, "none", `canPay false, ${reason}`);
   ok(ACCESS_STATES.filter(isLockedState).every((s) => wallModel(A(s)).safe), "every locked owner state says the data is safe");
+});
+await check("the trial fallback is offered only when the server says canStartTrial, only to someone who can pay; a blocked trial says so", () => {
+  const nop = A("locked", { lockReason: "no_plan", plan: null, planName: null, canStartTrial: true });
+  eq([wallModel(nop).variant, wallModel(nop).cta, wallModel(nop).trial], ["no_plan", "choose", true]);
+  eq(wallModel(A("locked", { lockReason: "no_plan", plan: null, planName: null, canStartTrial: false })).trial, false);
+  eq(wallModel(A("locked", { lockReason: "no_plan", plan: null, planName: null, canStartTrial: true, canPay: false })).trial, false);
+  eq(wallModel(A("locked", { staff: true, canStartTrial: true })).trial, false);
+  const tb = wallModel(A("locked", { lockReason: "trial_blocked", plan: null, planName: null, canStartTrial: true }));
+  eq([tb.variant, tb.trial, tb.body], ["no_plan", false, ["wall.trial_blocked.body"]]);
+  eq(wallModel(A("locked", { lockReason: "comp_ended" })).variant, "plan_ended");
+});
+await check("the renew link the server sends (absolute) becomes one of our own console paths; anything else is null", () => {
+  eq(internalPath("https://www.weddingwala.pk/dashboard/billing?renew=1&plan=premium"), "/dashboard/billing?renew=1&plan=premium");
+  eq(internalPath("http://localhost:3011/dashboard/billing?renew=1"), "/dashboard/billing?renew=1");
+  eq(internalPath("/dashboard/billing"), "/dashboard/billing");
+  for (const bad of [null, undefined, "", "https://evil.example/dashboard/billing", "https://www.weddingwala.pk/admin", "javascript:alert(1)", "not a url at all"]) eq(internalPath(bad as string | null), null);
 });
 await check("the Wall's sentences fill with real values and never invent a date", () => {
   const a = A("locked", { lockReason: "plan_ended", lockedAt: PKT_EOD("2026-10-16"), retainUntil: PKT_EOD("2027-01-14") });
