@@ -15,10 +15,10 @@ import { daysLeftOf, fmtPkDate, fmtPkDateTime, fmtPkDateTimeRu, isLockedState, t
 import type { CopyKey, CopyVars } from "./copy"
 
 export type BannerTone = "info" | "accent" | "warn" | "bad" | "ok"
-export type BannerCta = "choose" | "pay" | "resume" | "renew"
+export type BannerCta = "choose" | "pay" | "resume" | "renew" | "over"
 
 export interface BannerSpec {
-  kind: "trial_welcome" | "trial_t7" | "trial_t3" | "trial_t1" | "trial_today" | "past_due" | "cancelling" | "comp_end" | "locked_here" | "reactivated"
+  kind: "trial_welcome" | "trial_t7" | "trial_t3" | "trial_t1" | "trial_today" | "past_due" | "cancelling" | "comp_end" | "locked_here" | "reactivated" | "over_limit"
   tone: BannerTone
   /** Copy ladder (first with all placeholders filled wins) and the values, per language (dates are spoken per language). */
   keys: CopyKey[]
@@ -35,7 +35,16 @@ const trialVars = (a: Access, days: number | null) => (lang: "en" | "ru"): CopyV
   planName: a.planName, trialEnd: dt(a.trialEndsAt ?? a.endsAt, lang), days,
 })
 
-export function bannerFor(a: Access | null, now: Date = new Date(), opts: { welcomeSeen?: boolean; onPaymentPage?: boolean; wasLocked?: boolean } = {}): BannerSpec | null {
+type BannerOpts = { welcomeSeen?: boolean; onPaymentPage?: boolean; wasLocked?: boolean; overLimit?: boolean }
+
+/** The banner for the plan state, else (lowest priority) the over-the-limit one. */
+export function bannerFor(a: Access | null, now: Date = new Date(), opts: BannerOpts = {}): BannerSpec | null {
+  const s = stateBanner(a, now, opts)
+  if (s || !a || a.staff || isLockedState(a.state)) return s
+  return opts.overLimit && !opts.onPaymentPage ? { kind: "over_limit", tone: "warn", keys: ["over.banner"], vars: () => ({}), cta: "over", dismiss: "day" } : null
+}
+
+function stateBanner(a: Access | null, now: Date, opts: BannerOpts): BannerSpec | null {
   if (!a) return null
   if (a.staff) return null
   const end = a.trialEndsAt ?? a.endsAt

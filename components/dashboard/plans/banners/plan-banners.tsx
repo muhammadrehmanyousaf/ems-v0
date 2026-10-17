@@ -15,13 +15,15 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { AlertTriangle, CheckCircle2, Clock, Lock, Sparkles, X } from "lucide-react"
 import { useAccess } from "@/hooks/use-access"
+import { usePlan } from "@/context/plan-context"
+import type { LimitKey } from "@/lib/plan-gate"
 import { bannerFor, chipFor, type BannerSpec } from "@/lib/plans/banners"
 import { firstFilled, say } from "@/lib/plans/copy"
 import { useResolvedThemeMode } from "@/lib/store/theme-prefs"
 import { PLAN_UI_CSS, WALL_TOKENS_CSS } from "../plan-ui-css"
 import { useOne, useBi } from "../bilingual"
 
-const ICON = { trial_welcome: Sparkles, trial_t7: Clock, trial_t3: Clock, trial_t1: AlertTriangle, trial_today: AlertTriangle, past_due: AlertTriangle, cancelling: Clock, comp_end: Clock, locked_here: Lock, reactivated: CheckCircle2 } as const
+const ICON = { trial_welcome: Sparkles, trial_t7: Clock, trial_t3: Clock, trial_t1: AlertTriangle, trial_today: AlertTriangle, past_due: AlertTriangle, cancelling: Clock, comp_end: Clock, locked_here: Lock, reactivated: CheckCircle2, over_limit: AlertTriangle } as const
 
 function store(): Storage | null { try { return window.localStorage } catch { return null } }
 /** Pakistan calendar date, YYYY-MM-DD: "hide for today" ends at midnight Pakistan time. */
@@ -49,6 +51,9 @@ export function PlanBanners() {
   const one = useOne()
   const bi = useBi()
   const mode = useResolvedThemeMode()
+  const plan = usePlan()
+  // Over a plan limit (the server's numbers, from the one plan provider): the vendor is told, once a day, what to do.
+  const overLimit = (["businesses", "staff", "spaces", "images"] as LimitKey[]).some((k) => { const l = plan.limit(k); return !!l && l.enforced && l.max !== null && l.used !== null && l.used > l.max })
 
   // "Welcome back" once after a lock ends: remember that the Wall was shown.
   const [wasLocked, setWasLocked] = React.useState(false)
@@ -62,16 +67,16 @@ export function PlanBanners() {
   React.useEffect(() => { setWelcomeSeen(store()?.getItem(`ww:plans:dismiss:trial_welcome:${trialKey ?? ""}`) === "1") }, [trialKey])
 
   const onPaymentPage = pathname.startsWith("/dashboard/billing")
-  const spec = React.useMemo(() => bannerFor(access, new Date(), { welcomeSeen, onPaymentPage, wasLocked }), [access, welcomeSeen, onPaymentPage, wasLocked])
+  const spec = React.useMemo(() => bannerFor(access, new Date(), { welcomeSeen, onPaymentPage, wasLocked, overLimit }), [access, welcomeSeen, onPaymentPage, wasLocked, overLimit])
   const { hidden, dismiss } = useDismissals(spec, trialKey)
 
   if (!spec || hidden) return null
   const Icon = ICON[spec.kind]
   const tx = (lang: "en" | "ru") => firstFilled(spec.keys, lang, spec.vars(lang))
-  const ctaKey = spec.cta === "pay" ? "banner.cta.pay" : spec.cta === "resume" ? "banner.cta.resume" : spec.cta === "renew" ? "banner.cta.renew" : "banner.cta.choose"
+  const ctaKey = spec.cta === "over" ? "banner.cta.over" : spec.cta === "pay" ? "banner.cta.pay" : spec.cta === "resume" ? "banner.cta.resume" : spec.cta === "renew" ? "banner.cta.renew" : "banner.cta.choose"
   const href = spec.cta === "pay" || spec.cta === "resume" || spec.cta === "renew"
     ? `/dashboard/billing?renew=1${access?.plan ? `&plan=${encodeURIComponent(access.plan)}` : ""}`
-    : "/dashboard/billing"
+    : spec.cta === "over" ? "/dashboard/billing#over" : "/dashboard/billing"
   const dismissLabel = say(spec.dismiss === "once" ? "banner.dismiss_welcome" : "banner.dismiss", one.lang)
 
   return (

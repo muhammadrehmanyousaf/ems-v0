@@ -263,6 +263,11 @@ export const COPY = {
     en: "Your {planName} plan allows {max} {noun} and you have {used}. Nothing is deleted. Choose which ones stay live; the rest are paused and come back when you upgrade.",
     ru: "Aap ke {planName} plan mein {max} {noun} ki ijazat hai aur aap ke paas {used} hain. Kuch delete nahi hota. Chunein kaun se live rahenge; baqi pause ho jayenge aur upgrade karne par wapas aa jayenge.",
   },
+  "over.banner": {
+    en: "You are above your plan's limit. Nothing is deleted. Choose what stays live, or upgrade to keep it all.",
+    ru: "Aap apne plan ki had se aage hain. Kuch delete nahi hota. Chunein kya live rahe, ya upgrade karein taake sab rahe.",
+  },
+  "banner.cta.over": { en: "Choose what stays", ru: "Kya rahe, chunein" },
   "over.allowed": { en: "Live on your plan ({n})", ru: "Aap ke plan par live ({n})" },
   "over.paused": { en: "Paused ({n})", ru: "Pause ({n})" },
   "over.pick": { en: "Pick the venues that stay live", ru: "Wo venues chunein jo live rahenge" },
