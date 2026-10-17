@@ -58,11 +58,11 @@ check("the shared drawer module exports both taps and the panel", ["export funct
 const rp = src("components/dashboard/mainScreens/artifact/record-payment.ts");
 check("record-payment drawer (the one every screen opens): 409 shows the panel, and a settled phantom reopens a fresh drawer", rp.includes("unledgered409(err)") && rp.includes("phantomPanelHtml(") && rp.includes("wirePhantomButtons(") && rp.includes('id="rp-phantom"'));
 const rc = src("components/dashboard/mainScreens/receipts/artifact/receipts-artifact.tsx");
-check("Receipts: a refused save shows the panel inside the form; a refused delete opens the panel drawer", rc.includes("prependPhantomPanel(") && rc.includes("openPhantomDrawer(") && rc.includes("unledgered409(err)"));
+check("Receipts: a refused save shows the panel inside the form; a refused delete opens the panel drawer", /const ph = unledgered409\(err\)[\s\S]{0,200}prependPhantomPanel\(s, phantomCtxFrom\(ph/.test(rc) && /const ph = unledgered409\(err\)\s*\n\s*if \(ph\) \{[^\n]*openPhantomDrawer\(s, phantomCtxFrom\(ph/.test(rc));
 const pdc = src("components/dashboard/mainScreens/pdcs/artifact/pdcs-artifact.tsx");
-check("Cheques: a refused clear opens the panel drawer", pdc.includes("openPhantomDrawer(") && pdc.includes("unledgered409(err)"));
+check("Cheques: a refused clear opens the panel drawer", /const ph = unledgered409\(err\)\s*\n\s*if \(ph\) openPhantomDrawer\(s, phantomCtxFrom\(ph/.test(pdc));
 const q = src("components/dashboard/mainScreens/bookings/artifact/qist-payments.ts");
-check("booking page Payments card: the notice carries both buttons, Adopt hidden on a cancelled booking", q.includes("data-q-phantom") && q.includes("data-q-adopt") && q.includes("data-q-zero") && q.includes("phantomNoticeText(m.unledgered, cancelled)") && /cancelled \? "" : `<button class="btn btn-ghost" data-q-adopt/.test(q));
+check("booking page Payments card: the notice carries both buttons, Adopt hidden on a cancelled booking", q.includes("data-q-phantom") && q.includes('data-q-adopt="${Math.round(m.unledgered)}"') && q.includes('data-q-zero="${Math.round(m.unledgered)}">${escHtml(ZERO_BUTTON)}') && q.includes("phantomNoticeText(m.unledgered, cancelled)") && /cancelled \? "" : `<button class="btn btn-ghost" data-q-adopt/.test(q));
 check("booking page: Adopt opens the adopt drawer (not the record drawer with a typed amount)", q.includes("openAdoptDrawer(s, p)") && q.includes("openZeroDrawer(s, p)") && !/data-q-adopt[\s\S]{0,300}openRecordPaymentDrawer/.test(q));
 const bd = src("components/dashboard/mainScreens/bookings/artifact/booking-detail-artifact.tsx");
 check("booking page cancel drawer: says so and offers the two taps before the vendor cancels", bd.includes("cancelBookingHtml(Number(cx.dataset.bkCancel), gap)") && bd.includes("wirePhantomButtons(s, body"));
