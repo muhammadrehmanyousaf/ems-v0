@@ -180,9 +180,9 @@ for (const f of SETTERS) {
   ok(!/Min(imum)? [68] characters|at least [68] characters|length < [68]\b|length >= [68]\b/.test(src.replace(/vendor|business/gi, "")), `${f} states no 6/8 character rule of its own`);
 }
 const ctx = read("context/UserContext.tsx");
-ok(/clearAuthStorage\(\)/.test(ctx) && /auth\/sessions\/.*revoke/.test(ctx), "UserContext clears through the shared helper and revokes the session on sign-out");
+ok(/clearAuthStorage\(\)/.test(ctx) && /auth\/sessions\/\$\{encodeURIComponent\(jtiToRevoke\)\}\/revoke`/.test(ctx), "UserContext clears through the shared helper and revokes the session on sign-out");
 const pr = read("lib/protected-routes.tsx");
-ok(/clearAuthStorage\(\)/.test(pr) && /expiredLoginUrl\(/.test(pr) && !/return isAuthorized \? <>\{children\}<\/> : null/.test(pr), "ProtectedRoutes cleans stale cookies and never renders an empty page");
+ok(/clearAuthStorage\(\)/.test(pr) && /expiredLoginUrl\(/.test(pr) && !/return null/.test(pr) && /Redirecting/.test(pr), "ProtectedRoutes cleans stale cookies and never renders an empty page");
 
 // ─── 4. middleware ───────────────────────────────────────────────────────────
 console.log("4. middleware");
