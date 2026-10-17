@@ -1,9 +1,7 @@
 import "../globals.css"
-import { Inter } from "next/font/google"
+import { interTextStyle } from "@/lib/fonts/local-fonts"
 import { PublicChrome } from "@/components/public-chrome"
 import { VenueUnavailableHost } from "@/components/venue/venue-unavailable-host"
-
-const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
 // Intentionally NO `metadata` export here. The root `app/layout.tsx` already
 // sets `title.default = SITE_TITLE` and `title.template = "%s | Wedding Wala"`,
@@ -21,7 +19,7 @@ export default async function RootLayout({
 
   return (
     <div lang="en" suppressHydrationWarning>
-      <div className={inter.className} suppressHydrationWarning>
+      <div style={interTextStyle} suppressHydrationWarning>
         <PublicChrome>{children}</PublicChrome>
         {/* Tells a customer kindly when a venue is not taking new enquiries (409 VENUE_UNAVAILABLE from any request). */}
         <VenueUnavailableHost />
