@@ -30,6 +30,7 @@ import { Switch } from "@/components/ui/switch"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { changedPatch, triFrom } from "@/lib/settings/changed-patch"
 
 const labelCls = "text-xs font-medium text-muted-foreground"
 const inputCls =
@@ -65,8 +66,11 @@ function initialValues(
       // is the missing unwrap on the way in.
       out[field.key] = Array.isArray(raw) ? (raw[0] != null ? String(raw[0]) : "") : (raw ?? "")
     } else {
+      // SETUP-028 - a yes/no nobody answered stays null. It used to load as
+      // `false`, and the always-complete payload below then wrote an explicit
+      // "No" (catering, parking, SOP compliance...) over every unanswered one.
       out[field.key] =
-        raw ?? (field.type === "boolean" ? false : field.type === "multi-select" ? [] : "")
+        field.type === "boolean" ? triFrom(raw) : (raw ?? (field.type === "multi-select" ? [] : ""))
     }
   }
   return out
@@ -96,6 +100,7 @@ export function TypeSpecificManager({ business, config, onSaved }: Props) {
   // Re-sync local state when the business prop changes (e.g. after save + refetch).
   React.useEffect(() => {
     setValues(initialValues(business, fields))
+    savedBody.current = bodyFor(initialValues(business, fields))
     setDirty(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business])
@@ -116,11 +121,11 @@ export function TypeSpecificManager({ business, config, onSaved }: Props) {
     setDirty(true)
   }
 
-  const saveMut = useMutation({
-    mutationFn: () => {
+  /* Body in the shape the API takes, from a set of form values. */
+  const bodyFor = (vals: Record<string, unknown>): Record<string, unknown> => {
       const updateData: Record<string, unknown> = {}
       for (const field of fields) {
-        const val = values[field.key]
+        const val = vals[field.key]
         if (field.type === "number") {
           updateData[field.key] = val === "" || val == null ? null : Number(val)
         } else if (field.type === "select") {
@@ -152,9 +157,26 @@ export function TypeSpecificManager({ business, config, onSaved }: Props) {
           updateData[field.key] = val
         }
       }
-      return BusinessesAPI.update(business.id, updateData as Partial<ApiBusiness>)
+      return updateData
+  }
+
+  /* What the server holds, in body shape: the diff base (SETUP-021/028). Reset
+     whenever the business prop re-syncs the form, advanced after each save. */
+  const savedBody = React.useRef<Record<string, unknown> | null>(null)
+  if (savedBody.current === null) savedBody.current = bodyFor(initialValues(business, fields))
+
+  const saveMut = useMutation({
+    mutationFn: async () => {
+      const full = bodyFor(values)
+      // Only the fields the vendor moved; the rest stay exactly as stored.
+      const patch = changedPatch(full, savedBody.current ?? {})
+      if (Object.keys(patch).length > 0) {
+        await BusinessesAPI.update(business.id, patch as Partial<ApiBusiness>)
+      }
+      return full
     },
-    onSuccess: () => {
+    onSuccess: (full) => {
+      savedBody.current = full
       showSuccessToast("Settings updated")
       setDirty(false)
       invalidateBusinessData(qc)
@@ -185,13 +207,17 @@ export function TypeSpecificManager({ business, config, onSaved }: Props) {
             className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2.5 hover:bg-accent/50"
           >
             <span className="min-w-0">
-              <span className="block text-sm font-medium">{field.label}</span>
+              <span className="block text-sm font-medium">
+                {field.label}
+                {/* SETUP-028 read side: an unanswered question is not a "No". */}
+                {val == null && <span className="ml-2 text-[11px] font-normal text-muted-foreground" data-testid="unanswered">Not answered yet</span>}
+              </span>
               {field.description && (
                 <span className="block text-xs text-muted-foreground">{field.description}</span>
               )}
             </span>
             <Switch
-              checked={!!val}
+              checked={val === true}
               onCheckedChange={(checked) => setValue(field.key, checked)}
               aria-label={field.label}
             />

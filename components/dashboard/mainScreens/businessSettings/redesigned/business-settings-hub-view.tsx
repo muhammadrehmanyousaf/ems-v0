@@ -330,6 +330,10 @@ export function BusinessSettingsHubView() {
         city: biz.city ?? "",
         subArea: biz.subArea ?? "",
         brandLogo: biz.brandLogo ?? "",
+        // SETUP-004 - the stored NTN was never loaded, so the field was always
+        // blank and a verified NTN showed the "sends it back for review" warning
+        // before anything was typed.
+        ntnNumber: (biz as any).ntnNumber ?? "",
         minimumPrice: biz.minimumPrice ?? "",
         minCapacity: biz.minCapacity ?? "",
         maxCapacity: biz.maxCapacity ?? "",
@@ -371,6 +375,7 @@ export function BusinessSettingsHubView() {
         city: biz.city ?? "",
         subArea: biz.subArea ?? "",
         brandLogo: biz.brandLogo ?? "",
+        ntnNumber: (biz as any).ntnNumber ?? "",
         minimumPrice: biz.minimumPrice ?? "",
         minCapacity: biz.minCapacity ?? "",
         maxCapacity: biz.maxCapacity ?? "",
@@ -716,15 +721,24 @@ export function BusinessSettingsHubView() {
   } | null>(null)
 
   const saveMut = useMutation({
-    mutationFn: () => BusinessesAPI.update(biz!.id, buildPatch() as Partial<ApiBusiness>),
+    // The form is captured at SUBMIT time (SETUP-021): what is saved is what the
+    // page showed when Save was pressed, and that - not what the page loaded
+    // with - is what the next save must diff against. `patch` is built here, once.
+    mutationFn: (vars: { patch: Record<string, any>; snapshot: Record<string, any> }) =>
+      BusinessesAPI.update(biz!.id, vars.patch as Partial<ApiBusiness>),
     /* One business record is cached under three query keys across the
        dashboard; invalidating only this screen's own is what left every other
        screen — and the checklist that sent the vendor here — showing the old
        value until a browser reload. See lib/query/business-keys.ts. */
-    onSuccess: (res: any) => {
+    onSuccess: (res: any, vars) => {
       showSuccessToast("Business profile saved")
+      // SETUP-021 - re-base the diff on what was just saved. Without this the
+      // baseline stayed at the page-load values for the life of the page, so a
+      // field edited BACK to its load-time value diffed as "unchanged", the next
+      // save sent an empty patch, and the toast still said saved.
+      setBaseline({ ...vars.snapshot })
       setDirty(false)
-      invalidateBusinessData(qc)
+      invalidateBusinessData(qc, biz.id)
       // The save has already committed; the verdict rides along with the reply.
       const c = res?.pricingCoherence ?? res?.data?.pricingCoherence ?? null
       setPricingCoherence(c && c.status !== "ok" ? c : null)
@@ -1310,7 +1324,7 @@ export function BusinessSettingsHubView() {
             <TypeSpecificManager
               business={biz}
               config={getVendorTypeConfig(biz.vendor?.vendorType) ?? { displayName: biz.vendor?.vendorType || "This", typeSpecificFields: [] }}
-              onSaved={() => invalidateBusinessData(qc)}
+              onSaved={() => invalidateBusinessData(qc, biz.id)}
             />
           )}
           {active === "listing" && (
@@ -1322,7 +1336,7 @@ export function BusinessSettingsHubView() {
               key={biz.id}
               business={biz}
               onDirtyChange={setListingDirty}
-              onSaved={() => invalidateBusinessData(qc)}
+              onSaved={() => invalidateBusinessData(qc, biz.id)}
             />
           )}
           {active === "bank" && <BankAccountsManager />}
@@ -1413,7 +1427,7 @@ export function BusinessSettingsHubView() {
                   )
                   : "All changes saved"}
             </div>
-            <Button disabled={!dirty || hasBlockingError || saveMut.isPending} onClick={() => saveMut.mutate()}>
+            <Button disabled={!dirty || hasBlockingError || saveMut.isPending} onClick={() => saveMut.mutate({ patch: buildPatch(), snapshot: { ...form } })}>
               {saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={15} className="mr-1.5" /> Save changes</>}
             </Button>
           </div>

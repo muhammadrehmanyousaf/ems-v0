@@ -190,10 +190,14 @@ export function StaffArtifact() {
         const bId = Number(bizRef.current); if (!bId) { toast.error("Business select karein"); return }
         const editId = save.dataset.save === "new" ? 0 : Number(save.dataset.save)
         const body: CreateMemberInput = { businessId: bId, fullName: name, role: val("m-role") as StaffRole, employmentType: val("m-emp") as EmploymentType }
-        if (val("m-phone")) body.phoneNumber = val("m-phone")
-        if (val("m-wa")) body.whatsappNumber = val("m-wa")
-        if (val("m-salary")) body.monthlySalary = Number(val("m-salary"))
-        if (val("m-dihari")) body.defaultDihariRate = Number(val("m-dihari"))
+        // SETUP-024 - on EDIT an emptied phone / WhatsApp / salary / dihari rate is
+        // sent as null (the server clears on null and leaves an absent key alone,
+        // so omitting it silently kept the old value behind a success toast).
+        const optional = body as unknown as Record<string, unknown>
+        if (val("m-phone")) body.phoneNumber = val("m-phone"); else if (editId) optional.phoneNumber = null
+        if (val("m-wa")) body.whatsappNumber = val("m-wa"); else if (editId) optional.whatsappNumber = null
+        if (val("m-salary")) body.monthlySalary = Number(val("m-salary")); else if (editId) optional.monthlySalary = null
+        if (val("m-dihari")) body.defaultDihariRate = Number(val("m-dihari")); else if (editId) optional.defaultDihariRate = null
         if (editId) body.isActive = val("m-active") === "true" // status editable on existing members
         save.disabled = true; const orig = save.textContent; save.textContent = "Save ho raha…"
         try {

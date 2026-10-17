@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query"
+import { pushLive } from "@/lib/seo/push-live"
 
 /**
  * Every cache that holds the signed-in vendor's business record.
@@ -32,6 +33,11 @@ export const BUSINESS_QUERY_KEYS = [
   // `my-completeness` is a DIFFERENT endpoint (GET /businesses/my-completeness)
   // that derives from the same record, so it has to be invalidated alongside it.
   ["my-completeness"],
+  // SETUP-009 - the Setup checklist reads its own key (`onboarding-completeness`,
+  // the same /my-completeness payload under the 10-minute global staleTime). It
+  // was not in this list, so a vendor who saved the description the checklist
+  // told them to write came back to an item that was still unticked until F5.
+  ["onboarding-completeness"],
   // Retired keys. Nothing reads these since the business list was collapsed onto
   // `businessListKey`; invalidating a cache with no readers is a no-op, and they
   // stay listed so a call site that is reintroduced by mistake is still covered.
@@ -46,10 +52,15 @@ export const BUSINESS_QUERY_KEYS = [
  * without refetching — which looks identical to the bug from the vendor's side,
  * because the stale render is what they see when they navigate back.
  */
-export function invalidateBusinessData(qc: QueryClient): void {
+export function invalidateBusinessData(qc: QueryClient, businessId?: number | string | null): void {
   for (const key of BUSINESS_QUERY_KEYS) {
     qc.invalidateQueries({ queryKey: key as unknown as string[], refetchType: "all" })
   }
+  // SETUP-026 - the public listing reads the backend through a 1-hour ISR window.
+  // A save that changes what couples see (price, description, capacities,
+  // amenities, listing content) now drops this vendor's cache entry like the
+  // photo and video saves already did. Best effort and silent by design.
+  if (businessId != null) void pushLive(businessId)
 }
 
 export default invalidateBusinessData
