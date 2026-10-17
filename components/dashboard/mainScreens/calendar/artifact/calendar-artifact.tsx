@@ -9,7 +9,7 @@
  */
 
 import * as React from "react"
-import { useFetchData } from "@/hooks/use-fetch-data"
+import { useFetchAllPages } from "@/hooks/use-fetch-all-pages"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { spaceNameOf } from "@/lib/utils/booking-space"
 import { bookingStatusLabel } from "@/lib/booking-status-label"
@@ -167,7 +167,20 @@ export function CalendarArtifact() {
   const { businesses } = useBusiness()
   const bizList = React.useMemo(() => ((businesses ?? []) as { id: number; name?: string | null }[]).map((b) => ({ id: b.id, name: b.name })), [businesses])
   const qc = useQueryClient()
-  const { data, isError: bookingsErr } = useFetchData({ endpoint: "/api/v1/bookings", queryKey: ["cal-art-bookings"], Params: { page: 1, limit: 100, sortBy: "bookingDate", sortOrder: "ASC" } })
+  const today = parseKey(todayInKarachi()); const todayKey = keyOf(today) // the Pakistan day, whatever the browser zone is
+  const [offset, setOffset] = React.useState(0)
+  const [selKey, setSelKey] = React.useState(todayKey)
+  const [view, setView] = React.useState<"month" | "week" | "agenda">("month")
+  const [filter, setFilter] = React.useState("all")
+  const baseM = today.getMonth() + offset
+  const year = today.getFullYear() + Math.floor(baseM / 12); const month = ((baseM % 12) + 12) % 12
+  const stateRef = React.useRef({ offset, selKey, view, filter }); stateRef.current = { offset, selKey, view, filter }
+
+  // BOOKINGS-008 - the screen asked for the FIRST 100 bookings by date and never paged, so every booking after the
+  // 100th (the future ones) vanished: later months drew empty and said "0 Kul events". It now reads every page from
+  // two months before the earliest month on view (no upper bound: the agenda lists everything still to come).
+  const fromWindow = (() => { const d = new Date(today.getFullYear(), today.getMonth() + Math.min(0, offset) - 2, 1); return keyOf(d) })()
+  const { data, isError: bookingsErr } = useFetchAllPages<BookingData>({ endpoint: "/api/v1/bookings", queryKey: ["cal-art-bookings"], Params: { dateFrom: fromWindow, sortBy: "bookingDate", sortOrder: "ASC" } })
   const blockedQ = useQuery({ queryKey: ["cal-art-blocked", activeBusinessId], queryFn: () => BlockedDatesAPI.getAll(undefined, activeBusinessId) })
   const rows: BookingData[] = data?.data?.data ?? []
 
@@ -185,15 +198,6 @@ export function CalendarArtifact() {
   const bizListRef = React.useRef(bizList); bizListRef.current = bizList
   const slotDrawerDateRef = React.useRef<string>("")
   const slotDrawerVenueRef = React.useRef<number | null>(null)
-
-  const today = parseKey(todayInKarachi()); const todayKey = keyOf(today) // the Pakistan day, whatever the browser zone is
-  const [offset, setOffset] = React.useState(0)
-  const [selKey, setSelKey] = React.useState(todayKey)
-  const [view, setView] = React.useState<"month" | "week" | "agenda">("month")
-  const [filter, setFilter] = React.useState("all")
-  const baseM = today.getMonth() + offset
-  const year = today.getFullYear() + Math.floor(baseM / 12); const month = ((baseM % 12) + 12) % 12
-  const stateRef = React.useRef({ offset, selKey, view, filter }); stateRef.current = { offset, selKey, view, filter }
 
   const pass = (e: Evt) => filter === "all" || evtTone(e.status).tab === filter
 
