@@ -198,6 +198,7 @@ export const COPY = {
     en: "We could not load your upcoming events. They are safe. Try again.",
     ru: "Aap ke aane wale events load nahi ho sake. Woh mehfooz hain. Dobara koshish karein.",
   },
+  "export.title": { en: "Your records", ru: "Aap ke records" },
   "export.btn": { en: "Download money & tax records (CSV)", ru: "Paisa aur tax records download karein (CSV)" },
   "export.note": {
     en: "Receipts, payments, expenses and tax summary. They are yours, any time, even while your plan is paused.",

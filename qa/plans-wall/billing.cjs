@@ -25,6 +25,7 @@ const SCENARIOS = {
   "trial": { access: () => L.accessObj("trialing", { trialEndsAt: L.pkEnd(18), daysLeft: 18 }), manual: "404" },
   "trial-last": { access: () => L.accessObj("trialing", { trialEndsAt: L.pkEnd(1), daysLeft: 1 }), manual: "404" },
   "locked": { access: () => L.accessObj("locked", { lockReason: "plan_ended", lockedAt: L.pkEnd(-1), retainUntil: L.pkEnd(89) }), manual: () => manual() },
+  "deeplink-renew": { access: () => L.accessObj("locked", { lockReason: "plan_ended", lockedAt: L.pkEnd(-1), retainUntil: L.pkEnd(89) }), manual: () => manual(), path: "/dashboard/billing?renew=1&plan=premium", settle: 1500 },
   "locked-plans": { access: () => L.accessObj("locked", { lockReason: "plan_ended", lockedAt: L.pkEnd(-1), retainUntil: L.pkEnd(89) }), manual: () => manual(), scroll: 760 },
   "locked-bottom": { access: () => L.accessObj("locked", { lockReason: "plan_ended", lockedAt: L.pkEnd(-1), retainUntil: L.pkEnd(89) }), manual: () => manual(), scroll: 99999 },
   "locked-trial-ended": { access: () => L.accessObj("locked", { lockReason: "trial_ended", plan: null, planName: null, lockedAt: L.pkEnd(-1), retainUntil: L.pkEnd(89) }), manual: () => manual() },
@@ -60,7 +61,7 @@ const SCENARIOS = {
       if (r.request().method() === "PUT") return L.fulfill(r, L.j({ ok: true }))
       return L.fulfill(r, L.j({ limit: 1, planName: "Basic", venues: Array.from({ length: 9 }, (_, i) => ({ id: 100 + i, name: i === 0 ? "Local Test Marquee" : `Venue ${i + 1}`, city: "Lahore", live: i === 0 })) }))
     })
-    await page.goto(`${L.BASE}/dashboard/billing${sc.openManual ? "?pay=manual" : ""}`, { waitUntil: "domcontentloaded", timeout: 180000 })
+    await page.goto(`${L.BASE}${sc.path || "/dashboard/billing" + (sc.openManual ? "?pay=manual" : "")}`, { waitUntil: "domcontentloaded", timeout: 180000 })
     await page.waitForSelector(".cscroll", { timeout: 90000 }).catch(() => {})
     await page.waitForFunction(() => {
       const hosts = Array.from(document.querySelectorAll("div")).filter((d) => d.shadowRoot)

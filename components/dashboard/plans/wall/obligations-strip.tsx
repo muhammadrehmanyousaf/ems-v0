@@ -43,8 +43,9 @@ export function ObligationsStrip({ onHold = false }: { onHold?: boolean }) {
 
   return (
     <section className="wwp-card wwp-obl" aria-labelledby="wwp-obl-h" data-testid="obligations-strip">
-      <h2 id="wwp-obl-h">{one.t(onHold ? "obl.title_hold" : "obl.title")}</h2>
-      {one.both && <div className="ru-h">{one.other(onHold ? "obl.title_hold" : "obl.title")}</div>}
+      {/* With the figures: "While your plan is paused". Without them (the summary is not available, or this server does not have it yet) the card is just the vendor's records. */}
+      <h2 id="wwp-obl-h">{one.t(o ? (onHold ? "obl.title_hold" : "obl.title") : "export.title")}</h2>
+      {one.both && <div className="ru-h">{one.other(o ? (onHold ? "obl.title_hold" : "obl.title") : "export.title")}</div>}
 
       {q.isLoading ? (
         <div className="resp" role="status">...</div>

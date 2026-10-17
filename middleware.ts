@@ -85,7 +85,8 @@ export function middleware(request: NextRequest) {
 
   if (isProtectedRoute && !isAuthenticated) {
     const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirect', pathname);
+    // The query travels with it: a renewal link (/dashboard/billing?renew=1&plan=premium) must still open that plan after login.
+    loginUrl.searchParams.set('redirect', pathname + request.nextUrl.search);
     return NextResponse.redirect(loginUrl);
   }
 
