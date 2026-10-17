@@ -17,6 +17,7 @@ import {
   ExpensesAPI, type VendorExpense, type ExpenseCategory, type ExpensePaymentMethod, type CreateExpenseInput,
 } from "@/lib/api/vendorExpenses"
 import { useArtifactShell, pkNum, escHtml, initTablePager, errorBannerHtml, loadPref, savePref, openDrawer, closeDrawer, openConfirm } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 const CAT_LABEL: Record<ExpenseCategory, string> = {
   ingredients: "Saman / raashan", fuel: "Fuel", labour: "Mazdoori", salary: "Tankhwah", electricity: "Bijli",
@@ -36,7 +37,7 @@ const CATS = Object.keys(CAT_LABEL) as ExpenseCategory[]
 const METHODS = Object.keys(METHOD_LABEL) as ExpensePaymentMethod[]
 const money = (v: number | string | null | undefined) => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
 function fmtDate(s?: string | null) { if (!s) return "—"; const d = new Date(s); return isNaN(d.getTime()) ? String(s) : d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) }
-const todayIso = () => new Date().toISOString().slice(0, 10)
+const todayIso = () => todayInKarachi() // WP37 (MONEY-014): the Pakistan day; the UTC day is yesterday until 05:00 PKT
 const svg = (p: string, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}">${p}</svg>`
 const IC = {
   plus: '<path d="M12 5v14M5 12h14"/>', trash: '<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>', edit: '<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
