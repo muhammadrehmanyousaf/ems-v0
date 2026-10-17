@@ -101,6 +101,8 @@ export function middleware(request: NextRequest) {
   // /register send them home, and /business-registration stays open to them (see below) instead of a silent hop.
   const isCustomerSession = (() => {
     try {
+      // `ww_role` is written at sign-in (context/UserContext); `user_data` only after a profile refresh
+      if (request.cookies.get("ww_role")?.value === "customer") return true;
       const raw = request.cookies.get("user_data")?.value;
       if (!raw) return false;
       let text = raw;
