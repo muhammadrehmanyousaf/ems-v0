@@ -34,6 +34,7 @@ import { useActiveBusinessStore } from "@/lib/store/active-business-store"
 import { businessStatusInfo, businessSubtitle } from "@/lib/business-status"
 import { describeLimit, useBusinessLimit } from "@/lib/business-limits"
 import { PlanLockChip } from "@/components/dashboard/plans/plan-locked"
+import { PlanChip } from "@/components/dashboard/plans/banners/plan-banners"
 import { SCREEN_FEATURE } from "@/lib/plan-gate"
 import { useDirtyGuard } from "@/lib/store/dirty-guard"
 
@@ -348,7 +349,11 @@ export function ChampagneSidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter><ChampagneUserMenu /></SidebarFooter>
+      <SidebarFooter>
+        {/* The quiet trial / payment chip. Renders nothing for a healthy paid plan; hidden when the rail collapses to icons. */}
+        <div className="px-2 group-data-[collapsible=icon]:hidden"><PlanChip /></div>
+        <ChampagneUserMenu />
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   )

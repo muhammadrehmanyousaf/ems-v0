@@ -8,6 +8,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { SubscriptionAPI } from "@/lib/api/subscription"
+import { accessFromStatus, isLockedState } from "@/lib/plans/access"
 
 export const BILLING_STATUS_KEY = ["billing-status"] as const
 
@@ -21,8 +22,9 @@ export function useBillingStatus(enabled: boolean) {
     queryKey: BILLING_STATUS_KEY,
     queryFn: () => SubscriptionAPI.getBillingStatus(),
     enabled,
-    // Poll while a checkout is in flight; otherwise this is cheap to keep warm.
-    refetchInterval: (q) => (q.state.data?.access === "pending" ? 5000 : false),
+    // Poll while a checkout is in flight; while the dashboard is locked, look again every 20 s so a payment (or an admin
+    // approval of a manual one) opens it without a refresh; otherwise this is cheap to keep warm.
+    refetchInterval: (q) => (q.state.data?.access === "pending" ? 5000 : isLockedState(accessFromStatus(q.state.data)?.state) ? 20_000 : false),
     staleTime: 30_000,
   })
 }

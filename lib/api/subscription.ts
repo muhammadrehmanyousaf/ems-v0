@@ -10,6 +10,7 @@
 
 import axiosInstance from "@/lib/axiosConfig";
 import type { Entitlements } from "@/lib/plan-gate";
+import { legacyAccessWord, parseAccess } from "@/lib/plans/access";
 
 export type SubscriptionTier = "free" | "pro" | "premium";
 
@@ -123,6 +124,10 @@ export interface BillingStatus {
    * read it through parseEntitlements / the PlanProvider, never by hand.
    */
   entitlements?: unknown;
+  /** The server's access object (PLANS-SPEC contract 1), raw. Read it with accessFromStatus; never by hand. */
+  accessContext?: unknown;
+  /** A manual-payment proof waiting for (or past) approval (PL-C contract, see lib/api/billing.ts). */
+  manualPayment?: unknown;
 }
 
 export type { Entitlements };
@@ -289,10 +294,20 @@ export class SubscriptionAPI {
     return res.data?.data?.entitlements ?? null;
   }
 
-  /** Where the vendor stands with Safepay right now. */
+  /**
+   * Where the vendor stands with Safepay right now.
+   *
+   * PLANS-SPEC contract 1 puts the access object under `access`, where today's one-word string lives. The object is moved
+   * to `accessContext` (read it with lib/plans/access.ts accessFromStatus) and `access` keeps its one-word meaning, so the
+   * screens that compare `status.access === "active"` do not change and cannot disagree with the object.
+   */
   static async getBillingStatus(): Promise<BillingStatus> {
     const res = await axiosInstance.get("/api/v1/subscriptions/status");
-    return res.data?.data as BillingStatus;
+    const d = res.data?.data as (BillingStatus & { access: unknown }) | undefined;
+    if (!d) return d as unknown as BillingStatus;
+    const ctx = parseAccess(d.access);
+    if (ctx) return { ...d, accessContext: d.access as BillingStatus["accessContext"], access: legacyAccessWord(ctx.state) } as BillingStatus;
+    return d as BillingStatus;
   }
 
   /**

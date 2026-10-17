@@ -1,9 +1,9 @@
 "use client"
 
 /**
- * Pay for the portal: the plan cards and the one button that starts a
- * Safepay hosted checkout. Used by the paywall (BillingGate) and by the
- * billing page, so there is exactly one payment path.
+ * Pay for the portal: the one button that starts a Safepay hosted checkout, the
+ * return-from-checkout banner and the status card. (The lock screen itself is
+ * components/dashboard/plans/wall/access-wall.tsx.)
  *
  * The browser never sees an amount it can change: it sends a tier name, the
  * server answers with the hosted checkout URL for that tier's plan, and the
@@ -219,62 +219,6 @@ export function BillingStatusCard({ status }: { status: BillingStatus }) {
           Your subscription was cancelled. You keep access until {fmt(status.subscriptionEndsAt)}; subscribe again any time.
         </p>
       )}
-    </div>
-  )
-}
-
-/* ───────────────────────── The wall ───────────────────────── */
-
-export function PlanWall({ status }: { status: BillingStatus }) {
-  const { data, isLoading } = useQuery({ queryKey: ["billing-redesigned"], queryFn: () => SubscriptionAPI.getMyPlan() })
-  const plans: PlanCatalogEntry[] = (data?.plans ?? []).filter((p) => p.pricePkrMonthly > 0)
-  const router = useRouter()
-
-  return (
-    <div className="mx-auto w-full max-w-5xl p-4 md:p-8">
-      <div className="mb-6">
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Your portal</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-          {status.access === "past_due" ? "Your payment needs attention" : status.subscription ? "Choose a plan to open your portal" : "Choose a plan to get started"}
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Wedding Wala charges a monthly subscription and nothing else — no commission on your bookings. You pay securely through Safepay, it renews every month automatically, and you can cancel any time.
-        </p>
-      </div>
-
-      {status.subscription && <div className="mb-6"><BillingStatusCard status={status} /></div>}
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {((isLoading ? Array.from({ length: 3 }, () => undefined) : plans) as (PlanCatalogEntry | undefined)[]).map((p, i) => {
-          if (!p) return <div key={i} className="h-72 animate-pulse rounded-xl border border-border bg-muted" />
-          const popular = i === 1
-          return (
-            <div key={p.tier} className={cn("flex flex-col rounded-xl border bg-card p-5 shadow-sm", popular ? "border-primary ring-1 ring-primary/40" : "border-border")}>
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="text-base font-semibold">{p.name}</h2>
-                {popular && <StatusPill tone="success">Most chosen</StatusPill>}
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">{p.tagline}</p>
-              <p className="mt-4 text-2xl font-semibold tabular-nums">
-                {formatPkr(p.pricePkrMonthly)} <span className="text-sm font-normal text-muted-foreground">/ month</span>
-              </p>
-              <ul className="mt-4 flex-1 space-y-1.5 text-sm">
-                {p.highlights.map((h) => (
-                  <li key={h} className="flex gap-2"><span aria-hidden className="text-primary">✓</span><span>{h}</span></li>
-                ))}
-              </ul>
-              <div className="mt-5">
-                <SubscribeButton tier={p.tier} name={p.name} pricePkrMonthly={p.pricePkrMonthly} variant={popular ? "default" : "outline"} />
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      <p className="mt-6 text-xs text-muted-foreground">
-        {data?.pricing?.taxNote || "Prices are in PKR."} Payment is taken by Safepay; we never see or store your card details.{" "}
-        <button type="button" className="underline" onClick={() => router.push("/dashboard/billing")}>Billing details</button>
-      </p>
     </div>
   )
 }

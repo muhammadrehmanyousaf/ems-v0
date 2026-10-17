@@ -19,6 +19,7 @@ import Header from "@/components/dashboard/layout/header"
 import { VerificationBanner } from "@/components/auth/VerificationBanner"
 import { MobileBottomNav } from "@/components/dashboard/layout/mobile-bottom-nav"
 import { ChampagneShell } from "@/components/dashboard/layout/champagne-shell"
+import { PlanBanners } from "@/components/dashboard/plans/banners/plan-banners"
 
 export function DashboardChrome({ children }: { children: React.ReactNode }) {
   const { user } = useUser()
@@ -27,6 +28,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
   if (!admin) {
     return (
       <ChampagneShell>
+        <PlanBanners />
         <VerificationBanner />
         {children}
       </ChampagneShell>
