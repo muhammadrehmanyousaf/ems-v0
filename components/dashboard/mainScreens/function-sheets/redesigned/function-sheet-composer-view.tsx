@@ -182,6 +182,9 @@ export function FunctionSheetComposerView() {
     return <div className="p-4 md:p-6"><EmptyState icon="FileText" title="No function sheet to edit" description="Create a function sheet first, then edit it here." /></div>
   }
 
+  // WP37 (OPS-015): once the contract is signed, the prices and terms are what the customer signed. The server answers 409
+  // CONTRACT_LOCKED for any change; the form says so up front instead of letting a vendor type into numbers that cannot be saved.
+  const locked = ["signed", "beo_ready", "invoiced", "paid"].includes(sheet.state)
   const idx = STATE_ORDER.indexOf(sheet.state)
   const nextState = idx >= 0 && idx < STATE_ORDER.length - 1 ? STATE_ORDER[idx + 1] : null
 
@@ -207,9 +210,9 @@ export function FunctionSheetComposerView() {
               <input className={inputCls} value={form.title} onChange={(e) => setField("title", e.target.value)} placeholder="e.g. Wedding Photography — Ahmed & Fatima" />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="space-y-1.5"><label className={labelCls}>Customer name</label><input className={inputCls} value={form.customerName} onChange={(e) => setField("customerName", e.target.value)} /></div>
-              <div className="space-y-1.5"><label className={labelCls}>Phone</label><input className={inputCls} value={form.customerPhone} onChange={(e) => setField("customerPhone", e.target.value)} /></div>
-              <div className="space-y-1.5"><label className={labelCls}>Email</label><input className={inputCls} value={form.customerEmail} onChange={(e) => setField("customerEmail", e.target.value)} /></div>
+              <div className="space-y-1.5"><label className={labelCls}>Customer name</label><input className={inputCls} value={form.customerName} disabled={locked} onChange={(e) => setField("customerName", e.target.value)} /></div>
+              <div className="space-y-1.5"><label className={labelCls}>Phone</label><input className={inputCls} value={form.customerPhone} disabled={locked} onChange={(e) => setField("customerPhone", e.target.value)} /></div>
+              <div className="space-y-1.5"><label className={labelCls}>Email</label><input className={inputCls} value={form.customerEmail} disabled={locked} onChange={(e) => setField("customerEmail", e.target.value)} /></div>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5"><label className={labelCls}>Event date</label><input type="date" className={inputCls} value={form.eventDate} onChange={(e) => setField("eventDate", e.target.value)} /></div>
@@ -220,35 +223,35 @@ export function FunctionSheetComposerView() {
           {/* Line items editor */}
           <div className="rounded-xl border border-border bg-card shadow-sm">
             <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-              <h2 className="text-sm font-semibold">Line items</h2>
+              <h2 className="text-sm font-semibold">Line items{locked ? <span className="ml-2 text-xs font-normal text-muted-foreground">Locked: the contract is signed</span> : null}</h2>
               <div className="flex items-center gap-2">
                 {aiBeo && sheet && (
-                  <Button size="sm" variant="outline" disabled={suggestMut.isPending} onClick={() => suggestMut.mutate()}>
+                  <Button size="sm" variant="outline" disabled={suggestMut.isPending || locked} onClick={() => suggestMut.mutate()}>
                     {suggestMut.isPending
                       ? <><Spinner size={14} className="mr-1" /> Suggesting…</>
                       : <><Icon name="Sparkles" size={14} className="mr-1 text-bridal-gold" /> Suggest items</>}
                   </Button>
                 )}
-                <Button size="sm" variant="outline" onClick={addItem}><Icon name="Plus" size={14} className="mr-1" /> Add item</Button>
+                <Button size="sm" variant="outline" disabled={locked} onClick={addItem}><Icon name="Plus" size={14} className="mr-1" /> Add item</Button>
               </div>
             </div>
             <div className="space-y-2 p-3">
               {items.length === 0 && <p className="px-1 py-3 text-sm text-muted-foreground">No items yet — add the first.</p>}
               {items.map((it, i) => (
                 <div key={it._rid} className="grid grid-cols-12 items-center gap-2 rounded-lg border border-border/70 p-2">
-                  <input className={cn(inputCls, "col-span-12 sm:col-span-5")} placeholder="Description" value={it.label} onChange={(e) => setItem(i, { label: e.target.value })} />
-                  <input className={cn(inputCls, "col-span-3 sm:col-span-2 text-right tabular-nums")} type="number" placeholder="Qty" value={it.qty} onChange={(e) => setItem(i, { qty: e.target.value })} />
-                  <input className={cn(inputCls, "col-span-5 sm:col-span-2 text-right tabular-nums")} type="number" placeholder="Unit" value={it.unitPrice} onChange={(e) => setItem(i, { unitPrice: e.target.value })} />
+                  <input className={cn(inputCls, "col-span-12 sm:col-span-5")} placeholder="Description" disabled={locked} value={it.label} onChange={(e) => setItem(i, { label: e.target.value })} />
+                  <input className={cn(inputCls, "col-span-3 sm:col-span-2 text-right tabular-nums")} type="number" placeholder="Qty" disabled={locked} value={it.qty} onChange={(e) => setItem(i, { qty: e.target.value })} />
+                  <input className={cn(inputCls, "col-span-5 sm:col-span-2 text-right tabular-nums")} type="number" placeholder="Unit" disabled={locked} value={it.unitPrice} onChange={(e) => setItem(i, { unitPrice: e.target.value })} />
                   <div className="col-span-3 sm:col-span-2 text-right text-sm font-medium tabular-nums">{formatPkr(num(it.qty) * num(it.unitPrice))}</div>
-                  <button onClick={() => removeItem(i)} aria-label="Remove item" className="col-span-1 grid h-9 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive"><Icon name="Trash2" size={15} /></button>
+                  <button disabled={locked} onClick={() => removeItem(i)} aria-label="Remove item" className="col-span-1 grid h-9 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive"><Icon name="Trash2" size={15} /></button>
                 </div>
               ))}
             </div>
             {/* Totals + discount/tax inputs */}
             <div className="ml-auto max-w-sm space-y-2 border-t border-border p-4 text-sm">
               <div className="flex items-center justify-between"><span className="text-muted-foreground">Subtotal</span><span className="tabular-nums">{formatPkr(subtotal)}</span></div>
-              <div className="flex items-center justify-between gap-2"><span className="text-muted-foreground">Discount</span><input type="number" className={cn(inputCls, "h-8 w-32 text-right tabular-nums")} value={form.discountAmount} onChange={(e) => setField("discountAmount", e.target.value)} /></div>
-              <div className="flex items-center justify-between gap-2"><span className="text-muted-foreground">Sales tax</span><input type="number" className={cn(inputCls, "h-8 w-32 text-right tabular-nums")} value={form.taxAmount} onChange={(e) => setField("taxAmount", e.target.value)} /></div>
+              <div className="flex items-center justify-between gap-2"><span className="text-muted-foreground">Discount</span><input type="number" className={cn(inputCls, "h-8 w-32 text-right tabular-nums")} value={form.discountAmount} disabled={locked} onChange={(e) => setField("discountAmount", e.target.value)} /></div>
+              <div className="flex items-center justify-between gap-2"><span className="text-muted-foreground">Sales tax</span><input type="number" className={cn(inputCls, "h-8 w-32 text-right tabular-nums")} value={form.taxAmount} disabled={locked} onChange={(e) => setField("taxAmount", e.target.value)} /></div>
               <div className="flex items-center justify-between border-t border-border pt-2 text-base font-semibold"><span>Grand total</span><span className="tabular-nums text-emerald-600 dark:text-emerald-400">{formatPkr(grandTotal)}</span></div>
             </div>
           </div>
@@ -257,7 +260,7 @@ export function FunctionSheetComposerView() {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="space-y-1.5 rounded-xl border border-border bg-card p-4 shadow-sm">
               <label className={labelCls}>Terms (one per line)</label>
-              <textarea className={cn(inputCls, "h-28 resize-y py-2")} value={form.terms} onChange={(e) => setField("terms", e.target.value)} placeholder={"50% advance to confirm\nBalance due 7 days before event"} />
+              <textarea className={cn(inputCls, "h-28 resize-y py-2")} value={form.terms} disabled={locked} onChange={(e) => setField("terms", e.target.value)} placeholder={"50% advance to confirm\nBalance due 7 days before event"} />
             </div>
             <div className="space-y-1.5 rounded-xl border border-border bg-card p-4 shadow-sm">
               <label className={labelCls}>Internal notes</label>
