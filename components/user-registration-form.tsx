@@ -75,9 +75,9 @@ const formSchema = z
         (v) => /^(?:\+92|92|0)3\d{9}$/.test(v.replace(/[\s\-()./]/g, "")),
         { message: "Enter a valid Pakistani mobile number, e.g. 0300 1234567" },
       ),
-    // WP34 (PUBLIC-006): the screen used to promise "Min 8 characters" while the
-    // server (utils/passwordPolicy) demanded 10 + a lowercase + an upper/digit/symbol,
-    // so an 8-9 character password passed this form and failed after submit. One
+    // WP34 (PUBLIC-006): the screen used to promise a shorter minimum than the
+    // server (utils/passwordPolicy) demanded (10 + a lowercase + an upper/digit/symbol),
+    // so a password that passed this form failed after submit. One
     // mirrored rule (lib/validation/password), same wording as the server.
     password: z.string().superRefine((v, ctx) => {
       const problem = passwordProblem(v)

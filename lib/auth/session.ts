@@ -72,7 +72,8 @@ export function expiredLoginUrl(returnTo?: string | null): string {
   const params = new URLSearchParams()
   const back = returnTo || ""
   // never loop back to an auth screen
-  if (back.startsWith("/") && !/^\/(login|register)(\/|\?|$)/.test(back)) params.set("redirect", back)
+  const sameOriginPath = back.startsWith("/") && !/^[/\\]{2}/.test(back) && !back.includes("\\")
+  if (sameOriginPath && !/^\/(login|register)(\/|\?|$)/.test(back)) params.set("redirect", back)
   params.set("reason", "expired")
   return `/login?${params.toString()}`
 }
