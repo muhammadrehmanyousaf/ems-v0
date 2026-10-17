@@ -72,11 +72,17 @@ export function KpiCard({
         ) : null}
       </div>
 
-      <div className="mt-3.5">
+      <div className="mt-3.5 [container-type:inline-size]">
         {isLoading ? (
           <Skeleton className="h-9 w-32" />
         ) : (
-          <p className="font-display italic text-[34px] leading-none text-bridal-charcoal tabular-nums">
+          // One line, never "Rs." on one line and the amount on the next (or clipped): the figure is 34px
+          // while it fits the card and scales down with the card's own width when it does not
+          // (about 0.6em per character is Playfair italic's widest digit).
+          <p
+            className="font-display italic leading-none text-bridal-charcoal tabular-nums whitespace-nowrap"
+            style={{ fontSize: `min(34px, calc(100cqw / ${Math.max(String(value).length, 4) * 0.62}))` }}
+          >
             {value}
           </p>
         )}

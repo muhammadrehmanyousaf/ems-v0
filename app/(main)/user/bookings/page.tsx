@@ -355,7 +355,7 @@ export default function BookingsPage() {
           description="Track and manage every event booking in one place."
           actions={headerActions}
         />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 max-[419px]:grid-cols-1 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
             <KpiCard key={i} label="" value={0} isLoading />
           ))}
@@ -395,7 +395,7 @@ export default function BookingsPage() {
       />
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 max-[419px]:grid-cols-1 lg:grid-cols-4 gap-4">
         <KpiCard
           label="Total bookings"
           value={stats.total}

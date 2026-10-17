@@ -969,7 +969,7 @@ export function BusinessSettingsHubView() {
                   its validation was added; the tabs beside it were not, so all
                   five Profile labels had htmlFor null and no input carried an
                   id. Two labelling conventions in one hub. */}
-              <Section icon="Building2" title="Profile" desc="How your business appears to couples.">
+              <Section columns icon="Building2" title="Profile" desc="How your business appears to couples.">
                 <Row id="biz-name" label="Business name" help="businessName">
                   <input id="biz-name" className={inputCls} value={form.name ?? ""} onChange={(e) => set("name", e.target.value)} />
                 </Row>
@@ -1062,7 +1062,7 @@ export function BusinessSettingsHubView() {
           )}
 
           {active === "pricing" && (
-            <Section icon="DollarSign" title="Capacity & pricing" desc="Guest range, starting price and booking terms.">
+            <Section columns icon="DollarSign" title="Capacity & pricing" desc="Guest range, starting price and booking terms.">
               {/* WW-PRICING-OVERHAUL — vendor chooses how they are booked. "Auto"
                   ("" -> null) keeps the legacy inferred behaviour (byte-for-byte
                   unchanged), so nothing changes until the vendor picks a mode. */}
@@ -1285,7 +1285,7 @@ export function BusinessSettingsHubView() {
           )}
 
           {active === "amenities" && (
-            <Section icon="SlidersHorizontal" title="Amenities & services" desc="What's included with your service.">
+            <Section columns icon="SlidersHorizontal" title="Amenities & services" desc="What's included with your service.">
               <div id="biz-amenities" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {amenitiesFor(biz.vendor?.vendorType, form).map((b) => (
                   <label key={String(b.key)} className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2.5 hover:bg-accent/50">
@@ -1423,14 +1423,26 @@ export function BusinessSettingsHubView() {
   )
 }
 
-function Section({ icon, title, desc, children }: { icon: IconName; title: string; desc: string; children: React.ReactNode }) {
+// `columns`: from 1280px the field list flows into two columns (down the first, then the second), so a
+// name or description field is half the panel instead of ~1140px wide. Rows keep their own sub-grids, the
+// DOM and tab order are unchanged, and below 1280px it is the single column it always was. Layout only.
+function Section({ icon, title, desc, children, columns = false }: { icon: IconName; title: string; desc: string; children: React.ReactNode; columns?: boolean }) {
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm">
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
         <span className="grid h-8 w-8 place-items-center rounded-lg bg-muted text-muted-foreground"><Icon name={icon} size={16} /></span>
         <div><h2 className="text-sm font-semibold">{title}</h2>{desc && <p className="text-xs text-muted-foreground">{desc}</p>}</div>
       </div>
-      <div className="space-y-4 p-4">{children}</div>
+      <div
+        className={cn(
+          "p-4",
+          columns
+            ? "max-[1279px]:space-y-4 min-[1280px]:columns-2 min-[1280px]:gap-x-8 min-[1280px]:[&>*]:mb-4 min-[1280px]:[&>*]:break-inside-avoid min-[1280px]:[&>*:last-child]:mb-0"
+            : "space-y-4",
+        )}
+      >
+        {children}
+      </div>
     </div>
   )
 }

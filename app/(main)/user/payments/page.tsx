@@ -232,7 +232,7 @@ function PaymentsPageContent() {
           description="Track pending payments and view your payment history."
           actions={headerActions}
         />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 max-[419px]:grid-cols-1 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
             <KpiCard key={i} label="" value={0} isLoading />
           ))}
@@ -254,7 +254,7 @@ function PaymentsPageContent() {
         actions={headerActions}
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 max-[419px]:grid-cols-1 lg:grid-cols-4 gap-4">
         <KpiCard
           label="Pending payments"
           value={pending.length}
@@ -407,28 +407,28 @@ function PaymentsPageContent() {
                       ) : null}
                     </div>
 
-                    <div className="rounded-lg bg-muted/30 border border-border/60 p-3 mb-4 grid grid-cols-3 gap-3 text-center">
-                      <div>
+                    <div className="rounded-lg bg-muted/30 border border-border/60 p-3 mb-4 grid grid-cols-1 gap-2 min-[480px]:grid-cols-3 min-[480px]:gap-3 min-[480px]:text-center">
+                      <div className="flex items-baseline justify-between gap-3 min-[480px]:block">
                         <p className="text-[10px] uppercase tracking-[0.18em] font-medium text-muted-foreground">
                           Total
                         </p>
-                        <p className="font-display italic text-[16px] text-foreground tabular-nums mt-0.5">
+                        <p className="font-display italic text-[16px] text-foreground tabular-nums whitespace-nowrap min-[480px]:mt-0.5">
                           {fmt(figuresOf(booking).total)}
                         </p>
                       </div>
-                      <div className="border-x border-border/60">
+                      <div className="flex items-baseline justify-between gap-3 max-[479px]:border-y max-[479px]:border-border/60 max-[479px]:py-2 min-[480px]:block min-[480px]:border-x min-[480px]:border-border/60">
                         <p className="text-[10px] uppercase tracking-[0.18em] font-medium text-muted-foreground">
                           Paid so far
                         </p>
-                        <p className="font-display italic text-[16px] text-foreground tabular-nums mt-0.5">
+                        <p className="font-display italic text-[16px] text-foreground tabular-nums whitespace-nowrap min-[480px]:mt-0.5">
                           {fmt(figuresOf(booking).received)}
                         </p>
                       </div>
-                      <div>
+                      <div className="flex items-baseline justify-between gap-3 min-[480px]:block">
                         <p className="text-[10px] uppercase tracking-[0.18em] font-medium text-muted-foreground">
                           Remaining
                         </p>
-                        <p className="font-display italic text-[16px] text-foreground tabular-nums mt-0.5">
+                        <p className="font-display italic text-[16px] text-foreground tabular-nums whitespace-nowrap min-[480px]:mt-0.5">
                           {fmt(figuresOf(booking).outstanding)}
                         </p>
                       </div>
