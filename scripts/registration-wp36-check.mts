@@ -43,5 +43,35 @@ check("a generic category falls back to its own name", quickSignupSubTypes("Flor
 const onboarding = read("app/(auth)/onboarding/page.tsx");
 check("onboarding page appends subBusinessType from the shared mapping", /fd\.append\("subBusinessType",\s*JSON\.stringify\(quickSignupSubTypes\(vendorType\)\)\)/.test(onboarding));
 
+// 2. wizard payload and screens (static checks on the source text)
+const reg = read("components/business-registration-form.tsx");
+check("no pre-account upload to the auth-gated route", !/axios\s*\.post\(\s*`[^`]*upload-images/.test(reg));
+check("logo, gallery and package photos travel on the registration request", /"brandLogoFile"/.test(reg) && /"galleryImages"/.test(reg) && /packageImages_\$\{k\}/.test(reg));
+check("an upload failure is shown to the vendor", /Some photos could not be uploaded/.test(reg));
+check("capacity is never defaulted to 1", !/maxCapacity:\s*formData\.maxCapacity\s*\|\|\s*1/.test(reg));
+check("minCapacity is sent", /minCapacity:\s*formData\.minCapacity/.test(reg));
+check("car rental derives its business types from the fleet", /carRentalSubTypes\(formData\.businessType/.test(reg));
+check("signed-in customer gets a notice, not a silent hop", /signedInCustomer/.test(reg) && /isCustomerSession/.test(read("middleware.ts")));
+const personal = read("components/VendorStepForms/personal-details.tsx");
+check("account step asks if the e-mail is taken", /auth\/email-available/.test(personal));
+check("food categories can state a maximum guest count", /MaxGuestsField/.test(read("components/VendorStepForms/newVendorRegisterationForm/Catering/cateringComponents/business-details.tsx")) && /MaxGuestsField/.test(read("components/VendorStepForms/newVendorRegisterationForm/Generic/generic-business-details.tsx")));
+check("per-head price label for catering / live cooking", /Price per head/.test(read("components/VendorStepForms/packages.tsx")));
+check("type-specific values read back from typeSpecificDetails", /typeSpecificDetails/.test(read("components/dashboard/mainScreens/businessSettings/redesigned/type-specific-manager.tsx")));
+for (const f of [
+  "components/dashboard/mainScreens/function-sheets/artifact/function-sheets-artifact.tsx",
+  "components/dashboard/mainScreens/halal-certs/artifact/halal-certs-artifact.tsx",
+  "components/dashboard/mainScreens/generator-fuel/artifact/generator-fuel-artifact.tsx",
+  "components/dashboard/mainScreens/drone-noc/artifact/drone-noc-artifact.tsx",
+]) check(`${f.split("/").pop()}: create form scopes to the single owned venue`, /useScopedBusinessId\(\)/.test(read(f)));
+check("setup checklist follows the venue switcher", /useActiveBusinessId\(\)/.test(read("components/dashboard/mainScreens/onboarding/artifact/onboarding-artifact.tsx")));
+check("per-head package makes the booking flow ask for guests", /venueOffersPerHeadPackage/.test(read("components/booking/steps-v2/date-time-step.tsx")) && /venueOffersPerHeadPackage/.test(read("components/booking/shell/booking-ledger.tsx")));
+check("a caterer with one menu is not a venue booking", /FOOD_VENDOR_TYPES/.test(read("components/booking/booking-form.tsx")));
+check("vendor page gets its type", /vendor\.vendor\?\.vendorType/.test(read("components/VendorDetails/vendor-detail-route.tsx")));
+check("package card shows its own unit", /pricingUnit === "per_head"/.test(read("components/VendorDetails/VendorDetailsMobile.tsx")));
+check("declined line leaves the customer total", /=== 'declined' \? 0/.test(read("lib/utils/booking-money.ts")));
+check("anonymous deep links return after login", /loginUrl\(\)/.test(read("components/VendorDetails/VendorDetailsMobile.tsx")) && /redirect=/.test(read("lib/auth/go-login.ts")));
+check("booking request carries the function name", /payload\.eventType/.test(read("components/booking/booking-form.tsx")));
+check("vendor Payments card reads the server slice", /view\.slice/.test(read("components/dashboard/mainScreens/bookings/artifact/qist-payments.ts")));
+
 console.log(`registration-wp36-check: ${total - failed}/${total} checks passed`);
 if (failed) process.exit(1);
