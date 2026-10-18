@@ -9,7 +9,7 @@ import { ChatProvider } from "@/context/ChatContext"
 import { QueryProvider } from "@/lib/providers/query-provider"
 import { PerformanceMonitor } from "@/components/performance-monitor"
 import { CookieConsent } from "@/components/cookie-consent"
-import { Inter, Playfair_Display, DM_Sans, Noto_Nastaliq_Urdu } from "next/font/google"
+import { fontVariables } from "@/lib/fonts/local-fonts"
 // Phase 2 #8.9 — PWA shell.
 import { PwaRegister } from "@/components/pwa/pwa-register"
 import { PwaInstallPrompt } from "@/components/pwa/install-prompt"
@@ -142,40 +142,9 @@ export const viewport: Viewport = {
   colorScheme: "light",
 }
 
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-inter",
-  display: "swap",
-})
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
-  style: ["normal", "italic"],
-  variable: "--font-playfair",
-  display: "swap",
-})
-
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
-  variable: "--font-dm-sans",
-  display: "swap",
-})
-
 // Phase 3 #9.4 — Nastaliq for Urdu text. Loaded only when needed
-// via the `font-nastaliq` utility (see globals.css); doesn't bloat
-// the baseline English bundle because next/font's tree-shaking only
-// pulls the weights we actually use.
-const nastaliq = Noto_Nastaliq_Urdu({
-  subsets: ["arabic"],
-  weight: ["400", "700"],
-  variable: "--font-nastaliq",
-  display: "swap",
-  preload: false,
-})
-
+// via the `font-nastaliq` utility (see globals.css); the faces live in lib/fonts/local-fonts.ts.
+// (Keep the utility name in this file: Tailwind generates .font-nastaliq from the strings it finds in the source.)
 export default function RootLayout({
   children,
 }: {
@@ -184,8 +153,6 @@ export default function RootLayout({
   return (
     <html lang="en-PK" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationLD()) }}
@@ -196,7 +163,8 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.variable} ${playfair.variable} ${dmSans.variable} ${nastaliq.variable} font-sans`}
+        className="font-sans"
+        style={fontVariables}
         suppressHydrationWarning
       >
         <GoogleAnalytics />
