@@ -1,0 +1,13 @@
+Self-hosted fonts (lib/fonts/files/*.woff2)
+
+These are the exact files Google Fonts serves for the families the site already used through next/font/google. They are
+bundled so that `next build` and the running site never need fonts.googleapis.com / fonts.gstatic.com.
+
+  Inter                 Copyright (c) The Inter Project Authors (https://github.com/rsms/inter)
+  Playfair Display      Copyright (c) The Playfair Project Authors (https://github.com/clauseggers/Playfair)
+  DM Sans               Copyright (c) The DM Sans Project Authors (https://github.com/googlefonts/dm-fonts)
+  Noto Nastaliq Urdu    Copyright (c) The Noto Project Authors (https://github.com/notofonts/nastaliq)
+
+All four are licensed under the SIL Open Font License, Version 1.1. The full licence text is published at
+https://openfontlicense.org/ (https://scripts.sil.org/OFL). The fonts are used unmodified; they may be bundled and
+redistributed with the site as long as this notice stays with them and they are not sold on their own.

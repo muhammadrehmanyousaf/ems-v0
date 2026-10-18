@@ -413,6 +413,25 @@ export default function VendorDetailsMobile({
   const reviewsRef = useRef<HTMLDivElement>(null);
   const availabilityRef = useRef<HTMLDivElement>(null);
   const scrollSpyNavRef = useRef<HTMLDivElement>(null);
+  const scrollSpyPillsRef = useRef<HTMLDivElement>(null);
+
+  // Keep the active section pill inside the (horizontally scrolling) tab strip. WP40 / V6-5: this used to be a
+  // `scrollIntoView` in each pill's ref callback, which scrolls EVERY scrollable ancestor, the page included: on load the
+  // active pill is "Overview", the bar sits below the fold on a venue whose notice banner pushes it down (and on any short
+  // window), and the browser scrolled the whole page down to reveal it (138px at 1536x864, 37px at 390). Only the strip's
+  // own scrollLeft moves now, and only when the pill is actually clipped, so nothing scrolls the page on load.
+  useEffect(() => {
+    const strip = scrollSpyPillsRef.current;
+    if (!strip) return;
+    const pill = strip.querySelector<HTMLElement>(`[data-section="${activeSection}"]`);
+    if (!pill) return;
+    const s = strip.getBoundingClientRect();
+    const p = pill.getBoundingClientRect();
+    let delta = 0;
+    if (p.left < s.left) delta = p.left - s.left - 8;
+    else if (p.right > s.right) delta = p.right - s.right + 8;
+    if (delta !== 0) strip.scrollBy({ left: delta, behavior: "smooth" });
+  }, [activeSection]);
 
   // Parallax for hero
   const { scrollYProgress } = useScroll({
@@ -1236,22 +1255,15 @@ export default function VendorDetailsMobile({
         className="sticky top-0 z-30 bg-bridal-cream/95 backdrop-blur-xl border-b border-bridal-beige shadow-[0_4px_20px_-16px_rgba(176,125,84,0.45)]"
       >
         <div className="max-w-5xl mx-auto">
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none px-4 py-2.5">
+          {/* The nav is a horizontal scroller. On a phone the later sections sit off-screen, so the pill could become
+              active while remaining invisible (the vendor page appeared to have three sections, not six): the effect
+              above scrolls THIS strip (never the page) to bring the active pill into view. */}
+          <div ref={scrollSpyPillsRef} className="flex items-center gap-1 overflow-x-auto scrollbar-none px-4 py-2.5">
             {SECTIONS.map((section) => (
               <button
                 key={section.id}
                 type="button"
                 data-section={section.id}
-                /* The nav is a horizontal scroller. On a phone the later
-                   sections sit off-screen, so the pill could become active
-                   while remaining invisible — the vendor page appeared to have
-                   three sections, not six. `nearest` so it only moves when it
-                   has to. */
-                ref={(el) => {
-                  if (el && activeSection === section.id) {
-                    el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
-                  }
-                }}
                 onClick={() => scrollToSection(section.id)}
                 className={`relative px-4 py-2 font-bridal text-[11px] uppercase tracking-[0.22em] font-medium rounded-full whitespace-nowrap transition-all duration-300 ${
                   activeSection === section.id
