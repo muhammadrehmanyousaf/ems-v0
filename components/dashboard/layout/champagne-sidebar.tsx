@@ -18,6 +18,8 @@ import {
   CircleDollarSign, ReceiptText, Undo2, ArrowDownUp, HandCoins, Truck, BookOpen, Landmark,
   ListChecks, Zap, CalendarClock, Package, Building2, Boxes, Fuel, ShieldCheck, Plane,
   Megaphone, Handshake, FileQuestion, Clock, Star, Compass, Workflow, ChefHat, BarChart3, CreditCard,
+  Activity, Banknote, BriefcaseBusiness, FileBadge, Gavel, MessageSquareWarning, ScrollText, ShieldAlert,
+  UserCheck, Wrench, Shield,
 } from "lucide-react"
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel,
@@ -37,6 +39,7 @@ import { PlanLockChip } from "@/components/dashboard/plans/plan-locked"
 import { PlanChip } from "@/components/dashboard/plans/banners/plan-banners"
 import { SCREEN_FEATURE } from "@/lib/plan-gate"
 import { useDirtyGuard } from "@/lib/store/dirty-guard"
+import { getDashboardRole, isAdminLike } from "@/lib/dashboard-role"
 
 type Biz = {
   id: number; name?: string; city?: string | null; subArea?: string | null; status?: string
@@ -252,9 +255,94 @@ function BusinessSwitcher() {
   )
 }
 
+// ── Admin Nav data — platform, operations, directories, platform & security ──
+const ADMIN_PLATFORM: NItem[] = [
+  { name: "Platform overview", url: "/dashboard", icon: LayoutGrid },
+  { name: "Platform pulse", url: "/dashboard/admin/platform-pulse", icon: Activity },
+  { name: "Platform revenue", url: "/dashboard/revenue", icon: CircleDollarSign },
+]
+
+function getAdminOperations(isSuper: boolean): NItem[] {
+  const items: NItem[] = [
+    { name: "Vendor queue", url: "/dashboard/admin/vendor-queue", icon: UserCheck },
+  ]
+  if (isSuper) {
+    items.push({ name: "Manual payments", url: "/dashboard/admin/manual-payments", icon: Banknote })
+  }
+  items.push(
+    { name: "Claim requests", url: "/dashboard/claims", icon: ShieldCheck },
+    { name: "KYC documents", url: "/dashboard/admin/documents", icon: FileBadge },
+    { name: "Disputes", url: "/dashboard/admin/disputes", icon: Gavel },
+    { name: "Complaints", url: "/dashboard/admin/complaints", icon: MessageSquareWarning },
+  )
+  if (isSuper) {
+    items.push(
+      { name: "Subscriptions", url: "/dashboard/admin/subscriptions", icon: CreditCard },
+      { name: "Promotions", url: "/dashboard/admin/promotions", icon: Megaphone },
+      { name: "Billing tools", url: "/dashboard/admin/billing-tools", icon: Wrench },
+    )
+  }
+  return items
+}
+
+const ADMIN_DIRECTORIES: NItem[] = [
+  { name: "Vendors", url: "/dashboard/vendors", icon: UserCheck },
+  { name: "Businesses", url: "/dashboard/businesses", icon: BriefcaseBusiness },
+  { name: "Businesses overview", url: "/dashboard/businesses-overview", icon: BarChart3 },
+  { name: "Customers", url: "/dashboard/customers", icon: Users },
+]
+
+function getAdminSecurity(isSuper: boolean): NItem[] {
+  const items: NItem[] = []
+  if (isSuper) {
+    items.push(
+      { name: "Users", url: "/dashboard/users", icon: Users },
+      { name: "Roles", url: "/dashboard/roles", icon: Settings2 },
+      { name: "Audit logs", url: "/dashboard/admin/audit-logs", icon: ScrollText },
+    )
+  }
+  items.push({ name: "Activity & audit", url: "/dashboard/admin/activity", icon: Activity })
+  if (isSuper) {
+    items.push(
+      { name: "Currency rates", url: "/dashboard/admin/fx-rates", icon: CircleDollarSign },
+      { name: "Force majeure", url: "/dashboard/admin/force-majeure", icon: ShieldAlert },
+    )
+  }
+  return items
+}
+
+function AdminHeader({ isSuper }: { isSuper: boolean }) {
+  const title = isSuper ? "Super Admin Console" : "Platform Admin Console"
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <SidebarMenuButton size="lg" tooltip={title} className="hover:bg-sidebar-accent/50 cursor-default">
+          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold shadow-xs">
+            <ShieldCheck className="size-4" />
+          </div>
+          <div className="grid flex-1 text-left leading-tight min-w-0">
+            <span className="truncate text-[13px] font-semibold flex items-center gap-1.5">
+              WeddingWala
+              <span className="inline-block size-1.5 rounded-full bg-emerald-500 animate-pulse" title="System Live" />
+            </span>
+            <span className="truncate text-[11px] text-muted-foreground">
+              {title}
+            </span>
+          </div>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  )
+}
+
 export function ChampagneSidebar() {
   const router = useRouter()
   const pathname = usePathname()
+  const { user } = useUser()
+  const role = getDashboardRole(user)
+  const isAdmin = isAdminLike(role)
+  const isSuper = role === "superAdmin"
+
   // SETUP-027 - a screen with unsaved edits parks the navigation and asks first.
   const go = (url: string) => { useDirtyGuard.getState().guard(() => router.push(url)) }
 
@@ -301,10 +389,29 @@ export function ChampagneSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader><BusinessSwitcher /></SidebarHeader>
+      <SidebarHeader>{isAdmin ? <AdminHeader isSuper={isSuper} /> : <BusinessSwitcher />}</SidebarHeader>
 
       <SidebarContent className="overflow-x-hidden">
-        {drill === null ? (
+        {isAdmin ? (
+          <div key="admin-root" className="duration-200 animate-in fade-in-0">
+            <SidebarGroup>
+              <SidebarGroupLabel>Platform</SidebarGroupLabel>
+              <SidebarMenu>{ADMIN_PLATFORM.map((it) => <Item key={it.name} it={it} />)}</SidebarMenu>
+            </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel>Operations &amp; Queues</SidebarGroupLabel>
+              <SidebarMenu>{getAdminOperations(isSuper).map((it) => <Item key={it.name} it={it} />)}</SidebarMenu>
+            </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel>Directories</SidebarGroupLabel>
+              <SidebarMenu>{ADMIN_DIRECTORIES.map((it) => <Item key={it.name} it={it} />)}</SidebarMenu>
+            </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel>Platform &amp; Security</SidebarGroupLabel>
+              <SidebarMenu>{getAdminSecurity(isSuper).map((it) => <Item key={it.name} it={it} />)}</SidebarMenu>
+            </SidebarGroup>
+          </div>
+        ) : drill === null ? (
           <div key="root" className="duration-200 animate-in fade-in-0 slide-in-from-left-2">
             <SidebarGroup>
               <SidebarGroupLabel>Rozana</SidebarGroupLabel>
@@ -350,8 +457,10 @@ export function ChampagneSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
-        {/* The quiet trial / payment chip. Renders nothing for a healthy paid plan; hidden when the rail collapses to icons. */}
-        <div className="px-2 group-data-[collapsible=icon]:hidden"><PlanChip /></div>
+        {/* The quiet trial / payment chip. Only for vendors. */}
+        {!isAdmin && (
+          <div className="px-2 group-data-[collapsible=icon]:hidden"><PlanChip /></div>
+        )}
         <ChampagneUserMenu />
       </SidebarFooter>
       <SidebarRail />

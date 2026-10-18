@@ -28,10 +28,10 @@ import { NoBusinessFirstRun } from "@/components/dashboard/mainScreens/dashboard
 import { ProfileCompletionCard } from "@/components/dashboard/mainScreens/dashboard/redesigned/profile-completion-card"
 import { OverviewArtifact } from "@/components/dashboard/mainScreens/dashboard/artifact/overview-artifact"
 
-// Admin overview is vendor-console-free and only ever renders for admin-like
-// roles, so keep it out of the vendor bundle. Mirrors dashboard-view.tsx.
-const AdminDashboardView = dynamic(
-  () => import("@/components/dashboard/mainScreens/dashboard/admin-dashboard-view"),
+// Admin overview is vendor-console-free and renders the pixel-faithful
+// AdminOverviewArtifact in champagne styling.
+const AdminOverviewArtifact = dynamic(
+  () => import("@/components/dashboard/mainScreens/dashboard/artifact/admin-overview-artifact"),
   { ssr: false },
 )
 
@@ -83,7 +83,7 @@ interface RecentRow {
 export function OverviewRedesignedView() {
   const { user, isLoading } = useUser()
   if (isLoading) return null
-  if (isAdminLike(getDashboardRole(user))) return <AdminDashboardView />
+  if (isAdminLike(getDashboardRole(user))) return <AdminOverviewArtifact />
   // Vendor dashboard: pixel-faithful port of the approved design sample.
   return <OverviewArtifact />
 }
