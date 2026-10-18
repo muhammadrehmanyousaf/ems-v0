@@ -1,5 +1,4 @@
 import "../globals.css"
-import { interTextStyle } from "@/lib/fonts/local-fonts"
 import { PublicChrome } from "@/components/public-chrome"
 import { VenueUnavailableHost } from "@/components/venue/venue-unavailable-host"
 
@@ -10,6 +9,13 @@ import { VenueUnavailableHost } from "@/components/venue/venue-unavailable-host"
 // Marketplace") instead of the legacy "Modern Wedding Platform | AJOINT"
 // that was here before. Per-page `metadata` exports (e.g. /about, /careers)
 // override this anyway.
+
+// What `Inter(...).className` set on this wrapper: the sans face, from the --font-inter variable the ROOT layout sets on
+// <body> (lib/fonts/local-fonts.ts). WP40: this file must NOT import local-fonts. On Windows, Next 14.2 sorts layout CSS by
+// splitting entry paths on "/", so with a font module imported by two layouts the child layout wins the font CSS and every
+// route outside it (register, login, forgot-password ...) is left without its @font-face rules. One importer: the root layout
+// (scripts/wp40-fonts-check.mts).
+const interTextStyle = { fontFamily: "var(--font-inter)", fontStyle: "normal" } as const
 
 export default async function RootLayout({
   children,

@@ -180,5 +180,5 @@ export const fontVariables = {
   "--font-nastaliq": fontFamilies.nastaliq,
 } as CSSProperties
 
-/** What `Inter(...).className` set on the public wrapper in app/(main)/layout.tsx. */
-export const interTextStyle = { fontFamily: fontFamilies.inter, fontStyle: "normal" } as CSSProperties
+// (The public wrapper in app/(main)/layout.tsx uses `font-family: var(--font-inter)` and does not import this file: see
+// scripts/wp40-fonts-check.mts for why exactly one layout may import it.)
