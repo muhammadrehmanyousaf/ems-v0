@@ -2,12 +2,12 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "wedding-catering-cost-in-pakistan",
-  "title": "Wedding Catering Cost Per Head in Pakistan 2026: Rates, Tiers & How to Save",
-  "h1": "Wedding Catering Cost Per Head in Pakistan: Rates, Tiers & How to Save",
-  "metaDescription": "What is wedding catering cost per head in Pakistan? Indicative PKR per-head rate tiers (budget to five-star), dish counts, BBQ/live stations, the one-dish law and 8 FAQs.",
-  "eyebrow": "Wedding Budget Guide",
-  "updatedLabel": "June 2026",
-  "lead": "Wedding catering in Pakistan is usually priced per head, running an indicative PKR 800–1,800 for budget desi menus, PKR 1,800–3,500 standard, PKR 3,500–6,000 premium, and PKR 6,000+ for five-star spreads with live BBQ stations. Your total is per-head rate multiplied by guest count, so headcount is the single biggest lever — and every figure here is a market range, not a quote.",
+  "title": "Wedding Catering Cost Per Head in Pakistan (2026 Menu Rates & Packages)",
+  "h1": "Wedding Catering Cost Per Head in Pakistan: 2026 Menu Rates & Packages",
+  "metaDescription": "Complete 2026 wedding catering cost per head in Pakistan: per plate rates (PKR 1,200 - 8,000+), Biryani & BBQ menu packages, One-Dish rules, and caterer price list.",
+  "eyebrow": "Wedding Catering Pricing 2026",
+  "updatedLabel": "October 2026",
+  "lead": "Wedding catering in Pakistan is priced per head (per plate), running an indicative PKR 1,200–2,200 for classic one-dish menus (Biryani, Qorma, Naan, Kheer), PKR 2,500–4,500 for standard multi-course wedding spreads, and PKR 5,000–8,500+ for premium hotel banquets with live BBQ and sajji stations. Because food accounts for over 50% of your shaadi expense, guest count is the single most critical lever.",
   "authorName": "Wedding Wala Editorial Team",
   "breadcrumb": [
     {

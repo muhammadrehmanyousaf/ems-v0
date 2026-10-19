@@ -2,20 +2,24 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "dowry-jahez-guide-pakistan",
-  "title": "Dowry (Jahez) in Pakistan: Tradition, Law, Lists and the Debate",
-  "h1": "Dowry (Jahez) in Pakistan: Tradition, Law, Lists and the Debate Explained",
-  "metaDescription": "Dowry (jahez) in Pakistan explained: what it means, jahez vs haq mehr, the 1976 law and Rs 5,000 cap, typical lists, recovery after divorce, and the social debate.",
+  "title": "Complete Jahez List for Marriage in Pakistan (2026 Checklist & Saman List)",
+  "h1": "Complete Jahez List for Marriage in Pakistan: 2026 Saman Checklist, Laws & Recovery",
+  "metaDescription": "Download the complete Jahez list for marriage in Pakistan (2026 checklist): itemized saman-e-jahez breakdown (kitchen, electronics, furniture), legal template, and laws explained.",
   "eyebrow": "Wedding Culture & Law",
-  "updatedLabel": "June 2026",
-  "lead": "Jahez (dowry) is the property and goods a bride's family customarily gives at marriage in Pakistan. It is a subcontinental tradition, not an Islamic requirement, and is legally restricted under the Dowry and Bridal Gifts (Restriction) Act 1976. This guide covers the law, lists, Islamic stance and the social debate.",
+  "updatedLabel": "October 2026",
+  "lead": "Looking for a complete Jahez list for marriage in Pakistan? While jahez (dowry) is a cultural tradition rather than an Islamic obligation, millions of families prepare an itemized saman-e-jahez list to organize household gifts or legally document bridal property under the Dowry Act 1976. This comprehensive 2026 guide provides the full itemized jahez saman checklist, legal signed list template, court recovery process, and Islamic perspective.",
   "authorName": "Wedding Wala Editorial Team",
   "breadcrumb": [
+    {
+      "name": "Home",
+      "href": "/"
+    },
     {
       "name": "Guides",
       "href": "/blog"
     },
     {
-      "name": "Dowry (Jahez) in Pakistan",
+      "name": "Jahez List & Dowry Guide",
       "href": "/dowry-jahez-guide-pakistan"
     }
   ],
@@ -201,51 +205,87 @@ export const data: PillarData = {
     },
     {
       "type": "h2",
-      "text": "What is typically included in a jahez list?"
+      "text": "Complete Jahez Saman List for Marriage in Pakistan (Itemized 2026 Checklist)"
     },
     {
       "type": "p",
-      "text": "Jahez lists vary enormously by family, region and income. Below is a representative breakdown of common categories. No family is legally or religiously obligated to provide any of these items, and the figures shown are illustrative retail estimates only, not norms, recommendations or expectations."
+      "text": "For families preparing an organized saman-e-jahez inventory or drafting a formal court-admissible signed list, below is the complete itemized breakdown by room and category. Note: No family is legally or religiously required to provide these items — this checklist is structured to help you organize personal bridal assets cleanly."
     },
     {
       "type": "callout",
-      "text": "There is no legal or religious requirement to give jahez at all. Many couples in Pakistan now choose simple weddings with little or no dowry. Treat any list as optional and budget-driven, never as a standard you must meet.",
-      "label": "No obligation"
+      "text": "Islam places zero financial burden on the bride's parents to provide furniture or electronics. However, if gifts are given, maintaining an itemized, signed list ensures that all property remains legally protected under the bride's ownership.",
+      "label": "Bridal Property Protection"
     },
     {
       "type": "table",
-      "caption": "Table C: Common jahez categories (indicative only; illustrative retail estimates, not norms; no obligation to provide any of this)",
+      "caption": "Table C — Complete Itemized Jahez Saman List (Kitchen, Appliances, Furniture & Luggage)",
       "headers": [
         "Category",
-        "Typical items",
-        "Indicative PKR (illustrative, varies widely)"
+        "Essential Saman Items Included",
+        "Typical Quantity",
+        "Market Brand / Note"
       ],
       "rows": [
         [
-          "Kitchen",
-          "Dinnerware, cookware, pressure cooker, hotpots",
-          "Varies widely"
+          "Kitchen Crockery & Cookware",
+          "Dinner set (bone china/melamine), non-stick pots & pans set, pressure cooker, hot pots (set of 3), tea set, cutlery set, water set, spice rack, daily utensils",
+          "72-piece dinner set, 10-piece cooking set",
+          "Classic kitchen setup for independent living"
         ],
         [
-          "Bedroom furniture",
-          "Bed, side tables, dressing table set",
-          "Varies widely"
+          "Home Appliances & Electronics",
+          "Refrigerator (inverter), automatic washing machine, microwave oven, smart LED TV, heavy-weight dry iron / steam iron, vacuum cleaner, juicer/blender processor",
+          "1 unit per essential appliance",
+          "Energy-saving inverters preferred across Pakistani homes"
         ],
         [
-          "Living/dining",
-          "Sofa set, dining table",
-          "Varies widely"
+          "Master Bedroom Furniture",
+          "King-size wooden bed with orthopaedic mattress, 2 side tables, dressing table with illuminated mirror, 3-door / 4-door wardrobe (alamari)",
+          "1 complete master bedroom set",
+          "Solid wood (sheesham/chinar) or high-grade engineered wood"
         ],
         [
-          "Electronics",
-          "TV, fridge, washing machine, microwave",
-          "Varies widely"
+          "Bedding & Comfort Linens",
+          "Bridal quilt / comforter set (velvet/silk), 4-6 cotton daily bedsheet sets with pillow covers, AC blankets, mattress protector, bath towels set",
+          "1 luxury bridal set + 4 daily sets",
+          "High-thread-count Pakistani cotton"
         ],
         [
-          "Personal",
-          "Bridal clothing, shoes, makeup, jewellery",
-          "Varies widely"
+          "Living & Guest Seating",
+          "5-seater or 7-seater sofa set, center coffee table, 2 nesting side tables, console table with mirror (optional)",
+          "1 complete seating arrangement",
+          "Fabric or leatherette depending on home layout"
+        ],
+        [
+          "Bridal Trousseau & Personal Luggage",
+          "Bridal formal suits (Barat, Walima, post-wedding dawats), unstitched lawn/silk suits, branded makeup vanity box, shoes/heels collection, leather luggage trolley set (3 pieces)",
+          "10-25 formal/casual outfits, 3-piece suitcase set",
+          "Personal bridal belongings exclusively owned by the bride"
+        ],
+        [
+          "Islamic & Spiritual Gifts",
+          "Holy Quran with velvet rehal, Janamaz (prayer rugs set), tasbeeh, attar / perfumes",
+          "2 prayer sets",
+          "Customarily gifted during Nikah / Rukhsati"
         ]
+      ]
+    },
+    {
+      "type": "h2",
+      "text": "Legal format for signed Jahez list (Saman-e-Jahez template)"
+    },
+    {
+      "type": "p",
+      "text": "Under the Dowry and Bridal Gifts (Restriction) Act 1976 and the West Pakistan Family Courts Act 1964, a signed list of dowry articles is the single most powerful legal document if a dispute or divorce occurs. To be legally airtight, the list must include:"
+    },
+    {
+      "type": "ul",
+      "items": [
+        "Serial number and clear description of every item (including brand, model, and serial number for electronics).",
+        "Estimated monetary value at the time of purchase and accompanying retail receipts attached.",
+        "Clear statement that all listed articles remain the sole and exclusive personal property of the bride.",
+        "Signatures of the bride, the groom, the fathers or guardians of both sides, and two neutral male witnesses.",
+        "Photocopy attached to the bride's official Nikahnama copy."
       ]
     },
     {

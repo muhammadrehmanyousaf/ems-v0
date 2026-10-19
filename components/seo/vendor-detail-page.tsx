@@ -82,10 +82,30 @@ export async function generateVendorDetailMetadata(
   const vendor = await fetchVendorById(id)
   if (!vendor) return { title: "Not Found" }
 
-  const title = `${vendor.name} — ${vt.singular} in ${city.name}`
-  const description = vendor.description
-    ? vendor.description.slice(0, 155)
-    : `${vendor.name} — ${vt.singular.toLowerCase()} in ${city.name}, Pakistan. Book on ${SITE_NAME}.`
+  let title = `${vendor.name} — ${vt.singular} in ${city.name}`
+  let description = `${vendor.name} — ${vt.singular.toLowerCase()} in ${city.name}, Pakistan. Book on ${SITE_NAME}.`
+
+  if (input.typeSlug === "wedding-venues") {
+    title = `${vendor.name} (${city.name}) — Booking Price, Per Head Rates & Reviews (2026)`
+    description = `Planning an event at ${vendor.name} in ${city.name}? Check 2026 booking price, per head rates, guest capacity, photos, and verified reviews on ${SITE_NAME}.`
+  } else if (input.typeSlug === "wedding-photographers") {
+    title = `${vendor.name} (${city.name}) — Wedding Packages, Rates & Portfolio`
+    description = `Book ${vendor.name} in ${city.name}. Compare wedding photography and cinematography packages, rates, real portfolio photos & reviews on ${SITE_NAME}.`
+  } else if (input.typeSlug === "caterers") {
+    title = `${vendor.name} (${city.name}) — Wedding Catering Menu, Rates & Reviews`
+    description = `View authentic Pakistani wedding menus and per head rates for ${vendor.name} in ${city.name}. Compare wedding packages and reviews on ${SITE_NAME}.`
+  } else if (input.typeSlug === "bridal-makeup-artists") {
+    title = `${vendor.name} (${city.name}) — Bridal Makeup Charges & Portfolio`
+    description = `View ${vendor.name} bridal and party makeup packages in ${city.name}. Check real bride transformations, salon address, and reviews on ${SITE_NAME}.`
+  } else if (input.typeSlug === "wedding-mithai") {
+    title = `${vendor.name} (${city.name}) — Wedding Mithai Menu, Prices & Reviews`
+    description = `Order custom wedding mithai boxes from ${vendor.name} in ${city.name}. View sweet menu, per kg price list, and reviews on ${SITE_NAME}.`
+  } else {
+    title = `${vendor.name} — ${vt.singular} in ${city.name} (2026 Prices & Reviews)`
+    description = vendor.description
+      ? vendor.description.slice(0, 155)
+      : `Compare ${vendor.name} (${vt.singular.toLowerCase()}) in ${city.name}, Pakistan. Check rates, packages, and book on ${SITE_NAME}.`
+  }
 
   return buildPageMetadata({
     title,
@@ -364,9 +384,13 @@ export async function VendorDetailPage(input: PageInput) {
             */}
             <VenueAnswers raw={vendor.raw} />
 
-            {vendor.description && (
-              <p className="mt-5 font-bridal text-[14.5px] text-bridal-text leading-relaxed line-clamp-5">
+            {vendor.description ? (
+              <p className="mt-5 font-bridal text-[14.5px] text-bridal-text leading-relaxed">
                 {vendor.description}
+              </p>
+            ) : (
+              <p className="mt-5 font-bridal text-[14.5px] text-bridal-text leading-relaxed">
+                {vendor.name} is a trusted {vt.singular.toLowerCase()} serving couples across {city.name} and surrounding areas. Known for quality service across Mehndi, Barat, and Walima celebrations, {vendor.name} offers transparent booking options, bespoke packages, and verified support on Wedding Wala.
               </p>
             )}
 

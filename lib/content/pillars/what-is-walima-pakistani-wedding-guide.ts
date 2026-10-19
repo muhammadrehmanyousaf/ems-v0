@@ -2,12 +2,12 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "what-is-walima-pakistani-wedding-guide",
-  "title": "What Is a Walima? Meaning, Sunnah Significance & How to Plan the Reception (2026)",
-  "h1": "What Is a Walima? Meaning, Sunnah Significance & How to Plan the Reception",
-  "metaDescription": "What is a walima? The wedding reception after the nikah, hosted by the groom's side. Learn its Sunnah basis, when it's held, who pays, dress customs, the Punjab 2016 law, and how to plan one in Pakistan.",
+  "title": "What Is a Walima? Meaning in English, Sunnah Rules, Timing & Reception Guide (2026)",
+  "h1": "What Is a Walima? Meaning in English, Islamic Sunnah Rules & 2026 Planning Guide",
+  "metaDescription": "What is a walima? Meaning of walima in English and Islam, authentic Sunnah rules (who pays, timing, hadith), difference between Barat & Walima, and 2026 planning guide.",
   "eyebrow": "Wedding Guide",
-  "updatedLabel": "June 2026",
-  "lead": "A walima is the wedding reception banquet held after the nikah — the second part of an Islamic wedding, hosted and paid for by the groom's family. It is a Sunnah (strongly recommended), not obligatory. In Pakistan it is usually the final event, customarily held the day after the barat, and is commonly the bride's first public appearance as a bahu.",
+  "updatedLabel": "October 2026",
+  "lead": "What is a Walima? In simple terms, a Walima (often spelled Valima) is the celebratory Islamic wedding reception feast hosted by the groom's family after the Nikah (marriage contract) and consummation. In Pakistani wedding culture, the Walima is customarily the grand finale of the wedding festivities, marking the bride's official entry into her new home.",
   "authorName": "Wedding Wala Editorial Team",
   "breadcrumb": [
     {
@@ -19,27 +19,27 @@ export const data: PillarData = {
       "href": "/blog"
     },
     {
-      "name": "What Is a Walima",
+      "name": "What Is a Walima (Meaning & Guide)",
       "href": "/what-is-walima-pakistani-wedding-guide"
     }
   ],
   "sections": [
     {
+      "type": "callout",
+      "text": "Quick Definition: In English, 'Walima' translates to 'Wedding Banquet' or 'Marriage Reception Feast'. It is derived from the Arabic word 'Awlama' (أَوْلَمَ), meaning to assemble or gather people for a meal. In Islam, it is a strongly recommended Sunnah hosted and paid for exclusively by the groom or his family.",
+      "label": "Walima Meaning in English & Islam"
+    },
+    {
       "type": "h2",
-      "text": "What does \"walima\" mean?"
+      "text": "Walima meaning in English and Arabic origin"
     },
     {
       "type": "p",
-      "text": "Walima (وَلِيمَة) is the wedding feast or reception banquet held after the nikah. It is the second of the two parts of a Muslim wedding — the nikah (marriage contract) comes first, and the walima is the celebratory meal that follows. The word derives from the Arabic verb awlama (أَوْلَمَ), meaning to give a feast or gather people together, reflecting its purpose: to publicly announce and celebrate the marriage by bringing family and community together over a shared meal."
-    },
-    {
-      "type": "callout",
-      "text": "A walima is the post-nikah wedding reception, hosted and paid for by the groom's side. It is a Sunnah of the Prophet ﷺ (strongly recommended, not compulsory). In Pakistan it is typically the last event, customarily held the day after the barat.",
-      "label": "Quick answer"
+      "text": "The word Walima (وَلِيمَة) literally signifies a celebratory meal or banquet that brings people together to commemorate a union. In Islamic jurisprudence, it specifically refers to the post-wedding reception banquet hosted by the groom to publicly announce the consummation of the marriage. While the Nikah serves as the legal marriage contract, the Walima represents the communal celebration and thanksgiving."
     },
     {
       "type": "h2",
-      "text": "Is walima compulsory in Islam? (Sunnah, not fard)"
+      "text": "Is Walima compulsory in Islam? (Sunnah Mu'akkadah vs Fard)"
     },
     {
       "type": "p",

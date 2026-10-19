@@ -111,9 +111,18 @@ export function generateListicleMetadata(slug: string): Metadata {
   if (!parsed) return { title: "Not Found" }
   const { vendorType: vt, city } = parsed
 
+  const isVenue = vt.slug === "wedding-venues"
+  const title = isVenue
+    ? `Best Wedding Halls & Venues in ${city.name} (${LISTICLE_YEAR}) — Rates & Reviews`
+    : `Best ${vt.plural} in ${city.name} (${LISTICLE_YEAR}) — Prices & Reviews`
+
+  const description = isVenue
+    ? `The best wedding halls, marquees & marriage venues in ${city.name} (${LISTICLE_YEAR}), ranked by real couples. Compare per-head rates, packages & book on ${SITE_NAME}.`
+    : `The best ${vt.plural.toLowerCase()} in ${city.name} (${LISTICLE_YEAR}), ranked by real couples. Compare ratings, packages & PKR prices, then book a ${vt.singular.toLowerCase()} in minutes on ${SITE_NAME}.`
+
   return buildPageMetadata({
-    title: `Best ${vt.plural} in ${city.name} (${LISTICLE_YEAR})`,
-    description: `The best ${vt.plural.toLowerCase()} in ${city.name}, ranked by real couples. Compare ratings, packages & PKR prices, then book a ${vt.singular.toLowerCase()} in minutes on ${SITE_NAME}.`,
+    title,
+    description,
     path: `/best/${slug}`,
     ogType: "article",
   })

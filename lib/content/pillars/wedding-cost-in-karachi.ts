@@ -2,12 +2,12 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "wedding-cost-in-karachi",
-  "title": "Wedding Cost in Karachi 2026: Full Budget Breakdown by Tier, Category & Area",
-  "h1": "Wedding Cost in Karachi: Full Budget Breakdown by Tier, Category & Area",
-  "metaDescription": "How much does a wedding cost in Karachi? Indicative 2026 budget tiers (PKR 2M to 18M+), a per-category breakdown, cost by area (Clifton, DHA, Bahria Town), peak-season notes, how to save and 8 FAQs.",
-  "eyebrow": "Wedding Budget Guide",
-  "updatedLabel": "June 2026",
-  "lead": "A full wedding in Karachi typically costs from around PKR 2-4 million for a budget affair to PKR 10-18 million and well beyond for an elite one, with most middle-class Karachi weddings landing roughly PKR 5-9 million. Karachi carries the highest average wedding spend of any Pakistani metro, but it also has the country's biggest venue supply — from Clifton beachfront marquees to inland banquet halls — so your final total is driven mainly by guest count, area, venue tier and season.",
+  "title": "Wedding Cost in Karachi (2026): Per Head Rates, Banquet Prices & Budget Breakdown",
+  "h1": "Wedding Cost in Karachi (2026): Per Head Rates, Banquet Prices & Full Budget Guide",
+  "metaDescription": "How much does a wedding cost in Karachi? 2026 per head rates (PKR 1,800 - 15,000+), banquet hall prices in DHA & Clifton, catering, and full budget calculator.",
+  "eyebrow": "Karachi Wedding Budget Guide 2026",
+  "updatedLabel": "October 2026",
+  "lead": "A full wedding in Karachi typically costs from around PKR 2-4 million for a budget affair to PKR 10-18 million and well beyond for an elite one, with most middle-class Karachi weddings landing roughly PKR 5-9 million. Karachi carries the highest wedding volume and banquet density in Pakistan — with per head catering rates scaling across Clifton, DHA Phase 8, North Nazimabad, Gulshan, and Bahria Town.",
   "authorName": "Wedding Wala Editorial Team",
   "breadcrumb": [
     {
