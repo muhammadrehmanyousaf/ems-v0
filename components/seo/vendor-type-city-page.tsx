@@ -150,9 +150,18 @@ export function generateVendorTypeCityMetadata(
   const city = getCity(citySlug)
   if (!vt || !city) return { title: "Not Found" }
 
+  const isVenue = typeSlug === "wedding-venues"
+  const title = isVenue
+    ? `Wedding Halls & Venues in ${city.name} (2026 Price List & Rates)`
+    : `${vt.plural} in ${city.name} (2026 Prices, Packages & Reviews)`
+
+  const description = isVenue
+    ? `Compare top wedding halls, marquees & marriage venues in ${city.name}. View 2026 per-head rates, booking price lists, capacity, photos & reviews on ${SITE_NAME}.`
+    : `Compare the best ${vt.plural.toLowerCase()} in ${city.name}. Indicative PKR prices, verified packages, customer reviews, and direct booking on ${SITE_NAME}.`
+
   return buildPageMetadata({
-    title: `${vt.plural} in ${city.name} — Prices, Packages & FAQs`,
-    description: `Compare ${vt.plural.toLowerCase()} in ${city.name}. Indicative PKR prices & packages, ratings, what to check before booking & FAQs (2026) — on ${SITE_NAME}.`,
+    title,
+    description,
     path: `/${vt.slug}/${city.slug}`,
   })
 }

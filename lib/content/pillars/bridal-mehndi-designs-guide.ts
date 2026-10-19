@@ -2,49 +2,71 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   slug: "bridal-mehndi-designs-guide",
-  title: "Bridal Mehndi Designs 2026: Styles, Placement & How to Choose (Pakistan)",
-  h1: "Bridal Mehndi Designs: Styles, Placement & How to Choose",
+  title: "100+ Bridal Mehndi Designs 2026: Trending Pakistani Front & Back Hand Patterns, Feet & Dulhan Styles",
+  h1: "100+ Bridal Mehndi Designs 2026: Pakistani Front & Back Patterns, Feet & Dulhan Trends",
   metaDescription:
-    "A complete Pakistani bridal mehndi design guide for 2026: styles (Pakistani, Arabic, Indian, Khaleeji, minimal), hands vs feet vs arms, designs by event, darkening tips and aftercare.",
-  eyebrow: "Bridal Inspiration",
-  updatedLabel: "June 2026",
+    "Explore the top Pakistani bridal mehndi designs for 2026: intricate front and back hand patterns, royal dulhan styles, feet mehndi, and aftercare tips for a deep, rich stain.",
+  eyebrow: "Bridal Inspiration & Trends 2026",
+  updatedLabel: "October 2026",
   lead:
-    "For a Pakistani bride, the classic choice is an intricate full-hands-and-feet design — most often a dense Pakistani or Indian style for the Mehndi and Barat, with the groom's initials hidden in the pattern. Arabic and minimal styles suit lighter, faster looks for the Nikah or for guests. This guide explains every style, where to place it, and how to choose the design that fits your events.",
+    "For a Pakistani bride, the quintessential bridal look requires breathtaking mehndi artistry — from intricate front-and-back hand patterns featuring royal jaal, paisleys, and lotus motifs to elegant foot and ankle accents. Whether you are looking for a lavish traditional dulhan look or a contemporary minimal design for your Nikah, this 2026 bridal mehndi design guide covers every trending style, front-and-back placements, and secret darkening tips.",
   authorName: "Wedding Wala Editorial Team",
   breadcrumb: [
     { name: "Home", href: "/" },
     { name: "Blog", href: "/blog" },
-    { name: "Bridal Mehndi Designs", href: "/bridal-mehndi-designs-guide" },
+    { name: "Bridal Mehndi Designs 2026", href: "/bridal-mehndi-designs-guide" },
   ],
   sections: [
     {
       type: "h2",
-      text: "Bridal mehndi design styles explained",
+      text: "Trending 2026 Pakistani bridal mehndi designs at a glance",
     },
     {
       type: "p",
-      text: "Most bridal mehndi falls into a handful of recognisable styles. Brides often mix them — a dense Pakistani or Indian pattern for the main day, and a lighter Arabic or minimal look for a smaller function. Knowing the vocabulary helps you brief your artist precisely.",
+      text: "The 2026 wedding season in Pakistan is defined by two contrasting aesthetics: maximalist royal dulhan designs (full forearms, dense jaal, custom groom portraits, and intricate floral fillings) and refined minimalist symmetry (bold lotus motifs, negative space cuffs, and jewellery-style bel). Knowing these distinct styles helps you choose the perfect bridal look for your Mehndi, Barat, and Nikah.",
     },
     {
       type: "table",
-      caption: "Table A — Bridal mehndi styles at a glance",
-      headers: ["Style", "Look", "Coverage", "Best for"],
+      caption: "Table A — 2026 Bridal Mehndi Design Styles & Placement",
+      headers: ["Design Style", "Key Motifs & Characteristics", "Coverage", "Ideal Function"],
       rows: [
-        ["Pakistani / traditional", "Fine, dense detailing — jaal (net), bel (vines), gol tikki (central motif), paisleys", "Full hands + feet, often up the arms", "Mehndi & Barat (the main bridal look)"],
-        ["Indian", "Very intricate, story-telling motifs — dulha-dulhan figures, peacocks, often the groom's name hidden", "Full hands + feet, forearms", "Brides wanting maximal, personal detail"],
-        ["Arabic", "Bold, flowing floral trails with open space; faster to apply", "Lighter — back of hand, single trail", "Nikah, guests, a quicker second look"],
-        ["Khaleeji / Gulf", "Large floral motifs, glossy finish, sometimes with subtle colour", "Medium, statement placement", "Modern brides wanting a softer, airy look"],
-        ["Minimal / modern", "Negative space, fine-line, small motifs, jewellery-style", "Light — fingers, wrist, single sprigs", "Engagement, Nikah, understated brides"],
+        ["Royal Pakistani / Dulhan", "Dense jaal (net), gol tikki, peacocks, jhumkas, groom's initials", "Full hands (front & back), forearms, feet", "Mehndi & Barat (Main Bridal Look)"],
+        ["Contemporary Lotus & Jaal", "Bold lotus cut-outs, negative space geometry, fine shading", "Palms, back of hand, wrists", "Modern Barat & Reception"],
+        ["Arabic / Indo-Arabic", "Bold flowing floral trails (bel), leaf vines, open skin contrast", "Diagonal back of hand, wrists", "Nikah, Qawwali Night & Bridesmaids"],
+        ["Khaleeji / Gulf Pattern", "Large botanical silhouettes, shaded petals, shaded fingertips", "Medium coverage, statement palms", "Walima & Intimate Nikah"],
+        ["Minimalist Jewellery Style", "Hathphool chains, delicate bracelet cuffs, intricate finger accents", "Fingers & wrists only", "Engagement (Mangni) & Court Nikah"],
       ],
     },
     {
       type: "callout",
-      label: "Browsing real designs",
-      text: "Photos beat descriptions for mehndi. Every artist's portfolio shows their actual line-work and style range — browse and compare real mehndi-artist portfolios on Wedding Wala before you book, since hand-feel and detail vary a lot between artists.",
+      label: "Visual Inspiration & Portfolios",
+      text: "Every bridal mehndi artist has a unique signature line thickness and stain technique. Compare real bridal mehndi portfolios and book vetted mehndi artists across Karachi, Lahore, Islamabad, and Faisalabad directly on Wedding Wala.",
     },
     {
       type: "h2",
-      text: "Mehndi by placement: hands, feet and arms",
+      text: "Pakistani bridal mehndi designs front and back (hands & forearms)",
+    },
+    {
+      type: "p",
+      text: "A complete Pakistani bridal mehndi layout is thoughtfully divided between the palms (front) and the back of the hands, each designed to serve different photographic angles during your wedding ceremonies.",
+    },
+    {
+      type: "table",
+      caption: "Table B — Front vs Back Hand Bridal Mehndi Design Guide",
+      headers: ["Placement", "Photographic Focus", "Recommended Motifs", "Pro Styling Tip"],
+      rows: [
+        ["Front of Hands (Palms & Inner Forearms)", "Arsi Mushaf ceremony, ring close-ups, wedding vows", "Storytelling scenes (shehnai, baraat procession, dulha initials, intricate peacocks)", "Leave the center palm slightly shaded to maximize darkness for the groom's name search."],
+        ["Back of Hands (Dorsal & Outer Forearms)", "Stage portraits, dupatta adjustments, jewellery shots", "Geometric jaal (mesh), mandala chakras, hathphool chains, negative space florals", "Ensure wrist cuff transitions seamlessly into your bridal bangles and chooda."],
+        ["Fingertips & Nails", "Rukhsati and ring exchange photography", "Mandala caps, leafy vines, linear checks, reversed negative space dots", "Avoid solid dipping; delicate line work on knuckles creates a much more refined look in 4K video."],
+      ],
+    },
+    {
+      type: "h2",
+      text: "Bridal feet and ankle mehndi designs",
+    },
+    {
+      type: "p",
+      text: "Bridal foot mehndi is applied with meticulous precision to complement your payal (anklets) and bridal khussas. Trending 2026 foot designs focus on delicate mandala medallions on the instep, accented by lace-like jaal extending along the sides and dainty toe caps.",
     },
     {
       type: "p",

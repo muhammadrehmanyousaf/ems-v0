@@ -2,12 +2,12 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "wedding-cost-in-pakistan",
-  "title": "Wedding Cost in Pakistan 2026: Full Budget Breakdown by Category & City",
-  "h1": "Wedding Cost in Pakistan: Full Budget Breakdown by Category & City",
-  "metaDescription": "How much does a wedding cost in Pakistan? Indicative 2026 budget tiers (PKR 1.5M to 15M+), a full per-category breakdown with % of budget, cost by city, and 8 FAQs.",
-  "eyebrow": "Wedding Budget Guide",
-  "updatedLabel": "June 2026",
-  "lead": "A typical wedding in Pakistan costs anywhere from roughly PKR 1.5-3.5 million for a budget affair to PKR 8-15 million and well beyond for an elite one, with most middle-class weddings landing around PKR 4-7 million. Catering is the biggest single cost, and your final total is driven mainly by guest count, city, venue tier and season.",
+  "title": "Wedding Cost in Pakistan (2026): Per Head Rates, Budget Breakdown & Guest Tiers",
+  "h1": "Wedding Cost in Pakistan (2026): Per Head Rates, Guest Tiers & Full Budget Breakdown",
+  "metaDescription": "How much does a wedding cost in Pakistan? Complete 2026 budget guide: per head reception rates (PKR 1,500 - 15,000+), total costs for 100, 150, 200, 250, 400 guests, and per-category expenses.",
+  "eyebrow": "Wedding Budget Guide 2026",
+  "updatedLabel": "October 2026",
+  "lead": "A typical wedding in Pakistan costs anywhere from roughly PKR 1.5-3.5 million for a budget affair to PKR 8-15 million and well beyond for an elite one, with most middle-class weddings landing around PKR 4-7 million. Catering and per-head reception fees represent the single largest expense, scaling directly with your guest count (100, 200, 250, or 400+ guests), city, venue tier, and season.",
   "authorName": "Wedding Wala Editorial Team",
   "breadcrumb": [
     {
@@ -26,11 +26,67 @@ export const data: PillarData = {
   "sections": [
     {
       "type": "p",
-      "text": "Almost every Pakistani family planning a shaadi starts with the same anxious question: how much is this actually going to cost? This guide answers it directly. It gives indicative total-cost tiers from budget to elite, then breaks the spend down category by category — venue, catering, photography, decor, bridal makeup, bridal and groom wear, mehndi, cars, invitations and jewellery — with each category's typical share of the budget. It then shows how the same wedding costs more in Karachi, Lahore and Islamabad than in tier-2 cities, explains how to bring the number down, and is honest throughout about why no single 'average' figure is reliable. Set your own number with our budget tool and use these ranges to sanity-check every quote you receive."
+      "text": "Almost every Pakistani family planning a shaadi starts with the same anxious question: how much does a wedding cost in Pakistan? This guide answers it directly. It breaks down per-head costs for wedding receptions, provides exact total budgets for 100, 150, 200, 250, and 400 guests, and provides line-by-line cost estimates for venue, catering, photography, bridal wear, and decor across Karachi, Lahore, and Islamabad."
     },
     {
       "type": "h2",
-      "text": "How much does a wedding cost in Pakistan?"
+      "text": "Per head cost for wedding reception & total cost by guest count"
+    },
+    {
+      "type": "p",
+      "text": "Because food and venue space are charged per plate or per head, your total shaadi budget scales exponentially with your guest list. Below is an indicative breakdown of total wedding costs based on typical Pakistani guest counts across budget, mid-range, and luxury tiers."
+    },
+    {
+      "type": "table",
+      "caption": "Table 1 — Total Wedding Cost & Per Head Rates by Guest Count (PKR — 2026 Benchmarks)",
+      "headers": [
+        "Guest Count",
+        "Typical Per Head Menu (PKR)",
+        "Estimated Catering & Venue Total",
+        "Estimated All-Inclusive Wedding Budget"
+      ],
+      "rows": [
+        [
+          "100 Person Wedding (Intimate Nikah / Hall)",
+          "PKR 1,800 – 3,500 / head",
+          "PKR 250,000 – 450,000",
+          "PKR 1,200,000 – 2,200,000"
+        ],
+        [
+          "150 Person Wedding (Small Banquet / Lawns)",
+          "PKR 2,000 – 4,000 / head",
+          "PKR 350,000 – 700,000",
+          "PKR 1,800,000 – 3,200,000"
+        ],
+        [
+          "200 Person Wedding (Standard Family Cap)",
+          "PKR 2,200 – 5,500 / head",
+          "PKR 500,000 – 1,200,000",
+          "PKR 2,500,000 – 4,500,000"
+        ],
+        [
+          "250 Person Wedding (Mid-Tier Barat / Walima)",
+          "PKR 2,500 – 6,500 / head",
+          "PKR 700,000 – 1,800,000",
+          "PKR 3,500,000 – 6,500,000"
+        ],
+        [
+          "400 Person Wedding (Large Marquee Celebration)",
+          "PKR 3,000 – 8,500 / head",
+          "PKR 1,400,000 – 3,800,000",
+          "PKR 6,000,000 – 11,000,000"
+        ],
+        [
+          "500+ Person Wedding (Grand / Elite Multi-Day)",
+          "PKR 4,500 – 15,000+ / head",
+          "PKR 2,500,000 – 8,000,000+",
+          "PKR 12,000,000 – 25,000,000+"
+        ]
+      ]
+    },
+    {
+      "type": "h2",
+      "text": "How much does a wedding cost in Pakistan by tier?"
     },
     {
       "type": "p",

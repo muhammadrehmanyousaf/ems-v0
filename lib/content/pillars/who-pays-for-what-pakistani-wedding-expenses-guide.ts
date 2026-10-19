@@ -2,14 +2,18 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "who-pays-for-what-pakistani-wedding-expenses-guide",
-  "title": "Who Pays for What in a Pakistani Wedding? Barat vs Walima Expense Guide",
-  "h1": "Who Pays for What in a Pakistani Wedding? Bride vs Groom Family Expense Guide",
-  "metaDescription": "Who pays for Pakistani wedding expenses? Traditionally the bride's family funds the Barat and the groom's family the Walima. Full bride-vs-groom split, mahr, jahez vs bari, the law, and indicative PKR costs.",
-  "eyebrow": "Wedding Planning & Budget",
-  "updatedLabel": "June 2026",
-  "lead": "Traditionally, the bride's family pays for the Barat (the main wedding) and the groom's family pays for the Walima (the reception). Religiously, the one payment that is obligatory on the groom is mahr (haq mehr), which goes to the bride herself; hosting the walima is a strongly recommended Sunnah customarily borne by his family. Everything else — jahez from the bride's side, bari from the groom's, and who buys whose outfit — is custom, varies by family, and is increasingly shared today.",
+  "title": "Who Pays for What in a Pakistani Wedding? (Barat vs Walima Cost Split & Islamic Rules)",
+  "h1": "Who Pays for What in a Pakistani Wedding? Barat vs Walima Cost Split & Islamic Guide",
+  "metaDescription": "In Pakistani culture, who pays for the wedding? Complete breakdown of bride vs groom family expenses, Barat vs Walima split, who pays in Islam (Mahr & Sunnah), and modern 50/50 budgeting.",
+  "eyebrow": "Wedding Planning & Budget 2026",
+  "updatedLabel": "October 2026",
+  "lead": "In Pakistani culture, wedding expenses are customarily divided between the two families: the bride's family pays for the Barat (the main wedding and feast), while the groom's family pays for the Walima (the reception banquet). In Islam, the only obligatory financial responsibility on the groom is Mahr (Haq Mehr) paid directly to the bride, while hosting the Walima is a strongly emphasized Sunnah. Everything else is social tradition.",
   "authorName": "Wedding Wala Editorial Team",
   "breadcrumb": [
+    {
+      "name": "Home",
+      "href": "/"
+    },
     {
       "name": "Guides",
       "href": "/blog"
@@ -20,6 +24,19 @@ export const data: PillarData = {
     }
   ],
   "sections": [
+    {
+      "type": "callout",
+      "text": "Direct Answer: In Pakistani tradition, the bride's side funds the Barat venue, catering, and bridal photography. The groom's side pays for the Walima venue and catering, the groom's sherwani, the bride's gold/bari gifts, and the mandatory Haq Mehr. Today, many modern Pakistani couples opt for a 50/50 joint split to reduce financial pressure on both parents.",
+      "label": "In Pakistani Culture: Who Pays for the Wedding?"
+    },
+    {
+      "type": "h2",
+      "text": "How many days is a Pakistani wedding? (Event sequence & who pays)"
+    },
+    {
+      "type": "p",
+      "text": "A traditional Pakistani wedding spans 3 to 5 distinct days of celebrations. Below is the standard chronological sequence and the customary financial split for each function:"
+    },
     {
       "type": "h2",
       "text": "The short answer: Barat vs Walima at a glance"

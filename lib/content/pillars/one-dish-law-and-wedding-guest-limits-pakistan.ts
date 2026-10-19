@@ -2,20 +2,24 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "one-dish-law-and-wedding-guest-limits-pakistan",
-  "title": "One Dish Law Pakistan: Wedding Rules, Guest Limits & Penalties",
-  "h1": "The One-Dish Law and Wedding Guest Limits in Pakistan: A Complete Guide",
-  "metaDescription": "A plain-English, province-by-province guide to Pakistan's one-dish law, the 200-guest cap, the 10pm rule, banned items, and real fines for weddings.",
-  "eyebrow": "Wedding Laws & Compliance",
-  "updatedLabel": "June 2026",
-  "lead": "The \"one-dish law\" restricts wedding hosts to serving a single main meal to curb wasteful spending. In Punjab (Act 2016) and Islamabad it is enforced with a 10pm cut-off; Sindh and Islamabad add a 200-guest cap. The Punjab statute sets a penalty of up to one month's simple imprisonment plus a Rs 50,000–2,000,000 fine. Rules are province-specific, so always confirm the position for your city.",
+  "title": "One Dish Wedding Law Pakistan (2026 Rules, Menu List, Guest Limits & Fines)",
+  "h1": "One Dish Wedding Law Pakistan (2026 Rules, Menu List, Guest Limits & Penalties)",
+  "metaDescription": "Complete 2026 guide to Pakistan's One-Dish wedding law: permitted menu items (Punjab Marriage Functions Act 2016), 200-guest limit, 10 PM cut-off, and fine penalties.",
+  "eyebrow": "Wedding Laws & Compliance 2026",
+  "updatedLabel": "October 2026",
+  "lead": "The \"one-dish law\" restricts wedding hosts across Pakistan to serving a single main course to curb ostentatious and wasteful spending. In Punjab (under the Punjab Marriage Functions Act 2016) and Islamabad, it is strictly enforced alongside a mandatory 10:00 PM lights-off cut-off; Sindh and Islamabad enforce a 200–300 guest limit. Penalties include fines up to PKR 2,000,000 and sealing of wedding halls.",
   "authorName": "Wedding Wala Editorial Team",
   "breadcrumb": [
+    {
+      "name": "Home",
+      "href": "/"
+    },
     {
       "name": "Guides",
       "href": "/blog"
     },
     {
-      "name": "One-Dish Law & Wedding Guest Limits",
+      "name": "One-Dish Law Pakistan",
       "href": "/one-dish-law-and-wedding-guest-limits-pakistan"
     }
   ],

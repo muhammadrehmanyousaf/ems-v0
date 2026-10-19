@@ -2,12 +2,12 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "wedding-venue-cost-in-lahore",
-  "title": "Wedding Venue Cost in Lahore 2026: Marquee, Banquet Hall, Farmhouse & Hotel Prices",
-  "h1": "Wedding Venue Cost in Lahore: Marquee, Banquet Hall, Farmhouse & Hotel Prices",
-  "metaDescription": "What does a wedding venue cost in Lahore? Indicative PKR per-head and hall-rental ranges for marquees, banquet halls, farmhouses and hotel ballrooms, plus peak premiums and 8 FAQs.",
-  "eyebrow": "Wedding Budget Guide",
-  "updatedLabel": "June 2026",
-  "lead": "A wedding venue in Lahore is usually priced per head or as a hall rental. Indicative per-head rates run from roughly PKR 1,500–3,000 at budget marquees and community halls, PKR 3,000–6,000 at mid-range banquet halls, and PKR 6,000–15,000+ at premium hotel ballrooms and luxury farmhouses. Your final cost depends on whether catering is in-house, your guest count, the area and the date.",
+  "title": "Wedding Halls in Lahore with Rates (2026 Price List & Per Head Cost)",
+  "h1": "Wedding Halls in Lahore with Rates: 2026 Price List & Per Head Booking Guide",
+  "metaDescription": "Complete 2026 rates for wedding halls in Lahore: per head prices (PKR 1,500 - 15,000+), luxury marquees, small event venues (50-200 guests), and hall booking price list.",
+  "eyebrow": "Lahore Venue Pricing Guide 2026",
+  "updatedLabel": "October 2026",
+  "lead": "Searching for wedding halls in Lahore with rates and transparent price lists? Marriage hall booking in Lahore is primarily priced per head (ranging from PKR 1,500 to 15,000+ per guest) or as a flat hall rental for independent catering. Whether you need a small event venue for an intimate 100-guest Nikah or an extravagant luxury marquee on Bedian Road or Raiwind Road, this comprehensive 2026 price guide breaks down rates across all major Lahore localities.",
   "authorName": "Wedding Wala Editorial Team",
   "breadcrumb": [
     {
@@ -19,14 +19,105 @@ export const data: PillarData = {
       "href": "/blog"
     },
     {
-      "name": "Wedding Venue Cost in Lahore",
+      "name": "Wedding Halls in Lahore Rates",
       "href": "/wedding-venue-cost-in-lahore"
     }
   ],
   "sections": [
     {
       "type": "p",
-      "text": "Lahore couples ask the same question first: how much will the venue cost? This guide answers it directly with indicative PKR ranges, then explains the two ways Lahore venues charge (per head versus hall rental), what is and isn't included, how marquees, banquet halls, farmhouses and hotel ballrooms differ, how capacity and area (DHA, Bahria Town, Gulberg, Model Town, Bedian Road) move the price, and what peak winter dates add. When you are ready to compare real options and check availability for your dates, browse and contact Lahore wedding venues on our hub."
+      "text": "Lahore couples ask the same question first: how much do wedding halls in Lahore cost? This guide answers it directly with updated 2026 PKR price lists, per-head rates for luxury banquet halls, small event venues (50–200 guests), and locality breakdowns across DHA, Gulberg, Bahria Town, Johar Town, and Bedian Road."
+    },
+    {
+      "type": "h2",
+      "text": "Small event venues in Lahore with prices (50 to 200 guests)"
+    },
+    {
+      "type": "p",
+      "text": "For intimate ceremonies like Baat Pakki, Dholki, small Mehndi, or close-family Nikahs, booking a 500-person marquee is impractical. Lahore now offers dedicated boutique event spaces and private banquet rooms that cater specifically to 50–200 guests with customized per-head catering or flat hall rental fees."
+    },
+    {
+      "type": "table",
+      "caption": "Table 1 — Small Event Venues in Lahore: Capacity & Estimated Rates (PKR)",
+      "headers": [
+        "Venue Style / Type",
+        "Ideal Guest Capacity",
+        "Typical Per Head Rate",
+        "Hall-Only Rental Option",
+        "Best Lahore Localities"
+      ],
+      "rows": [
+        [
+          "Boutique Banquet Rooms",
+          "50 – 120 guests",
+          "PKR 2,000 – 3,800 / head",
+          "PKR 60,000 – 150,000 / slot",
+          "Gulberg, MM Alam Road, DHA Phase 5"
+        ],
+        [
+          "Rooftop / Glasshouse Cafes & Lawns",
+          "60 – 150 guests",
+          "PKR 2,500 – 4,500 / head",
+          "PKR 80,000 – 200,000 / event",
+          "Gulberg III, Model Town, Cantt"
+        ],
+        [
+          "Community Club Halls",
+          "80 – 200 guests",
+          "PKR 1,500 – 2,800 / head",
+          "PKR 40,000 – 100,000 (members/public)",
+          "Model Town Club, Defence Club DHA, Johar Town"
+        ],
+        [
+          "Mini Farmhouse Lawns",
+          "100 – 200 guests",
+          "PKR 2,800 – 5,500 / head",
+          "PKR 150,000 – 350,000 / day",
+          "Bedian Road, Barki Road, Canal Bank"
+        ]
+      ]
+    },
+    {
+      "type": "h2",
+      "text": "Luxury wedding halls in Lahore with prices (500+ guests)"
+    },
+    {
+      "type": "p",
+      "text": "For grand Barat and Walima celebrations, Lahore's marquee complexes and 5-star hotel ballrooms offer state-of-the-art climate control, bespoke stage setups, crystal chandeliers, and expansive valet parking."
+    },
+    {
+      "type": "table",
+      "caption": "Table 2 — Luxury Wedding Halls & Marquees in Lahore (Rates & Amenities)",
+      "headers": [
+        "Venue Category",
+        "Per Head Range (PKR)",
+        "Minimum Guest Guarantee",
+        "Included Amenities",
+        "Prime Examples"
+      ],
+      "rows": [
+        [
+          "5-Star Hotel Ballrooms",
+          "PKR 7,500 – 16,000+ / head",
+          "250 – 500 guests",
+          "Full central HVAC, multi-course buffet, complimentary bridal suite",
+          "Pearl Continental (PC), Nishat Hotel Emporium, Avari"
+        ],
+        [
+          "Signature Marquee Complexes",
+          "PKR 4,500 – 9,000 / head",
+          "350 – 600 guests",
+          "High-ceiling trussing, designer chandeliers, sound system, VIP lounge",
+          "Garrison Golf & Country Club, Royal Palm, Areej Marquee"
+        ],
+        [
+          "Bedian Luxury Event Estates",
+          "PKR 5,000 – 12,000 / head",
+          "300 – 800 guests",
+          "Lush landscaped lawns, private lake / pool settings, fireworks clearance",
+          "Topaz / Castello, Renoir by Zafar, Bedian Farmhouses"
+        ]
+      ]
     },
     {
       "type": "h2",

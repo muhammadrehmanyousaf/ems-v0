@@ -2,20 +2,24 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "pakistani-wedding-checklist-and-timeline",
-  "title": "Pakistani Wedding Checklist & Month-by-Month Timeline | Wedding Wala",
-  "h1": "Pakistani Wedding Planning Checklist and Month-by-Month Timeline",
-  "metaDescription": "A complete Pakistani wedding planning checklist with a month-by-month timeline, vendor booking lead times, nikah paperwork steps, and an indicative budget split.",
-  "eyebrow": "Planning Guides",
-  "updatedLabel": "June 2026",
-  "lead": "Start planning a Pakistani wedding 9-12 months out, with a season-aware countdown that locks venue and date first, then layers in photographer, makeup, attire, caterer, mehndi artist, decor, and the nikah paperwork. This checklist gives you the full month-by-month timeline, vendor lead times, an indicative budget split, and a 3-month compressed plan.",
+  "title": "Pakistani Wedding Checklist & 12-Month Timeline (2026 Planning Guide)",
+  "h1": "Pakistani Wedding Checklist & 12-Month Month-by-Month Timeline (2026)",
+  "metaDescription": "The ultimate Pakistani wedding planning checklist with month-by-month timeline, vendor booking lead times, peak winter season guide, and nikah preparation.",
+  "eyebrow": "Wedding Planning Guides 2026",
+  "updatedLabel": "October 2026",
+  "lead": "Planning a Pakistani wedding requires juggling dates, venues, photographers, caterers, and multiple multi-day events. For peak winter wedding season in Pakistan (November to February), starting 9–12 months ahead ensures your dream banquet hall and top vendors are locked in. This 2026 master checklist provides a month-by-month timeline, countdown lead times, and budget milestones.",
   "authorName": "Wedding Wala Editorial Team",
   "breadcrumb": [
+    {
+      "name": "Home",
+      "href": "/"
+    },
     {
       "name": "Planning Guides",
       "href": "/blog"
     },
     {
-      "name": "Pakistani Wedding Checklist & Timeline",
+      "name": "Wedding Checklist & Timeline",
       "href": "/pakistani-wedding-checklist-and-timeline"
     }
   ],

@@ -2,12 +2,12 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "wedding-photography-cost-in-karachi",
-  "title": "Wedding Photography Cost in Karachi 2026: Packages, Prices & How to Choose",
-  "h1": "Wedding Photography Cost in Karachi: Packages, Prices & How to Choose",
-  "metaDescription": "What does wedding photography cost in Karachi? Indicative PKR package tiers (budget to luxury), what each includes, per-event notes, a how-to-choose checklist, when to book and 8 FAQs.",
-  "eyebrow": "Wedding Photography Guide",
-  "updatedLabel": "June 2026",
-  "lead": "Wedding photography in Karachi typically runs from a few tens of thousands of rupees for single-event budget coverage to several hundred thousand — and PKR 1,000,000+ for luxury multi-day teams. Your final price is driven by how many events you cover, team size, candid vs cinematic work, drone, album quality and how many edited photos you receive.",
+  "title": "Wedding Photography Cost in Karachi (2026 Packages & Price List)",
+  "h1": "Wedding Photography Cost in Karachi: 2026 Packages, Prices & Studio Guide",
+  "metaDescription": "Complete 2026 wedding photography packages and prices in Karachi: single event rates (PKR 35,000+), DHA & Clifton multi-day cinematic teams, drone coverage, and reviews.",
+  "eyebrow": "Karachi Photography Rates 2026",
+  "updatedLabel": "October 2026",
+  "lead": "Looking for wedding photography costs and packages in Karachi? Karachi wedding studios typically charge from PKR 35,000 to PKR 160,000 for single-event coverage, with complete 3-day (Mehndi, Barat, Walima) cinematic photo and video packages ranging from PKR 190,000 to over PKR 850,000 across DHA, Clifton, and Gulshan.",
   "authorName": "Wedding Wala Editorial Team",
   "breadcrumb": [
     {

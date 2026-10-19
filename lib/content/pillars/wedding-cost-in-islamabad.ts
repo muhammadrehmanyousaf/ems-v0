@@ -2,12 +2,12 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "wedding-cost-in-islamabad",
-  "title": "Wedding Cost in Islamabad 2026: Full Budget Guide by Area, Venue & Season",
-  "h1": "Wedding Cost in Islamabad: Full Budget Breakdown for 2026",
-  "metaDescription": "How much does a wedding cost in Islamabad? Indicative 2026 budget tiers (PKR 4M to 18M+), a per-category breakdown, cost by sector and venue type, the Rawalpindi money-saver angle, and 8 FAQs.",
-  "eyebrow": "Wedding Budget Guide",
-  "updatedLabel": "June 2026",
-  "lead": "A full wedding in Islamabad typically costs from roughly PKR 4-7 million for a modest affair to PKR 15-18 million and well beyond for an elite one, with most middle-class capital weddings landing around PKR 6-11 million. Islamabad sits at the upper end of Pakistani wedding pricing — tracking Lahore's top tier — because the city skews formal, has fewer budget options inside its limits, and leans on premium hotels, F-sector banquets and Margalla-view farmhouses. The single largest savings lever unique to the capital is crossing into Rawalpindi, where comparable venues and often the very same vendors run 30-40% cheaper.",
+  "title": "Wedding Cost in Islamabad (2026): Per Head Rates, Marquee Prices & Budget Guide",
+  "h1": "Wedding Cost in Islamabad (2026): Per Head Rates, Marquee Prices & Full Budget Breakdown",
+  "metaDescription": "How much does a wedding cost in Islamabad? 2026 per head rates (PKR 2,500 - 18,000+), sector breakdown (F-sectors, Club Road, Chak Shahzad farmhouses), and budget guide.",
+  "eyebrow": "Islamabad Wedding Budget Guide 2026",
+  "updatedLabel": "October 2026",
+  "lead": "A full wedding in Islamabad typically costs from roughly PKR 4-7 million for a modest affair to PKR 15-18 million and well beyond for an elite one, with most middle-class capital weddings landing around PKR 6-11 million. Islamabad sits at the upper end of Pakistani wedding pricing — tracking Lahore's top tier — with per head catering rates scaling across F-sectors, Club Road, Chak Shahzad luxury farmhouses, and Rawalpindi sister venues.",
   "authorName": "Wedding Wala Editorial Team",
   "breadcrumb": [
     {
