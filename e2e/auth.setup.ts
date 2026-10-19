@@ -69,8 +69,12 @@ async function loginAndSave(page: any, creds: Creds, outFile: string) {
 }
 
 setup("authenticate super-admin", async ({ page }) => {
+  const outFile = path.join(authDir, "superadmin.json");
+  if (fs.existsSync(outFile)) return;
+  const configured = !!fromEnv("superadmin") || fs.existsSync(credPath);
+  setup.skip(!configured, "No superadmin credentials: set WW_SA_EMAIL / WW_SA_PASSWORD.");
   fs.mkdirSync(authDir, { recursive: true });
-  await loginAndSave(page, loadCreds("superadmin"), path.join(authDir, "superadmin.json"));
+  await loginAndSave(page, loadCreds("superadmin"), outFile);
 });
 
 /**
@@ -82,8 +86,10 @@ setup("authenticate super-admin", async ({ page }) => {
  * reported as pending, so "not configured" still cannot be misread as "passed".
  */
 setup("authenticate vendor", async ({ page }) => {
+  const outFile = path.join(authDir, "vendor.json");
+  if (fs.existsSync(outFile)) return;
   const configured = !!fromEnv("vendor") || fs.existsSync(credPath);
   setup.skip(!configured, "No vendor credentials: set WW_VENDOR_EMAIL / WW_VENDOR_PASSWORD.");
   fs.mkdirSync(authDir, { recursive: true });
-  await loginAndSave(page, loadCreds("vendor"), path.join(authDir, "vendor.json"));
+  await loginAndSave(page, loadCreds("vendor"), outFile);
 });
