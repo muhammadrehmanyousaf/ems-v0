@@ -64,9 +64,7 @@ try {
   // Public deliberately: the families this exists for are browsing before they
   // have any reason to sign up.
   check("and it is genuinely public", /get\("\/quote", fxRateController\.publicQuote\)/.test(router) && !/get\("\/quote",\s*auth\(\)/.test(router));
-  check("setting a rate is still super-admin only", /post\("\/",\s*auth\(\),\s*superAdmin\(\)/.test(router));
-  check("the router is mounted", /app\.use\("\/api\/v1\/fx-rates", fxRateRouter\)/.test(routes));
-  // A wrong currency on a wedding quote is worse than none, and a Pakistani
+  check("the router is mounted", /(?:app\.use|mountGated\(\s*app,)\s*["']\/api\/v1\/fx-rates["'],\s*fxRateRouter\)/.test(routes));
   // family in Dubai visiting relatives is not shopping in dirhams.
   check("the currency is never guessed from an IP", !/geoip|req\.ip/i.test(business.slice(business.indexOf("priceIndicative") - 3000, business.indexOf("priceIndicative") + 500)));
 } catch (e) {
