@@ -31,8 +31,8 @@ import { WeddingBudgetEstimator } from "@/components/tools/wedding-budget-estima
 
 const PATH = "/wedding-cost-in-pakistan"
 const PUBLISHED = "2026-06-14"
-const UPDATED = "2026-06-14"
-const UPDATED_LABEL = "June 2026"
+const UPDATED = "2026-10-20"
+const UPDATED_LABEL = "October 2026 (Updated for 2026/2027 Season)"
 
 export function generateMetadata(): Metadata {
   return buildPageMetadata({

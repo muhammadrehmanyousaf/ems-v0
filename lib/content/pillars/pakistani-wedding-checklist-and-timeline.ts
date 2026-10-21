@@ -2,7 +2,7 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "pakistani-wedding-checklist-and-timeline",
-  "title": "Pakistani Wedding Checklist & 12-Month Timeline (2026 Planning Guide)",
+  "title": "Wedding Checklist & Timeline",
   "h1": "Pakistani Wedding Checklist & 12-Month Month-by-Month Timeline (2026)",
   "metaDescription": "The ultimate Pakistani wedding planning checklist with month-by-month timeline, vendor booking lead times, peak winter season guide, and nikah preparation.",
   "eyebrow": "Wedding Planning Guides 2026",

@@ -1,11 +1,8 @@
 /**
  * Per-vendor-type "related guides" links, rendered on the /[vendor-type]/[city]
- * money pages to strengthen the informational <-> commercial internal-link silo
- * (money page -> cost/how-to/inspiration guides, completing the bridge the
- * content guides already build in the other direction).
+ * money pages to strengthen the informational <-> commercial internal-link silo.
  *
- * Every href MUST be a real content-pillar route (see lib/content/pillars).
- * Keyed by the SEO vendor-type slug (see VENDOR_TYPES in constants.ts).
+ * City-aware: dynamically injects relevant city cost guides and local law references.
  */
 export interface GuideLink {
   label: string
@@ -20,8 +17,9 @@ export const VENDOR_TYPE_RELATED_GUIDES: Record<string, GuideLink[]> = {
   ],
   "wedding-venues": [
     { label: "Wedding venue types compared", href: "/wedding-venue-types-guide-pakistan" },
-    { label: "Wedding venue cost in Lahore", href: "/wedding-venue-cost-in-lahore" },
     { label: "Wedding cost in Pakistan (full budget)", href: "/wedding-cost-in-pakistan" },
+    { label: "One-dish law & wedding guest limits", href: "/one-dish-law-and-wedding-guest-limits-pakistan" },
+    { label: "Pakistani wedding checklist & timeline", href: "/pakistani-wedding-checklist-and-timeline" },
   ],
   "bridal-makeup-artists": [
     { label: "Bridal makeup looks guide", href: "/bridal-makeup-looks-guide-pakistan" },
@@ -31,6 +29,7 @@ export const VENDOR_TYPE_RELATED_GUIDES: Record<string, GuideLink[]> = {
   caterers: [
     { label: "Wedding catering cost per head", href: "/wedding-catering-cost-in-pakistan" },
     { label: "Wedding catering menu guide", href: "/wedding-catering-menu-guide-pakistan" },
+    { label: "One-dish law & menu regulations", href: "/one-dish-law-and-wedding-guest-limits-pakistan" },
   ],
   "wedding-decorators": [
     { label: "Wedding decoration ideas", href: "/wedding-decoration-ideas-pakistan" },
@@ -57,6 +56,32 @@ export const VENDOR_TYPE_RELATED_GUIDES: Record<string, GuideLink[]> = {
   ],
 }
 
-export function getVendorTypeRelatedGuides(slug: string): GuideLink[] {
-  return VENDOR_TYPE_RELATED_GUIDES[slug] ?? []
+export function getVendorTypeRelatedGuides(slug: string, citySlug?: string): GuideLink[] {
+  const base = VENDOR_TYPE_RELATED_GUIDES[slug] ?? []
+  const customized = [...base]
+
+  if (slug === "wedding-venues" || slug === "caterers") {
+    if (citySlug === "lahore") {
+      customized.unshift(
+        { label: "Wedding venue cost in Lahore (2026)", href: "/wedding-venue-cost-in-lahore" },
+        { label: "Wedding cost in Lahore (budget breakdown)", href: "/wedding-cost-in-lahore" },
+      )
+    } else if (citySlug === "karachi") {
+      customized.unshift(
+        { label: "Wedding cost in Karachi (2026 rates)", href: "/wedding-cost-in-karachi" },
+      )
+    } else if (citySlug === "islamabad" || citySlug === "rawalpindi") {
+      customized.unshift(
+        { label: "Wedding cost in Islamabad (budget guide)", href: "/wedding-cost-in-islamabad" },
+      )
+    }
+  }
+
+  // Deduplicate by href
+  const seen = new Set<string>()
+  return customized.filter((item) => {
+    if (seen.has(item.href)) return false
+    seen.add(item.href)
+    return true
+  })
 }

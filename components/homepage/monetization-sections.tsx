@@ -316,13 +316,13 @@ export function SponsoredSpotlight() {
               ceremonies. Now booking 2026 dates.
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              <Link href="/venues/1">
+              <Link href="/wedding-venues">
                 <BridalButton variant="primary" size="lg">
                   View Venue
                   <ArrowRight className="w-4 h-4" />
                 </BridalButton>
               </Link>
-              <Link href="/venues">
+              <Link href="/wedding-venues">
                 <BridalButton
                   variant="ghost"
                   size="lg"
@@ -336,8 +336,8 @@ export function SponsoredSpotlight() {
             <div className="mt-8 flex flex-wrap items-center justify-center gap-8">
               {[
                 { v: "2,000+", l: "Guest capacity" },
-                { v: "120+",   l: "Weddings hosted" },
-                { v: "4.9★",   l: "Couple rating" },
+                { v: "100%", l: "Verified location" },
+                { v: "Direct", l: "Vendor contact" },
               ].map((s) => (
                 <div key={s.l} className="flex flex-col items-center">
                   <span className="font-display italic text-[24px] text-bridal-gold leading-none">
@@ -439,13 +439,13 @@ export function FeaturedVenueShowcase() {
             title="Where Pakistan's most beautiful"
             highlight="weddings happen"
             description="Hand-selected venues, rated by real couples, with verified availability and instant booking."
-            cta={{ href: "/venues", label: "All venues" }}
+            cta={{ href: "/wedding-venues", label: "All venues" }}
           />
         </ScrollReveal>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {venues.map((v, i) => (
-            <Link key={v.name} href="/venues" className="group block">
+            <Link key={v.name} href="/wedding-venues" className="group block">
               <article className="relative aspect-[16/10] rounded-md overflow-hidden bridal-card p-0">
                 <img
                   src={v.img}

@@ -209,7 +209,7 @@ export function HeroSection({ backdrop }: { backdrop?: React.ReactNode }) {
         if (s.venueType && s.venueType !== "all") params.set("type", s.venueType)
         if (s.location?.trim()) params.set("location", s.location.trim())
         const qs = params.toString()
-        router.push(`/venues${qs ? `?${qs}` : ""}`)
+        router.push(`/wedding-venues${qs ? `?${qs}` : ""}`)
       }, 0)
       return
     }
@@ -465,7 +465,7 @@ export function HeroSection({ backdrop }: { backdrop?: React.ReactNode }) {
     if (venueLocation.trim()) params.set("location", venueLocation.trim())
 
     const qs = params.toString()
-    router.push(`/venues${qs ? `?${qs}` : ""}`)
+    router.push(`/wedding-venues${qs ? `?${qs}` : ""}`)
   }
 
   // Handle category selection
@@ -592,7 +592,7 @@ export function HeroSection({ backdrop }: { backdrop?: React.ReactNode }) {
                 className="backdrop-blur-md bg-bridal-blush/95 shadow-[0_8px_22px_-12px_rgba(176,125,84,0.35)]"
               >
                 <Heart className="w-3 h-3 fill-bridal-rose text-bridal-rose" />
-                Pakistan&apos;s #1 Shaadi Platform
+                Pakistan&apos;s Wedding Marketplace & Planning Platform
               </BridalBadge>
             </motion.div>
 
@@ -1155,7 +1155,7 @@ export function HeroSection({ backdrop }: { backdrop?: React.ReactNode }) {
               {
                 end: stats?.vendors ?? 0,
                 suffix: "+",
-                label: "Verified Vendors",
+                label: "Vendors Listed",
               },
               {
                 end: stats?.couplesServed ?? 0,

@@ -7,5 +7,5 @@ import { redirect } from "next/navigation"
  * it wants to book something; the venues list is where that starts.
  */
 export default function LegacyBookingPage() {
-  redirect("/venues")
+  redirect("/wedding-venues")
 }
