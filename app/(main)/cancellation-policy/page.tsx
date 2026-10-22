@@ -43,7 +43,7 @@ export default function CancellationPolicyPage() {
         If a vendor cancels a confirmed booking, you receive a <strong>full refund of
         all amounts paid</strong> within the timelines in the{" "}
         <Link href="/refund-policy">Refund Policy</Link>. {SITE_NAME} will help
-        you find a replacement vendor at no additional platform fee.
+        you find a replacement vendor at zero commission or platform fees.
       </p>
       <p>
         Vendors who cancel without good cause may be suspended from the
@@ -71,7 +71,7 @@ export default function CancellationPolicyPage() {
         other events beyond reasonable control of either party.
       </p>
       <ul>
-        <li>If the event date falls within a force-majeure window, both parties agree to <strong>reschedule first</strong>. {SITE_NAME} will not charge platform fees for force-majeure rescheduling within 12 months of the original date.</li>
+        <li>If the event date falls within a force-majeure window, both parties agree to <strong>reschedule first</strong>. {SITE_NAME} charges 0% commission on bookings and does not charge rescheduling fees.</li>
         <li>Where rescheduling is not feasible, the customer is entitled to a refund of all amounts not yet incurred by the vendor as documented work-in-progress (e.g. paid sub-vendor fees, custom outfits already produced).</li>
       </ul>
 
