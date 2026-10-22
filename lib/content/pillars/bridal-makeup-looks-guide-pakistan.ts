@@ -2,7 +2,7 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   slug: "bridal-makeup-looks-guide-pakistan",
-  title: "Bridal Makeup Looks Guide Pakistan 2026: By Event, Skin Tone & HD vs Airbrush",
+  title: "Bridal Makeup Looks Guide Pakistan",
   h1: "Pakistani Bridal Makeup Looks: By Event, Skin Tone & Finish",
   metaDescription:
     "A Pakistani bridal makeup looks guide for 2026 — looks by event (mehndi, barat, walima, nikah), choosing for your skin tone, HD vs airbrush vs traditional, and making it last.",

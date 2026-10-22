@@ -2,7 +2,7 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   slug: "wedding-decoration-ideas-pakistan",
-  title: "Wedding Decoration Ideas Pakistan 2026: Stage, Mehndi, Barat & Walima Decor",
+  title: "Wedding Decor Ideas Pakistan (2026)",
   h1: "Wedding Decoration Ideas for Every Event",
   metaDescription:
     "Pakistani wedding decoration ideas for 2026 — stage and backdrop, mehndi, barat and walima decor, lighting, centrepieces, fresh-flower vs theme decor, colour palettes and budget tips.",

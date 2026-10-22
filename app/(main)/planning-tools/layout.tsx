@@ -1,4 +1,13 @@
 import React from "react";
+import type { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Wedding Planning Tools & Checklists",
+  description:
+    "Free planning tools for Pakistani weddings — wedding checklist, budget calculator, guest list manager, and event timeline by Wedding Wala.",
+  path: "/planning-tools",
+});
 
 export default function PlanningToolsLayout({
   children,

@@ -33,23 +33,21 @@ export default function RefundPolicyPage() {
         <li><strong>Service quality dispute</strong> — partial or full refund may be issued through our dispute process. Open a dispute via your booking page within 14 days of the event date.</li>
       </ul>
 
-      <h2>2. How refunds reach you</h2>
+      <h2>2. Customer booking refunds (direct from Vendor)</h2>
       <p>
-        Refunds are credited <strong>back to the original payment method</strong>.
-        We do not refund to a different card, bank account, or cash equivalent.
-        This is a card-network rule and a security measure.
+        Because {SITE_NAME} takes 0% commission and never holds customer money in escrow,
+        booking deposits and milestone payments are settled directly between you and the Vendor.
+        Any eligible refund is returned directly by the Vendor to your bank account or mobile wallet
+        in accordance with the agreed cancellation tier. {SITE_NAME} assists in verifying transaction
+        records and mediating disputes.
       </p>
-      <ul>
-        <li>Card refunds typically reach your statement in <strong>10–12 working days</strong> after we initiate the refund (timing is set by your bank, not by {SITE_NAME}).</li>
-        <li>JazzCash / Easypaisa refunds typically clear in 3–7 working days.</li>
-        <li>You will receive an email confirmation when we initiate the refund.</li>
-      </ul>
 
-      <h2>3. Platform fees</h2>
+      <h2>3. Vendor subscription refunds & 0% booking fee</h2>
       <p>
-        For cancellations within the eligible window, {SITE_NAME}&apos;s platform
-        fee is refunded along with the booking amount. For cancellations outside
-        the eligible window, the platform fee is non-refundable.{/* LEGAL REVIEW: confirm platform-fee refundability terms */}
+        {SITE_NAME} charges couples <strong>Rs. 0 platform fees</strong> on bookings. For Vendors,
+        our only charge is the monthly portal subscription. If an erroneous or duplicate subscription
+        charge occurs, {SITE_NAME} initiates a full refund via Safepay back to the original card or bank account
+        within 7–10 working days.
       </p>
 
       <h2>4. How to request a refund</h2>

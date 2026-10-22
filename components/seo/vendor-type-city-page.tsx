@@ -1,3 +1,4 @@
+import { computeCityPriceRange } from "@/lib/pricing/pricing-model";
 /**
  * Shared component for `/[vendor-type-plural]/[city]` programmatic SEO pages
  * (the commercial "money pages"). Each per-vendor-type [city] route file
@@ -59,22 +60,32 @@ function filterRealVendors(vendors: VendorListItem[]): VendorListItem[] {
   )
 }
 
-/** Indicative headline range from the pricing tiers (e.g. "PKR 30,000–600,000+"). */
-function indicativeRange(pricing: VendorTypePricing | null): string | null {
+/** Indicative headline range from the pricing tiers (e.g. "PKR 800–6,500+ / head" or "PKR 30,000–600,000+"). Separates per-head from flat packages. */
+function indicativeRange(pricing: VendorTypePricing | null, slug?: string): string | null {
   if (!pricing) return null
-  const nums: number[] = []
+  if (slug === "wedding-venues") {
+    return "PKR 800–6,500+ / head"
+  }
+  const perHeadNums: number[] = []
+  const flatNums: number[] = []
   let plus = false
   for (const t of pricing.tiers) {
     if (t.band.includes("+")) plus = true
+    const isPerHead = t.band.toLowerCase().includes("/head") || t.band.toLowerCase().includes("per head")
     for (const m of t.band.match(/[\d,]+/g) ?? []) {
       const n = Number(m.replace(/,/g, ""))
-      if (Number.isFinite(n) && n > 0) nums.push(n)
+      if (Number.isFinite(n) && n > 0) {
+        if (isPerHead) perHeadNums.push(n)
+        else flatNums.push(n)
+      }
     }
   }
+  const nums = perHeadNums.length > 0 ? perHeadNums : flatNums
   if (nums.length === 0) return null
   const lo = Math.min(...nums)
   const hi = Math.max(...nums)
-  return `PKR ${lo.toLocaleString("en-PK")}–${hi.toLocaleString("en-PK")}${plus ? "+" : ""}`
+  const unit = perHeadNums.length > 0 ? " / head" : ""
+  return `PKR ${lo.toLocaleString("en-PK")}–${hi.toLocaleString("en-PK")}${plus ? "+" : ""}${unit}`
 }
 
 const B2_DRIVERS: Record<string, string> = {
@@ -166,15 +177,8 @@ export function generateVendorTypeCityMetadata(
   })
 }
 
-function formatPriceRange(vendors: VendorListItem[]): string | undefined {
-  const prices = vendors
-    .map((v) => v.priceMin)
-    .filter((p): p is number => Number.isFinite(p ?? NaN))
-  if (prices.length === 0) return undefined
-  const lo = Math.min(...prices)
-  const hi = Math.max(...prices)
-  if (lo === hi) return `PKR ${lo.toLocaleString("en-PK")}`
-  return `PKR ${lo.toLocaleString("en-PK")} – ${hi.toLocaleString("en-PK")}`
+function formatPriceRange(vendors: VendorListItem[], isVenue = false): string | undefined {
+  return computeCityPriceRange(vendors, isVenue);
 }
 
 export async function VendorTypeCityPage({
@@ -214,7 +218,7 @@ export async function VendorTypeCityPage({
   const pricing = getVendorTypePricing(vt.slug)
   const questions = getVendorTypeQuestions(vt.slug)
   const guidePillar = getVendorTypeGuidePillar(vt.slug)
-  const relatedGuides = getVendorTypeRelatedGuides(vt.slug)
+  const relatedGuides = getVendorTypeRelatedGuides(vt.slug, city.slug)
   const checklist = getVendorTypeChecklist(vt.slug)
   const eventNotes = getVendorTypeEventNotes(vt.slug)
   const imagery = getLocationImagery(vt.slug)
@@ -225,14 +229,15 @@ export async function VendorTypeCityPage({
     guide ? { label: "What to look for", body: guide } : null,
     editorial.priceContext ? { label: "Pricing context", body: editorial.priceContext } : null,
   ].filter((f): f is { label: string; body: string } => f !== null)
-  const range = indicativeRange(pricing)
+  const range = indicativeRange(pricing, vt.slug)
   const answerLead = buildAnswerLead(vt.plural, vt.singular, city.name, vt.slug, range)
   const waLink = `https://wa.me/${WHATSAPP_E164}?text=${encodeURIComponent(
     `Hi Wedding Wala — I'm looking for ${vt.plural.toLowerCase()} in ${city.name}. Can you help me get quotes?`,
   )}`
 
   const url = `${SITE_URL}/${vt.slug}/${city.slug}`
-  const priceRangeStr = formatPriceRange(vendors)
+  const isVenue = vt.slug === 'wedding-venues' || vt.slug === 'caterers';
+  const priceRangeStr = formatPriceRange(vendors, isVenue);
 
   const collectionLd = collectionPageLD({
     name: `${vt.plural} in ${city.name} — ${SITE_NAME}`,
@@ -625,6 +630,51 @@ export async function VendorTypeCityPage({
                 </li>
               ))}
             </ul>
+          </section>
+        )}
+
+        {/* ─────────── LOCAL RULES & TIMINGS (SEO Master Plan Part 3.2 #6) ─────────── */}
+        {isVenue && (
+          <section className="mb-16 rounded-2xl border border-bridal-gold/30 bg-bridal-cream/50 p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+              <div>
+                <span className="font-bridal text-[10.5px] uppercase tracking-[0.2em] text-bridal-gold-dark font-medium">
+                  Regulations &amp; Curfews
+                </span>
+                <h3 className="font-display italic text-2xl text-bridal-charcoal mt-1">
+                  Local Wedding Laws &amp; Timings in {city.name}
+                </h3>
+              </div>
+              <Link
+                href="/one-dish-law-and-wedding-guest-limits-pakistan"
+                className="shrink-0 text-xs font-semibold text-bridal-gold-dark hover:underline flex items-center gap-1"
+              >
+                <span>Read Pakistan One-Dish Guide</span>
+                <span>→</span>
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-sm text-bridal-text">
+              <div className="space-y-1.5 p-4 rounded-xl bg-white border border-bridal-beige/70">
+                <p className="font-semibold text-bridal-charcoal text-xs uppercase tracking-wider text-bridal-gold-dark">
+                  Closing Curfew Hours
+                </p>
+                <p className="text-xs leading-relaxed text-bridal-text">
+                  {['karachi', 'hyderabad', 'sukkur'].includes(city.slug)
+                    ? 'In Sindh, wedding halls and marquees must adhere to the 11:00 PM curfew. Noise regulations require music and loud speakers to conclude on time to avoid municipal penalties.'
+                    : 'Under provincial regulations in Punjab and the federal capital territory, all wedding ceremonies and banquet functions must strictly conclude by 10:00 PM. Venue lights are turned off at curfew.'}
+                </p>
+              </div>
+              <div className="space-y-1.5 p-4 rounded-xl bg-white border border-bridal-beige/70">
+                <p className="font-semibold text-bridal-charcoal text-xs uppercase tracking-wider text-bridal-gold-dark">
+                  Menu &amp; One-Dish Regulations
+                </p>
+                <p className="text-xs leading-relaxed text-bridal-text">
+                  {['karachi', 'hyderabad', 'sukkur'].includes(city.slug)
+                    ? 'Karachi and Sindh allow multi-course wedding menus, but caterers must follow food safety and hygiene guidelines issued by the Sindh Food Authority.'
+                    : 'The Punjab Marriage Functions Act strictly enforces the one-dish rule: one main rice or meat dish plus one dessert (with salad and bread). Serving extra dishes invites heavy fines and temporary venue sealing.'}
+                </p>
+              </div>
+            </div>
           </section>
         )}
 

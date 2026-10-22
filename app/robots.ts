@@ -39,7 +39,7 @@ export default function robots(): MetadataRoute.Robots {
           '/api/',
           '/dashboard/',
           '/user/',
-          '/_next/',
+          // Semrush W1: allow /_next/static CSS/JS for full rendering
           '/login',
           '/register',
           '/forgot-password',
@@ -48,7 +48,7 @@ export default function robots(): MetadataRoute.Robots {
           '/booking/',          // post-payment confirmation; not for indexing
           '/checkout-callback',
           '/*?*sort=',          // sort variants
-          '/*?*page=',          // pagination canonicalizes to base
+          // Phase T1: unblocked pagination
           '/*?utm_*',
           '/*?fbclid=',
           '/*?gclid=',

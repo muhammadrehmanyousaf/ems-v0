@@ -2,7 +2,8 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "what-is-walima-pakistani-wedding-guide",
-  "title": "What Is a Walima? Meaning in English, Sunnah Rules, Timing & Reception Guide (2026)",
+  "title": "What Is a Walima? Complete Guide",
+
   "h1": "What Is a Walima? Meaning in English, Islamic Sunnah Rules & 2026 Planning Guide",
   "metaDescription": "What is a walima? Meaning of walima in English and Islam, authentic Sunnah rules (who pays, timing, hadith), difference between Barat & Walima, and 2026 planning guide.",
   "eyebrow": "Wedding Guide",

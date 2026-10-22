@@ -1,3 +1,4 @@
+import { isListingIndexable } from "@/lib/pricing/pricing-validator";
 import { SITE_URL, CITIES, backendToSeoSlug } from "@/lib/seo"
 import { slugifyName } from "@/lib/seo/fetch-vendor"
 import { BACKEND_URL } from "@/lib/backend-url"
@@ -74,6 +75,9 @@ export async function fetchAllBusinesses(): Promise<any[]> {
 }
 
 export function projectToCanonical(raw: any): DynamicVendor | null {
+  // Phase T2: Quality gate exclusion from sitemap
+  if (!isListingIndexable(raw)) return null;
+
   const id = raw?.id ?? raw?.businessId
   if (!id) return null
 

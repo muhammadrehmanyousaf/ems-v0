@@ -75,7 +75,7 @@ export default function WeddingWebsitePage() {
                       Explore Planning Tools <ArrowRight className="w-4 h-4" />
                     </Button>
                   </Link>
-                  <Link href="/venues">
+                  <Link href="/wedding-venues">
                     <Button variant="outline">Browse Vendors</Button>
                   </Link>
                 </div>

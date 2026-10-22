@@ -2,7 +2,8 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   slug: "bridal-mehndi-designs-guide",
-  title: "100+ Bridal Mehndi Designs 2026: Trending Pakistani Front & Back Hand Patterns, Feet & Dulhan Styles",
+  title: "Bridal Mehndi Designs Guide (2026)",
+
   h1: "100+ Bridal Mehndi Designs 2026: Pakistani Front & Back Patterns, Feet & Dulhan Trends",
   metaDescription:
     "Explore the top Pakistani bridal mehndi designs for 2026: intricate front and back hand patterns, royal dulhan styles, feet mehndi, and aftercare tips for a deep, rich stain.",

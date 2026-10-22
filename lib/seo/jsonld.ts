@@ -61,7 +61,6 @@ export function organizationLD() {
       addressRegion: BUSINESS_REGION,
       addressCountry: BUSINESS_COUNTRY,
     },
-    openingHours: BUSINESS_HOURS_SCHEMA,
     contactPoint: [
       {
         "@type": "ContactPoint",

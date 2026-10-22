@@ -2,7 +2,7 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "how-to-plan-a-wedding-in-pakistan",
-  "title": "How to Plan a Wedding in Pakistan (2026): Step-by-Step Guide, Timeline & Checklist",
+  "title": "How to Plan a Wedding in Pakistan",
   "h1": "How to Plan a Wedding in Pakistan: Step-by-Step Guide (Timeline + Checklist)",
   "metaDescription": "How to plan a wedding in Pakistan: a 10-step guide with a month-by-month timeline, indicative PKR budget ranges, the Nikah Nama legal process, and a free checklist.",
   "eyebrow": "Wedding Planning · Pakistan",

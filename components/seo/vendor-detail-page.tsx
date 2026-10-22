@@ -1,3 +1,5 @@
+import { formatPrice } from "@/lib/pricing/pricing-model";
+import { isListingIndexable } from "@/lib/pricing/pricing-validator";
 /**
  * Shared L6 leaf detail page — `/{type-plural}/{city-slug}/{name-slug}-{id}`.
  *
@@ -85,9 +87,20 @@ export async function generateVendorDetailMetadata(
   let title = `${vendor.name} — ${vt.singular} in ${city.name}`
   let description = `${vendor.name} — ${vt.singular.toLowerCase()} in ${city.name}, Pakistan. Book on ${SITE_NAME}.`
 
+
+  const priceDisplay = formatPrice(vendor.raw || vendor);
+  const indexable = isListingIndexable(vendor.raw || vendor);
+
   if (input.typeSlug === "wedding-venues") {
-    title = `${vendor.name} (${city.name}) — Booking Price, Per Head Rates & Reviews (2026)`
-    description = `Planning an event at ${vendor.name} in ${city.name}? Check 2026 booking price, per head rates, guest capacity, photos, and verified reviews on ${SITE_NAME}.`
+    const area = String(vendor.raw?.subArea || "").trim();
+    const areaStr = area ? `${area}, ` : "";
+    title = `${vendor.name}, ${areaStr}${city.name} — Price, Capacity & Photos (2026)`;
+    const capStr = vendor.raw?.minCapacity && vendor.raw?.maxCapacity
+      ? `, capacity ${vendor.raw.minCapacity}–${vendor.raw.maxCapacity}`
+      : vendor.raw?.maxCapacity
+      ? `, capacity up to ${vendor.raw.maxCapacity}`
+      : "";
+    description = `${vendor.name} in ${areaStr}${city.name}: ${priceDisplay.metaPrice}${capStr}. See photos, menu options & book a visit.`.slice(0, 155);
   } else if (input.typeSlug === "wedding-photographers") {
     title = `${vendor.name} (${city.name}) — Wedding Packages, Rates & Portfolio`
     description = `Book ${vendor.name} in ${city.name}. Compare wedding photography and cinematography packages, rates, real portfolio photos & reviews on ${SITE_NAME}.`
@@ -107,13 +120,16 @@ export async function generateVendorDetailMetadata(
       : `Compare ${vendor.name} (${vt.singular.toLowerCase()}) in ${city.name}, Pakistan. Check rates, packages, and book on ${SITE_NAME}.`
   }
 
-  return buildPageMetadata({
-    title,
-    description,
-    path: `/${vt.slug}/${city.slug}/${vendor.nameSlug}-${vendor.id}`,
-    imageUrl: vendor.imageUrl,
-    ogType: "profile",
-  })
+  return {
+    ...buildPageMetadata({
+      title,
+      description,
+      path: `/${vt.slug}/${city.slug}/${vendor.nameSlug}-${vendor.id}`,
+      imageUrl: vendor.imageUrl,
+      ogType: "profile",
+    }),
+    ...(!indexable ? { robots: { index: false, follow: true } } : {}),
+  }
 }
 
 export async function VendorDetailPage(input: PageInput) {
@@ -126,6 +142,7 @@ export async function VendorDetailPage(input: PageInput) {
 
   const vendor = await fetchVendorById(parsed.id)
   if (!vendor) notFound()
+  const priceDisplay = formatPrice(vendor.raw || vendor)
 
   // Editorial stand-in for a vendor with no photos of their own. Category-
   // matched, never presented as theirs — see the caption on the image itself.
@@ -218,8 +235,8 @@ export async function VendorDetailPage(input: PageInput) {
         phone: vendor.phone,
         email: vendor.email,
         websiteUrl: vendor.websiteUrl,
-        priceRange: vendor.priceMin
-          ? `PKR ${vendor.priceMin.toLocaleString("en-PK")}+`
+        priceRange: priceDisplay.metaPrice !== "Price on request"
+          ? priceDisplay.metaPrice
           : undefined,
         rating:
           vendor.rating > 0
@@ -359,13 +376,23 @@ export async function VendorDetailPage(input: PageInput) {
                 serves the canonical vendor URL, so it is what a customer arriving
                 from Google sees. `priceRange` is (correctly) omitted from the
                 JSON-LD in the same case, so we never claim a price we don't have. */}
-            <p className="mt-2 font-bridal text-[14px] text-bridal-charcoal">
-              {vendor.priceMin ? (
-                <strong>From PKR {vendor.priceMin.toLocaleString("en-PK")}</strong>
-              ) : (
-                <span className="text-bridal-text">Price on request</span>
+            {/* SEO Master Plan Part 2.2 — Single source of truth price display */}
+            <div className="mt-2.5">
+              <p className="font-bridal text-[16px] sm:text-[18px] text-bridal-charcoal font-semibold">
+                {priceDisplay.headline}
+              </p>
+              {priceDisplay.subtext && (
+                <p className="font-bridal text-[12.5px] text-bridal-text-soft mt-0.5">
+                  {priceDisplay.subtext}
+                </p>
               )}
-            </p>
+              {priceDisplay.confirmationNote && (
+                <p className="font-bridal text-[11px] text-bridal-gold-dark mt-1 flex items-center gap-1.5">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-bridal-gold" />
+                  <span>{priceDisplay.confirmationNote}</span>
+                </p>
+              )}
+            </div>
 
             {/*
               WW-TEST-CASES 2.23 — the six answers that decide whether this
@@ -400,7 +427,7 @@ export async function VendorDetailPage(input: PageInput) {
             <div className="mt-6 flex flex-wrap gap-3">
               {availabilityNotice ? (
                 <>
-                  <UnavailableButton label={vendor.priceMin ? "Check availability" : "Ask for a price"} />
+                  <UnavailableButton label={priceDisplay.primaryAmount ? "Check availability" : "Ask for a price"} />
                   <UnavailableButton label="Ask a question" />
                   <UnavailableButton label="Request a quote" />
                 </>
@@ -414,7 +441,7 @@ export async function VendorDetailPage(input: PageInput) {
                 href={`/${vendor.id}/booking`}
                 className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-bridal-gold text-white font-bridal text-[13px] font-medium hover:bg-bridal-gold-dark transition-colors"
               >
-                {vendor.priceMin ? "Check availability" : "Ask for a price"}
+                {priceDisplay.primaryAmount ? "Check availability" : "Ask for a price"}
               </Link>
               {/* Anonymous inquiry — a first-time visitor from Google can ask a
                   question or ask for a price WITHOUT logging in, and the dialog
@@ -745,7 +772,7 @@ export async function VendorDetailPage(input: PageInput) {
           <StickyQuoteBar
             raw={vendor.raw}
             vendorId={vendor.id}
-            ctaLabel={vendor.priceMin ? "Check availability" : "Ask for a price"}
+            ctaLabel={priceDisplay.primaryAmount ? "Check availability" : "Ask for a price"}
           />
         )}
       </div>

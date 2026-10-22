@@ -7,7 +7,7 @@ export const data: PillarData = {
   metaDescription:
     "How much does a wedding cost in Lahore in 2026? Indicative PKR ranges for venues, catering per head, photography, decor, makeup and more, plus a 400-guest sample budget and area-by-area cost guide.",
   eyebrow: "Wedding Budget Guide",
-  updatedLabel: "June 2026",
+  updatedLabel: "October 2026 (Updated for 2026/2027 Season)",
   lead:
     "A full wedding in Lahore in 2026 typically runs from around PKR 15-25 lakh for a lean, single-event celebration to PKR 1.5 crore or more for a multi-event luxury affair at a five-star ballroom. Most middle-class Lahore families planning the usual Mehndi, Baraat and Walima for 300-500 guests land somewhere between PKR 35 lakh and PKR 90 lakh. Lahore is Pakistan's wedding capital and carries the widest price range of any city: the same 400-guest dinner can cost PKR 1,200 a head at a modest marquee or PKR 8,000-plus a head at a luxury hotel. Below we break down every category in PKR, share a realistic mid-range sample budget, and map how costs shift across DHA, Bahria Town, Gulberg, Model Town and the Bedian Road farmhouse belt.",
   authorName: "Wedding Wala Editorial Team",

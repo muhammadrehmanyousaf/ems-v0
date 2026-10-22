@@ -1,3 +1,4 @@
+import { computeCityPriceRange } from "@/lib/pricing/pricing-model";
 /**
  * "Best {vendor} in {city} {year}" listicle page — the GEO/AI-citation weapon.
  *
@@ -128,15 +129,8 @@ export function generateListicleMetadata(slug: string): Metadata {
   })
 }
 
-function formatPriceRange(vendors: VendorListItem[]): string | undefined {
-  const prices = vendors
-    .map((v) => v.priceMin)
-    .filter((p): p is number => Number.isFinite(p ?? NaN) && (p ?? 0) > 0)
-  if (prices.length === 0) return undefined
-  const lo = Math.min(...prices)
-  const hi = Math.max(...prices)
-  if (lo === hi) return `PKR ${lo.toLocaleString("en-PK")}`
-  return `PKR ${lo.toLocaleString("en-PK")} – ${hi.toLocaleString("en-PK")}`
+function formatPriceRange(vendors: VendorListItem[], isVenue = false): string | undefined {
+  return computeCityPriceRange(vendors, isVenue);
 }
 
 /** Natural-language join: ["A","B","C"] → "A, B, and C". */
@@ -162,7 +156,8 @@ export async function BestVendorListiclePage({ slug }: { slug: string }) {
   if (all.length < MIN_VENDORS_FOR_LISTICLE) notFound()
 
   const ranked = all.slice(0, LISTICLE_MAX_RANKED)
-  const priceRangeStr = formatPriceRange(all)
+  const isVenue = vt.slug === 'wedding-venues' || vt.slug === 'caterers';
+  const priceRangeStr = formatPriceRange(all, isVenue);
   const editorial = getCityEditorial(city.slug)
   const guide = getVendorTypeGuide(vt.slug)
   const path = `/best/${slug}`

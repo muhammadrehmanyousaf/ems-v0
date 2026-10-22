@@ -37,9 +37,10 @@ export default function TermsPage() {
         the Vendor, not by {SITE_NAME}.
       </p>
       <p>
-        We collect your payments on behalf of the Vendor, hold the deposit
-        through a regulated payment processor, and disburse funds to the Vendor
-        according to our payout schedule and the Refund Policy.
+        WeddingWala charges vendors a monthly portal subscription and takes 0% commission
+        on bookings. We never collect, hold, or disburse customer booking funds — customer payments
+        are made directly to the Vendor through the Vendor's own bank account or mobile wallet.
+        WeddingWala provides the booking workflow and verification record.
       </p>
 
       <h2>2. Account registration</h2>
@@ -54,8 +55,8 @@ export default function TermsPage() {
       <ul>
         <li>Vendor pricing on the platform is set by the Vendor, in PKR.</li>
         <li>To confirm a booking you pay a deposit (typically the down-payment); the balance is due as set out in your booking.</li>
-        <li>Payments are processed by our licensed payment processor. {SITE_NAME} does not store your full card details.</li>
-        <li>The customer-facing card-statement descriptor is &quot;WEDDINGWALA&quot; (or our registered DBA).{/* LEGAL REVIEW: confirm final DBA / card-statement descriptor */}</li>
+        <li>Customer booking payments are transferred directly to the Vendor. For Vendor subscription plans, charges are processed securely via Safepay (a licensed payment gateway) or bank transfer.</li>
+        <li>The statement descriptor for Vendor portal subscriptions is &quot;WEDDINGWALA&quot; or &quot;SAFEPAY*WEDDINGWALA&quot;. Customers will see the Vendor's own account title on booking payments.</li>
         <li>Once you make a booking you enter into a contract <em>with the Vendor</em>, mediated by {SITE_NAME}.</li>
       </ul>
 
@@ -98,9 +99,9 @@ export default function TermsPage() {
 
       <h2>8. Marketplace rule (no off-platform circumvention)</h2>
       <p>
-        Customers and Vendors connected through {SITE_NAME} must complete payment
-        through the platform for the discovered booking. Off-platform payment to
-        avoid platform fees is a Terms violation and we may suspend your account.
+        Because {SITE_NAME} takes 0% commission on bookings, payments are settled directly
+        with Vendors. All booking requests, milestones, and payment receipts must be recorded on
+        the platform to maintain an authentic, verifiable transaction record and dispute protection.
       </p>
 
       <h2>9. Liability</h2>

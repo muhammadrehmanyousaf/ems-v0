@@ -68,6 +68,8 @@ function buildCoreShard(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/glossary`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     // Content-guides hub — links to every content pillar.
     { url: `${SITE_URL}/wedding-guides`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${SITE_URL}/how-we-verify-vendors`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${SITE_URL}/editorial-policy`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
   ]
 
   const tools: MetadataRoute.Sitemap = [

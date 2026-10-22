@@ -68,13 +68,13 @@ const VENDOR_GROUPS = [
   {
     group: "Core Services",
     items: [
-      { name: "Photographers", href: "/photographers",      icon: Camera,    desc: "Capture every moment" },
-      { name: "Venues",        href: "/venues",             icon: MapPin,    desc: "Where memories begin" },
-      { name: "Decorators",    href: "/decor",              icon: Sparkles,  desc: "Transform every space" },
-      { name: "Makeup",        href: "/makeup-artists",     icon: Palette,   desc: "The bridal glow" },
-      { name: "Catering",      href: "/catering",           icon: Utensils,  desc: "Flavours to remember" },
-      { name: "Car Rental",    href: "/car-rental",         icon: Car,       desc: "Arrive in elegance" },
-      { name: "Henna Artists", href: "/henna-artists",      icon: Flower2,   desc: "The mehndi tradition" },
+      { name: "Photographers", href: "/wedding-photographers",      icon: Camera,    desc: "Capture every moment" },
+      { name: "Venues",        href: "/wedding-venues",             icon: MapPin,    desc: "Where memories begin" },
+      { name: "Decorators",    href: "/wedding-decorators",              icon: Sparkles,  desc: "Transform every space" },
+      { name: "Makeup",        href: "/bridal-makeup-artists",     icon: Palette,   desc: "The bridal glow" },
+      { name: "Catering",      href: "/caterers",           icon: Utensils,  desc: "Flavours to remember" },
+      { name: "Car Rental",    href: "/wedding-cars",         icon: Car,       desc: "Arrive in elegance" },
+      { name: "Henna Artists", href: "/mehndi-artists",      icon: Flower2,   desc: "The mehndi tradition" },
       { name: "Bridal Wear",   href: "/bridal-wear",        icon: Crown,     desc: "Couture for the bride" },
       { name: "Stationery",    href: "/wedding-stationery", icon: PenTool,   desc: "Invitations that last" },
     ],
@@ -82,35 +82,35 @@ const VENDOR_GROUPS = [
   {
     group: "Food & Sweets",
     items: [
-      { name: "Wedding Cakes",  href: "/wedding-cakes",       icon: Cake,    desc: "Tiered & themed" },
-      { name: "Mithai & Sweets", href: "/mithai",             icon: Candy,   desc: "Sweeten the day" },
-      { name: "Live Cooking",   href: "/live-cooking-stalls", icon: ChefHat, desc: "Tandoor, chaat & paan" },
+      { name: "Wedding Cakes",  href: "/wedding-cake-designers",       icon: Cake,    desc: "Tiered & themed" },
+      { name: "Mithai & Sweets", href: "/wedding-mithai",             icon: Candy,   desc: "Sweeten the day" },
+      { name: "Live Cooking",   href: "/caterers", icon: ChefHat, desc: "Tandoor, chaat & paan" },
     ],
   },
   {
     group: "Décor & Rentals",
     items: [
-      { name: "Florists",      href: "/florists",             icon: Flower,  desc: "Fresh blooms" },
-      { name: "Marquee & Tent", href: "/marquee-rental",      icon: Tent,    desc: "Canopies & shamiana" },
-      { name: "Furniture",     href: "/furniture-rental",     icon: Sofa,    desc: "Seating & stage" },
-      { name: "Generators",    href: "/generator-rental",     icon: Zap,     desc: "Power backup" },
-      { name: "Sound System",  href: "/sound-system-rental",  icon: Speaker, desc: "Speakers & mics" },
+      { name: "Florists",      href: "/wedding-decorators",             icon: Flower,  desc: "Fresh blooms" },
+      { name: "Marquee & Tent", href: "/wedding-venues",      icon: Tent,    desc: "Canopies & shamiana" },
+      { name: "Furniture",     href: "/wedding-decorators",     icon: Sofa,    desc: "Seating & stage" },
+      { name: "Generators",    href: "/wedding-generators",     icon: Zap,     desc: "Power backup" },
+      { name: "Sound System",  href: "/wedding-djs",  icon: Speaker, desc: "Speakers & mics" },
     ],
   },
   {
     group: "Entertainment & Hosting",
     items: [
-      { name: "Dhol Players",   href: "/dhol-players",          icon: Drum,           desc: "Set the rhythm" },
-      { name: "Qawwali & Naat", href: "/qawwali",               icon: Music2,         desc: "Spiritual evenings" },
-      { name: "Choreographers", href: "/wedding-choreographers", icon: PersonStanding, desc: "Mehndi performances" },
-      { name: "Event Hosts",    href: "/event-hosts",           icon: Mic,            desc: "MCs & anchors" },
-      { name: "Live Streaming", href: "/live-streaming",        icon: Video,          desc: "Stream to family abroad" },
+      { name: "Dhol Players",   href: "/wedding-djs",          icon: Drum,           desc: "Set the rhythm" },
+      { name: "Qawwali & Naat", href: "/wedding-djs",               icon: Music2,         desc: "Spiritual evenings" },
+      { name: "Choreographers", href: "/wedding-planners", icon: PersonStanding, desc: "Mehndi performances" },
+      { name: "Event Hosts",    href: "/wedding-planners",           icon: Mic,            desc: "MCs & anchors" },
+      { name: "Live Streaming", href: "/wedding-photographers",        icon: Video,          desc: "Stream to family abroad" },
     ],
   },
   {
     group: "Ceremony",
     items: [
-      { name: "Nikahkhwan", href: "/wedding-officiants", icon: ScrollText, desc: "Officiate the nikah" },
+      { name: "Nikahkhwan", href: "/nikah-khwan", icon: ScrollText, desc: "Officiate the nikah" },
     ],
   },
 ]
@@ -680,7 +680,7 @@ export function Header() {
 
               {/* Direct links */}
               {[
-                { href: "/venues", label: "Venues" },
+                { href: "/wedding-venues", label: "Venues" },
                 { href: "/vendors", label: "All Vendors" },
                 { href: "/real-weddings", label: "Real Weddings" },
                 { href: "/pricing", label: "Pricing" },

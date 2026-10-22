@@ -1,3 +1,4 @@
+import { formatPrice as formatCanonicalPrice } from "@/lib/pricing/pricing-model";
 "use client"
 
 import { useState, useRef, useCallback, useEffect } from "react"
@@ -116,7 +117,16 @@ export default function VendorCard({
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
   })()
-  const [openAlert, setOpenAlert] = useState(false)
+  const [openAlert, setOpenAlert] = useState(false);
+  const priceDisplay = formatCanonicalPrice(
+    business || {
+      price,
+      minimumPrice: price,
+      type: vendorType || type,
+      vendorType: vendorType || type,
+      maxCapacity: capacity,
+    }
+  );
   // Where the visitor was heading when we interrupted them to sign in.
   const [pendingPath, setPendingPath] = useState<string | null>(null)
   const router = useRouter()
@@ -455,12 +465,12 @@ export default function VendorCard({
                 <div className="flex items-end justify-between mt-auto pt-3 border-t border-bridal-beige/70">
                   <div>
                     <p className="font-bridal text-[10px] uppercase tracking-[0.2em] font-medium text-bridal-text-label">
-                      Starting from
+                      {priceDisplay.model.priceBasis === "per_head" ? "Per Guest" : "Starting from"}
                     </p>
-                    <p className="font-display italic text-[22px] sm:text-[24px] text-bridal-gold-dark mt-0.5 leading-none">
-                      {/* WW-PRICE0 — consistent with the detail page and the
-                          booking funnel: no published price ⇒ price on request. */}
-                      {formatPrice(price) ?? (
+                    <p className="font-display italic text-[20px] sm:text-[22px] text-bridal-gold-dark mt-0.5 leading-none">
+                      {priceDisplay.headline !== "Price on request" ? (
+                        priceDisplay.headline
+                      ) : (
                         <span className="text-[15px] text-bridal-text-soft">
                           Price on request
                         </span>
@@ -530,7 +540,7 @@ export default function VendorCard({
                       <Calendar className="w-3.5 h-3.5" />
                       {/* WW-PRICE0 — an unpriced vendor can't be booked; the booking
                           funnel shows the price-on-request panel with the inquiry. */}
-                      {(price || price === 0) ? "Book Now" : "Ask for a price"}
+                      {(priceDisplay.primaryAmount != null && priceDisplay.primaryAmount > 0) ? "Book Now" : "Ask for a price"}
                     </button>
                   )}
                 </CardFooter>

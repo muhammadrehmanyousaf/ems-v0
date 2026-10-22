@@ -36,7 +36,7 @@ export default function DealsPage() {
             <p className="text-neutral-600 mb-6 max-w-md mx-auto">
               Browse our vendor catalog to discover more offers and seasonal promotions.
             </p>
-            <Link href="/venues">
+            <Link href="/wedding-venues">
               <Button className="bg-gradient-to-r from-bridal-gold to-bridal-gold-dark hover:from-bridal-gold-dark hover:to-bridal-gold-dark text-white gap-2">
                 Browse Vendors <ArrowRight className="w-4 h-4" />
               </Button>

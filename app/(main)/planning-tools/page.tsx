@@ -166,7 +166,7 @@ export default function PlanningToolsPage() {
                 Find Vendors
               </div>
             </Link>
-            <Link href="/venues" className="w-full sm:w-auto">
+            <Link href="/wedding-venues" className="w-full sm:w-auto">
               <div className="px-6 py-3 border border-bridal-gold-dark text-bridal-gold-dark rounded-lg hover:bg-bridal-cream transition-all duration-300 font-medium text-center">
                 Browse Venues
               </div>

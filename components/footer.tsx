@@ -249,13 +249,13 @@ export function Footer() {
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-1">
                 <span className="inline-flex items-center gap-1.5 font-bridal text-[12px] text-bridal-text-soft">
                   <Star className="w-3.5 h-3.5 text-bridal-gold fill-bridal-gold" />
-                  <span className="font-medium text-bridal-charcoal">4.8/5</span>
-                  rating
+                  <span className="font-medium text-bridal-charcoal">3,000+</span>
+                  listings
                 </span>
                 <span className="inline-flex items-center gap-1.5 font-bridal text-[12px] text-bridal-text-soft">
                   <Users className="w-3.5 h-3.5 text-bridal-gold" />
-                  <span className="font-medium text-bridal-charcoal">10K+</span>
-                  couples
+                  <span className="font-medium text-bridal-charcoal">90+</span>
+                  cities
                 </span>
               </div>
 
@@ -373,6 +373,8 @@ export function Footer() {
               <ul className="space-y-2">
                 {[
                   { href: "/about",                    name: "About us" },
+                  { href: "/how-we-verify-vendors",    name: "How we verify vendors" },
+                  { href: "/editorial-policy",         name: "Editorial & pricing policy" },
                   { href: "/services",                 name: "Our services" },
                   { href: "/payments",                 name: "Payments & security" },
                   { href: "/press",                    name: "Press" },

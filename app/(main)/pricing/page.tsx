@@ -476,8 +476,8 @@ export default function PricingPage() {
                 `Write to ${SUPPORT_EMAIL} or call ${SUPPORT_PHONE_DISPLAY}. We acknowledge ${TAT_FIRST_RESPONSE} and resolve ${TAT_RESOLUTION}. Approved refunds go back to the original payment method and typically reach a card in ${TAT_REFUND_TO_CARD}.`,
               ],
               [
-                "Customer deposits",
-                "Separate from your subscription. A deposit a customer places against a booking is held by us and released to you in full after the function is delivered. We deduct nothing from it.",
+                "Customer payments & deposits",
+                "100% direct to vendor. Customers pay you directly into your bank account or mobile wallet. WeddingWala takes 0% commission and never holds, handles, or deducts from customer money.",
               ],
             ].map(([term, def]) => (
               <div key={term}>

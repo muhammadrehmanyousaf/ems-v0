@@ -38,10 +38,10 @@ const testimonials = [
 ]
 
 const stats = [
-  { end: 10000, suffix: "+", label: "Happy Couples" },
-  { end: 500,   suffix: "+", label: "Verified Vendors" },
-  { end: 50,    suffix: "+", label: "Cities Covered" },
-  { end: 4.8,   suffix: "/5", label: "Avg Rating", decimals: true },
+  { end: 3200, suffix: "+", label: "Vendors Listed" },
+  { end: 60,   suffix: "+", label: "Weddings Hosted" },
+  { end: 90,   suffix: "+", label: "Cities Covered" },
+  { end: 100,  suffix: "%", label: "Transparent Rates" },
 ]
 
 export function TestimonialBand() {
@@ -173,11 +173,7 @@ export function TestimonialBand() {
                   className="bridal-card p-5 sm:p-6 text-center hover:border-bridal-gold/55 transition-colors"
                 >
                   <div className="font-display italic text-[28px] sm:text-[34px] text-bridal-gold leading-none">
-                    {stat.decimals ? (
-                      <span>4.8/5</span>
-                    ) : (
-                      <CountUp end={stat.end} suffix={stat.suffix} duration={2.5} />
-                    )}
+                    <CountUp end={stat.end} suffix={stat.suffix} duration={2.5} />
                   </div>
                   <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-text-soft font-medium mt-2">
                     {stat.label}

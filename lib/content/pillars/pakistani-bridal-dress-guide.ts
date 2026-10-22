@@ -2,7 +2,7 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "pakistani-bridal-dress-guide",
-  "title": "Pakistani Bridal Dress Guide 2026: What the Bride Wears at Every Event",
+  "title": "Pakistani Bridal Dress Guide",
   "h1": "Pakistani Bridal Dress Guide: What to Wear at Every Wedding Event",
   "metaDescription": "A neutral, Pakistan-specific bridal dress guide: what the bride wears at Mayun, Mehndi, Nikah, Barat and Walima, plus silhouettes, colours, fabrics and indicative costs.",
   "eyebrow": "Bridal Attire Guide",

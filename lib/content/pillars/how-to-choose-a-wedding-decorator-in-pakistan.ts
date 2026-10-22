@@ -2,7 +2,7 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "how-to-choose-a-wedding-decorator-in-pakistan",
-  "title": "How to Choose a Wedding Decorator in Pakistan: Stage, Themes & Costs",
+  "title": "Wedding Decorator Guide Pakistan",
   "h1": "How to Choose a Wedding Decorator in Pakistan: Stage, Themes & Costs",
   "metaDescription": "A practical guide to choosing a wedding decorator in Pakistan: what they do, indicative stage decoration costs (PKR), themes by event, an 8-step checklist, contract red flags and when to book.",
   "eyebrow": "Vendor Guides",
