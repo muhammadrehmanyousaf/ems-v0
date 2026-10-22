@@ -1,3 +1,5 @@
+"use client"
+
 /**
  * "Save to Pinterest" button.
  *
@@ -19,8 +21,6 @@
  * Renders a small branded button that opens Pinterest's pin-creation
  * dialog in a popup. Pinterest auto-fills imageUrl + description + pageUrl.
  */
-
-"use client"
 
 import Link from "next/link"
 

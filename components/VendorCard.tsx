@@ -1,5 +1,6 @@
-import { formatPrice as formatCanonicalPrice } from "@/lib/pricing/pricing-model";
 "use client"
+
+import { formatPrice as formatCanonicalPrice } from "@/lib/pricing/pricing-model";
 
 import { useState, useRef, useCallback, useEffect } from "react"
 import Link from "next/link"
