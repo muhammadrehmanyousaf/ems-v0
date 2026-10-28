@@ -261,6 +261,14 @@ export function BusinessRegistrationForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessType]);
 
+  // Keep formData.businessType synchronized with businessType from formContext
+  // so that toggles or partial field updates never clear businessType and blank out the form
+  useEffect(() => {
+    if (businessType && formData.businessType !== businessType) {
+      setFormData((prev) => ({ ...prev, businessType: String(businessType) }));
+    }
+  }, [businessType, formData.businessType, setFormData]);
+
   // Persist image binaries to IndexedDB so a refresh doesn't wipe a 10 MB
   // shop photo. Stash the id-map in a ref AND immediately schedule a draft
   // save with the fresh refs — otherwise, picking an image then refreshing
@@ -466,7 +474,7 @@ export function BusinessRegistrationForm() {
       }
       setErrors(currentErrors);
       return currentErrors;
-    } else if (formData.businessType === "Wedding venue") {
+    } else if (venue || formData.businessType === "Wedding venue") {
       vanueValidations({ currentStep, formData, currentErrors });
       setErrors(currentErrors);
       return currentErrors;
@@ -574,7 +582,9 @@ export function BusinessRegistrationForm() {
       const imagesStep = 6;
       if (currentStep === packagesStep) {
         const isMenuType =
+          venue ||
           formData.businessType === "Wedding venue" ||
+          catering ||
           formData.businessType === "Catering";
         const itemLabel = isMenuType ? "menu" : "package";
         const validPackages =
@@ -752,11 +762,15 @@ export function BusinessRegistrationForm() {
         city: formData.city,
         subArea: formData.subArea,
         secondaryContactNumber: formData.secondaryContactNumber || undefined,
-        vendorType: formData.businessType,
+        vendorType: formData.businessType || (businessType as string),
         name: formData.name,
         brandLogo: formData.profilePicture,
         roleIds: [2],
-        subBusinessType: carRentalSubTypes(formData.businessType, formData.subBusinessType, formData.packages),
+        subBusinessType: carRentalSubTypes(
+          formData.businessType || (businessType as string),
+          formData.subBusinessType,
+          formData.packages
+        ),
         cityCovered: formData.cityCovered,
         expertise: formData.expertise,
         amenities: formData.amenities,
@@ -1220,7 +1234,11 @@ export function BusinessRegistrationForm() {
               {/* min-h-full + justify-center: centres a short step vertically,
                   while a tall step (e.g. the business-type grid) just grows
                   and scrolls from the top — no clipping. */}
-              <div className="lg:min-h-full lg:flex lg:flex-col lg:justify-center">
+              <div
+                className={`lg:min-h-full lg:flex lg:flex-col ${
+                  currentStep === 0 ? "lg:justify-center" : "lg:justify-start"
+                }`}
+              >
               {/* 02-VR-RESILIENCE-V1 — device-local resume prompt.
                   Fires the moment the page loads if a local draft exists,
                   even before the vendor types an email. This is the common
@@ -1316,7 +1334,7 @@ export function BusinessRegistrationForm() {
                       </div>
                     </div>
 
-                    {formData.businessType === "Wedding venue" ? (
+                    {venue || formData.businessType === "Wedding venue" ? (
                       <VenueSteps
                         setFile={setFile}
                         file={file}

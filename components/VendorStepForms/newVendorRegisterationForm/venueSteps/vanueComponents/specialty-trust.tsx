@@ -89,13 +89,16 @@ const VenueSpecialtyTrust = () => {
             { key: "valetParkingIncluded", label: "Valet parking included" },
             { key: "wifiAvailable", label: "Wi-Fi available for guests" },
           ].map((f) => (
-            <label key={f.key} className="flex items-center gap-2 text-sm cursor-pointer">
+            <div key={f.key} className="flex items-center gap-2 text-sm">
               <Checkbox
+                id={`venue-op-${f.key}`}
                 checked={!!tsd[f.key]}
                 onCheckedChange={(c) => setTsd(f.key, !!c)}
               />
-              <span>{f.label}</span>
-            </label>
+              <label htmlFor={`venue-op-${f.key}`} className="cursor-pointer">
+                {f.label}
+              </label>
+            </div>
           ))}
         </div>
       </SectionCard>

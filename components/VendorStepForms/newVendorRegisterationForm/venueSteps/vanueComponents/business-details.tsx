@@ -56,6 +56,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
     useEffect(() => {
         setFormData((prevData) => ({
             ...prevData,
+            businessType: prevData.businessType || businessType || "Wedding venue",
             staff: selectedstaff,
             expertise: selectedExpertise,
             // MUST be an array. The column is ARRAY(STRING), and the backend runs
