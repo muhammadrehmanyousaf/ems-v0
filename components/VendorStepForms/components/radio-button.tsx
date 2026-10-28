@@ -31,14 +31,14 @@ const RadioButton:React.FC<RadioCompontent> = ({data, selectedOption, setSelecte
                 return (
                     <label
                         key={option.id}
-                        className={`flex items-center cursor-pointer space-x-1.5 py-1.5 pr-5 lg:pr-8 rounded-full border focus-within:ring-2 focus-within:ring-bridal-gold/40 ${selected ? "border-bridal-gold bg-bridal-gold/10 shadow-sm" : "hover:bg-gray-100"}`}>
+                        className={`relative flex items-center cursor-pointer space-x-1.5 py-1.5 pr-5 lg:pr-8 rounded-full border focus-within:ring-2 focus-within:ring-bridal-gold/40 select-none overflow-hidden transition-colors ${selected ? "border-bridal-gold bg-bridal-gold/10 shadow-sm" : "hover:bg-gray-100"}`}>
                         <input
                             type="radio"
                             name={groupName}
                             value={option.id}
                             checked={selected}
                             onChange={() => setSelectedOption(option.id)}
-                            className="sr-only"
+                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
                         />
                         <div className="size-8 flex items-center justify-center">
                             <span

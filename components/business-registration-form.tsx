@@ -340,6 +340,19 @@ export function BusinessRegistrationForm() {
     sweepExpiredBlobs().catch(() => null);
   }, []);
 
+  // Prevent rogue browser focus-scroll on the outer container
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const root = document.querySelector<HTMLElement>(".bridal-surface");
+    if (!root) return;
+    const onScroll = () => {
+      if (root.scrollTop !== 0) root.scrollTop = 0;
+      if (root.scrollLeft !== 0) root.scrollLeft = 0;
+    };
+    root.addEventListener("scroll", onScroll, { passive: true });
+    return () => root.removeEventListener("scroll", onScroll);
+  }, []);
+
   // The indicator shows whichever layer wrote most recently.
   const combinedLastSavedAt: Date | null = (() => {
     const a = draftSync.lastSavedAt;
@@ -687,6 +700,8 @@ export function BusinessRegistrationForm() {
   // AND the window in case mobile is using the page scrollbar.
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const root = document.querySelector<HTMLElement>(".bridal-surface");
+    if (root) root.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
     const panels = document.querySelectorAll<HTMLElement>(".bridal-scroll");
     panels.forEach((p) => p.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior }));
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
@@ -1159,7 +1174,7 @@ export function BusinessRegistrationForm() {
   const totalSteps = maxUserSteps + 1;
 
   return (
-    <div className="min-h-screen lg:h-screen lg:overflow-hidden lg:flex lg:flex-col bridal-surface relative">
+    <div className="min-h-screen lg:h-screen lg:overflow-clip lg:flex lg:flex-col bridal-surface relative">
       {/* Page-wide warm parchment + jaal background */}
       <div className="fixed inset-0 bg-bridal-hero -z-10" aria-hidden />
       <div
