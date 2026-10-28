@@ -379,15 +379,18 @@ export function BusinessRegistrationForm() {
 
     // Password is intentionally NOT persisted (localStorage is plaintext
     // and would leak if the device is shared/stolen). Vendor must re-enter
-    // on resume — flag it so they know what to do.
-    const passwordRequired = (d.currentStep ?? 0) >= 1;
-    if (passwordRequired) {
+    // on resume — navigate to Step 1 so they enter it upfront rather than
+    // being blocked on final submission.
+    const needsPassword = (d.currentStep ?? 0) >= 1 && !d.formData?.password;
+    if (needsPassword) {
+      setCurrentStep(1);
       toast({
         title: "Progress restored",
         description:
-          "Welcome back. You'll need to re-enter your password before submitting (we don't store passwords on your device for security).",
+          "Welcome back! Your registration details have been restored. Please set your password on this step to continue.",
       });
     } else {
+      if (typeof d.currentStep === "number") setCurrentStep(d.currentStep);
       toast({
         title: "Progress restored",
         description: `Picked up where you left off${
@@ -468,91 +471,106 @@ export function BusinessRegistrationForm() {
     console.log("Running validations for step:", currentStep);
 
     if (currentStep === 0) {
-      if (!formData.businessType) {
-        console.log("in no business type 43525452435", formData.businessType);
+      if (!formData.businessType && !businessType) {
         currentErrors.businessType = "Select Business Type";
       }
       setErrors(currentErrors);
       return currentErrors;
-    } else if (venue || formData.businessType === "Wedding venue") {
+    }
+
+    // Step 1: Personal Details is universal across all categories
+    if (currentStep === 1) {
+      if (!formData.fullName || !formData.fullName.trim()) {
+        currentErrors.fullName = "Full Name is required";
+      }
+      if (!formData.email || !formData.email.trim()) {
+        currentErrors.email = "Email is required";
+      } else if (!validateEmail(formData.email.trim())) {
+        currentErrors.email = "Invalid email address";
+      }
+      if (!formData.phoneNumber) {
+        currentErrors.phoneNumber = "Phone number is required";
+      } else if (!isValidPakistaniPhone(formData.phoneNumber) && !/^3\d{9}$/.test(String(formData.phoneNumber))) {
+        currentErrors.phoneNumber = PHONE_VALIDATION_MESSAGE;
+      }
+      if (!formData.password) {
+        currentErrors.password = "Password is required";
+      } else if (formData.password.length < 8) {
+        currentErrors.password = "Password must be at least 8 characters";
+      }
+      if (!formData.re_enterPassword) {
+        currentErrors.re_enterPassword = "Re-enter password is required";
+      } else if (formData.password !== formData.re_enterPassword) {
+        currentErrors.re_enterPassword = "Passwords do not match";
+      }
+      setErrors(currentErrors);
+      return currentErrors;
+    }
+
+    // Step 2: Contact Details is universal across all categories
+    if (currentStep === 2) {
+      if (!formData.name || !formData.name.trim()) {
+        currentErrors.name = "Brand Name is required";
+      }
+      if (formData.secondaryContactNumber) {
+        if (!isValidPakistaniPhone(formData.secondaryContactNumber) && !/^3\d{9}$/.test(String(formData.secondaryContactNumber))) {
+          currentErrors.secondaryContactNumber = PHONE_VALIDATION_MESSAGE;
+        } else if (String(formData.secondaryContactNumber) === String(formData.phoneNumber)) {
+          currentErrors.secondaryContactNumber = "Secondary number must be different from your primary phone number";
+        }
+      }
+      if (!formData.city || !formData.city.trim()) {
+        currentErrors.city = "City is required";
+      } else if (!/^[a-zA-Z\s\-]+$/.test(formData.city.trim())) {
+        currentErrors.city = "City must contain letters only";
+      }
+      if (!formData.subArea || !formData.subArea.trim()) {
+        currentErrors.subArea = "Sub Area is required";
+      } else if (!/^[a-zA-Z0-9\s\-]+$/.test(formData.subArea.trim())) {
+        currentErrors.subArea = "Sub Area must contain letters, numbers, or hyphens only";
+      }
+      if (!formData.officeAddress || !formData.officeAddress.trim()) {
+        currentErrors.officeAddress = "Office Address is required";
+      } else if (formData.officeAddress.includes("@") || /^https?:\/\//i.test(formData.officeAddress)) {
+        currentErrors.officeAddress = "Please enter a valid office address";
+      } else if (formData.officeAddress.trim().length < 5) {
+        currentErrors.officeAddress = "Office Address is too short";
+      }
+      if (formData.instagram && !/^https?:\/\/(www\.)?instagram\.com\/.+/i.test(formData.instagram)) {
+        currentErrors.instagram = "Must be a valid Instagram link (e.g. https://instagram.com/youraccount)";
+      }
+      if (formData.facebook && !/^https?:\/\/(www\.)?facebook\.com\/.+/i.test(formData.facebook)) {
+        currentErrors.facebook = "Must be a valid Facebook link (e.g. https://facebook.com/yourpage)";
+      }
+      if (formData.officeGoogleLink && !/google\.com\/maps|maps\.google\.com|maps\.app\.goo\.gl|goo\.gl/i.test(formData.officeGoogleLink)) {
+        currentErrors.officeGoogleLink = "Must be a valid Google Maps link";
+      }
+      setErrors(currentErrors);
+      return currentErrors;
+    }
+
+    // Step 3 and onwards: Category-specific validations
+    if (venue || formData.businessType === "Wedding venue") {
       vanueValidations({ currentStep, formData, currentErrors });
       setErrors(currentErrors);
       return currentErrors;
     }
-    if (carRental) {
+    if (carRental || formData.businessType === "Car rental") {
       CarRentalValidations({ currentStep, formData, currentErrors });
       setErrors(currentErrors);
       return currentErrors;
     }
-    if (bridalWear) {
+    if (bridalWear || formData.businessType === "Bridal wearing") {
       BridalWearValidations({ currentStep, formData, currentErrors });
       setErrors(currentErrors);
       return currentErrors;
     }
-    if (weddingStationery) {
+    if (weddingStationery || formData.businessType === "Wedding Invitations and Stationery") {
       WeddingStationeryValidations({ currentStep, formData, currentErrors });
       setErrors(currentErrors);
       return currentErrors;
     }
     if (photographer || makeupArtist || hennaArtist || decorator || catering || isGenericNewCategory) {
-      // For now, use basic validation for new business types
-      if (currentStep === 1) {
-        if (!formData.fullName)
-          currentErrors.fullName = "Full name is required";
-        if (!formData.email) currentErrors.email = "Email is required";
-        if (formData.email && !validateEmail(formData.email))
-          currentErrors.email = "Invalid email address";
-        if (!formData.phoneNumber) {
-          currentErrors.phoneNumber = "Phone number is required";
-        } else if (!isValidPakistaniPhone(formData.phoneNumber)) {
-          // Issue #10 — accept both 10-digit (3001234567) and
-          // 11-digit (03001234567) forms via the shared util.
-          currentErrors.phoneNumber = PHONE_VALIDATION_MESSAGE;
-        }
-        if (!formData.password) currentErrors.password = "Password is required";
-        if (formData.password && formData.password.length < 8)
-          currentErrors.password = "Password must be at least 8 characters";
-        if (!formData.re_enterPassword)
-          currentErrors.re_enterPassword = "Re-enter password is required";
-        else if (formData.password !== formData.re_enterPassword)
-          currentErrors.re_enterPassword = "Passwords do not match";
-      }
-      if (currentStep === 2) {
-        if (!formData.name) currentErrors.name = "Brand Name is required";
-        if (formData.secondaryContactNumber) {
-          if (!isValidPakistaniPhone(formData.secondaryContactNumber)) {
-            currentErrors.secondaryContactNumber = PHONE_VALIDATION_MESSAGE;
-          } else if (String(formData.secondaryContactNumber) === String(formData.phoneNumber)) {
-            currentErrors.secondaryContactNumber = "Secondary number must be different from your primary phone number";
-          }
-        }
-        if (!formData.city) {
-          currentErrors.city = "City is required";
-        } else if (!/^[a-zA-Z\s\-]+$/.test(formData.city)) {
-          currentErrors.city = "City must contain letters only";
-        }
-        if (!formData.subArea) {
-          currentErrors.subArea = "Sub area is required";
-        } else if (!/^[a-zA-Z0-9\s\-]+$/.test(formData.subArea)) {
-          currentErrors.subArea = "Sub Area must contain letters, numbers, or hyphens only";
-        }
-        if (!formData.officeAddress) {
-          currentErrors.officeAddress = "Office address is required";
-        } else if (formData.officeAddress.includes("@") || /^https?:\/\//i.test(formData.officeAddress)) {
-          currentErrors.officeAddress = "Please enter a valid office address";
-        } else if (formData.officeAddress.trim().length < 5) {
-          currentErrors.officeAddress = "Office address is too short";
-        }
-        if (formData.instagram && !/^https?:\/\/(www\.)?instagram\.com\/.+/i.test(formData.instagram)) {
-          currentErrors.instagram = "Must be a valid Instagram link (e.g. https://instagram.com/youraccount)";
-        }
-        if (formData.facebook && !/^https?:\/\/(www\.)?facebook\.com\/.+/i.test(formData.facebook)) {
-          currentErrors.facebook = "Must be a valid Facebook link (e.g. https://facebook.com/yourpage)";
-        }
-        if (formData.officeGoogleLink && !/google\.com\/maps|maps\.google\.com|maps\.app\.goo\.gl|goo\.gl/i.test(formData.officeGoogleLink)) {
-          currentErrors.officeGoogleLink = "Must be a valid Google Maps link";
-        }
-      }
       if (currentStep === 3) {
         if (!formData.description)
           currentErrors.description = "Business description is required";
@@ -574,10 +592,6 @@ export function BusinessRegistrationForm() {
           currentErrors.downPayment = "Percentage must be between 0 and 100";
         }
       }
-      // VR-050 — every simple-flow vendor type (photographer, makeup, henna,
-      // decorator, catering) inserted a "Specialty & Trust" step at 4, so
-      // their Packages step is 5 and Images step is 6. Step 4 is optional
-      // (no validation needed).
       const packagesStep = 5;
       const imagesStep = 6;
       if (currentStep === packagesStep) {
@@ -602,7 +616,6 @@ export function BusinessRegistrationForm() {
               currentErrors[`packages[${index}].price`] =
                 `${itemLabel.charAt(0).toUpperCase() + itemLabel.slice(1)} price is required`;
             }
-            // Features Validation: every item in a selected feature must be filled
             if (pkg.features) {
               Object.keys(pkg.features).forEach((feature) => {
                 const items = pkg.features[feature];
@@ -622,10 +635,6 @@ export function BusinessRegistrationForm() {
       }
       if (currentStep === imagesStep) {
         const imageCount = formData.imageFiles?.length ?? 0;
-        // Temporary — images optional while IMAGE_UPLOADS_ENABLED is
-        // off (no storage backend yet). The 20-image cap still
-        // applies as a defensive client-side limit so a vendor
-        // can't queue up gigabytes of files we'd silently discard.
         if (IMAGE_UPLOADS_ENABLED && imageCount === 0) {
           currentErrors.images = "Please upload at least one image";
         } else if (imageCount > 20) {
@@ -635,6 +644,9 @@ export function BusinessRegistrationForm() {
       setErrors(currentErrors);
       return currentErrors;
     }
+
+    setErrors(currentErrors);
+    return currentErrors;
   };
 
   const handleNext = () => {
@@ -642,10 +654,24 @@ export function BusinessRegistrationForm() {
     console.log("Validation Errors:", validationErrors);
 
     if (validationErrors && Object.keys(validationErrors).length > 0) {
+      const errorList = Object.values(validationErrors);
       toast({
-        title: "Validation Error",
-        description: Object.values(validationErrors).join(", "),
+        title: "Please complete required fields",
+        description: errorList[0] || "Some required fields are missing or invalid.",
+        variant: "destructive",
       });
+
+      // Scroll to the first error element if present in DOM
+      const firstErrorField = Object.keys(validationErrors)[0];
+      if (typeof window !== "undefined") {
+        setTimeout(() => {
+          const el = document.querySelector(`[name="${firstErrorField}"]`) as HTMLElement;
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            el.focus();
+          }
+        }, 80);
+      }
       return;
     }
 
@@ -666,13 +692,95 @@ export function BusinessRegistrationForm() {
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   }, [currentStep]);
 
-  const handleSubmit = async () => {
-    const validationErrors = handleValidations();
+  const validateAllSteps = (): { valid: boolean; stepToRedirect?: number; errors: Record<string, string> } => {
+    // 1. Step 1: Personal Details
+    const s1: Record<string, string> = {};
+    if (!formData.fullName || !formData.fullName.trim()) s1.fullName = "Full Name is required";
+    if (!formData.email || !formData.email.trim()) {
+      s1.email = "Email is required";
+    } else if (!validateEmail(formData.email.trim())) {
+      s1.email = "Invalid email address";
+    }
+    if (!formData.phoneNumber) {
+      s1.phoneNumber = "Phone number is required";
+    } else if (!isValidPakistaniPhone(formData.phoneNumber) && !/^3\d{9}$/.test(String(formData.phoneNumber))) {
+      s1.phoneNumber = PHONE_VALIDATION_MESSAGE;
+    }
+    if (!formData.password) {
+      s1.password = "Password is required";
+    } else if (formData.password.length < 8) {
+      s1.password = "Password must be at least 8 characters";
+    }
+    if (!formData.re_enterPassword) {
+      s1.re_enterPassword = "Re-enter password is required";
+    } else if (formData.password !== formData.re_enterPassword) {
+      s1.re_enterPassword = "Passwords do not match";
+    }
+    if (Object.keys(s1).length > 0) {
+      return { valid: false, stepToRedirect: 1, errors: s1 };
+    }
 
-    if (validationErrors && Object.keys(validationErrors).length > 0) {
+    // 2. Step 2: Contact Details
+    const s2: Record<string, string> = {};
+    if (!formData.name || !formData.name.trim()) s2.name = "Brand Name is required";
+    if (!formData.city || !formData.city.trim()) s2.city = "City is required";
+    if (!formData.subArea || !formData.subArea.trim()) s2.subArea = "Sub Area is required";
+    if (!formData.officeAddress || !formData.officeAddress.trim()) s2.officeAddress = "Office Address is required";
+    if (Object.keys(s2).length > 0) {
+      return { valid: false, stepToRedirect: 2, errors: s2 };
+    }
+
+    // 3. Step 3: Business Details
+    const s3: Record<string, string> = {};
+    if (venue || businessType === "Wedding venue" || formData.businessType === "Wedding venue") {
+      vanueValidations({ currentStep: 3, formData, currentErrors: s3 });
+    } else if (carRental || businessType === "Car rental" || formData.businessType === "Car rental") {
+      CarRentalValidations({ currentStep: 3, formData, currentErrors: s3 });
+    } else if (bridalWear || businessType === "Bridal wearing" || formData.businessType === "Bridal wearing") {
+      BridalWearValidations({ currentStep: 3, formData, currentErrors: s3 });
+    } else if (weddingStationery || businessType === "Wedding Invitations and Stationery" || formData.businessType === "Wedding Invitations and Stationery") {
+      WeddingStationeryValidations({ currentStep: 3, formData, currentErrors: s3 });
+    } else {
+      if (!formData.description) s3.description = "Business description is required";
+      if (!Array.isArray(formData.subBusinessType) || formData.subBusinessType.length === 0) s3.subBusinessType = "Business type is required";
+      if (!formData.staff || formData.staff.length < 1) s3.staff = "Staff is required";
+      if (!formData.cancelationPolicy) s3.cancelationPolicy = "Cancellation policy is required";
+      if (!formData.downPaymentType) s3.downPaymentType = "Down payment type is required";
+      if (!formData.downPayment || Number(formData.downPayment) <= 0) s3.downPayment = "Down payment is required";
+    }
+    if (Object.keys(s3).length > 0) {
+      return { valid: false, stepToRedirect: 3, errors: s3 };
+    }
+
+    // 4. Packages Validation (unless specialized flow)
+    const isSpecializedFlow = carRental || businessType === "Car rental";
+    if (!isSpecializedFlow) {
+      const validPackages = formData.packages?.filter((p: any) => p.name && p.price) ?? [];
+      const pkgStep = bridalWear || weddingStationery ? 7 : 5;
+      if (validPackages.length === 0) {
+        return {
+          valid: false,
+          stepToRedirect: pkgStep,
+          errors: { packages: "At least one package/menu with a name and price is required" },
+        };
+      }
+    }
+
+    return { valid: true, errors: {} };
+  };
+
+  const handleSubmit = async () => {
+    // Comprehensive full validation across all steps before submitting
+    const comprehensiveCheck = validateAllSteps();
+    if (!comprehensiveCheck.valid) {
+      setErrors(comprehensiveCheck.errors);
+      if (typeof comprehensiveCheck.stepToRedirect === "number") {
+        setCurrentStep(comprehensiveCheck.stepToRedirect);
+      }
       toast({
-        title: "Validation Error",
-        description: Object.values(validationErrors).join(", "),
+        title: "Please complete required fields",
+        description: Object.values(comprehensiveCheck.errors)[0] || "Some required fields are missing or incomplete.",
+        variant: "destructive",
       });
       return;
     }
@@ -1273,12 +1381,22 @@ export function BusinessRegistrationForm() {
                       return;
                     }
                     setFormData((prev) => ({ ...prev, ...(d.payload || {}) }));
-                    if (typeof d.currentStep === "number") setCurrentStep(d.currentStep);
+                    const needsPassword = (d.currentStep || 0) >= 1 && !d.payload?.password;
+                    if (needsPassword) {
+                      setCurrentStep(1);
+                      toast({
+                        title: "Progress restored",
+                        description:
+                          "Welcome back! Your registration details have been restored. Please set your password on this step to continue.",
+                      });
+                    } else if (typeof d.currentStep === "number") {
+                      setCurrentStep(d.currentStep);
+                      toast({
+                        title: "Progress restored",
+                        description: `Picked up where you left off (step ${(d.currentStep || 0) + 1}).`,
+                      });
+                    }
                     if (d.vendorType) setBusinessType(d.vendorType);
-                    toast({
-                      title: "Progress restored",
-                      description: `Picked up where you left off (step ${(d.currentStep || 0) + 1}).`,
-                    });
                   }}
                 />
               )}

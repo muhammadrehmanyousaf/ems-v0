@@ -1,4 +1,5 @@
 import { FieldLabel } from "@/components/ui/field-help";
+import { cn } from "@/lib/utils";
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -268,8 +269,11 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                 <section className="space-y-3">
                     <FieldLabel help="maxCapacity">Maximum People Capacity</FieldLabel>
                     <Input
+                        id="maxCapacity"
+                        name="maxCapacity"
                         type="number"
                         placeholder="Enter maximum people capacity"
+                        className={cn(errors.maxCapacity && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/30")}
                         value={formData.maxCapacity || ""}
                         onChange={(e) => {
                             setFormData((prevData) => ({
@@ -280,6 +284,11 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                                 ...prevErrors,
                                 maxCapacity: "",
                             }));
+                        }}
+                        onBlur={(e) => {
+                            if (!e.target.value || Number(e.target.value) <= 0) {
+                                setErrors((prev) => ({ ...prev, maxCapacity: "Maximum Capacity is required" }));
+                            }
                         }}
                     />
                     {errors.maxCapacity && <p className="text-xs text-red-500">{errors.maxCapacity}</p>}
@@ -346,8 +355,11 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                     <section className="space-y-3">
                         <FieldLabel help="carParkingCapacity">Car Parking Capacity</FieldLabel>
                         <Input
+                            id="carParkingCapacity"
+                            name="carParkingCapacity"
                             type="number"
                             placeholder="Enter car parking capacity"
+                            className={cn(errors.carParkingCapacity && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/30")}
                             value={formData.carParkingCapacity || ""}
                             onChange={(e) => {
                                 setFormData((prevData) => ({
@@ -358,6 +370,11 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                                     ...prevErrors,
                                     carParkingCapacity: "",
                                 }));
+                            }}
+                            onBlur={(e) => {
+                                if (parking === 'yes' && (!e.target.value || Number(e.target.value) <= 0)) {
+                                    setErrors((prev) => ({ ...prev, carParkingCapacity: "Car Parking Capacity is required" }));
+                                }
                             }}
                         />
                         {errors.carParkingCapacity && <p className="text-xs text-red-500">{errors.carParkingCapacity}</p>}
@@ -376,8 +393,10 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
             <section className="space-y-3">
                 <FieldLabel help="businessDescription">Description</FieldLabel>
                 <Textarea
+                    id="description"
                     placeholder="Enter Description"
                     name="description"
+                    className={cn(errors.description && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/30")}
                     value={formData.description || ''}
                     onChange={(e) => {
                         setFormData((prevData) => ({
@@ -385,6 +404,11 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                             description: e.target.value,
                         }));
                         setErrors((prevErrors) => ({ ...prevErrors, description: "" }));
+                    }}
+                    onBlur={(e) => {
+                        if (!e.target.value?.trim()) {
+                            setErrors((prev) => ({ ...prev, description: "Description is required" }));
+                        }
                     }}
                 />
                 {errors.description && <p className="text-xs text-red-500">{errors.description}</p>}
@@ -430,8 +454,10 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
             <section className="space-y-3">
                 <FieldLabel help="downPayment">Down Payment</FieldLabel>
                 <Input
+                    id="downPayment"
                     type="number"
                     placeholder="Enter Down Payment"
+                    className={cn(errors.downPayment && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/30")}
                     value={formData.downPayment || ''}
                     name="downPayment"
                     onChange={(e) => {
@@ -440,6 +466,13 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                             downPayment: Number(e.target.value),
                         }));
                         setErrors((prevErrors) => ({ ...prevErrors, downPayment: "" }));
+                    }}
+                    onBlur={(e) => {
+                        if (!e.target.value || Number(e.target.value) <= 0) {
+                            setErrors((prev) => ({ ...prev, downPayment: "Down Payment is required" }));
+                        } else if (downPaymentType === "Percentage" && Number(e.target.value) > 100) {
+                            setErrors((prev) => ({ ...prev, downPayment: "Percentage must be between 0 and 100" }));
+                        }
                     }}
                 />
                 {errors.downPayment && <p className="text-xs text-red-500">{errors.downPayment}</p>}

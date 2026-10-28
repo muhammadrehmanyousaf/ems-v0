@@ -6,6 +6,8 @@ import { Input } from "../ui/input";
 import { PasswordInput } from "../ui/password-input";
 import { Flag, Camera, User, X } from "lucide-react";
 import { useFormContext } from "@/lib/context/form-context";
+import { cn } from "@/lib/utils";
+import { isValidPakistaniPhone, PHONE_VALIDATION_MESSAGE } from "@/lib/utils/pakistani-phone";
 import axios from "axios";
 import { BACKEND_URL } from "@/lib/backend-url";
 
@@ -72,14 +74,14 @@ const PersonalDetails = ({
     },
     {
       label: "Password",
-      place: "***********",
+      place: "At least 8 characters",
       type: "password",
       name: "password",
       help: "password" as FieldHelpKey,
     },
     {
       label: "Re-enter Password",
-      place: "***********",
+      place: "Confirm your password",
       type: "password",
       name: "re_enterPassword",
       help: "confirmPassword" as FieldHelpKey,
@@ -106,31 +108,54 @@ const PersonalDetails = ({
       [fieldName]: value,
     }));
 
-    setErrors((prevErrors) => ({
-      ...prevErrors,
-      [fieldName]: "",
-    }));
+    setErrors((prevErrors) => {
+      const next = { ...prevErrors, [fieldName]: "" };
+      // Dynamic cross-field clearing
+      if (fieldName === "password" && formData.re_enterPassword) {
+        if (value === formData.re_enterPassword) {
+          next.re_enterPassword = "";
+        }
+      }
+      if (fieldName === "re_enterPassword" && formData.password) {
+        if (value === formData.password) {
+          next.re_enterPassword = "";
+        }
+      }
+      return next;
+    });
   };
 
   const handleBlur = (
     e: React.FocusEvent<HTMLInputElement>,
     fieldName: string,
   ) => {
+    const rawVal = e.target.value;
+    const trimmed = rawVal.trim();
+
+    if (fieldName === "fullName") {
+      if (!trimmed) {
+        setErrors((prev) => ({ ...prev, fullName: "Full Name is required" }));
+      } else if (trimmed.length < 2) {
+        setErrors((prev) => ({ ...prev, fullName: "Full Name is too short" }));
+      }
+    }
+
     if (fieldName === "email") {
-      const value = e.target.value;
-      if (value && !validateEmail(value)) {
-        setErrors((prevErrors) => ({
-          ...prevErrors,
+      if (!trimmed) {
+        setErrors((prev) => ({ ...prev, email: "Email is required" }));
+      } else if (!validateEmail(trimmed)) {
+        setErrors((prev) => ({
+          ...prev,
           email: "Please enter a valid email address",
         }));
-      } else if (value) {
+      } else {
         // WP36 / PUBLIC-031: learn on THIS step that the address is taken, not after the last one
         axios
-          .get(`${BACKEND_URL}api/v1/auth/email-available`, { params: { email: value.trim() } })
+          .get(`${BACKEND_URL}api/v1/auth/email-available`, { params: { email: trimmed } })
           .then((res) => {
             if (res.data?.data?.available === false) {
-              setErrors((prevErrors) => ({
-                ...prevErrors,
+              setErrors((prev) => ({
+                ...prev,
                 email: "An account with this e-mail already exists. Sign in instead (Login page) or use another e-mail.",
               }));
             }
@@ -140,13 +165,33 @@ const PersonalDetails = ({
           });
       }
     }
+
     if (fieldName === "phoneNumber") {
-      const value = e.target.value;
-      if (value && !/^3\d{9}$/.test(value)) {
-        setErrors((prevErrors) => ({
-          ...prevErrors,
+      if (!trimmed) {
+        setErrors((prev) => ({ ...prev, phoneNumber: "Phone number is required" }));
+      } else if (!isValidPakistaniPhone(trimmed) && !/^3\d{9}$/.test(trimmed)) {
+        setErrors((prev) => ({
+          ...prev,
           phoneNumber: "Enter a valid 10-digit number starting with 3 (e.g. 3001234567)",
         }));
+      }
+    }
+
+    if (fieldName === "password") {
+      if (!rawVal) {
+        setErrors((prev) => ({ ...prev, password: "Password is required" }));
+      } else if (rawVal.length < 8) {
+        setErrors((prev) => ({ ...prev, password: "Password must be at least 8 characters" }));
+      } else if (formData.re_enterPassword && rawVal !== formData.re_enterPassword) {
+        setErrors((prev) => ({ ...prev, re_enterPassword: "Passwords do not match" }));
+      }
+    }
+
+    if (fieldName === "re_enterPassword") {
+      if (!rawVal) {
+        setErrors((prev) => ({ ...prev, re_enterPassword: "Re-enter password is required" }));
+      } else if (formData.password && rawVal !== formData.password) {
+        setErrors((prev) => ({ ...prev, re_enterPassword: "Passwords do not match" }));
       }
     }
   };
@@ -195,54 +240,82 @@ const PersonalDetails = ({
         </div>
       </div>
 
-      {formFields.map((field) => (
-        <div key={field.name} className="space-y-2">
-          <FieldLabel help={field.help}>{field.label}</FieldLabel>
-          {field.name === "phoneNumber" ? (
-            <div className="flex">
-              <div className="flex items-center justify-center px-3 border border-r-0 rounded-l-md bg-gray-50">
-                <Flag className="w-4 h-4 text-gray-500" />
-                <span className="ml-2 text-sm text-gray-500">+92</span>
+      {formFields.map((field) => {
+        const hasError = !!errors[field.name];
+        return (
+          <div key={field.name} className="space-y-2">
+            <FieldLabel help={field.help}>{field.label}</FieldLabel>
+            {field.name === "phoneNumber" ? (
+              <div className="flex">
+                <div className={cn(
+                  "flex items-center justify-center px-3 border border-r-0 rounded-l-md bg-gray-50 transition-colors",
+                  hasError ? "border-red-500 bg-red-50/30" : "border-input"
+                )}>
+                  <Flag className="w-4 h-4 text-gray-500" />
+                  <span className="ml-2 text-sm text-gray-500">+92</span>
+                </div>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  type={field.type}
+                  inputMode="numeric"
+                  maxLength={10}
+                  placeholder={field.place}
+                  className={cn(
+                    "rounded-l-none",
+                    hasError && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/30"
+                  )}
+                  value={
+                    String(formData[field.name as keyof typeof formData] ?? "")
+                  }
+                  onChange={(e) => handleChange(e, field.name)}
+                  onBlur={(e) => handleBlur(e, field.name)}
+                  aria-invalid={hasError}
+                />
               </div>
-              <Input
-                type={field.type}
-                inputMode="numeric"
-                maxLength={10}
+            ) : field.type === "password" ? (
+              <PasswordInput
+                id={field.name}
+                name={field.name}
                 placeholder={field.place}
-                className="rounded-l-none"
-                value={
-                  String(formData[field.name as keyof typeof formData]) ?? ""
-                }
+                className={cn(
+                  "w-full",
+                  hasError && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/30"
+                )}
+                value={String(
+                  formData[field.name as keyof typeof formData] ?? "",
+                )}
+                onChange={(e) => handleChange(e as React.ChangeEvent<HTMLInputElement>, field.name)}
+                onBlur={(e) => handleBlur(e as React.FocusEvent<HTMLInputElement>, field.name)}
+                aria-invalid={hasError}
+              />
+            ) : (
+              <Input
+                id={field.name}
+                name={field.name}
+                type={field.type || "text"}
+                placeholder={field.place}
+                className={cn(
+                  "w-full",
+                  hasError && "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/30"
+                )}
+                value={String(
+                  formData[field.name as keyof typeof formData] ?? "",
+                )}
                 onChange={(e) => handleChange(e, field.name)}
                 onBlur={(e) => handleBlur(e, field.name)}
+                aria-invalid={hasError}
               />
-            </div>
-          ) : field.type === "password" ? (
-            <PasswordInput
-              placeholder={field.place}
-              value={String(
-                formData[field.name as keyof typeof formData] ?? "",
-              )}
-              onChange={(e) => handleChange(e as React.ChangeEvent<HTMLInputElement>, field.name)}
-              onBlur={(e) => handleBlur(e as React.FocusEvent<HTMLInputElement>, field.name)}
-            />
-          ) : (
-            <Input
-              type={field.type || "text"}
-              placeholder={field.place}
-              value={String(
-                formData[field.name as keyof typeof formData] ?? "",
-              )}
-              onChange={(e) => handleChange(e, field.name)}
-              onBlur={(e) => handleBlur(e, field.name)}
-            />
-          )}
+            )}
 
-          {errors[field.name] && (
-            <p className="text-xs text-red-500">{errors[field.name]}</p>
-          )}
-        </div>
-      ))}
+            {hasError && (
+              <p className="text-xs text-red-500 font-medium" role="alert">
+                {errors[field.name]}
+              </p>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };
