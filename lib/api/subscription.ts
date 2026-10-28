@@ -302,8 +302,9 @@ export class SubscriptionAPI {
    * to `accessContext` (read it with lib/plans/access.ts accessFromStatus) and `access` keeps its one-word meaning, so the
    * screens that compare `status.access === "active"` do not change and cannot disagree with the object.
    */
-  static async getBillingStatus(): Promise<BillingStatus> {
-    const res = await axiosInstance.get("/api/v1/subscriptions/status");
+  static async getBillingStatus(opts?: { ref?: string }): Promise<BillingStatus> {
+    const q = opts?.ref ? `?ref=${encodeURIComponent(opts.ref)}` : "";
+    const res = await axiosInstance.get(`/api/v1/subscriptions/status${q}`);
     const d = res.data?.data as (BillingStatus & { access: unknown }) | undefined;
     if (!d) return d as unknown as BillingStatus;
     const ctx = parseAccess(d.access);

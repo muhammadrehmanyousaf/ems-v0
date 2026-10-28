@@ -92,27 +92,32 @@ export function CheckoutReturnBanner() {
   const router = useRouter()
   const qc = useQueryClient()
   const mode = params?.get("checkout") ?? null
+  const ref = params?.get("ref") ?? null
   const [elapsed, setElapsed] = React.useState(0)
 
   const { data } = useQuery({
-    queryKey: ["billing-status"],
-    queryFn: () => SubscriptionAPI.getBillingStatus(),
+    queryKey: ["billing-status", ref],
+    queryFn: () => SubscriptionAPI.getBillingStatus(ref ? { ref } : undefined),
     enabled: mode === "return",
     refetchInterval: (q) => {
       const a = q.state.data?.access
       if (a === "active") return false
-      return elapsed < 120 ? 3000 : false
+      return elapsed < 120 ? 2000 : false
     },
   })
 
   React.useEffect(() => {
     if (mode !== "return") return
-    const t = setInterval(() => setElapsed((s) => s + 3), 3000)
+    const t = setInterval(() => setElapsed((s) => s + 2), 2000)
     return () => clearInterval(t)
   }, [mode])
 
   React.useEffect(() => {
-    if (data?.access === "active") qc.invalidateQueries({ queryKey: ["billing-redesigned"] })
+    if (data?.access === "active") {
+      qc.invalidateQueries({ queryKey: ["billing-status"] })
+      qc.invalidateQueries({ queryKey: ["billing-redesigned"] })
+      qc.invalidateQueries({ queryKey: ["vendor-entitlements"] })
+    }
   }, [data?.access, qc])
 
   if (!mode) return null
