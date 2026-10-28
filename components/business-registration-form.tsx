@@ -1111,7 +1111,7 @@ export function BusinessRegistrationForm() {
         // blank step 1 wondering whether their registration went through.
         const successMsg =
           response.data?.message ||
-          "Your business has been registered. Sign in to access your dashboard.";
+          "Your business registration has been submitted for review. Our team will verify your details and email you once approved.";
         try { sessionStorage.setItem(REG_SUCCESS_KEY, successMsg); } catch {}
         setSuccessMessage(successMsg);
         // WP36 / VENDORTYPES-001: never lose photos silently
@@ -1332,7 +1332,7 @@ export function BusinessRegistrationForm() {
           <section className="lg:col-span-8 order-1 lg:order-2 lg:h-full lg:min-h-0">
             <BridalCard
               elevated
-              className="p-0 bg-bridal-cream flex flex-col overflow-hidden lg:h-full"
+              className="p-0 bg-bridal-cream flex flex-col overflow-hidden lg:h-full hover:transform-none hover:shadow-[0_24px_40px_-28px_rgba(176,125,84,0.4)] transition-none"
             >
               {/* Scrollable step body — slim gold scrollbar (bridal-scroll).
                   The nav buttons live in a pinned footer below, so they stay
@@ -1460,7 +1460,7 @@ export function BusinessRegistrationForm() {
                         setErrors={setErrors}
                         currentStep={currentStep}
                       />
-                    ) : carRental ? (
+                    ) : carRental || formData.businessType === "Car rental" ? (
                       <CarRentalSteps
                         setFile={setFile}
                         file={file}
@@ -1468,7 +1468,7 @@ export function BusinessRegistrationForm() {
                         setErrors={setErrors}
                         currentStep={currentStep}
                       />
-                    ) : bridalWear ? (
+                    ) : bridalWear || formData.businessType === "Bridal Wear" || formData.businessType === "Bridal wearing" ? (
                       <BridalWearSteps
                         setFile={setFile}
                         file={file}
@@ -1476,7 +1476,7 @@ export function BusinessRegistrationForm() {
                         setErrors={setErrors}
                         currentStep={currentStep}
                       />
-                    ) : weddingStationery ? (
+                    ) : weddingStationery || formData.businessType === "Wedding Stationery" || formData.businessType === "Wedding Invitations and Stationery" ? (
                       <WeddingStationerySteps
                         setFile={setFile}
                         file={file}
@@ -1484,7 +1484,7 @@ export function BusinessRegistrationForm() {
                         setErrors={setErrors}
                         currentStep={currentStep}
                       />
-                    ) : photographer ? (
+                    ) : photographer || formData.businessType === "Photographer" ? (
                       <PhotographerSteps
                         setFile={setFile}
                         file={file}
@@ -1492,7 +1492,7 @@ export function BusinessRegistrationForm() {
                         setErrors={setErrors}
                         currentStep={currentStep}
                       />
-                    ) : makeupArtist ? (
+                    ) : makeupArtist || formData.businessType === "Makeup artist" ? (
                       <MakeupArtistSteps
                         setFile={setFile}
                         file={file}
@@ -1500,7 +1500,7 @@ export function BusinessRegistrationForm() {
                         setErrors={setErrors}
                         currentStep={currentStep}
                       />
-                    ) : hennaArtist ? (
+                    ) : hennaArtist || formData.businessType === "Henna artist" ? (
                       <HennaArtistSteps
                         setFile={setFile}
                         file={file}
@@ -1508,7 +1508,7 @@ export function BusinessRegistrationForm() {
                         setErrors={setErrors}
                         currentStep={currentStep}
                       />
-                    ) : decorator ? (
+                    ) : decorator || formData.businessType === "Decorator" ? (
                       <DecoratorSteps
                         setFile={setFile}
                         file={file}
@@ -1516,7 +1516,7 @@ export function BusinessRegistrationForm() {
                         setErrors={setErrors}
                         currentStep={currentStep}
                       />
-                    ) : catering ? (
+                    ) : catering || formData.businessType === "Catering" ? (
                       <CateringSteps
                         setFile={setFile}
                         file={file}
@@ -1536,7 +1536,14 @@ export function BusinessRegistrationForm() {
                         currentStep={currentStep}
                       />
                     ) : (
-                      <div />
+                      // Fallback: Never render an empty div on step > 0! Default to VenueSteps so it never goes blank.
+                      <VenueSteps
+                        setFile={setFile}
+                        file={file}
+                        error={errors}
+                        setErrors={setErrors}
+                        currentStep={currentStep}
+                      />
                     )}
                   </div>
                 )}

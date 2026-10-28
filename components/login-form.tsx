@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Heart, Mail, Lock, Eye, EyeOff, ShieldCheck } from "lucide-react"
+import { Heart, Mail, Lock, Eye, EyeOff, ShieldCheck, Clock } from "lucide-react"
 
 import { Phone, KeyRound } from "lucide-react"
 
@@ -59,6 +59,8 @@ export function LoginForm() {
   const [otp, setOtp] = useState("")
   const [otpSent, setOtpSent] = useState(false)
   const [phoneBusy, setPhoneBusy] = useState(false)
+  const [pendingApproval, setPendingApproval] = useState(false)
+  const [approvalMessage, setApprovalMessage] = useState("")
   const { login } = useUser()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -219,7 +221,22 @@ export function LoginForm() {
           title: code === "TWO_FACTOR_INVALID" ? "Incorrect code" : "One more step",
           description: loginErrorMessage(error),
         })
+      } else if (code === "ACCOUNT_PENDING_APPROVAL") {
+        setPendingApproval(true)
+        setApprovalMessage(loginErrorMessage(error))
+        toast({
+          title: "Account under review",
+          description: "Our admin team reviews registrations before activating vendor accounts.",
+        })
+      } else if (code === "ACCOUNT_REJECTED") {
+        setPendingApproval(false)
+        toast({
+          title: "Registration not approved",
+          description: loginErrorMessage(error),
+          variant: "destructive",
+        })
       } else {
+        setPendingApproval(false)
         toast({
           title: "Login failed",
           description: loginErrorMessage(error),
@@ -255,6 +272,18 @@ export function LoginForm() {
       <p className="text-center font-bridal text-bridal-text-soft text-sm mb-8">
         Enter your credentials to access your saved vendors, bookings, and more.
       </p>
+
+      {pendingApproval && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50/90 dark:bg-amber-950/40 p-4 text-amber-900 dark:text-amber-200 space-y-2 mb-5">
+          <div className="flex items-center gap-2">
+            <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+            <p className="font-semibold text-sm">Account Pending Approval</p>
+          </div>
+          <p className="text-xs leading-relaxed text-amber-800 dark:text-amber-300">
+            {approvalMessage || "Your registration is currently under review by our admin team. You will receive an email confirmation once approved and will then be able to access your dashboard."}
+          </p>
+        </div>
+      )}
 
       {!phoneMode && (
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">

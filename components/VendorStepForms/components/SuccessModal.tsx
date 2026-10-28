@@ -29,7 +29,13 @@ const clearRegSuccess = () => {
 const SuccessModal: React.FC<SuccessModalProps> = ({ setOpen, open, message }) => {
     const router = useRouter()
 
-    const onClick = () => {
+    const onHomeClick = () => {
+        clearRegSuccess()
+        router.push("/")
+        setOpen(false)
+    }
+
+    const onSignInClick = () => {
         clearRegSuccess()
         router.push("/login")
         setOpen(false)
@@ -75,28 +81,40 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ setOpen, open, message }) =
 
                 {/* Body */}
                 <div className="px-7 pt-2 pb-7 text-center">
-                    <BridalCrown className="mb-3">All Set</BridalCrown>
+                    <BridalCrown className="mb-3">Application Received</BridalCrown>
                     <BridalTitle size="h3" className="mb-3">
-                        Welcome to{" "}
-                        <span className="text-bridal-gold">our network</span>
+                        Submitted for{" "}
+                        <span className="text-bridal-gold">Admin Review</span>
                     </BridalTitle>
 
                     <p className="font-bridal text-bridal-text-soft text-[14px] leading-relaxed">
                         {message ||
-                            "Your business has been registered. Sign in to access your dashboard and start receiving bookings."}
+                            "Thank you for registering with Wedding Wala! Your business details are now in our admin review queue. Our team reviews all new registrations within 1–2 business days. You will receive an email confirmation once your account is approved, and you can then sign in."}
                     </p>
 
                     <FloralDivider className="my-5" width={180} />
 
-                    <BridalButton
-                        type="button"
-                        variant="primary"
-                        size="lg"
-                        block
-                        onClick={onClick}
-                    >
-                        Go to Sign In
-                    </BridalButton>
+                    <div className="space-y-3">
+                        <BridalButton
+                            type="button"
+                            variant="primary"
+                            size="lg"
+                            block
+                            onClick={onHomeClick}
+                        >
+                            Return to Homepage
+                        </BridalButton>
+
+                        <div>
+                            <button
+                                type="button"
+                                onClick={onSignInClick}
+                                className="font-bridal text-[13px] text-bridal-gold hover:text-bridal-gold-dark hover:underline transition-colors"
+                            >
+                                Already approved? Sign In
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </DialogContent>
         </Dialog>

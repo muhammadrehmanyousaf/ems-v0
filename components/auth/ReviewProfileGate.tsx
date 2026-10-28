@@ -57,31 +57,15 @@ export function ReviewProfileGate({ children }: ReviewProfileGateProps) {
     );
   if (!isVendor) return <>{children}</>;
 
-  // ONLY block when the BE-supplied reviewProfile flag is explicitly false.
-  // Grandfathered users (no flag, or flag === true) pass through to match
-  // the BE's behaviour (see authController.js line 55). If flags is null
-  // for any reason (e.g. session restored without the soft-flags blob),
-  // default to "approved" — safer than locking a legitimate vendor out
-  // of their own dashboard on a transient cache miss.
-  if (!flags || flags.reviewProfile !== false) return <>{children}</>;
+  // If vendor is pending approval (reviewProfile is false in flags or user),
+  // block access to the dashboard and render the full-screen "Under Review" gate.
+  // Super admins and approved vendors pass through untouched.
+  const isPendingApproval =
+    flags?.reviewProfile === false ||
+    user?.reviewProfile === false ||
+    (flags?.reviewProfile === undefined && user?.reviewProfile !== true);
 
-  // Phase-1 EPIC 6 · T6.1 — the operational dashboard now EXISTS (calendar, order
-  // builder, ledger). Where it's enabled, a pending vendor should be able to run
-  // their business (log bookings, manage the calendar) while only their PUBLIC
-  // profile waits for review — so the full-screen block becomes a slim banner.
-  if (true) {
-    return (
-      <>
-        <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-900/50 px-4 py-2 text-xs text-amber-800 dark:text-amber-300">
-          <Clock className="w-3.5 h-3.5 shrink-0" />
-          <span>
-            Profile under review — couples can’t find you publicly yet (1–2 days), but you can log bookings and manage your calendar now.
-          </span>
-        </div>
-        {children}
-      </>
-    );
-  }
+  if (!isPendingApproval) return <>{children}</>;
 
   const handleSignOut = async () => {
     try {

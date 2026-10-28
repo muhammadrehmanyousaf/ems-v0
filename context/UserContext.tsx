@@ -20,6 +20,7 @@ interface User {
   emailVerified?: boolean;
   phoneVerified?: boolean;
   twoFactorEnabled?: boolean;
+  reviewProfile?: boolean;
   // Subscription tier (§17.1). Flows in via verifyWithServer; absent =
   // treat as 'free'. Display/analytics only: what the plan includes comes from the server's entitlements (context/plan-context.tsx).
   subscriptionTier?: "free" | "pro" | "premium" | "elite";

@@ -14,6 +14,8 @@ export type LoginErrorCode =
   // WW-172 — login now enforces the second factor for 2FA-enabled accounts.
   | "TWO_FACTOR_REQUIRED"
   | "TWO_FACTOR_INVALID"
+  | "ACCOUNT_PENDING_APPROVAL"
+  | "ACCOUNT_REJECTED"
 
 export interface LoginFlags {
   emailVerified: boolean
@@ -146,6 +148,8 @@ const LOGIN_MESSAGES: Record<LoginErrorCode, string> = {
   VALIDATION_FAILED: "Some of the details you entered are invalid.",
   TWO_FACTOR_REQUIRED: "Enter the 6-digit code from your authenticator app.",
   TWO_FACTOR_INVALID: "That code wasn't right. Try the current code from your authenticator app.",
+  ACCOUNT_PENDING_APPROVAL: "Your registration is currently under review by our admin team. You will be able to log in once your business has been approved.",
+  ACCOUNT_REJECTED: "Your business registration was not approved. Please check your email or contact support@weddingwala.pk.",
 }
 
 export function loginErrorMessage(error: any, fallback = "Something went wrong"): string {
