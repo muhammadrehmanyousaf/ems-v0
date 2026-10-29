@@ -26,7 +26,7 @@ import { useUser } from "@/context/UserContext"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { BILLING_STATUS_KEY, useBillingStatus } from "@/hooks/use-billing-status"
 import {
-  onPlanGate, parseEntitlements, planNameOf,
+  onPlanGate, parseEntitlements, planNameOf, setLockedFeatures,
   type Entitlements, type FeatureEntitlement, type FeatureKey, type LimitEntitlement, type LimitKey,
 } from "@/lib/plan-gate"
 import { PlanGateHost } from "@/components/dashboard/plans/plan-gate-host"
@@ -71,6 +71,8 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   const activeBusinessId = useActiveBusinessId()
 
   const ent = React.useMemo(() => parseEntitlements(q.data?.entitlements), [q.data])
+
+  React.useEffect(() => { setLockedFeatures(ent?.features ?? {}, ent?.planName ?? "No plan") }, [ent])
 
   const refresh = React.useCallback(() => { qc.invalidateQueries({ queryKey: BILLING_STATUS_KEY }) }, [qc])
 

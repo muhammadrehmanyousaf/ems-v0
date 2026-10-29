@@ -71,6 +71,22 @@ export async function submitManualPayment(input: ManualPaymentSubmit): Promise<v
   await axiosInstance.post("/api/v1/subscriptions/manual-payment", fd, { headers: { "Content-Type": "multipart/form-data" } })
 }
 
+/** Take back a submission that is still waiting (wrong amount / reference / plan). */
+export async function withdrawManualPayment(id: number): Promise<void> {
+  await axiosInstance.post(`/api/v1/subscriptions/manual-payment/${id}/withdraw`)
+}
+/** Add the screenshot to a waiting submission that has none. */
+export async function addManualPaymentProof(id: number, proof: File): Promise<void> {
+  const fd = new FormData()
+  fd.append("proof", proof)
+  await axiosInstance.post(`/api/v1/subscriptions/manual-payment/${id}/proof`, fd, { headers: { "Content-Type": "multipart/form-data" } })
+}
+/** The vendor's own submission slip (any status). */
+export async function getManualPaymentSlip(id: number): Promise<unknown> {
+  const res = await axiosInstance.get(`/api/v1/subscriptions/manual-payment/${id}`)
+  return res.data?.data
+}
+
 /* ───────────── which venues stay live when the plan allows fewer ───────────── */
 
 export async function getLiveVenues(): Promise<LiveVenues | null> {

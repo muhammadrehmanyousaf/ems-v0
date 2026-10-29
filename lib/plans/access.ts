@@ -42,6 +42,15 @@ export function isWalled(a: Access | null | undefined): boolean {
   return !!a && isLockedState(a.state) && a.enforced !== false
 }
 
+/**
+ * FREE-TIER MODEL: the plan or the trial ended and the Wall is not real for this account (the server runs the plan sheet's
+ * "drop to Free" model, not the old close-the-dashboard Wall). The vendor is on the Free plan: free modules work, paid modules
+ * are read-only. An admin suspension is never "free tier".
+ */
+export function isFreeTier(a: Access | null | undefined): boolean {
+  return !!a && isLockedState(a.state) && a.state !== "suspended_admin" && a.enforced === false
+}
+
 export interface Access {
   state: AccessStateKey
   /** Internal tier key of the plan in force or the last plan (pro | premium | elite), or null. */

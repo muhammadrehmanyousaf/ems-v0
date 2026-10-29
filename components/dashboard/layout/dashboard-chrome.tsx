@@ -13,6 +13,7 @@ import { getDashboardRole, isAdminLike } from "@/lib/dashboard-role"
 import { VerificationBanner } from "@/components/auth/VerificationBanner"
 import { ChampagneShell } from "@/components/dashboard/layout/champagne-shell"
 import { PlanBanners } from "@/components/dashboard/plans/banners/plan-banners"
+import { LimitBanner } from "@/components/dashboard/plans/banners/limit-banner"
 
 export function DashboardChrome({ children }: { children: React.ReactNode }) {
   const { user } = useUser()
@@ -21,6 +22,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
   return (
     <ChampagneShell>
       {!admin && <PlanBanners />}
+      {!admin && <LimitBanner />}
       <VerificationBanner />
       {children}
     </ChampagneShell>

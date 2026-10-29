@@ -80,6 +80,15 @@ export function trialCardHtml(a: Access, now: Date = new Date()): string {
   </div></div>`
 }
 
+/* ───────────── free tier (the plan or the trial ended; nothing is closed) ───────────── */
+
+export function freeTierCardHtml(): string {
+  return `<div class="sp warn" role="status" data-testid="free-tier-card">${svg(IC.lock)}<div style="flex:1;min-width:0">
+    <div class="sp-t">${bi("bill.free.title")}</div>
+    <div class="sp-s">${bi("bill.free.line")}</div>
+  </div></div>`
+}
+
 /* ───────────── locked ───────────── */
 
 export function lockedCardHtml(a: Access): string {
@@ -113,11 +122,18 @@ export function manualCardHtml(info: ManualPaymentInfo | null, planName: (tier: 
   if (cur?.status === "pending") {
     return `<div class="sp warn" role="status" data-testid="manual-pending">${svg(IC.spin)}<div style="flex:1;min-width:0">
       <div class="sp-t">${bi("manual.pending.title")}</div>
-      <div class="sp-s">${bi("manual.pending.body", (l) => ({ date: (l === "ru" ? fmtPkDateTimeRu(cur.submittedAt) : fmt(cur.submittedAt)) || null }))}</div>${summary}</div></div>`
+      <div class="sp-s">${bi("manual.pending.body", (l) => ({ date: (l === "ru" ? fmtPkDateTimeRu(cur.submittedAt) : fmt(cur.submittedAt)) || null }))}</div>${summary}
+      <div class="sp-s" style="margin-top:6px">Reference: <b>${escHtml(cur.reference || "-")}</b>${cur.hasProof ? " · screenshot received" : " · no screenshot yet"}</div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        ${cur.id ? `<a class="btn btn-ghost sm" href="/dashboard/billing/submission/${cur.id}" data-testid="manual-slip-link">View slip</a>` : ""}
+        ${cur.id && cur.canAddProof ? `<button type="button" class="btn btn-ghost sm" data-mp-addproof="${cur.id}">Add screenshot</button><input type="file" id="mp-addproof-file" accept="image/*,application/pdf" hidden>` : ""}
+        ${cur.id && cur.canWithdraw ? `<button type="button" class="btn btn-ghost sm" data-mp-withdraw="${cur.id}">Wrong details? Withdraw</button>` : ""}
+      </div></div></div>`
   }
   if (cur?.status === "approved" && settled) {
     return `<div class="sp ok" role="status" data-testid="manual-approved">${svg(IC.check, 2.4)}<div style="flex:1;min-width:0">
-      <div class="sp-t">${bi("manual.approved.title")}</div><div class="sp-s">${bi("manual.approved.body")}</div>${summary}</div></div>`
+      <div class="sp-t">${bi("manual.approved.title")}</div><div class="sp-s">${bi("manual.approved.body")}</div>${summary}
+      ${cur.receiptNo ? `<div style="margin-top:10px"><a class="btn btn-ghost sm" href="/dashboard/billing/receipt/${encodeURIComponent(cur.receiptNo)}" data-testid="manual-receipt-link">Receipt ${escHtml(cur.receiptNo)}</a></div>` : ""}</div></div>`
   }
   const rejected = cur?.status === "rejected"
     ? `<div class="sp bad" role="status" data-testid="manual-rejected" style="margin-bottom:10px">${svg(IC.alert)}<div style="flex:1;min-width:0"><div class="sp-t">${bi("manual.rejected.title")}</div><div class="sp-s">${bi(["manual.rejected.body", "manual.rejected.body_noreason"], { reason: (cur.rejectionReason ?? "").replace(/[\s.!?;:,]+$/, "") })}</div></div></div>`
@@ -126,6 +142,28 @@ export function manualCardHtml(info: ManualPaymentInfo | null, planName: (tier: 
     <span class="cur-ic" style="flex:none">${svg(IC.upload, 1.8)}</span>
     <div style="flex:1;min-width:240px"><div class="cur-t">${bi("manual.title")}</div><div class="cur-s" style="margin-top:4px">${bi("manual.intro")}</div></div>
     <button class="btn btn-ghost" data-manual-open>${svg(IC.upload)} ${escHtml(say("manual.open", "en"))}</button></div>`
+}
+
+/**
+ * "Payments you sent by bank / JazzCash / Easypaisa": EVERY submission with its state, so a vendor never has to wonder where
+ * a payment went. Pending and rejected ones have no receipt yet, so they open a submission slip; a checked one links its receipt.
+ */
+export function submissionsCardHtml(info: ManualPaymentInfo | null, planName: (tier: string) => string): string {
+  const rows = info?.history ?? []
+  if (!rows.length) return ""
+  const fmt = (iso: string | null) => fmtPkDateTime(iso) || "-"
+  const chip = (st: string) => st === "approved" ? `<span class="st ok">Approved</span>` : st === "pending" ? `<span class="st warn">Waiting for approval</span>` : st === "rejected" ? `<span class="st bad">Not accepted</span>` : `<span class="st mut">Withdrawn</span>`
+  const body = rows.map((r) => `<tr>
+    <td>${escHtml(fmt(r.submittedAt))}</td>
+    <td>${escHtml(r.tier ? planName(r.tier) : "-")}</td>
+    <td>${r.amountPkr !== null ? `<span class="rs">Rs</span> ${pkNum(r.amountPkr)}` : "-"}</td>
+    <td>${escHtml(METHOD_LABEL[r.method || ""] || r.method || "-")}</td>
+    <td style="font-variant-numeric:tabular-nums">${escHtml(r.reference || "-")}</td>
+    <td>${chip(r.status)}${r.status === "rejected" && r.rejectionReason ? `<div class="sp-s" style="margin-top:4px">${escHtml(r.rejectionReason)}</div>` : ""}</td>
+    <td style="text-align:right;white-space:nowrap">${r.status === "approved" && r.receiptNo ? `<a class="btn btn-ghost sm" href="/dashboard/billing/receipt/${encodeURIComponent(r.receiptNo)}">Receipt</a>` : r.id ? `<a class="btn btn-ghost sm" href="/dashboard/billing/submission/${r.id}">Slip</a>` : ""}</td>
+  </tr>`).join("")
+  return `<div class="card" id="submissions" data-testid="manual-submissions" style="margin-bottom:16px"><div class="card-h" style="padding:14px 16px 6px"><div><h2 style="font-size:13.5px;font-weight:600">Payments you sent for checking</h2><div class="sub">Bank transfer, JazzCash and Easypaisa. A receipt is issued as soon as a payment is approved.</div></div></div>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Sent</th><th>Plan</th><th>Amount</th><th>Via</th><th>Reference</th><th>Status</th><th></th></tr></thead><tbody>${body}</tbody></table></div></div>`
 }
 
 export function manualUnavailableHtml(): string {

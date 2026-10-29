@@ -161,6 +161,10 @@ export interface SubscriptionPaymentRow {
 export interface SubscriptionReceipt {
   receipt: SubscriptionPaymentRow & { user?: { fullName: string | null; email: string | null; phoneNumber: string | null } };
   planName: string;
+  /** How it was paid: a card charge (Safepay) or a bank / JazzCash / Easypaisa payment a super admin checked. */
+  payment?: { kind: "card" | "manual"; methodLabel: string; reference: string | null; submittedAt?: string | null; approvedAt?: string | null } | null;
+  /** The businesses this subscription covers (the account's). */
+  businesses?: { id: number; name: string }[];
   issuer: { name: string; legalName: string; ntn: string; address: string; email: string; taxNote: string };
 }
 

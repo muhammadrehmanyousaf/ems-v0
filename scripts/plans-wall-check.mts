@@ -11,7 +11,7 @@
  *   3. NO LOCAL PLAN LOGIC. The gate, the Wall and the Wall model do no date or tier arithmetic: they read the server's
  *      state. Nothing outside lib/plans decides what "locked" means.
  *   4. COPY. Every key has English and Roman Urdu with the same {placeholders}; every key used in the source exists; and
- *      nothing the vendor reads promises a free vendor plan.
+ *      nothing the vendor reads promises a free vendor plan EXCEPT the free-tier keys (the owner's plan sheet defines a Free tier).
  *   5. BEHAVIOUR. wallModel / bannerFor / chipFor / the store / the parsers, run for every state: staff never get a pay
  *      button, a suspended account never gets a renew button, the trial countdown says the right thing on every day, a
  *      figure the server did not send is "not available" and never 0.
@@ -183,8 +183,11 @@ await check("fill() never prints a hole: a missing value makes the sentence unav
 await check("nothing a vendor reads promises a free vendor plan (the lines that say there is none are the only ones that mention it)", () => {
   const promise = /\bfree (vendor )?(plan|tier)\b|\bfree (listing|profile)\b|free, full-featured|list(ing)? for free/i;
   const bad: string[] = [];
+  // The plan sheet (WeddingWala_Module_Tiers.xlsx) now DEFINES a Free plan: the keys that describe it are the only exception.
+  const FREE_TIER_KEY = /^(freetier\.|chip\.free$|bill\.free\.|trial\.t10\.free$|trial\.t3\.free$|cancelling\.banner\.free$|past_due\.banner\.free$)/;
   for (const k of KEYS) for (const l of ["en", "ru"] as const) {
     const t = (COPY[k] as { en: string; ru: string })[l];
+    if (FREE_TIER_KEY.test(k)) continue;
     if (promise.test(t) && !/\bno free\b|\bkoi free\b|\bnahi\b/i.test(t)) bad.push(`${k}.${l}`);
   }
   for (const f of [...walk(path.join(ROOT, "app")), ...walk(path.join(ROOT, "components"))]) {
@@ -260,9 +263,10 @@ await check("a locked state is walled only when the server says the Wall is real
   eq(lockFromError(e402({ code: "SUBSCRIPTION_REQUIRED", state: "locked" }))!.enforced, true);
   eq(accessFromStatus({ access: "none", accessState: { state: "locked", lockReason: "no_plan" } })!.enforced, null, "an older build that does not say: taken at its word");
 });
-await check("shadow: no banner for a would-lock account; the store does not hold it as a lock", () => {
-  eq(bannerFor(A("locked", { enforced: false }), NOW), null);
-  eq(bannerFor(A("locked", { enforced: false }), NOW, { overLimit: true }), null);
+await check("not enforced: a would-lock account is on the Free plan (one gentle banner, never the Wall); the store does not hold it as a lock", () => {
+  eq(bannerFor(A("locked", { enforced: false }), NOW)?.kind, "free_tier");
+  eq(bannerFor(A("locked", { enforced: false }), NOW, { overLimit: true })?.kind, "free_tier");
+  eq(bannerFor(A("suspended_admin", { enforced: false }), NOW), null, "an admin suspension is never 'free tier'");
   const st = useAccessStore; st.getState().reset();
   st.getState().applyStatus(A("locked", { enforced: false }));
   eq(isWalled(st.getState().access), false);

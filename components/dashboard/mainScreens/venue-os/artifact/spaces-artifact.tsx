@@ -7,6 +7,7 @@
  * weather fallback. Wired to venueSpacesApi (sub-venue tree + merge groups).
  */
 
+import { guardFeature } from "@/lib/plan-gate"
 import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -305,10 +306,12 @@ export function SpacesArtifact() {
         const btn = s.getElementById("af-save") as HTMLButtonElement | null; const btnOrig = btn?.textContent; if (btn) { btn.disabled = true; btn.textContent = "Save ho raha…" }
         try {
           if (editId) {
+            if (val("sv-gender") !== "MIXED" && !guardFeature("men_women_portions")) return
             await venueSpacesApi.updateSubVenue(editId, { name, kind: val("sv-kind"), genderMode: val("sv-gender"), bookingMode: val("sv-mode") as BookingMode, comfortCapacity: comfort, fireRatedCapacity: fire, basePricePkr: price, backupSubVenueId: backup })
             const oldParent = val("sv-oldparent") ? Number(val("sv-oldparent")) : null
             if (parent !== oldParent) await venueSpacesApi.moveSubVenue(editId, parent)
           } else {
+            if (val("sv-gender") !== "MIXED" && !guardFeature("men_women_portions")) return
             const cbody: { name: string; kind: string; genderMode: string; bookingMode: BookingMode; parentSubVenueId: number | null; comfortCapacity?: number; fireRatedCapacity?: number; basePricePkr?: number } = { name, kind: val("sv-kind"), genderMode: val("sv-gender"), bookingMode: val("sv-mode") as BookingMode, parentSubVenueId: parent }
             if (comfort != null) cbody.comfortCapacity = comfort
             if (fire != null) cbody.fireRatedCapacity = fire

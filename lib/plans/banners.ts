@@ -11,14 +11,14 @@
  * and the quiet chip for a trial / past due / cancelling is always there (chipFor).
  */
 
-import { daysLeftOf, fmtPkDate, fmtPkDateTime, fmtPkDateTimeRu, isLockedState, isWalled, type Access } from "./access"
+import { daysLeftOf, fmtPkDate, fmtPkDateTime, fmtPkDateTimeRu, isFreeTier, isLockedState, isWalled, type Access } from "./access"
 import type { CopyKey, CopyVars } from "./copy"
 
 export type BannerTone = "info" | "accent" | "warn" | "bad" | "ok"
 export type BannerCta = "choose" | "pay" | "resume" | "renew" | "over" | "add_business"
 
 export interface BannerSpec {
-  kind: "trial_welcome" | "trial_t7" | "trial_t3" | "trial_t1" | "trial_today" | "past_due" | "cancelling" | "comp_end" | "locked_here" | "reactivated" | "over_limit" | "unstarted"
+  kind: "free_tier" | "trial_welcome" | "trial_t7" | "trial_t3" | "trial_t1" | "trial_today" | "past_due" | "cancelling" | "comp_end" | "locked_here" | "reactivated" | "over_limit" | "unstarted"
   tone: BannerTone
   /** Copy ladder (first with all placeholders filled wins) and the values, per language (dates are spoken per language). */
   keys: CopyKey[]
@@ -52,19 +52,20 @@ function stateBanner(a: Access | null, now: Date, opts: BannerOpts): BannerSpec 
     const days = daysLeftOf(a, end, now)
     if (days !== null && days <= 0) return { kind: "trial_today", tone: "bad", keys: ["trial.today"], vars: trialVars(a, days), cta: "choose", dismiss: null }
     if (days !== null && days === 1) return { kind: "trial_t1", tone: "bad", keys: ["trial.t1"], vars: trialVars(a, days), cta: "choose", dismiss: null }
-    if (days !== null && days <= 3) return { kind: "trial_t3", tone: "warn", keys: ["trial.t3"], vars: trialVars(a, days), cta: "choose", dismiss: "day" }
-    if (days !== null && days <= 7) return { kind: "trial_t7", tone: "accent", keys: ["trial.t7"], vars: trialVars(a, days), cta: "choose", dismiss: "day" }
+    const free = a.enforced === false // the server drops to Free at the end (no Wall): word it that way
+    if (days !== null && days <= 3) return { kind: "trial_t3", tone: "warn", keys: [free ? "trial.t3.free" : "trial.t3"], vars: trialVars(a, days), cta: "choose", dismiss: "day" }
+    if (days !== null && days <= (free ? 10 : 7)) return { kind: "trial_t7", tone: "accent", keys: [free && days > 7 ? "trial.t10.free" : "trial.t7"], vars: trialVars(a, days), cta: "choose", dismiss: "day" }
     if (!opts.welcomeSeen) return { kind: "trial_welcome", tone: "accent", keys: ["trial.welcome"], vars: trialVars(a, days), cta: null, dismiss: "once" }
     return null
   }
   if (a.state === "past_due") {
     return {
-      kind: "past_due", tone: "bad", keys: ["past_due.banner", "past_due.banner_nodate"],
+      kind: "past_due", tone: "bad", keys: a.enforced === false ? ["past_due.banner.free", "past_due.banner_nodate"] : ["past_due.banner", "past_due.banner_nodate"],
       vars: (lang) => ({ graceEnd: dt(a.graceEndsAt ?? a.endsAt, lang) }), cta: a.canPay ? "pay" : null, dismiss: null,
     }
   }
   if (a.state === "cancelling") {
-    return { kind: "cancelling", tone: "info", keys: ["cancelling.banner"], vars: () => ({ date: fmtPkDate(a.endsAt) || null }), cta: a.canPay ? "resume" : null, dismiss: "day" }
+    return { kind: "cancelling", tone: "info", keys: [a.enforced === false ? "cancelling.banner.free" : "cancelling.banner"], vars: () => ({ date: fmtPkDate(a.endsAt) || null }), cta: a.canPay ? "resume" : null, dismiss: "day" }
   }
   if (a.state === "comp") {
     const days = daysLeftOf(a, a.endsAt, now)
@@ -76,6 +77,10 @@ function stateBanner(a: Access | null, now: Date, opts: BannerOpts): BannerSpec 
     return { kind: "unstarted", tone: "accent", keys: ["unstarted.banner"], vars: () => ({}), cta: "add_business", dismiss: "day" }
   }
   if (isLockedState(a.state)) {
+    // Free-tier model: nothing is closed; tell the vendor which plan they are on and how to get the paid modules back.
+    if (isFreeTier(a)) {
+      return opts.onPaymentPage ? null : { kind: "free_tier", tone: "info", keys: ["freetier.banner"], vars: () => ({}), cta: a.canPay ? "choose" : null, dismiss: "day" }
+    }
     // In shadow mode the state is only logged: say nothing.
     if (!isWalled(a)) return null
     // Only reachable on the pages that stay open while locked (billing, account). The billing page says it itself, in a card.
@@ -98,6 +103,7 @@ export function chipFor(a: Access | null, now: Date = new Date()): ChipSpec | nu
     if (days === 1) return { tone: "bad", key: "chip.trial_1", vars: {} }
     return { tone: days <= 3 ? "warn" : "ok", key: "chip.trial", vars: { days } }
   }
+  if (isFreeTier(a)) return { tone: "warn", key: "chip.free", vars: {} }
   if (a.state === "past_due") return { tone: "bad", key: "chip.past_due", vars: {} }
   if (a.state === "cancelling") return { tone: "warn", key: "chip.cancelling", vars: { date: fmtPkDate(a.endsAt) || null } }
   if (a.state === "comp") return { tone: "ok", key: "chip.comp", vars: {} }

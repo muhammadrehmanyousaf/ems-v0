@@ -35,6 +35,7 @@
 import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useUser } from "@/context/UserContext"
+import { usePlan } from "@/context/plan-context"
 import { useBusiness } from "@/context/BusinessContext"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useArtifactShell, pkNum, escHtml, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
@@ -438,6 +439,25 @@ svg .today-lbl{ fill:var(--accent-ink); font-size:10px; font-weight:600; }
 @media (max-width:560px){ .kpis{ grid-template-columns:1fr; } }
 `
 
+/**
+ * Plan sheet rule 5: the Khata cards are never empty on Free - they show an Unlock teaser. The figures stay blurred behind it
+ * (the server still sends only the vendor's own numbers; this is presentation, the write routes are what the plan locks).
+ */
+function lockKhataCards(root: HTMLElement, planName: string) {
+  const KHATA_TITLES = ["Revenue", "Wapsi — jo dena hai"]
+  root.querySelectorAll<HTMLElement>(".card").forEach((card) => {
+    const title = card.querySelector("h2")?.textContent?.trim() || ""
+    if (!KHATA_TITLES.includes(title) || card.dataset.khataLocked) return
+    card.dataset.khataLocked = "1"
+    card.style.position = "relative"
+    Array.from(card.children).forEach((c) => { if (!(c as HTMLElement).classList.contains("card-h")) (c as HTMLElement).style.filter = "blur(5px)" })
+    const o = document.createElement("div")
+    o.setAttribute("style", "position:absolute;inset:56px 0 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:16px;background:color-mix(in srgb,var(--surface,#fff) 55%,transparent)")
+    o.innerHTML = `<b>Khata ke figures unlock karein</b><span style="font-size:12.5px;color:var(--ink-3)">Revenue, baqaya aur wapsi Basic plan se khulte hain. Aap abhi ${escHtml(planName)} par hain.</span><a class="link" data-nav href="/dashboard/billing" style="display:inline-flex">Plans dekhein</a>`
+    card.appendChild(o)
+  })
+}
+
 export function OverviewArtifact() {
   const hostRef = React.useRef<HTMLDivElement | null>(null)
   const { user } = useUser()
@@ -567,6 +587,10 @@ export function OverviewArtifact() {
     }
   }, [dashQ.data, dashQ.isLoading, dashQ.isError, compQ.data, reviewsQ.data, refundQ.data, refundQ.isError, refundQ.isPending])
 
+  const plan = usePlan()
+  const khataLocked = !!plan.feature("mod_payments")?.locked
+  const planName = plan.planName
+
   const greeting = React.useMemo(() => {
     const full = (user as { fullName?: string } | null)?.fullName
     const first = full ? full.split(/\s+/)[0] : ""
@@ -595,13 +619,14 @@ export function OverviewArtifact() {
       return
     }
     wwc.innerHTML = buildContent(data, greeting, todayStr)
+    if (khataLocked) lockKhataCards(wwc, planName)
     monthsRef.current = data.o.revenue.months
     renderChart(s, monthsRef.current, rangeRef.current)
     renderSparks(s, kpiCards(data.o, data.baqaya).map((k) => k.spark))
     const segWrap = wwc.querySelector(".seg")
     if (segWrap) segWrap.querySelectorAll("button").forEach((x) => { const b = x as HTMLElement; const on = Number(b.dataset.range) === rangeRef.current; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)) })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, data, greeting, todayStr])
+  }, [ready, data, greeting, todayStr, khataLocked, planName])
 
   // Revenue range 3M/6M/1Y and the retry button. (Nav is handled by the shell.)
   const bound = React.useRef(false)

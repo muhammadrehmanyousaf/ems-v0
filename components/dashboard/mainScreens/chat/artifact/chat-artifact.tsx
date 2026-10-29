@@ -25,6 +25,7 @@ import type { ConversationItem, ChatMessageItem } from "@/lib/api/chat"
 import { BookingAPI } from "@/lib/api/bookings"
 import { LeadAPI } from "@/lib/api/leads"
 import { waDigits } from "@/components/dashboard/mainScreens/leads/artifact/leads-artifact"
+import { guardFeature } from "@/lib/plan-gate"
 import { openBookingForm } from "@/components/dashboard/mainScreens/artifact/booking-form"
 import { useArtifactShell, escHtml, initialsOf } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
@@ -371,7 +372,7 @@ export function ChatArtifact() {
 
     s.addEventListener("click", (e) => {
       const t = e.target as HTMLElement
-      if (t.closest("#cattach")) { (s.getElementById("cfile") as HTMLInputElement | null)?.click(); return }
+      if (t.closest("#cattach")) { if (!guardFeature("chat_attachments")) return; (s.getElementById("cfile") as HTMLInputElement | null)?.click(); return }
       // On a phone, opening a conversation replaces the list rather than
       // sharing the screen with it; the back button returns. On a desktop the
       // attribute is inert because both panes are always visible.
@@ -386,9 +387,10 @@ export function ChatArtifact() {
       const tab = t.closest(".ctab") as HTMLElement | null
       if (tab?.dataset.f) { setFilter(tab.dataset.f as "all" | "unread" | "lead" | "book"); return }
       const q = t.closest(".qchip") as HTMLElement | null
+      if (q && !guardFeature("chat_attachments")) return
       if (q) { const inp = s.getElementById("cmsg") as HTMLInputElement | null; if (inp) { inp.value = q.textContent || ""; inp.focus(); const send = s.getElementById("csend") as HTMLButtonElement | null; if (send) send.disabled = !inp.value.trim() } return }
       // "Template" → drop the first ready-reply into the composer
-      if (t.closest("#ctemplate")) { const chip = s.querySelector(".qchip") as HTMLElement | null; const inp = s.getElementById("cmsg") as HTMLInputElement | null; if (chip && inp) { inp.value = chip.textContent || ""; inp.focus(); const send = s.getElementById("csend") as HTMLButtonElement | null; if (send) send.disabled = !inp.value.trim() } return }
+      if (t.closest("#ctemplate")) { if (!guardFeature("chat_attachments")) return; const chip = s.querySelector(".qchip") as HTMLElement | null; const inp = s.getElementById("cmsg") as HTMLInputElement | null; if (chip && inp) { inp.value = chip.textContent || ""; inp.focus(); const send = s.getElementById("csend") as HTMLButtonElement | null; if (send) send.disabled = !inp.value.trim() } return }
       // inline record payment against this booking conversation — no round-trip
       const rec = t.closest("[data-rec]") as HTMLElement | null
       if (rec?.dataset.rec) { openRecordPaymentDrawer(s, { bookingId: Number(rec.dataset.rec), customerName: rec.dataset.recName || undefined, onSaved: () => qc.invalidateQueries({ queryKey: ["chat-phone"] }) }); return }

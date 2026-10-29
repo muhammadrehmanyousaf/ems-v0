@@ -11,6 +11,7 @@
  * routing, and the sidebar shows the real business + user.
  */
 
+import { guardFeature } from "@/lib/plan-gate"
 import { foldText } from "@/lib/text-normalise"
 import * as React from "react"
 import { useRouter } from "next/navigation"
@@ -893,7 +894,7 @@ export function useArtifactShell(hostRef: React.RefObject<HTMLDivElement | null>
     const onClick = (e: Event) => {
       const t = e.target as HTMLElement
       if (t.closest('[data-act="theme"]')) { e.preventDefault(); setTheme(resolvedTheme === "dark" ? "light" : "dark"); return }
-      if (t.closest('[data-act="export-table"]')) { e.preventDefault(); exportWwcTable(shadow, opts.crumbBold); return }
+      if (t.closest('[data-act="export-table"]')) { e.preventDefault(); if (!guardFeature("data_export")) return; exportWwcTable(shadow, opts.crumbBold); return }
       const moreBtn = t.closest("[data-nav-more]") as HTMLElement | null
       if (moreBtn) { e.preventDefault(); const panel = shadow.querySelector("[data-nav-more-panel]") as HTMLElement | null; if (panel) { const open = !panel.hidden; panel.hidden = open; moreBtn.setAttribute("aria-expanded", String(!open)) } return }
       if (t.closest("[data-drawer-close]") || t.closest("[data-drawer-scrim]")) { e.preventDefault(); closeDrawer(shadow); return }

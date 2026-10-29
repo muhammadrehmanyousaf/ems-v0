@@ -23,7 +23,7 @@ import { useResolvedThemeMode } from "@/lib/store/theme-prefs"
 import { PLAN_UI_CSS, WALL_TOKENS_CSS } from "../plan-ui-css"
 import { useOne, useBi } from "../bilingual"
 
-const ICON = { unstarted: Sparkles, trial_welcome: Sparkles, trial_t7: Clock, trial_t3: Clock, trial_t1: AlertTriangle, trial_today: AlertTriangle, past_due: AlertTriangle, cancelling: Clock, comp_end: Clock, locked_here: Lock, reactivated: CheckCircle2, over_limit: AlertTriangle } as const
+const ICON = { free_tier: Lock, unstarted: Sparkles, trial_welcome: Sparkles, trial_t7: Clock, trial_t3: Clock, trial_t1: AlertTriangle, trial_today: AlertTriangle, past_due: AlertTriangle, cancelling: Clock, comp_end: Clock, locked_here: Lock, reactivated: CheckCircle2, over_limit: AlertTriangle } as const
 
 function store(): Storage | null { try { return window.localStorage } catch { return null } }
 /** Pakistan calendar date, YYYY-MM-DD: "hide for today" ends at midnight Pakistan time. */
@@ -53,7 +53,7 @@ export function PlanBanners() {
   const mode = useResolvedThemeMode()
   const plan = usePlan()
   // Over a plan limit (the server's numbers, from the one plan provider): the vendor is told, once a day, what to do.
-  const overLimit = (["businesses", "staff", "spaces", "images"] as LimitKey[]).some((k) => { const l = plan.limit(k); return !!l && l.enforced && l.max !== null && l.used !== null && l.used > l.max })
+  const overLimit = (["businesses", "staff", "halls", "spaces", "images", "slots", "packages"] as LimitKey[]).some((k) => { const l = plan.limit(k); return !!l && l.enforced && l.max !== null && l.used !== null && l.used > l.max })
 
   // "Welcome back" once after a lock ends: remember that the Wall was shown.
   const [wasLocked, setWasLocked] = React.useState(false)

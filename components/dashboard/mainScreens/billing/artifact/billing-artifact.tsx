@@ -30,12 +30,12 @@ import {
 import { usePlan, type PlanApi } from "@/context/plan-context"
 import { LIMIT_NOUNS, type LimitKey } from "@/lib/plan-gate"
 import { useAccess } from "@/hooks/use-access"
-import { accessFromStatus, isLockedState, type Access } from "@/lib/plans/access"
+import { accessFromStatus, isFreeTier, isLockedState, type Access } from "@/lib/plans/access"
 import { useBusiness } from "@/context/BusinessContext"
-import { getLiveVenues, getManualPayment, isNotThere, saveLiveVenues, submitManualPayment, type LiveVenues, type ManualMethodKey, type ManualPaymentInfo } from "@/lib/api/billing"
+import { addManualPaymentProof, getLiveVenues, getManualPayment, isNotThere, saveLiveVenues, submitManualPayment, withdrawManualPayment, type LiveVenues, type ManualMethodKey, type ManualPaymentInfo } from "@/lib/api/billing"
 import { say } from "@/lib/plans/copy"
 import {
-  STATE_CARDS_CSS, bi, liveVenuesDrawerHtml, lockedCardHtml, manualCardHtml, manualDrawerHtml, manualUnavailableHtml, overLimitCardHtml, trialCardHtml,
+  STATE_CARDS_CSS, bi, liveVenuesDrawerHtml, lockedCardHtml, freeTierCardHtml, submissionsCardHtml, manualCardHtml, manualDrawerHtml, manualUnavailableHtml, overLimitCardHtml, trialCardHtml,
   type OverLimitRow,
 } from "./plan-state-cards"
 import { useArtifactShell, pkNum, escHtml, errorBannerHtml, openConfirm, openDrawer, closeDrawer, planMeterHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
@@ -259,11 +259,17 @@ function historyCard(payments: SubscriptionPaymentRow[] | undefined, planName: (
  * "What you have used": the four things a plan limits, as the server counts them (the same numbers the gates enforce).
  * While limits are not being enforced for this vendor it is only a plain count, with no limit and no upgrade prompt.
  */
+const LIMIT_TITLES: Record<LimitKey, string> = {
+  businesses: "Businesses", halls: "Halls", spaces: "Spaces (har hall mein)", staff: "Staff accounts", images: "Photos",
+  bookings: "Bookings (is mahine)", leads: "Leads (is mahine)", quoteRequests: "Quote requests (is mahine)", slots: "Bookable slots (har din)", packages: "Packages",
+}
+const USAGE_KEYS: LimitKey[] = ["bookings", "leads", "quoteRequests", "businesses", "halls", "spaces", "slots", "packages", "staff", "images"]
+
 function usageCardHtml(plan: PlanApi): string {
-  const rows = (["businesses", "staff", "spaces", "images"] as LimitKey[]).map((k) => {
+  const rows = USAGE_KEYS.map((k) => {
     const l = plan.limit(k)
     if (!l || l.used === null) return ""
-    const label = { businesses: "Businesses", staff: "Staff accounts", spaces: "Halls & spaces", images: "Photos" }[k]
+    const label = LIMIT_TITLES[k]
     const note = l.scope === "business" ? " (har business mein)" : ""
     return `<div class="us-row"><div class="us-l">${escHtml(label)}<span>${escHtml(note)}</span></div>${planMeterHtml(l, LIMIT_NOUNS[k])}</div>`
   }).join("")
@@ -338,13 +344,13 @@ function buildContent(d: MyPlanData, status: BillingStatus | null, mode: ReturnM
 
   // One card says where the vendor stands: the trial countdown, "your plan is paused", or the Safepay status.
   const stateCard = access?.state === "trialing" ? trialCardHtml(access) : statusCard(status)
-  const lockedCard = access && isLockedState(access.state) ? lockedCardHtml(access) : ""
+  const lockedCard = access && isLockedState(access.state) ? (isFreeTier(access) ? freeTierCardHtml() : lockedCardHtml(access)) : ""
   const planNameOfTier = (t: string) => tierName(t as SubscriptionTier)
   const manualCard = st?.manual && st.manual !== "absent" ? manualCardHtml(st.manual, planNameOfTier, access?.canPay !== false, !!access && !isLockedState(access.state) && access.state !== "past_due") : st?.askedManual ? manualUnavailableHtml() : ""
   const overCard = st && st.overRows.length ? overLimitCardHtml({ planName: access?.planName || curPlan?.name || "your", rows: st.overRows, venues: st.venues, canChoose: st.canChooseVenues, venueLimit: st.venueLimit }) : ""
   return `
   <div class="head"><div><h1>Plan & billing</h1><div class="sub">Apna plan chunein — payment Safepay par hoti hai aur har mahina khud renew hoti hai.</div></div></div>
-  ${returnBanner(mode, status, waited)}${lockedCard}${stateCard}${cur}${overCard}${usageHtml}${declineLine}${manualCard}${plans}${historyCard(payments, (t) => tierName(t as SubscriptionTier))}${comparison}${honest}${note}
+  ${returnBanner(mode, status, waited)}${lockedCard}${stateCard}${cur}${overCard}${usageHtml}${declineLine}${manualCard}${plans}${submissionsCardHtml(st?.manual && st.manual !== "absent" ? st.manual : null, planNameOfTier)}${historyCard(payments, (t) => tierName(t as SubscriptionTier))}${comparison}${honest}${note}
   <div class="foot">WeddingWala vendor console · Billing</div>`
 }
 
@@ -398,10 +404,10 @@ export function BillingArtifact() {
   // Over the plan's limit: which limits are exceeded (the server's numbers) and, for venues, which stay live.
   const overRows: OverLimitRow[] = React.useMemo(() => {
     const out: OverLimitRow[] = []
-    for (const k of ["businesses", "staff", "spaces", "images"] as LimitKey[]) {
+    for (const k of USAGE_KEYS) {
       const l = plan.limit(k)
       if (l && l.enforced && l.max !== null && l.used !== null && l.used > l.max) {
-        out.push({ label: { businesses: "Businesses", staff: "Staff accounts", spaces: "Halls & spaces", images: "Photos" }[k], used: l.used, max: l.max, nouns: LIMIT_NOUNS[k] })
+        out.push({ label: LIMIT_TITLES[k], used: l.used, max: l.max, nouns: LIMIT_NOUNS[k] })
       }
     }
     return out
@@ -544,8 +550,20 @@ export function BillingArtifact() {
     }
 
     // Manual proof route: pick a plan, see where to send the money, upload the proof; a super-admin approves it.
-    s.addEventListener("change", (e) => {
+    s.addEventListener("change", async (e) => {
       const t = e.target as HTMLElement
+      if (t.id === "mp-addproof-file") {
+        const input = t as HTMLInputElement
+        const file = input.files?.[0]
+        const id = Number(input.dataset.payment)
+        if (file && id) {
+          if (file.size > 8 * 1024 * 1024) { toast.error("The file is too big (max 8 MB)."); return }
+          try { await addManualPaymentProof(id, file); toast.success("Screenshot added. We will check your payment.") } catch (err4: unknown) { toast.error(msgOf(err4) || "Could not upload it. Please try again.") }
+          input.value = ""
+          qc.invalidateQueries({ queryKey: ["billing-manual"] })
+        }
+        return
+      }
       if (t.id === "mp-tier") {
         const price = (t as HTMLSelectElement).selectedOptions[0]?.dataset.price
         const amt = s.getElementById("mp-amt") as HTMLInputElement | null
@@ -622,6 +640,34 @@ export function BillingArtifact() {
         if (info?.enabled) openDrawer(s, "Bank transfer / JazzCash / Easypaisa", manualDrawerHtml(info, cat.map((p) => ({ tier: p.tier, name: p.name, pricePkrMonthly: p.pricePkrMonthly })), st.access?.plan ?? null))
         return
       }
+      // Withdraw a waiting payment (wrong amount / reference / plan): nothing was charged, the reference is free again.
+      const wd = t.closest("[data-mp-withdraw]") as HTMLElement | null
+      if (wd) {
+        const id = Number(wd.dataset.mpWithdraw)
+        openConfirm(s, {
+          title: "Withdraw this payment?",
+          message: "Nothing is charged by withdrawing. Your payment is not approved yet, so you can send it again with the right plan, amount or reference. If you already paid, keep this one and contact us instead.",
+          confirmLabel: "Yes, withdraw",
+          cancelLabel: "Keep it",
+          onConfirm: async () => {
+            try {
+              await withdrawManualPayment(id)
+              toast.success("Withdrawn. You can send the payment again with the right details.")
+            } catch (err3: unknown) {
+              toast.error(msgOf(err3) || "Could not withdraw it. Please try again.")
+            }
+            qc.invalidateQueries({ queryKey: ["billing-manual"] })
+          },
+        })
+        return
+      }
+      // Add the screenshot to a waiting payment that has none.
+      const ap = t.closest("[data-mp-addproof]") as HTMLElement | null
+      if (ap) {
+        const input = s.getElementById("mp-addproof-file") as HTMLInputElement | null
+        if (input) { input.dataset.payment = ap.dataset.mpAddproof || ""; input.click() }
+        return
+      }
       if (t.closest("[data-live-open]")) {
         const st = planRef.current.state
         openDrawer(s, say("over.pick", "en"), liveVenuesDrawerHtml({ limit: st.venueLimit, venues: st.venues.map((v) => ({ id: v.id, name: v.name, city: v.city, live: v.live !== false })) }))
@@ -648,7 +694,7 @@ export function BillingArtifact() {
         const until = cancelBtn.dataset.until || "paid period ke aakhir"
         openConfirm(s, {
           title: "Plan cancel karein?",
-          message: `Aage koi charge nahi hoga. Portal ${until} tak khula rahega, phir band ho jayega — aapki bookings, khata aur records mehfooz rehte hain aur listing couples ko dikhti rahegi. Jab chahein dobara subscribe kar sakte hain.`,
+          message: `Aage koi charge nahi hoga. Paid modules ${until} tak khule rahenge, phir aap Free plan par chale jayenge — Overview, Leads, Bookings, Calendar aur Chat chalte rahenge; baqi paid modules sirf dekhne ke liye hongay. Aapki bookings, khata aur records mehfooz rehte hain aur listing couples ko dikhti rahegi. Jab chahein dobara subscribe kar sakte hain.`,
           confirmLabel: "Haan, cancel karein",
           cancelLabel: "Rehne dein",
           onConfirm: async () => {
@@ -674,7 +720,7 @@ export function BillingArtifact() {
         const planName = trialBtn.dataset.planName || "plan"
         openConfirm(s, {
           title: days ? `${days} din muft trial shuru karein?` : "Muft trial shuru karein?",
-          message: `Koi card nahi, koi charge nahi. ${planName} ke saare features${days ? ` ${days} din ke liye` : ""} khul jayenge. Trial ke baad portal band ho jata hai jab tak aap subscribe na karein — aur jo din bach jayen, woh paid plan mein shamil ho jate hain. Trial ek hi baar milta hai.`,
+          message: `Koi card nahi, koi charge nahi. ${planName} ke saare features${days ? ` ${days} din ke liye` : ""} khul jayenge. Trial ke baad aap Free plan par chale jate hain (free modules chalte hain, paid modules sirf dekhne ke liye) jab tak aap subscribe na karein — aur jo din bach jayen, woh paid plan mein shamil ho jate hain. Trial ek hi baar milta hai.`,
           confirmLabel: "Trial shuru karein",
           cancelLabel: "Rehne dein",
           danger: false,

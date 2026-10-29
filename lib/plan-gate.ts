@@ -29,7 +29,11 @@ export function planNameOf(tier: string | null | undefined): string {
 export type FeatureKey =
   | "analytics" | "cheque_ledger" | "contracts_esign" | "wa_templates" | "staff" | "remove_branding"
   | "multi_business" | "client_portal" | "fbr_invoicing" | "automations" | "forecasting"
-export type LimitKey = "businesses" | "staff" | "spaces" | "images"
+  | "men_women_portions" | "chat_attachments" | "data_export" | "role_permissions"
+  // the owner's plan sheet: one feature per module above Free, `mod_<module>` (backend utils/moduleTiers.js)
+  | `mod_${string}`
+export type LimitKey =
+  | "businesses" | "staff" | "halls" | "spaces" | "images" | "bookings" | "leads" | "quoteRequests" | "slots" | "packages"
 
 export interface FeatureEntitlement {
   /** The plan includes it. */
@@ -49,6 +53,10 @@ export interface LimitEntitlement {
   scope: "account" | "business"
   /** Enforcement applies AND used >= max: the next create will be refused. */
   reached: boolean
+  /** 80% or more of the limit is used (sheet rule 4): warn before the wall. */
+  nearing: boolean
+  /** "month" / "day" for a limit that resets; null for a standing count. */
+  period: "month" | "day" | null
   /** The plan that raises this limit, or null on the top plan (then it is a custom plan). */
   nextPlan: string | null
   /** For per-business limits: { [businessId]: used }. */
@@ -101,6 +109,8 @@ export function parseEntitlements(raw: unknown): Entitlements | null {
       label: str(v.label) ?? k,
       scope: v.scope === "business" ? "business" : "account",
       reached: v.reached === true,
+      nearing: v.nearing === true,
+      period: v.period === "month" || v.period === "day" ? v.period : null,
       nextPlan: str(v.nextPlan),
       ...(Object.keys(per).length ? { perBusiness: per } : {}),
     }
@@ -122,8 +132,14 @@ export function describeUsage(l: LimitEntitlement, nouns?: [string, string]): st
 export const LIMIT_NOUNS: Record<LimitKey, [string, string]> = {
   businesses: ["business", "businesses"],
   staff: ["staff account", "staff accounts"],
-  spaces: ["hall or space", "halls and spaces"],
+  halls: ["hall", "halls"],
+  spaces: ["space per hall", "spaces per hall"],
   images: ["photo", "photos"],
+  bookings: ["booking this month", "bookings this month"],
+  leads: ["lead this month", "leads this month"],
+  quoteRequests: ["quote request this month", "quote requests this month"],
+  slots: ["slot per day", "slots per day"],
+  packages: ["package", "packages"],
 }
 
 /* ───────────── the server's two refusals ───────────── */
@@ -259,10 +275,70 @@ export const isGateClaimed = (error: unknown): boolean => !!(error as { __planGa
  * planEntitlements.js); a tool added to this map without that decision being revisited is a bug.
  */
 export const SCREEN_FEATURE: Record<string, FeatureKey> = {
-  "/dashboard/insights": "analytics",
-  "/dashboard/reports": "analytics",
-  "/dashboard/pdcs": "cheque_ledger",
-  "/dashboard/staff": "staff",
+  // Rozana
+  "/dashboard/function-sheets": "mod_function_sheets",
+  "/dashboard/function-sheet-composer": "mod_function_sheets",
+  "/dashboard/function-sheet-operations": "mod_function_sheets",
+  // Khata
+  "/dashboard/payments": "mod_payments",
+  "/dashboard/receipts": "mod_receipts",
+  "/dashboard/receivables": "mod_refunds",
+  "/dashboard/expenses": "mod_expenses",
+  "/dashboard/staff": "mod_staff_payroll",
+  "/dashboard/suppliers": "mod_suppliers",
+  "/dashboard/pdcs": "mod_cheque_ledger",
+  "/dashboard/tax": "mod_tax_report",
+  // Set up
+  "/dashboard/automation": "mod_automation",
+  "/dashboard/packages": "mod_packages_menus",
+  "/dashboard/venue-os": "mod_venue_os",
+  "/dashboard/inventory": "mod_inventory",
+  "/dashboard/generator-fuel": "mod_generator_fuel",
+  "/dashboard/halal-certs": "mod_halal_certs",
+  "/dashboard/drone-noc": "mod_drone_noc",
+  "/dashboard/collaborations": "mod_collaborations",
+  // Zyada
+  "/dashboard/holds": "mod_date_holds",
+  "/dashboard/field": "mod_field_capture",
+  "/dashboard/trade-ops": "mod_trade_ops",
+  "/dashboard/kitchen-prep": "mod_kitchen_prep",
+  "/dashboard/brokers": "mod_brokers",
+  "/dashboard/insights": "mod_reports",
+  "/dashboard/reports": "mod_reports",
+}
+
+/** The feature a portal path needs (longest matching screen), or null when the path is not a gated module. */
+export function featureForPath(pathname: string | null | undefined): FeatureKey | null {
+  const p = (pathname || "").replace(/\/+$/, "")
+  for (const [route, feature] of Object.entries(SCREEN_FEATURE)) {
+    if (p === route || p.startsWith(route + "/")) return feature
+  }
+  return null
 }
 // The Automation screen is NOT listed: its built-in reminder toggles stay open to every plan; only the custom rule
 // builder inside it is Premium, and that part of the screen shows its own lock.
+
+/* ───────────── non-React code (the shadow-DOM screens, the table exporter) asks the same question ───────────── */
+
+let lockedNow: { features: Entitlements["features"]; planName: string } = { features: {}, planName: "No plan" }
+/** The plan provider keeps this current, so imperative handlers can guard an action without a hook. */
+export function setLockedFeatures(features: Entitlements["features"], planName: string): void { lockedNow = { features, planName } }
+
+/**
+ * Guard a user action behind a plan feature from plain event handlers. Returns true when the action may go ahead; when the
+ * plan lacks the feature it opens the portal's upgrade dialog and returns false. Open while enforcement is off or unknown.
+ */
+export function guardFeature(feature: FeatureKey): boolean {
+  const f = lockedNow.features[feature]
+  if (!f || !f.locked) return true
+  const label = f.label
+  publishPlanGate(
+    {
+      code: "FEATURE_NOT_IN_PLAN", feature, featureLabel: label, limit: null, limitLabel: null, max: null, used: null, adding: null,
+      scope: null, currentPlan: lockedNow.planName, requiredPlan: f.requiredPlan,
+      message: `${label} is part of the ${f.requiredPlan} plan. You are on ${lockedNow.planName}.`,
+    },
+    { method: "post", silent: false, prompt: true },
+  )
+  return false
+}

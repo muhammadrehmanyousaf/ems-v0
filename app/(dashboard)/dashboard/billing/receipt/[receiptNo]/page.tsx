@@ -64,8 +64,20 @@ export default function ReceiptPage() {
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">Payment</p>
-            <p className="mt-1 text-sm">Safepay · recurring monthly</p>
-            {r.transactionId && <p className="text-sm text-neutral-600">Transaction {r.transactionId}</p>}
+            {data.payment?.kind === "manual" ? (
+              <>
+                <p className="mt-1 text-sm">{data.payment.methodLabel} · one month, paid by transfer</p>
+                {data.payment.reference && <p className="text-sm text-neutral-600">Your reference {data.payment.reference}</p>}
+                {data.payment.submittedAt && <p className="text-sm text-neutral-600">Sent {fmtDate(data.payment.submittedAt)}</p>}
+                {data.payment.approvedAt && <p className="text-sm text-neutral-600">Checked and approved {fmtDate(data.payment.approvedAt)}</p>}
+              </>
+            ) : (
+              <>
+                <p className="mt-1 text-sm">Safepay · recurring monthly</p>
+                {r.transactionId && <p className="text-sm text-neutral-600">Transaction {r.transactionId}</p>}
+              </>
+            )}
+            {!!data.businesses?.length && <p className="mt-2 text-sm text-neutral-600">For {data.businesses.map((b) => b.name).join(", ")}</p>}
           </div>
         </section>
 
@@ -104,7 +116,7 @@ export default function ReceiptPage() {
 
         <footer className="mt-8 space-y-2 text-xs text-neutral-500">
           <p>{data.issuer.taxNote}</p>
-          <p>This receipt confirms a subscription payment to Wedding Wala for use of the vendor portal. It is not an invoice for any wedding booking. Subscriptions renew monthly and can be cancelled from Billing; no refunds are made for partial months. Full terms: <a className="underline" href="/vendor-subscription-policy">weddingwala.pk/vendor-subscription-policy</a>.</p>
+          <p>This receipt confirms a subscription payment to Wedding Wala for use of the vendor portal. It is not an invoice for any wedding booking. {data.payment?.kind === "manual" ? "A payment by transfer buys one month and does not renew by itself; send the next payment before the end date to keep your plan without a gap." : "Subscriptions renew monthly and can be cancelled from Billing."} No refunds are made for partial months. Full terms: <a className="underline" href="/vendor-subscription-policy">weddingwala.pk/vendor-subscription-policy</a>.</p>
         </footer>
       </article>
     </div>

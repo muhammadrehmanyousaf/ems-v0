@@ -20,6 +20,7 @@ import { ProductTourProvider } from "@/components/dashboard/tour/product-tour"
 // only billing, the account page and add-a-business stay open). The access state comes from /subscriptions/status and from
 // any 402, into one store (lib/plans/access-store.ts).
 import { AccessGate } from "@/components/dashboard/plans/access-gate"
+import { ModuleGate } from "@/components/dashboard/plans/module-gate"
 import { AccessSync } from "@/components/dashboard/plans/access-sync"
 // What the vendor's plan includes and how much of it is used, from the server (one provider for the whole portal),
 // and the one dialog that explains any plan refusal. See context/plan-context.tsx.
@@ -78,7 +79,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
                 render inside it) and the classic sidebar for admins. See
                 dashboard-chrome.tsx. */}
             <AccessGate>
-              <DashboardChrome>{children}</DashboardChrome>
+              <DashboardChrome><ModuleGate>{children}</ModuleGate></DashboardChrome>
             </AccessGate>
             </ProductTourProvider>
           </ReviewProfileGate>

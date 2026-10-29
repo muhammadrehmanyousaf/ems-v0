@@ -27,6 +27,32 @@ export const COPY = {
     en: "{days} days left in your free month. Choose a plan to keep going. The days you have left are added on top.",
     ru: "Aap ke muft mahine ke {days} din reh gaye hain. Plan chun lein. Bache hue din upar se jud jayenge.",
   },
+  "trial.t10.free": {
+    en: "{days} days left in your free month. After {trialEnd} you move to the Free plan: paid modules become read-only and your data stays safe.",
+    ru: "Aap ke muft mahine ke {days} din reh gaye hain. {trialEnd} ke baad aap Free plan par chale jayenge: paid modules sirf dekhne ke liye reh jayenge aur data mehfooz rahega.",
+  },
+  "trial.t3.free": {
+    en: "{days} days left. After {trialEnd} you move to the Free plan: paid modules become read-only. Your data stays safe.",
+    ru: "Sirf {days} din baqi hain. {trialEnd} ke baad aap Free plan par chale jayenge: paid modules sirf dekhne ke liye reh jayenge. Data mehfooz rahega.",
+  },
+  "cancelling.banner.free": {
+    en: "Your plan is cancelled. Everything stays open until {date}, then you move to the Free plan. Your data stays safe.",
+    ru: "Aap ka plan cancel ho chuka hai. {date} tak sab kuch khula hai, phir aap Free plan par chale jayenge. Aap ka data mehfooz rahega.",
+  },
+  "past_due.banner.free": {
+    en: "Your payment didn't go through. Fix it by {graceEnd} to keep your paid modules open; after that you move to the Free plan.",
+    ru: "Aap ki payment nahi ho saki. Paid modules khule rakhne ke liye {graceEnd} tak theek kar lein; uske baad aap Free plan par chale jayenge.",
+  },
+  "freetier.banner": {
+    en: "You are on the Free plan. Free modules keep working; paid modules are read-only. Choose a plan to open them again.",
+    ru: "Aap Free plan par hain. Free modules chalte rahenge; paid modules sirf dekhne ke liye hain. Dobara kholne ke liye plan chun lein.",
+  },
+  "chip.free": { en: "Free plan", ru: "Free plan (muft)" },
+  "bill.free.title": { en: "You are on the Free plan", ru: "Aap Free plan par hain" },
+  "bill.free.line": {
+    en: "Overview, Leads, Bookings, Calendar, Chat and the other free modules keep working. Paid modules are read-only: you can see what you already have, but cannot add to it. Choose a plan below and they open the moment payment is confirmed.",
+    ru: "Overview, Leads, Bookings, Calendar, Chat aur baqi free modules chalte rahenge. Paid modules sirf dekhne ke liye hain: jo data hai wo nazar aayega, naya nahi add ho sakta. Neeche se plan chunein, payment confirm hote hi khul jayenge.",
+  },
   "trial.t3": {
     en: "{days} days left. After {trialEnd} your dashboard locks. Your data stays safe.",
     ru: "Sirf {days} din baqi hain. {trialEnd} ke baad dashboard band ho jayega. Aap ka data mehfooz rahega.",

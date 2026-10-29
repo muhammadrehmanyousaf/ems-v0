@@ -161,9 +161,12 @@ await check("a silent or read refusal never arms the toast filter", async () => 
 });
 
 console.log("\nwhich screens are locked");
-await check("the operations tools are not in the screen-to-feature map (they stay in every paid plan)", () => {
-  const tools = ["venue-os", "trade-ops", "kitchen-prep", "brokers", "inventory", "generator-fuel", "halal-certs", "drone-noc", "field"];
-  eq(Object.keys(SCREEN_FEATURE).filter((r) => tools.some((t) => r === `/dashboard/${t}`)), []);
+await check("every module the plan sheet puts above Free is in the screen-to-feature map", () => {
+  // WeddingWala_Module_Tiers.xlsx supersedes the 9 Oct decision that left the operations tools ungated.
+  const paid = ["function-sheets", "payments", "receipts", "receivables", "expenses", "staff", "suppliers", "pdcs", "tax", "automation", "packages", "venue-os", "inventory", "generator-fuel", "halal-certs", "drone-noc", "collaborations", "holds", "field", "trade-ops", "kitchen-prep", "brokers", "insights"];
+  eq(paid.filter((r) => !SCREEN_FEATURE[`/dashboard/${r}`]), []);
+  const free = ["leads", "bookings", "calendar", "chat", "customers", "settings", "onboarding", "cancellation-policy", "spaces", "slots", "promote", "quotes", "reviews", "billing"];
+  eq(free.filter((r) => SCREEN_FEATURE[`/dashboard/${r}`]), []);
 });
 await check("the sidebar, the axios layer and the dashboard layout are wired to the shared provider", () => {
   ok(/SCREEN_FEATURE/.test(read("components/dashboard/layout/champagne-sidebar.tsx")) && /PlanLockChip/.test(read("components/dashboard/layout/champagne-sidebar.tsx")), "sidebar lock chips");

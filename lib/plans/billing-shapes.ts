@@ -57,7 +57,7 @@ export interface ManualMethod {
   bankName: string | null
   note: string | null
 }
-export type ManualStatus = "pending" | "approved" | "rejected"
+export type ManualStatus = "pending" | "approved" | "rejected" | "withdrawn"
 export interface ManualPaymentCurrent {
   id: number | null
   status: ManualStatus
@@ -68,11 +68,18 @@ export interface ManualPaymentCurrent {
   submittedAt: string | null
   decidedAt: string | null
   rejectionReason: string | null
+  /** The receipt a checked payment became (only when approved). */
+  receiptNo: string | null
+  hasProof: boolean
+  canWithdraw: boolean
+  canAddProof: boolean
 }
 export interface ManualPaymentInfo {
   enabled: boolean
   methods: ManualMethod[]
   current: ManualPaymentCurrent | null
+  /** Every submission the vendor ever made, newest first: pending, approved, rejected and withdrawn. */
+  history: ManualPaymentCurrent[]
 }
 
 const METHOD_KEYS: ManualMethodKey[] = ["bank", "jazzcash", "easypaisa"]
@@ -93,15 +100,19 @@ export function parseManualPayment(raw: unknown): ManualPaymentInfo | null {
       })
     }
   }
-  const c = isRec(d.current) ? d.current : null
-  const status = c ? str(c.status) : null
-  const current: ManualPaymentCurrent | null = c && (status === "pending" || status === "approved" || status === "rejected")
-    ? {
-        id: num(c.id), status, tier: str(c.tier), method: str(c.method), amountPkr: num(c.amountPkr), reference: str(c.reference),
-        submittedAt: str(c.submittedAt), decidedAt: str(c.decidedAt), rejectionReason: str(c.rejectionReason),
-      }
-    : null
-  return { enabled: d.enabled === true && methods.length > 0, methods, current }
+  const readOne = (c: unknown): ManualPaymentCurrent | null => {
+    if (!isRec(c)) return null
+    const status = str(c.status)
+    if (status !== "pending" && status !== "approved" && status !== "rejected" && status !== "withdrawn") return null
+    return {
+      id: num(c.id), status, tier: str(c.tier), method: str(c.method), amountPkr: num(c.amountPkr), reference: str(c.reference),
+      submittedAt: str(c.submittedAt), decidedAt: str(c.decidedAt), rejectionReason: str(c.rejectionReason),
+      receiptNo: str(c.receiptNo), hasProof: c.hasProof === true, canWithdraw: c.canWithdraw === true, canAddProof: c.canAddProof === true,
+    }
+  }
+  const current = readOne(d.current)
+  const history = (Array.isArray(d.history) ? d.history : []).map(readOne).filter((x): x is ManualPaymentCurrent => !!x)
+  return { enabled: d.enabled === true && methods.length > 0, methods, current, history }
 }
 
 
