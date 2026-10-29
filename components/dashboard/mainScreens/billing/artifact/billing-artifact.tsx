@@ -242,17 +242,26 @@ function statusCard(status: BillingStatus | null): string {
 }
 
 function historyCard(payments: SubscriptionPaymentRow[] | undefined, planName: (tier: string) => string): string {
-  if (!payments || payments.length === 0) return ""
+  const head = `<div class="card-h" style="padding:14px 16px 6px"><div><h2 style="font-size:13.5px;font-weight:600">Receipts</h2><div class="sub">Every payment you made and its receipt. Open one to print it or save it as PDF.</div></div></div>`
+  if (!payments || payments.length === 0) {
+    return `<div class="card" id="history" data-testid="receipts-card" style="margin-bottom:16px">${head}<div style="padding:6px 16px 18px;color:var(--ink-3);font-size:13px">No receipts yet. When a payment is approved, its receipt appears here with a number you can quote to us.</div></div>`
+  }
   const rows = payments.map((r) => `<tr>
     <td>${escHtml(fmtDate(r.paidAt))}</td>
     <td><span class="rs">Rs</span> ${pkNum(Math.round(r.amountPaisas / 100))}</td>
     <td>${escHtml(planName(r.tier))}</td>
     <td>${escHtml(fmtDate(r.periodStart))} – ${escHtml(fmtDate(r.periodEnd))}</td>
     <td style="font-variant-numeric:tabular-nums">${escHtml(r.receiptNo)}${r.refundedPaisas && r.refundedPaisas > 0 ? ` <span class="st warn" style="margin-left:6px">Refund <span class="rs">Rs</span> ${pkNum(Math.round(r.refundedPaisas / 100))}</span>` : ""}</td>
-    <td style="text-align:right"><a class="btn btn-ghost sm" href="/dashboard/billing/receipt/${encodeURIComponent(r.receiptNo)}">Receipt</a></td>
+    <td style="text-align:right"><a class="btn btn-ghost sm" href="/dashboard/billing/receipt/${encodeURIComponent(r.receiptNo)}">Open receipt</a></td>
   </tr>`).join("")
-  return `<div class="card" id="history" style="margin-bottom:16px"><div class="card-h" style="padding:14px 16px 6px"><div><h2 style="font-size:13.5px;font-weight:600">Billing history</h2><div class="sub">Har mahine ki payment aur uski receipt.</div></div></div>
-    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Taareekh</th><th>Raqam</th><th>Plan</th><th>Period</th><th>Receipt no.</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`
+  return `<div class="card" id="history" data-testid="receipts-card" style="margin-bottom:16px">${head}
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th>Amount</th><th>Plan</th><th>Period</th><th>Receipt no.</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`
+}
+
+/** The quick-jump bar: the four things a vendor comes to this page for, one tap each. */
+function billingNavHtml(hasPaid: boolean, hasSent: boolean): string {
+  const j = (id: string, label: string) => `<button type="button" class="btn btn-ghost sm" data-jump="${id}">${label}</button>`
+  return `<div class="bill-nav" data-testid="billing-nav" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px">${j("plans", hasPaid ? "Plans" : "Choose a plan")}${j("manual", "Pay by bank / JazzCash")}${j("history", "Receipts")}${hasSent ? j("submissions", "Payments sent") : ""}</div>`
 }
 
 /**
@@ -350,7 +359,7 @@ function buildContent(d: MyPlanData, status: BillingStatus | null, mode: ReturnM
   const overCard = st && st.overRows.length ? overLimitCardHtml({ planName: access?.planName || curPlan?.name || "your", rows: st.overRows, venues: st.venues, canChoose: st.canChooseVenues, venueLimit: st.venueLimit }) : ""
   return `
   <div class="head"><div><h1>Plan & billing</h1><div class="sub">Apna plan chunein — payment Safepay par hoti hai aur har mahina khud renew hoti hai.</div></div></div>
-  ${returnBanner(mode, status, waited)}${lockedCard}${stateCard}${cur}${overCard}${usageHtml}${declineLine}${manualCard}${plans}${submissionsCardHtml(st?.manual && st.manual !== "absent" ? st.manual : null, planNameOfTier)}${historyCard(payments, (t) => tierName(t as SubscriptionTier))}${comparison}${honest}${note}
+  ${returnBanner(mode, status, waited)}${billingNavHtml(!!(payments && payments.length), !!(st?.manual && st.manual !== "absent" && st.manual.history.length))}${lockedCard}${stateCard}${cur}${isFreeTier(access) || !(access && isLockedState(access.state)) ? overCard : ""}${access && isLockedState(access.state) ? "" : usageHtml}${declineLine}${manualCard}${historyCard(payments, (t) => tierName(t as SubscriptionTier))}${submissionsCardHtml(st?.manual && st.manual !== "absent" ? st.manual : null, planNameOfTier)}${plans}${comparison}${honest}${note}
   <div class="foot">WeddingWala vendor console · Billing</div>`
 }
 
@@ -489,6 +498,17 @@ export function BillingArtifact() {
   // Deep links: #history / #plans / #over / #manual scroll into the shadow content, and a renewal link
   // (?renew=1&plan=premium, the one in every reminder) opens that plan's confirmation once. ?pay=manual opens the manual form.
   const deepDone = React.useRef({ hash: "", renew: false, manual: false })
+  // A link to a section while this page is already open (the Wall's sidebar "Receipts") changes the hash: scroll to it again.
+  React.useEffect(() => {
+    const onHash = () => {
+      const sh = shadowRef.current
+      const id = window.location.hash.replace("#", "")
+      const el = sh && id ? sh.getElementById(id) : null
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
+    window.addEventListener("hashchange", onHash)
+    return () => window.removeEventListener("hashchange", onHash)
+  }, [])
   React.useEffect(() => {
     const sh = shadowRef.current
     if (!sh || !ready || !data) return
@@ -633,6 +653,14 @@ export function BillingArtifact() {
     s.addEventListener("click", async (e) => {
       const t = e.target as HTMLElement
       if (t.closest("[data-retry]")) { refresh(); return }
+      const jump = t.closest("[data-jump]") as HTMLElement | null
+      if (jump) {
+        const which = jump.dataset.jump || ""
+        const target = which === "plans" ? s.querySelector(".plans") : which === "manual" ? (s.getElementById("manual") || s.querySelector('[data-testid^="manual-"]')) : s.getElementById(which)
+        if (target) (target as HTMLElement).scrollIntoView({ behavior: "smooth", block: "start" })
+        else toast.message("Nothing there yet")
+        return
+      }
       if (t.closest("[data-manual-open]")) {
         const st = planRef.current.state
         const info = st.manual && st.manual !== "absent" ? st.manual : null

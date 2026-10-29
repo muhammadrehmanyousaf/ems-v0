@@ -40,6 +40,7 @@ import { PlanChip } from "@/components/dashboard/plans/banners/plan-banners"
 import { SCREEN_FEATURE } from "@/lib/plan-gate"
 import { useDirtyGuard } from "@/lib/store/dirty-guard"
 import { getDashboardRole, isAdminLike } from "@/lib/dashboard-role"
+import { useAccess } from "@/hooks/use-access"
 
 type Biz = {
   id: number; name?: string; city?: string | null; subArea?: string | null; status?: string
@@ -342,6 +343,10 @@ export function ChampagneSidebar() {
   const role = getDashboardRole(user)
   const isAdmin = isAdminLike(role)
   const isSuper = role === "superAdmin"
+  // The plan is over and the Wall is real: the vendor sees ONLY how to pay and what they paid. No module is listed, so
+  // nothing in the product is visible or reachable until a payment is confirmed.
+  const { locked: planOver } = useAccess()
+  const lockedNav = !isAdmin && planOver
 
   // SETUP-027 - a screen with unsaved edits parks the navigation and asks first.
   const go = (url: string) => { useDirtyGuard.getState().guard(() => router.push(url)) }
@@ -389,10 +394,36 @@ export function ChampagneSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>{isAdmin ? <AdminHeader isSuper={isSuper} /> : <BusinessSwitcher />}</SidebarHeader>
+      <SidebarHeader>{isAdmin ? <AdminHeader isSuper={isSuper} /> : lockedNav ? (
+        <div className="px-2 py-1.5 text-[13px] font-semibold" data-testid="locked-brand">WeddingWala<span className="block text-[11px] font-normal text-muted-foreground">Your plan has ended</span></div>
+      ) : <BusinessSwitcher />}</SidebarHeader>
 
       <SidebarContent className="overflow-x-hidden">
-        {isAdmin ? (
+        {lockedNav ? (
+          <div key="locked-root" data-testid="locked-nav">
+            <SidebarGroup>
+              <SidebarGroupLabel>Payment</SidebarGroupLabel>
+              <SidebarMenu>
+                {([
+                  { name: "Plan & payment", url: "/dashboard/billing", icon: CreditCard },
+                  { name: "Receipts", url: "/dashboard/billing#history", icon: ReceiptText },
+                  { name: "My account", url: "/dashboard/profile", icon: Settings2 },
+                ] as NItem[]).map((it) => (
+                  <SidebarMenuItem key={it.name}>
+                    <SidebarMenuButton tooltip={it.name} isActive={isActiveForNav(pathname, it.url.split("#")[0]) && (it.url.includes("#") ? false : true)} onClick={() => {
+                      // a link to a section of the page we are already on: change the hash (the billing screen listens for it)
+                      const [path, hash] = it.url.split("#")
+                      if (hash && pathname === path) window.location.hash = hash
+                      else go(it.url)
+                    }}>
+                      <it.icon /><span>{it.name}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+          </div>
+        ) : isAdmin ? (
           <div key="admin-root" className="duration-200 animate-in fade-in-0">
             <SidebarGroup>
               <SidebarGroupLabel>Platform</SidebarGroupLabel>
