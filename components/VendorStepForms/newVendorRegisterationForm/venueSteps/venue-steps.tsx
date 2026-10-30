@@ -7,6 +7,7 @@ import Packages from '../../packages';
 import ImagesStep from '../../images-step';
 import Preview from '../../preview';
 import { RegistrationSpacesBuilder } from './registration-spaces-builder';
+import MenusStep from './vanueComponents/menus-step';
 
 interface VenueStepsProps {
     currentStep: number;
@@ -17,9 +18,10 @@ interface VenueStepsProps {
 };
 
 // VR-050 — venue flow grew from 6 to 7 steps with the addition of
-// the "Specialty & Trust" step at position 4. Order:
+// the "Specialty & Trust" step at position 4, and to 8 with the "Menus" step
+// (what the hall serves, per head) after Packages. Order:
 //   1 Personal · 2 Contact · 3 Business · 4 Specialty/Trust ·
-//   5 Packages · 6 Images · 7 Preview
+//   5 Packages · 6 Menus · 7 Images · 8 Preview
 const VenueSteps = ({ currentStep, error, setErrors, file, setFile }: VenueStepsProps) => {
 
     return (
@@ -73,6 +75,14 @@ const VenueSteps = ({ currentStep, error, setErrors, file, setFile }: VenueSteps
                                 : currentStep === 6 ?
                                     <div className='space-y-6'>
                                         <div className="space-y-3 mb-6">
+                                            <h1 className="text-2xl lg:text-3xl text-roze-default font-semibold">{'Menus'}</h1>
+                                            <p className="text-sm md:text-base lg:text-lg font-medium">{'What does your venue serve? Add each menu with its price per head and its dishes.'}</p>
+                                        </div>
+                                        <MenusStep setErrors={setErrors} errors={error as { [key: string]: string }} />
+                                    </div>
+                                : currentStep === 7 ?
+                                    <div className='space-y-6'>
+                                        <div className="space-y-3 mb-6">
                                             <h1 className="text-2xl lg:text-3xl text-roze-default font-semibold">{'Images'}</h1>
                                             <p className="text-sm md:text-base lg:text-lg font-medium">{'Upload your venue images'}</p>
                                         </div>
@@ -81,7 +91,7 @@ const VenueSteps = ({ currentStep, error, setErrors, file, setFile }: VenueSteps
                                             errors={error}
                                         />
                                     </div>
-                                    : currentStep === 7 &&
+                                    : currentStep === 8 &&
                                     <div>
                                         <Preview />
                                     </div>

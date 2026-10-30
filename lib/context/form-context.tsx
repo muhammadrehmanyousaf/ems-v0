@@ -26,6 +26,14 @@ interface Package {
   features: Record<string, string[]>;
 }
 
+/** One menu of a venue's registration (food, priced PER HEAD). Strings while typing; the submit step turns them into numbers. */
+export interface VenueMenu {
+  title: string;
+  price: number | string;
+  minGuaranteeCount?: number | string;
+  items: string[];
+}
+
 export interface CarRentalPackageCar {
   carIndex: number;   // index into formData.packages (fleet)
   quantity: number;
@@ -81,6 +89,10 @@ export type FormType = {
   // serviceProvided: string[];
   expertise: string[];
   packages: Package[];
+  /** Venue registration, "Menus" step (after Packages). Absent on drafts saved before the step existed. */
+  menus?: VenueMenu[];
+  /** "My venue does not serve food (hall only)": an explicit answer, so an empty menu list is not an omission. */
+  noMenus?: boolean;
   carRentalPackages: CarRentalPackage[];
   amenities: string[];
   maxCapacity: string;
@@ -200,6 +212,8 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         features: {},
       },
     ],
+    menus: [],
+    noMenus: false,
     carRentalPackages: [],
     amenities: [],
     maxCapacity: "",

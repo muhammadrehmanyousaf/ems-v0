@@ -64,17 +64,26 @@ const statusTone = (s?: string | null): StatusTone =>
   STATUS_TONE[(s as BusinessStatus)] ?? "neutral"
 
 /** The status tabs, in lifecycle order (mirrors the original screen's tabs). */
-const STATUS_TABS: { value: BusinessStatus; label: string }[] = [
-  // First: these are vendors waiting on a human, and nothing else surfaces them.
-  // Bulk-approve deliberately still only sweeps `submitted` (the OSM import), so
-  // a self-served listing always gets an individual look.
-  { value: "pending_review", label: "New submissions" },
-  { value: "submitted", label: "Awaiting review" },
-  { value: "approved", label: "Approved" },
-  { value: "rejected", label: "Rejected" },
-  { value: "suspended", label: "Suspended" },
-  { value: "draft", label: "Drafts" },
+type QueueTab = { key: string; value: BusinessStatus; label: string; origin?: "self" }
+const STATUS_TABS: QueueTab[] = [
+  // First: a REAL vendor who just registered. They cannot sign in until this is decided, and on production they used to sit
+  // among ~3,200 imported listings in `submitted`; origin=self shows only what a person sent in.
+  { key: "new_vendors", value: "submitted", origin: "self", label: "New vendors" },
+  // A vendor who already has venues added another one (hidden from customers until approved).
+  { key: "pending_review", value: "pending_review", label: "Added venues" },
+  // Everything in `submitted`, imports included. Bulk-approve only sweeps THIS tab, so a self-served listing always gets an
+  // individual look.
+  { key: "submitted", value: "submitted", label: "All awaiting review" },
+  { key: "approved", value: "approved", label: "Approved" },
+  { key: "rejected", value: "rejected", label: "Rejected" },
+  { key: "suspended", value: "suspended", label: "Suspended" },
+  { key: "draft", value: "draft", label: "Drafts" },
 ]
+const ORIGIN_LABEL: Record<string, { label: string; tone: StatusTone }> = {
+  new_vendor: { label: "New vendor", tone: "info" },
+  additional: { label: "Added venue", tone: "warning" },
+  import: { label: "Imported", tone: "neutral" },
+}
 
 /** Success copy per action (drives the undo-style success toast). */
 const SUCCESS_COPY: Record<ActionKind, string> = {
@@ -130,7 +139,8 @@ export function VendorQueueRedesignedView() {
   // `pending_review` holds the handful a real vendor typed in and is waiting to
   // hear about. Landing on the import backlog buried the queue that matters
   // behind a tab nobody had a reason to click.
-  const [statusTab, setStatusTab] = React.useState<BusinessStatus>("pending_review")
+  const [statusTab, setStatusTab] = React.useState<string>("new_vendors")
+  const activeTab = STATUS_TABS.find((t) => t.key === statusTab) ?? STATUS_TABS[0]
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [pending, setPending] = React.useState<PendingAction | null>(null)
@@ -148,7 +158,7 @@ export function VendorQueueRedesignedView() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["vendor-queue-redesigned", statusTab, debouncedSearch],
-    queryFn: () => listVendorQueue(statusTab, 50, 0, debouncedSearch),
+    queryFn: () => listVendorQueue(activeTab.value, 50, 0, debouncedSearch, activeTab.origin),
   })
 
   /**
@@ -171,14 +181,14 @@ export function VendorQueueRedesignedView() {
       const entries = await Promise.all(
         STATUS_TABS.map(async (t) => {
           try {
-            const r = await listVendorQueue(t.value, 1, 0, "")
-            return [t.value, r?.count ?? 0] as const
+            const r = await listVendorQueue(t.value, 1, 0, "", t.origin)
+            return [t.key, r?.count ?? 0] as const
           } catch {
-            return [t.value, null] as const
+            return [t.key, null] as const
           }
         }),
       )
-      return Object.fromEntries(entries) as Record<BusinessStatus, number | null>
+      return Object.fromEntries(entries) as Record<string, number | null>
     },
     staleTime: 60_000,
   })
@@ -188,8 +198,8 @@ export function VendorQueueRedesignedView() {
     if (landed.current || !countsQ.data) return
     landed.current = true
     if ((countsQ.data[statusTab] ?? 0) > 0) return
-    const firstWithWork = STATUS_TABS.find((t) => (countsQ.data?.[t.value] ?? 0) > 0)
-    if (firstWithWork) setStatusTab(firstWithWork.value)
+    const firstWithWork = STATUS_TABS.find((t) => (countsQ.data?.[t.key] ?? 0) > 0)
+    if (firstWithWork) setStatusTab(firstWithWork.key)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [countsQ.data])
 
@@ -243,7 +253,7 @@ export function VendorQueueRedesignedView() {
   const avgCompleteness = all.length
     ? Math.round(all.reduce((sum, r) => sum + num(r.completenessScore), 0) / all.length)
     : 0
-  const tabLabel = STATUS_TABS.find((t) => t.value === statusTab)?.label ?? cap(statusTab)
+  const tabLabel = activeTab.label
 
   const renderActions = (r: QueueBusiness) => {
     const kinds = actionsFor(r.status)
@@ -300,8 +310,23 @@ export function VendorQueueRedesignedView() {
     {
       key: "vendor",
       header: "Vendor",
-      cellClassName: "text-muted-foreground",
-      render: (r) => r.vendor?.fullName || "—",
+      render: (r) => (
+        <div className="min-w-0 space-y-1" data-testid="queue-vendor-cell">
+          <div className="truncate text-sm">{r.vendor?.fullName || "—"}</div>
+          <div className="truncate text-xs text-muted-foreground">{r.vendor?.email || ""}</div>
+          <div className="flex flex-wrap items-center gap-1">
+            {r.origin && ORIGIN_LABEL[r.origin] && <StatusPill tone={ORIGIN_LABEL[r.origin].tone}>{ORIGIN_LABEL[r.origin].label}</StatusPill>}
+            {r.origin !== "import" && typeof r.vendorBusinessCount === "number" && (
+              <span
+                className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground"
+                title={(r.vendorOtherBusinesses ?? []).map((b) => `${b.name}${b.city ? `, ${b.city}` : ""} (${b.status})`).join("\n") || "No other venues"}
+              >
+                {r.vendorBusinessCount} {r.vendorBusinessCount === 1 ? "venue" : "venues"} · {r.vendorApprovedCount ?? 0} live
+              </span>
+            )}
+          </div>
+        </div>
+      ),
     },
     { key: "city", header: "City", cellClassName: "text-muted-foreground", render: (r) => r.city || "—" },
     {
@@ -343,12 +368,12 @@ export function VendorQueueRedesignedView() {
       {/* Status tabs — pass the chosen status straight to listVendorQueue. */}
       <div className="flex flex-wrap items-center gap-1 border-b border-border">
         {STATUS_TABS.map((t) => {
-          const active = t.value === statusTab
+          const active = t.key === statusTab
           return (
             <button
-              key={t.value}
+              key={t.key}
               type="button"
-              onClick={() => setStatusTab(t.value)}
+              onClick={() => setStatusTab(t.key)}
               aria-pressed={active}
               className={
                 "relative -mb-px rounded-t-md px-3 py-2 text-sm font-medium transition-colors " +
@@ -359,7 +384,7 @@ export function VendorQueueRedesignedView() {
             >
               {t.label}
               {(() => {
-                const n = countsQ.data?.[t.value]
+                const n = countsQ.data?.[t.key]
                 if (n == null || n === 0) return null
                 return (
                   <span
@@ -409,7 +434,7 @@ export function VendorQueueRedesignedView() {
               />
             </div>
             <div className="ml-auto flex items-center gap-2">
-              {statusTab === "submitted" && selected.size > 0 && (
+              {activeTab.key === "submitted" && selected.size > 0 && (
                 <Button
                   size="sm"
                   variant="default"

@@ -9,6 +9,42 @@ type ValidationTypes = {
     };
 };
 
+/**
+ * The Menus step. A venue either lists at least one complete menu or says it serves no food. A row the vendor never touched is
+ * ignored; a half-filled one is an error naming what is missing, so nothing half-typed is silently dropped at submit.
+ * (The server checks the same rules again: backend utils/registrationMenus.js.)
+ */
+export const venueMenuErrors = (formData: FormType): Record<string, string> => {
+    const errors: Record<string, string> = {};
+    if (formData.noMenus === true) return errors;
+    const menus = Array.isArray(formData.menus) ? formData.menus : [];
+    const touched = menus
+        .map((m, i) => ({ m, i }))
+        .filter(({ m }) => (m.title || "").trim() || String(m.price ?? "").trim() || (m.items || []).some((d) => (d || "").trim()));
+    if (touched.length === 0) {
+        errors.menus = "Add at least one menu, or tick \"My venue does not serve food (hall only)\"";
+        return errors;
+    }
+    const seen = new Set<string>();
+    touched.forEach(({ m, i }) => {
+        const title = (m.title || "").trim();
+        if (!title) errors[`menus[${i}].title`] = "Menu name is required";
+        else if (seen.has(title.toLowerCase())) errors[`menus[${i}].title`] = "Two menus have the same name";
+        else seen.add(title.toLowerCase());
+        const price = Number(m.price);
+        if (!String(m.price ?? "").trim() || !Number.isFinite(price)) errors[`menus[${i}].price`] = "Price per head is required";
+        else if (price <= 0) errors[`menus[${i}].price`] = "Price per head must be more than zero";
+        else if (price > 100000) errors[`menus[${i}].price`] = "Price per head looks too high";
+        if (!(m.items || []).some((d) => (d || "").trim())) errors[`menus[${i}].items`] = "Add at least one dish";
+        const min = m.minGuaranteeCount;
+        if (min !== undefined && min !== "" && min !== null) {
+            const n = Number(min);
+            if (!Number.isInteger(n) || n < 1 || n > 5000) errors[`menus[${i}].minGuaranteeCount`] = "Whole number from 1 to 5000";
+        }
+    });
+    return errors;
+};
+
 export const vanueValidations = ({currentStep, formData, currentErrors }: ValidationTypes) => {
     if (currentStep === 1) {
         if (!formData.fullName) currentErrors.fullName = "Full Name is required";
@@ -118,6 +154,10 @@ export const vanueValidations = ({currentStep, formData, currentErrors }: Valida
         });
       }
       else if (currentStep === 6) {
+        // Menus: either at least one complete menu (name, price per head, a dish) or an explicit "hall only".
+        Object.assign(currentErrors, venueMenuErrors(formData));
+      }
+      else if (currentStep === 7) {
         // Images temporarily optional — storage backend not wired up.
         // See business-registration-form IMAGE_UPLOADS_ENABLED for the
         // platform-wide flag; venue can complete registration without

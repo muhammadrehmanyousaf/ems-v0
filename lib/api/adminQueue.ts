@@ -35,6 +35,13 @@ export interface QueueBusiness {
     vendorType: string | null
   }
   documents?: VendorDocument[]
+  /** new_vendor: their first business, just registered. additional: an existing vendor added another venue. import: an OSM-imported listing. */
+  origin?: "new_vendor" | "additional" | "import"
+  /** How many businesses this vendor has in total (this one included), and how many of them are live. */
+  vendorBusinessCount?: number
+  vendorApprovedCount?: number
+  /** Their other venues (up to 6), so the admin can judge a 2nd or 5th venue. */
+  vendorOtherBusinesses?: { id: number; name: string; status: BusinessStatus; city: string | null }[]
 }
 
 export interface AuditLog {
@@ -60,12 +67,15 @@ export async function listVendorQueue(
   status: BusinessStatus = "submitted",
   limit = 50,
   offset = 0,
-  q = ""
+  q = "",
+  origin?: "self"
 ): Promise<{ count: number; businesses: QueueBusiness[] }> {
   // F-H — pass the search term to the backend so it searches the WHOLE status
   // bucket (name/city), not just the 50 rows already loaded in the browser.
   const params: Record<string, string | number> = { status, limit, offset }
   if (q && q.trim()) params.q = q.trim()
+  // origin=self: only what a real vendor sent in (registration / add-a-business), not the OSM import shells
+  if (origin) params.origin = origin
   const res = await axiosInstance.get(`/api/v1/admin/vendor-queue`, { params })
   return unwrap<{ count: number; businesses: QueueBusiness[] }>(res) ?? { count: 0, businesses: [] }
 }

@@ -76,7 +76,7 @@ function carRentalSubTypes(businessType: unknown, current: unknown, packages: an
    present itself as a failure. Session-scoped, so it dies with the tab. */
 const REG_SUCCESS_KEY = "ww_vendor_reg_success";
 import { TERMS_VERSION } from "@/lib/seo";
-import { vanueValidations } from "./VendorStepForms/newVendorRegisterationForm/venueSteps/vanueComponents/vanueValidations";
+import { vanueValidations, venueMenuErrors } from "./VendorStepForms/newVendorRegisterationForm/venueSteps/vanueComponents/vanueValidations";
 import SuccessModal from "./VendorStepForms/components/SuccessModal";
 import CarRentalSteps from "./VendorStepForms/newVendorRegisterationForm/CarRental/car-rental-steps";
 import { CarRentalValidations } from "./VendorStepForms/newVendorRegisterationForm/CarRental/components/validations";
@@ -362,6 +362,17 @@ export function BusinessRegistrationForm() {
   })();
   const combinedSaving = draftSync.saving || localSaving;
 
+  // The venue wizard gained a "Menus" step at 6 (Images moved to 7, Preview to 8). A venue draft saved BEFORE that has no
+  // `menus` field and numbers its steps the old way, so a vendor who stopped on Images (6) or Preview (7) would resume one step
+  // early or on the wrong screen. Shift those by one; earlier steps are unchanged.
+  const stepForResume = (d: { formData?: unknown; currentStep?: number; businessType?: string }): number | undefined => {
+    if (typeof d.currentStep !== "number") return undefined;
+    const f = (d.formData ?? {}) as { businessType?: string; menus?: unknown };
+    const isVenueDraft = (d.businessType || f.businessType) === "Wedding venue";
+    const savedBeforeMenus = !("menus" in f);
+    return isVenueDraft && savedBeforeMenus && d.currentStep >= 6 ? d.currentStep + 1 : d.currentStep;
+  };
+
   // Hydrate state from a localDraft when the user opts in via the resume prompt.
   // Restores formData / step / business type AND any image binaries that were
   // mirrored to IndexedDB (brand logo, gallery, per-package photos).
@@ -369,7 +380,10 @@ export function BusinessRegistrationForm() {
     if (d.formData && typeof d.formData === "object") {
       setFormData((prev) => ({ ...prev, ...(d.formData as Partial<FormType>) }));
     }
-    if (typeof d.currentStep === "number") setCurrentStep(d.currentStep);
+    {
+      const resumeAt = stepForResume(d);
+      if (typeof resumeAt === "number") setCurrentStep(resumeAt);
+    }
     if (d.businessType) setBusinessType(d.businessType);
 
     // Pull image binaries back from IDB and slot them into the three image
@@ -403,11 +417,12 @@ export function BusinessRegistrationForm() {
           "Welcome back! Your registration details have been restored. Please set your password on this step to continue.",
       });
     } else {
-      if (typeof d.currentStep === "number") setCurrentStep(d.currentStep);
+      const resumeAt = stepForResume(d);
+      if (typeof resumeAt === "number") setCurrentStep(resumeAt);
       toast({
         title: "Progress restored",
         description: `Picked up where you left off${
-          typeof d.currentStep === "number" ? ` (step ${d.currentStep + 1})` : ""
+          typeof resumeAt === "number" ? ` (step ${resumeAt + 1})` : ""
         }.`,
       });
     }
@@ -458,10 +473,12 @@ export function BusinessRegistrationForm() {
   //   Bridal Wear / Stationery: 9 (was 8)
   //   Car Rental:               8 (was 7)
   //   Photographer / Venue / Makeup / Henna / Decorator / Catering: 7 (was 6)
+  // A venue has one more: Menus (after Packages): 1 Personal 2 Contact 3 Business 4 Specialty 5 Packages 6 Menus 7 Images 8 Preview.
+  const isVenueFlow = venue || formData.businessType === "Wedding venue";
   const maxUserSteps =
     bridalWear || weddingStationery
       ? 9
-      : carRental
+      : carRental || isVenueFlow
         ? 8
         : 7;
 
@@ -767,6 +784,14 @@ export function BusinessRegistrationForm() {
       return { valid: false, stepToRedirect: 3, errors: s3 };
     }
 
+    // 3b. A venue's Menus (step 6): at least one complete menu, or an explicit "hall only"
+    if (venue || businessType === "Wedding venue" || formData.businessType === "Wedding venue") {
+      const menuErrors = venueMenuErrors(formData);
+      if (Object.keys(menuErrors).length > 0) {
+        return { valid: false, stepToRedirect: 6, errors: menuErrors };
+      }
+    }
+
     // 4. Packages Validation (unless specialized flow)
     const isSpecializedFlow = carRental || businessType === "Car rental";
     if (!isSpecializedFlow) {
@@ -945,6 +970,21 @@ export function BusinessRegistrationForm() {
         minimumPrice: formData.minimumPrice || undefined,
         images: formData.images,
         packages: packagesWithImages,
+        // A venue's menus (per head). "Hall only" sends an empty list: the server stores no menus and that is deliberate.
+        ...(venue || formData.businessType === "Wedding venue"
+          ? {
+              menus: formData.noMenus === true
+                ? []
+                : (formData.menus ?? [])
+                    .filter((m) => (m.title || "").trim() || (m.items || []).some((d) => (d || "").trim()))
+                    .map((m) => ({
+                      title: (m.title || "").trim(),
+                      price: Number(m.price),
+                      ...(String(m.minGuaranteeCount ?? "").trim() ? { minGuaranteeCount: Number(m.minGuaranteeCount) } : {}),
+                      items: (m.items || []).map((d) => (d || "").trim()).filter(Boolean),
+                    })),
+            }
+          : {}),
         carRentalPackages: (formData.carRentalPackages ?? [])
           .filter((pkg) => pkg.name?.trim() && pkg.totalPrice > 0)
           .map((pkg) => ({
@@ -1090,6 +1130,8 @@ export function BusinessRegistrationForm() {
           cityCovered: [],
           expertise: [],
           packages: [{ id: undefined, name: "", price: 0, features: {} }],
+          menus: [],
+          noMenus: false,
           carRentalPackages: [],
           amenities: [],
           maxCapacity: "",
@@ -1405,10 +1447,12 @@ export function BusinessRegistrationForm() {
                           "Welcome back! Your registration details have been restored. Please set your password on this step to continue.",
                       });
                     } else if (typeof d.currentStep === "number") {
-                      setCurrentStep(d.currentStep);
+                      // venue drafts saved before the Menus step count their steps the old way (see stepForResume)
+                      const resumeAt = stepForResume({ formData: d.payload, currentStep: d.currentStep, businessType: d.vendorType ?? undefined }) ?? d.currentStep;
+                      setCurrentStep(resumeAt);
                       toast({
                         title: "Progress restored",
-                        description: `Picked up where you left off (step ${(d.currentStep || 0) + 1}).`,
+                        description: `Picked up where you left off (step ${resumeAt + 1}).`,
                       });
                     }
                     if (d.vendorType) setBusinessType(d.vendorType);

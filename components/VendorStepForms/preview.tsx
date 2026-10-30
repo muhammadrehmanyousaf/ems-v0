@@ -830,6 +830,38 @@ const Preview = () => {
                 </Section>
             )}
 
+            {/* ── Venue menus (food, per head) ── */}
+            {formData.businessType === "Wedding venue" && (
+                <Section title="Menus">
+                    {formData.noMenus === true ? (
+                        <p className="text-sm text-bridal-text-soft" data-testid="preview-no-menus">
+                            Hall only: this venue does not serve food. Customers bring their own caterer.
+                        </p>
+                    ) : (formData.menus ?? []).filter((m) => (m.title || "").trim()).length === 0 ? (
+                        <p className="text-sm text-bridal-text-soft">No menus added.</p>
+                    ) : (
+                        <div className="space-y-3" data-testid="preview-menus">
+                            {(formData.menus ?? [])
+                                .filter((m) => (m.title || "").trim())
+                                .map((m, i) => (
+                                    <div key={i} className="rounded-md border border-bridal-beige p-3">
+                                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                                            <p className="font-display italic text-[17px] text-bridal-charcoal">{m.title}</p>
+                                            <p className="text-sm font-medium text-bridal-charcoal">
+                                                Rs {Number(m.price || 0).toLocaleString("en-PK")} per head
+                                                {String(m.minGuaranteeCount ?? "").trim() ? ` · min ${m.minGuaranteeCount} guests` : ""}
+                                            </p>
+                                        </div>
+                                        <p className="mt-1 text-[13px] text-bridal-text-soft">
+                                            {(m.items || []).map((d) => (d || "").trim()).filter(Boolean).join(" · ")}
+                                        </p>
+                                    </div>
+                                ))}
+                        </div>
+                    )}
+                </Section>
+            )}
+
             {/* ── Car Rental Combo Packages ── */}
             {isCarRental &&
                 (formData.carRentalPackages ?? []).filter((p) => p.name?.trim())
