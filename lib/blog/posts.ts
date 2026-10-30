@@ -454,7 +454,7 @@ export const POSTS: BlogPost[] = [
     headline: "How to Choose the Right Wedding Planner for Your Big Day",
     excerpt:
       "Seven things to check before you hire a wedding planner in Karachi, Lahore, Islamabad or anywhere in Pakistan: services, experience, costs, vendor network, communication, client feedback and the written agreement.",
-    imageUrl: "/images/blog/karachi-wedding-family-celebration.jpg",
+    imageUrl: "/images/blog/marcem-wedding-stage-karachi.jpg",
     author: AUTHORS["wedding-wala-editorial"],
     publishedAt: "2026-10-30T09:00:00.000Z",
     readingMinutes: 9,
@@ -522,10 +522,10 @@ export const POSTS: BlogPost[] = [
       },
       {
         type: "img",
-        src: "/images/blog/pakistani-bride-wedding-hall-aisle.jpg",
-        alt: "Bride in a maroon embroidered lehenga and long veil walking down the aisle of a wedding hall with a crystal chandelier and a floral stage",
-        width: 480,
-        height: 720,
+        src: "/images/blog/marcem-wedding-venue-setup.jpg",
+        alt: "Outdoor wedding setup with a white floral arch, draped fabric canopy, gold chairs and pampas grass arrangements",
+        width: 738,
+        height: 369,
       },
       {
         type: "p",
@@ -620,9 +620,9 @@ export const POSTS: BlogPost[] = [
       },
       {
         type: "img",
-        src: "/images/blog/nikah-signing-peacock-feather-pen.jpg",
-        alt: "Groom signing the nikah register with a decorated peacock-feather pen",
-        width: 480,
+        src: "/images/blog/marcem-event-team-at-work.jpg",
+        alt: "Marcem Events team members hanging crystal chandeliers and fabric draping inside a wedding marquee",
+        width: 1280,
         height: 720,
       },
       { type: "h2", text: "6. Assess Their Communication and Problem-Solving Skills" },
@@ -694,10 +694,10 @@ export const POSTS: BlogPost[] = [
       },
       {
         type: "img",
-        src: "/images/blog/pakistani-couple-sherwani-dupatta.jpg",
-        alt: "Pakistani bride in an embroidered white dupatta with henna and groom in a cream sherwani by a window",
-        width: 480,
-        height: 720,
+        src: "/images/blog/marcem-wedding-couple-decor.jpg",
+        alt: "Groom in a cream sherwani greeting his veiled bride on a stage decorated with fresh roses and chandeliers",
+        width: 494,
+        height: 619,
       },
       { type: "h2", text: "Questions to Ask Before Hiring a Wedding Planner" },
       {
