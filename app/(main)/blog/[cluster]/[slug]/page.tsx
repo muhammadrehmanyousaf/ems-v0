@@ -20,6 +20,29 @@ import {
   getPostsByCluster,
 } from "@/lib/blog/posts"
 
+/**
+ * Inline links inside a body string: `[label](https://example.com)`. Only absolute http(s) URLs are turned into anchors;
+ * anything else stays plain text. External links open normally with rel="noopener" (followed: used for agreed partner links).
+ */
+function renderInline(text: string): React.ReactNode {
+  const parts: React.ReactNode[] = []
+  const re = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g
+  let last = 0
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text))) {
+    if (m.index > last) parts.push(text.slice(last, m.index))
+    parts.push(
+      <a key={m.index} href={m[2]} rel="noopener" className="text-bridal-gold-dark underline underline-offset-2 hover:text-bridal-gold">
+        {m[1]}
+      </a>,
+    )
+    last = m.index + m[0].length
+  }
+  if (last === 0) return text
+  if (last < text.length) parts.push(text.slice(last))
+  return parts
+}
+
 interface RouteProps {
   params: { cluster: string; slug: string }
 }
@@ -176,14 +199,14 @@ export default function BlogPostPage({ params }: RouteProps) {
         {/* Body */}
         <div className="prose prose-bridal max-w-3xl font-bridal text-[15.5px] text-bridal-text leading-relaxed [&_h2]:font-display [&_h2]:italic [&_h2]:text-[26px] [&_h2]:text-bridal-charcoal [&_h2]:mt-10 [&_h2]:mb-4 [&_h3]:font-display [&_h3]:italic [&_h3]:text-[20px] [&_h3]:text-bridal-charcoal [&_h3]:mt-6 [&_h3]:mb-2 [&_p]:my-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-4 [&_li]:my-1.5">
           {post.body.map((block, i) => {
-            if (block.type === "p") return <p key={i}>{block.text}</p>
+            if (block.type === "p") return <p key={i}>{renderInline(block.text)}</p>
             if (block.type === "h2") return <h2 key={i}>{block.text}</h2>
             if (block.type === "h3") return <h3 key={i}>{block.text}</h3>
             if (block.type === "ul") {
               return (
                 <ul key={i}>
                   {block.items.map((item, j) => (
-                    <li key={j}>{item}</li>
+                    <li key={j}>{renderInline(item)}</li>
                   ))}
                 </ul>
               )

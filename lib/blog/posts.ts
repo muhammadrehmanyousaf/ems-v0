@@ -471,7 +471,7 @@ export const POSTS: BlogPost[] = [
       { type: "h2", text: "1. Start by Understanding What You Need From a Wedding Planner" },
       {
         type: "p",
-        text: "Before contacting different planners, identify the type of support you actually need. The best wedding planners in Pakistan offer different levels of support, and not every professional provides the same range of services.",
+        text: "Before contacting different planners, identify the type of support you actually need. The [best wedding planners in Pakistan](https://marcem.com.pk/wedding-event-planner-pakistan/) offer different levels of support, and not every professional provides the same range of services.",
       },
       {
         type: "p",
@@ -503,7 +503,7 @@ export const POSTS: BlogPost[] = [
         type: "p",
         text: "Ask to see examples of weddings they have managed. Review their portfolio to understand the variety of events they have handled, the quality of their arrangements, and whether their work reflects the style you want.",
       },
-      { type: "p", text: "Pay attention to details such as:" },
+      { type: "p", text: "Pay attention to details such as" },
       {
         type: "ul",
         items: [
@@ -584,7 +584,11 @@ export const POSTS: BlogPost[] = [
       { type: "h2", text: "5. Ask About Their Vendor Network and Coordination Process" },
       {
         type: "p",
-        text: "Choosing an experienced event management company in Karachi can also help bring different vendors and event arrangements under coordinated management. This is why vendor coordination should be an important part of your evaluation.",
+        text: "Choosing an experienced [event management company in Karachi](https://marcem.com.pk/) can also help bring different vendors and event arrangements under coordinated management.",
+      },
+      {
+        type: "p",
+        text: "This is why vendor coordination should be an important part of your evaluation.",
       },
       {
         type: "p",
@@ -604,7 +608,7 @@ export const POSTS: BlogPost[] = [
       },
       {
         type: "p",
-        text: "A reliable coordination process should include confirmed responsibilities, clear timelines, and a designated contact person. This is particularly important when several functions take place at different venues or on consecutive days.",
+        text: "A reliable coordination process should include confirmed responsibilities, clear timelines,, and a designated contact person. This is particularly important when several functions take place at different venues or on consecutive days.",
       },
       { type: "h2", text: "6. Assess Their Communication and Problem-Solving Skills" },
       {
@@ -643,6 +647,10 @@ export const POSTS: BlogPost[] = [
       {
         type: "p",
         text: "Before making your final decision, look beyond the planner's portfolio and review feedback from previous clients.",
+      },
+      {
+        type: "p",
+        text: "Some companies specialize in décor, while others manage several aspects of the event, including logistics, [professional catering service providers](https://marcem.com.pk/catering-packages-prices-karachi/), entertainment, and on-site coordination.",
       },
       {
         type: "p",
@@ -721,6 +729,11 @@ export const POSTS: BlogPost[] = [
       {
         type: "p",
         text: "A wedding planner typically manages broader preparations, including budgeting, vendor selection, bookings, and event arrangements. A wedding coordinator focuses more on organizing the schedule, supervising vendors, and managing the event's execution.",
+      },
+      { type: "h3", text: "What should a wedding planner's package include?" },
+      {
+        type: "p",
+        text: "Depending on the agreed service, a package may include venue assistance, décor planning, vendor coordination, scheduling, logistics, and event-day supervision. Always request",
       },
     ],
   },
