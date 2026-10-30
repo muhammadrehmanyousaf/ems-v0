@@ -174,6 +174,7 @@ export default function BlogPostPage({ params }: RouteProps) {
             alt={post.headline}
             fill
             priority
+            quality={90}
             fetchPriority="high"
             sizes="(min-width: 1024px) 1024px, 100vw"
             className="object-cover"
@@ -209,7 +210,7 @@ export default function BlogPostPage({ params }: RouteProps) {
                     alt={block.alt}
                     width={block.width}
                     height={block.height}
-                    quality={90}
+                    unoptimized
                     sizes={`(min-width: 768px) ${Math.min(block.width, 672)}px, 100vw`}
                     className="w-full h-auto rounded-md"
                   />
