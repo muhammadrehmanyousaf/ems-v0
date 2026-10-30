@@ -200,6 +200,20 @@ export default function BlogPostPage({ params }: RouteProps) {
         <div className="prose prose-bridal max-w-3xl font-bridal text-[15.5px] text-bridal-text leading-relaxed [&_h2]:font-display [&_h2]:italic [&_h2]:text-[26px] [&_h2]:text-bridal-charcoal [&_h2]:mt-10 [&_h2]:mb-4 [&_h3]:font-display [&_h3]:italic [&_h3]:text-[20px] [&_h3]:text-bridal-charcoal [&_h3]:mt-6 [&_h3]:mb-2 [&_p]:my-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-4 [&_li]:my-1.5">
           {post.body.map((block, i) => {
             if (block.type === "p") return <p key={i}>{renderInline(block.text)}</p>
+            if (block.type === "img") {
+              return (
+                <figure key={i} className="my-6">
+                  <Image
+                    src={block.src}
+                    alt={block.alt}
+                    width={block.width}
+                    height={block.height}
+                    sizes="(min-width: 768px) 672px, 100vw"
+                    className="w-full h-auto rounded-md"
+                  />
+                </figure>
+              )
+            }
             if (block.type === "h2") return <h2 key={i}>{block.text}</h2>
             if (block.type === "h3") return <h3 key={i}>{block.text}</h3>
             if (block.type === "ul") {

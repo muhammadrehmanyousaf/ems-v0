@@ -50,6 +50,7 @@ export type BlogBlock =
   | { type: "h2"; text: string }
   | { type: "h3"; text: string }
   | { type: "ul"; items: string[] }
+  | { type: "img"; src: string; alt: string; width: number; height: number }
 
 // ─── Authors ────────────────────────────────────────────────────────────
 
@@ -453,7 +454,7 @@ export const POSTS: BlogPost[] = [
     headline: "How to Choose the Right Wedding Planner for Your Big Day",
     excerpt:
       "Seven things to check before you hire a wedding planner in Karachi, Lahore, Islamabad or anywhere in Pakistan: services, experience, costs, vendor network, communication, client feedback and the written agreement.",
-    imageUrl: "/images/seo/hero.jpg",
+    imageUrl: "/images/blog/wedding-planner-team.jpg",
     author: AUTHORS["wedding-wala-editorial"],
     publishedAt: "2026-10-30T09:00:00.000Z",
     readingMinutes: 9,
@@ -518,6 +519,13 @@ export const POSTS: BlogPost[] = [
       {
         type: "p",
         text: "It is also useful to ask whether the planner has managed events similar to yours. Someone experienced in large wedding receptions may have a different approach from a planner who primarily handles intimate celebrations.",
+      },
+      {
+        type: "img",
+        src: "/images/blog/wedding-planner-bridal-entry.jpg",
+        alt: "Brides in embellished lehengas carrying a flower-decorated tray of lit candles through a wedding hall",
+        width: 541,
+        height: 567,
       },
       {
         type: "p",
@@ -610,6 +618,13 @@ export const POSTS: BlogPost[] = [
         type: "p",
         text: "A reliable coordination process should include confirmed responsibilities, clear timelines,, and a designated contact person. This is particularly important when several functions take place at different venues or on consecutive days.",
       },
+      {
+        type: "img",
+        src: "/images/blog/wedding-planner-couple-venue.jpg",
+        alt: "Bride and groom embracing in a decorated pavilion with chandeliers and floral arrangements",
+        width: 678,
+        height: 452,
+      },
       { type: "h2", text: "6. Assess Their Communication and Problem-Solving Skills" },
       {
         type: "p",
@@ -676,6 +691,13 @@ export const POSTS: BlogPost[] = [
       {
         type: "p",
         text: "Avoid relying entirely on verbal promises. A written agreement gives both sides a clear understanding of the expected services and responsibilities.",
+      },
+      {
+        type: "img",
+        src: "/images/blog/wedding-planner-family-celebration.jpg",
+        alt: "Wedding family and guests posing together under floral arches at sunset",
+        width: 647,
+        height: 473,
       },
       { type: "h2", text: "Questions to Ask Before Hiring a Wedding Planner" },
       {
