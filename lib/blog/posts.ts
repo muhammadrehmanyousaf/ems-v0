@@ -454,7 +454,7 @@ export const POSTS: BlogPost[] = [
     headline: "How to Choose the Right Wedding Planner for Your Big Day",
     excerpt:
       "Seven things to check before you hire a wedding planner in Karachi, Lahore, Islamabad or anywhere in Pakistan: services, experience, costs, vendor network, communication, client feedback and the written agreement.",
-    imageUrl: "/images/blog/wedding-planner-team.jpg",
+    imageUrl: "/images/blog/marcem-wedding-stage-karachi.jpg",
     author: AUTHORS["wedding-wala-editorial"],
     publishedAt: "2026-10-30T09:00:00.000Z",
     readingMinutes: 9,
@@ -522,10 +522,10 @@ export const POSTS: BlogPost[] = [
       },
       {
         type: "img",
-        src: "/images/blog/wedding-planner-bridal-entry.jpg",
-        alt: "Brides in embellished lehengas carrying a flower-decorated tray of lit candles through a wedding hall",
-        width: 541,
-        height: 567,
+        src: "/images/blog/marcem-wedding-venue-setup.jpg",
+        alt: "Outdoor wedding setup with a white floral arch, draped fabric canopy, gold chairs and pampas grass arrangements",
+        width: 738,
+        height: 369,
       },
       {
         type: "p",
@@ -620,10 +620,10 @@ export const POSTS: BlogPost[] = [
       },
       {
         type: "img",
-        src: "/images/blog/wedding-planner-couple-venue.jpg",
-        alt: "Bride and groom embracing in a decorated pavilion with chandeliers and floral arrangements",
-        width: 678,
-        height: 452,
+        src: "/images/blog/marcem-event-team-at-work.jpg",
+        alt: "Marcem Events team members hanging crystal chandeliers and fabric draping inside a wedding marquee",
+        width: 1280,
+        height: 720,
       },
       { type: "h2", text: "6. Assess Their Communication and Problem-Solving Skills" },
       {
@@ -694,10 +694,10 @@ export const POSTS: BlogPost[] = [
       },
       {
         type: "img",
-        src: "/images/blog/wedding-planner-family-celebration.jpg",
-        alt: "Wedding family and guests posing together under floral arches at sunset",
-        width: 647,
-        height: 473,
+        src: "/images/blog/marcem-wedding-couple-decor.jpg",
+        alt: "Groom in a cream sherwani greeting his veiled bride on a stage decorated with fresh roses and chandeliers",
+        width: 494,
+        height: 619,
       },
       { type: "h2", text: "Questions to Ask Before Hiring a Wedding Planner" },
       {

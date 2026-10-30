@@ -202,13 +202,15 @@ export default function BlogPostPage({ params }: RouteProps) {
             if (block.type === "p") return <p key={i}>{renderInline(block.text)}</p>
             if (block.type === "img") {
               return (
-                <figure key={i} className="my-6">
+                // Never display an image larger than its own pixels: stretching a small photo to the column width is what makes it look blurry.
+                <figure key={i} className="my-6 mx-auto" style={{ maxWidth: block.width }}>
                   <Image
                     src={block.src}
                     alt={block.alt}
                     width={block.width}
                     height={block.height}
-                    sizes="(min-width: 768px) 672px, 100vw"
+                    quality={90}
+                    sizes={`(min-width: 768px) ${Math.min(block.width, 672)}px, 100vw`}
                     className="w-full h-auto rounded-md"
                   />
                 </figure>
