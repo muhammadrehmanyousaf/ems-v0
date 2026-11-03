@@ -82,6 +82,7 @@ interface VendorCardProps {
    * normally, which is what `loading="lazy"` is for.
    */
   priority?: boolean
+  href?: string
 }
 
 export default function VendorCard({
@@ -104,6 +105,7 @@ export default function VendorCard({
   onFavoriteToggle,
   business,
   priority = false,
+  href,
 }: VendorCardProps) {
   // BK-048 — vacation mode dims the card and replaces the booking CTA with
   // a disabled "Back on …" button. Listing stays visible per BK-048's spec
@@ -156,6 +158,11 @@ export default function VendorCard({
     // Don't navigate if clicking on interactive elements
     const target = e.target as HTMLElement;
     if (target.closest('button') || target.closest('a') || target.closest('[data-no-navigate]')) {
+      return;
+    }
+
+    if (href) {
+      router.push(href);
       return;
     }
     
@@ -349,7 +356,7 @@ export default function VendorCard({
                     </div>
                     <button
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); handleCardClick(e) }}
+                      onClick={(e) => { e.stopPropagation(); if (href) { router.push(href); } else { handleCardClick(e); } }}
                       className="inline-flex items-center gap-1.5 font-bridal text-[11px] uppercase tracking-[0.22em] font-medium text-bridal-gold hover:text-bridal-rose transition-colors"
                       data-no-navigate
                     >
@@ -401,7 +408,7 @@ export default function VendorCard({
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-display italic text-[18px] sm:text-[20px] leading-tight text-bridal-charcoal group-hover:text-bridal-gold-dark transition-colors duration-300 line-clamp-2">
-                      {name}
+                      {href ? <Link href={href} className="hover:underline">{name}</Link> : name}
                     </h3>
                     <div className="flex items-center font-bridal text-bridal-text-soft text-[12px] mt-1">
                       <MapPin className="w-3.5 h-3.5 mr-1 flex-shrink-0 text-bridal-gold/80" />
