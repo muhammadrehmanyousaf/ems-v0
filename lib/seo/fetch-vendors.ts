@@ -56,6 +56,9 @@ export interface VendorListItem {
   priceMin?: number | null
   vendorType?: string
   href?: string // pre-computed href for the card
+  subArea?: string
+  capacity?: number
+  raw?: any
   /** Optional enrichment — populated from backend when available, else omitted. */
   specialties?: string[]
   areaServed?: string
@@ -228,8 +231,12 @@ function normalize(raw: any): VendorListItem {
     if (prices.length > 0) priceMin = Math.min(...prices)
   }
 
-  // A stock-pool photo is not a photo of this business — see isStockPoolImage.
-  if (isStockPoolImage(imageUrl)) imageUrl = undefined
+  // Ensure fallback to raw image properties if imageUrl is not extracted yet
+  if (!imageUrl && raw?.image) imageUrl = typeof raw.image === "string" ? raw.image : raw.image?.url
+  if (!imageUrl && raw?.coverImage) imageUrl = typeof raw.coverImage === "string" ? raw.coverImage : raw.coverImage?.url
+  if (!imageUrl && vendor?.images?.[0]) {
+    imageUrl = typeof vendor.images[0] === "string" ? vendor.images[0] : vendor.images[0]?.url
+  }
 
   const id = raw?.id ?? raw?.businessId ?? 0
   const city = raw?.city ?? raw?.location ?? vendor?.city ?? ""
@@ -260,5 +267,8 @@ function normalize(raw: any): VendorListItem {
       ? Number(raw.verificationTier)
       : 0,
     status: typeof raw?.status === "string" ? raw.status : undefined,
+    subArea: raw?.subArea ?? raw?.sub_area ?? raw?.area ?? undefined,
+    capacity: raw?.maxCapacity ? Number(raw.maxCapacity) : (raw?.capacity ? Number(raw.capacity) : undefined),
+    raw,
   }
 }

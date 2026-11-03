@@ -41,7 +41,7 @@ import { getVendorTypeRelatedGuides } from "@/lib/seo/related-guides"
 import { getVendorTypeChecklist } from "@/lib/seo/things-to-check"
 import { getVendorTypeEventNotes } from "@/lib/seo/event-notes"
 import { getLocationImagery } from "@/lib/seo/location-imagery"
-import { PremiumVendorCard } from "@/components/seo/location/premium-vendor-card"
+import { CityVendorListingGrid } from "@/components/seo/location/CityVendorListingGrid"
 
 const WHATSAPP_E164 = "923274811220"
 
@@ -196,7 +196,7 @@ export async function VendorTypeCityPage({
   const { vendors: fetched, ok: listingsOk } = await fetchCityVendorsResult({
     city: city.slug,
     vendorType: backendType,
-    limit: 24,
+    limit: 60,
   })
   // Strip seed/demo vendors so a live page never shows test data. This used to
   // fall back to curated sample vendors behind NEXT_PUBLIC_UI_PREVIEW for local
@@ -460,13 +460,15 @@ export async function VendorTypeCityPage({
               </a>
             </div>
           ) : (
-            <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {vendors.map((v) => (
-                <li key={v.id}>
-                  <PremiumVendorCard vendor={v} categoryLabel={vt.singular} />
-                </li>
-              ))}
-            </ul>
+            <CityVendorListingGrid
+              initialVendors={vendors}
+              categoryLabel={vt.singular}
+              categoryPlural={vt.plural}
+              cityName={city.name}
+              citySlug={city.slug}
+              typeSlug={vt.slug}
+              waLink={waLink}
+            />
           )}
         </section>
 
