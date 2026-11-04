@@ -118,18 +118,6 @@ const nextConfig = {
       { source: "/event-hosts", destination: "/wedding-planners", permanent: true },
       { source: "/event-hosts/:city([a-zA-Z-]+)", destination: "/wedding-planners/:city", permanent: true },
 
-      // SEO-canonical hub.
-      {
-        source: "/bridal-wear/:id(\\d+)",
-        destination: "/bridal-wear",
-        permanent: true,
-      },
-      {
-        source: "/wedding-stationery/:id(\\d+)",
-        destination: "/wedding-stationery",
-        permanent: true,
-      },
-
       // The last four "-new" dashboard routes, renamed to real paths.
       //
       // 37 others were deleted outright because the canonical route already
