@@ -200,21 +200,46 @@ export function VendorBugReportWidget() {
 
   return (
     <>
-      {/* Floating Action Button Docked Bottom-Right */}
+      {/* Floating Action Button Docked Bottom-Right (offset from DevTools) */}
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-5 z-40 flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-[#1A1815] text-[#F5EFE2] border border-[#B8863B]/40 shadow-xl shadow-black/20 hover:border-[#B8863B] hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 group"
+        className="fixed bottom-5 right-[76px] max-sm:right-4 z-50 flex items-center gap-3 px-3.5 py-2 rounded-full border border-[#C4A484]/70 shadow-2xl transition-all duration-200 hover:scale-105 active:scale-95 hover:border-[#D8A85A] group"
+        style={{
+          background: "linear-gradient(135deg, #1A1815 0%, #2A251E 100%)",
+          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(184, 134, 59, 0.25)",
+        }}
         aria-label="Report a bug or get support"
       >
-        <span className="relative flex h-2.5 w-2.5">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#B8863B] opacity-75" />
-          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#D8A85A]" />
+        <span
+          className="relative w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm"
+          style={{
+            background: "linear-gradient(135deg, #D4AF37 0%, #996515 100%)",
+            color: "#FFFFFF",
+          }}
+        >
+          <HelpCircle className="w-4 h-4 text-white group-hover:rotate-12 transition-transform duration-300" />
+          <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E5C07B] opacity-75" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#F5EFE2]" />
+          </span>
         </span>
-        <LifeBuoy className="w-4 h-4 text-[#D8A85A] group-hover:rotate-45 transition-transform duration-300" />
-        <span className="text-xs font-semibold tracking-wide">Report a Bug / Support</span>
+        <div className="flex flex-col items-start text-left leading-tight pr-1">
+          <span
+            style={{ color: "#FFFFFF" }}
+            className="text-[12.5px] font-bold tracking-tight text-white"
+          >
+            Need Help?
+          </span>
+          <span
+            style={{ color: "#E5C07B" }}
+            className="text-[10.5px] font-semibold tracking-normal"
+          >
+            Report a Bug / Support
+          </span>
+        </div>
         {activeTicketsCount > 0 && (
-          <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#B8863B] text-white">
+          <span className="ml-0.5 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-[#B8863B] text-white shadow-sm">
             {activeTicketsCount}
           </span>
         )}
