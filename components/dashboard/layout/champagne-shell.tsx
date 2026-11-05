@@ -30,6 +30,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { ChampagneSidebar } from "./champagne-sidebar"
 import { LeaveGuardDialog } from "@/components/dashboard/shared/leave-guard"
 import { useUnreadCount } from "@/hooks/use-unread-count"
+import { VendorBugReportWidget } from "@/components/dashboard/support/vendor-bug-report-widget"
 
 /** React pages (non-artifact, e.g. the settings hub) call this to set the
  * persistent shell's crumb + active-route, mirroring what useArtifactShell does
@@ -267,6 +268,7 @@ export function ChampagneShell({
         <SidebarInset className="cs-inset min-h-0 bg-background">
           <div className="cscroll"><div className="content">{children}</div></div>
         </SidebarInset>
+        <VendorBugReportWidget />
       </SidebarProvider>
     </div>
   )

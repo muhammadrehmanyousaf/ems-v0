@@ -13,6 +13,10 @@ import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   AlertTriangle,
+  MessageSquare,
+  Send,
+  Laptop,
+  ExternalLink,
   Clock,
   Inbox,
   Loader2,
@@ -45,6 +49,7 @@ import {
   listComplaints,
   resolveComplaint,
   setComplaintStatus,
+  postComplaintMessage,
   type ComplaintRow,
   type ComplaintStatus,
 } from "@/lib/api/complaints"
@@ -63,6 +68,7 @@ const STATUS_VARIANT: Record<ComplaintStatus, "default" | "secondary" | "destruc
   {
     open: "secondary",
     in_progress: "outline",
+    waiting_on_vendor: "outline",
     resolved: "default",
     dismissed: "destructive",
   }
@@ -93,6 +99,33 @@ export function ComplaintsQueueView() {
   const [active, setActive] = useState<ComplaintRow | null>(null)
   const [notes, setNotes] = useState("")
   const [escalation, setEscalation] = useState("")
+  const [threadTicket, setThreadTicket] = useState<ComplaintRow | null>(null)
+  const [adminReply, setAdminReply] = useState("")
+
+  const replyMutation = useMutation({
+    mutationFn: ({ id, message }: { id: number; message: string }) =>
+      postComplaintMessage(id, { message }),
+    onSuccess: (updated) => {
+      toast({ title: "Reply sent to vendor" })
+      setAdminReply("")
+      invalidate()
+      setThreadTicket(updated)
+    },
+    onError: () =>
+      toast({ title: "Couldn't send reply", variant: "destructive" }),
+  })
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: "open" | "in_progress" | "waiting_on_vendor" }) =>
+      setComplaintStatus(id, status),
+    onSuccess: (updated) => {
+      toast({ title: `Status updated to ${STATUS_LABEL[updated.status]}` })
+      invalidate()
+      setThreadTicket(updated)
+    },
+    onError: () =>
+      toast({ title: "Couldn't update status", variant: "destructive" }),
+  })
 
   const params = useMemo(() => {
     if (tab === "overdue") return { overdue: true, q: search || undefined }
@@ -284,6 +317,15 @@ export function ComplaintsQueueView() {
                   </div>
 
                   <div className="flex sm:flex-col gap-2 shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setThreadTicket(row)}
+                      className="gap-1.5"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      View thread &amp; reply
+                    </Button>
                     {row.status === "open" && (
                       <Button
                         variant="outline"
@@ -390,6 +432,180 @@ export function ComplaintsQueueView() {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 2-Way Live Thread & Telemetry Dialog */}
+      <Dialog open={!!threadTicket} onOpenChange={(o) => !o && setThreadTicket(null)}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="px-6 py-4 border-b bg-neutral-50/50">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm font-bold text-neutral-900">
+                    {threadTicket?.reference}
+                  </span>
+                  {threadTicket?.status && (
+                    <Badge variant={STATUS_VARIANT[threadTicket.status]}>
+                      {STATUS_LABEL[threadTicket.status]}
+                    </Badge>
+                  )}
+                  {threadTicket?.category && (
+                    <Badge variant="outline">
+                      {CATEGORY_LABEL[threadTicket.category]}
+                    </Badge>
+                  )}
+                </div>
+                <DialogTitle className="text-base font-semibold mt-1">
+                  {threadTicket?.subject}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-neutral-500">
+                  Complainant: {threadTicket?.contactName || "Vendor"} ({threadTicket?.contactEmail})
+                </DialogDescription>
+              </div>
+
+              {/* Status Selector */}
+              {threadTicket && threadTicket.status !== "resolved" && threadTicket.status !== "dismissed" && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-xs text-neutral-500">Status:</span>
+                  <select
+                    value={threadTicket.status}
+                    onChange={(e) =>
+                      updateStatusMutation.mutate({
+                        id: threadTicket.id,
+                        status: e.target.value as any,
+                      })
+                    }
+                    className="text-xs h-8 rounded-md border border-neutral-300 bg-white px-2 font-medium"
+                  >
+                    <option value="open">Open</option>
+                    <option value="in_progress">In progress</option>
+                    <option value="waiting_on_vendor">Waiting on vendor</option>
+                  </select>
+                </div>
+              )}
+            </div>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {/* Telemetry metadata */}
+            {threadTicket?.telemetry && (
+              <div className="p-3 rounded-lg bg-neutral-100/70 border border-neutral-200 text-xs text-neutral-700 space-y-1">
+                <div className="flex items-center gap-2 font-semibold text-neutral-900">
+                  <Laptop className="w-3.5 h-3.5 text-neutral-500" />
+                  Diagnostic Telemetry Captured
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] font-mono text-neutral-600 pt-1">
+                  <p className="truncate">URL: {threadTicket.telemetry.url || "—"}</p>
+                  <p>Screen: {threadTicket.telemetry.screen || "—"}</p>
+                  <p>Business: {threadTicket.telemetry.businessName || "—"}</p>
+                  <p className="truncate">Agent: {threadTicket.telemetry.userAgent || "—"}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Conversation messages */}
+            <div className="space-y-3">
+              <div className="text-xs uppercase font-bold tracking-wider text-neutral-400">
+                Message History
+              </div>
+
+              <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                {(threadTicket?.thread && threadTicket.thread.length > 0
+                  ? threadTicket.thread
+                  : [
+                      {
+                        id: "1",
+                        senderId: threadTicket?.raisedByUserId || null,
+                        senderRole: "vendor" as const,
+                        senderName: threadTicket?.contactName || "Vendor",
+                        message: threadTicket?.body || "",
+                        createdAt: threadTicket?.createdAt || "",
+                      },
+                    ]
+                ).map((msg, idx) => {
+                  const isAdmin = msg.senderRole === "admin"
+                  return (
+                    <div
+                      key={msg.id || idx}
+                      className={`p-3.5 rounded-xl border text-xs leading-relaxed ${
+                        isAdmin
+                          ? "bg-amber-50/50 border-amber-200 text-neutral-900 ml-6"
+                          : "bg-white border-neutral-200 text-neutral-900 mr-6"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5 font-semibold">
+                        <span className={isAdmin ? "text-amber-800 flex items-center gap-1" : "text-neutral-800"}>
+                          {isAdmin && <ShieldCheck className="w-3.5 h-3.5" />}
+                          {msg.senderName || (isAdmin ? "Admin" : "Vendor")}
+                        </span>
+                        <span className="text-[10px] text-neutral-400">
+                          {new Date(msg.createdAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
+                        </span>
+                      </div>
+                      <div className="whitespace-pre-wrap">{msg.message}</div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Reply Box */}
+              {threadTicket && threadTicket.status !== "resolved" && threadTicket.status !== "dismissed" && (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    if (!threadTicket || !adminReply.trim()) return
+                    replyMutation.mutate({ id: threadTicket.id, message: adminReply.trim() })
+                  }}
+                  className="pt-2 border-t space-y-2"
+                >
+                  <Label htmlFor="admin-reply-box" className="text-xs font-semibold">
+                    Reply to Vendor
+                  </Label>
+                  <Textarea
+                    id="admin-reply-box"
+                    rows={3}
+                    value={adminReply}
+                    onChange={(e) => setAdminReply(e.target.value)}
+                    placeholder="Write an interactive response to the vendor..."
+                    className="text-xs"
+                  />
+                  <div className="flex items-center justify-between pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setActive(threadTicket)
+                        setNotes("")
+                        setEscalation("")
+                        setThreadTicket(null)
+                      }}
+                      className="text-xs text-neutral-600"
+                    >
+                      Close &amp; Email Outcome
+                    </Button>
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={replyMutation.isPending || !adminReply.trim()}
+                      className="text-xs font-medium gap-1.5"
+                    >
+                      {replyMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending…
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-3.5 h-3.5" /> Send Reply to Vendor
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </PageContainer>
