@@ -3,7 +3,14 @@ import { Button } from "@/components/ui/button"
 import { BookOpen, UserPlus, Store, Package, Star, CreditCard, TrendingUp, ArrowRight, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import type { Metadata } from "next"
-import { buildPageMetadata, SITE_NAME } from "@/lib/seo"
+import {
+  buildPageMetadata,
+  SITE_NAME,
+  howToLD,
+  breadcrumbsLD,
+  combineGraph,
+} from "@/lib/seo"
+import { safeJsonLd } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Vendor Guide — Grow Your Wedding Business on ${SITE_NAME}`,
@@ -62,8 +69,27 @@ const benefits = [
 ]
 
 export default function VendorGuidePage() {
+  const howTo = howToLD({
+    name: `How to List & Grow Your Wedding Business on ${SITE_NAME}`,
+    description: "Step-by-step guide for wedding vendors in Pakistan to create profiles, publish PKR packages, and receive bookings.",
+    steps: steps.map((s) => ({
+      name: s.title,
+      text: s.description,
+      url: `/vendor-guide#step-${s.step}`,
+    })),
+  })
+  const breadcrumbLd = breadcrumbsLD([
+    { name: "Home", url: "/" },
+    { name: "Vendor Guide", url: "/vendor-guide" },
+  ])
+  const combined = combineGraph(howTo, breadcrumbLd)
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(combined) }}
+      />
       <section className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <BookOpen className="w-12 h-12 mx-auto mb-4 text-bridal-gold/40" />

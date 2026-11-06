@@ -5,7 +5,11 @@ import {
   SITE_NAME,
   SUPPORT_EMAIL,
   SUPPORT_PHONE_DISPLAY,
+  howToLD,
+  breadcrumbsLD,
+  combineGraph,
 } from "@/lib/seo"
+import { safeJsonLd } from "@/lib/seo/jsonld"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 import {
   ShieldCheck,
@@ -58,8 +62,30 @@ export default function HowWeVerifyVendorsPage() {
     },
   ]
 
+  const howTo = howToLD({
+    name: "How Wedding Wala Verifies Wedding Vendors in Pakistan",
+    description:
+      "Learn about Wedding Wala's strict 5-step vendor verification process — identity checks, physical venue inspection, portfolio auditing, and transparent PKR pricing.",
+    steps: steps.map((s) => ({
+      name: s.title,
+      text: s.desc,
+      url: `/how-we-verify-vendors#step-${s.number}`,
+    })),
+  })
+
+  const breadcrumbsLd = breadcrumbsLD([
+    { name: "Home", url: "/" },
+    { name: "How We Verify Vendors", url: "/how-we-verify-vendors" },
+  ])
+
+  const combined = combineGraph(howTo, breadcrumbsLd)
+
   return (
     <div className="container-responsive py-10 sm:py-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(combined) }}
+      />
       <Breadcrumbs
         items={[{ name: "How We Verify Vendors", href: "/how-we-verify-vendors" }]}
         className="mb-6"

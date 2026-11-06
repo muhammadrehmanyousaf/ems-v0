@@ -4,6 +4,13 @@ import { Button } from "@/components/ui/button"
 import { Tag, Percent, Clock, Sparkles, ArrowRight, Bell } from "lucide-react"
 import Link from "next/link"
 import { buildPageMetadata } from "@/lib/seo/metadata"
+import {
+  SITE_NAME,
+  collectionPageLD,
+  breadcrumbsLD,
+  combineGraph,
+} from "@/lib/seo"
+import { safeJsonLd } from "@/lib/seo/jsonld"
 
 export const metadata = buildPageMetadata({
   title: "Wedding Deals & Offers",
@@ -12,8 +19,29 @@ export const metadata = buildPageMetadata({
 })
 
 export default function DealsPage() {
+  const collectionLd = collectionPageLD({
+    name: `Wedding Deals & Offers — ${SITE_NAME}`,
+    description: "Current deals and seasonal wedding offers from verified vendors across Pakistan.",
+    url: "/deals",
+    items: [
+      { name: "Wedding Venues Deals", url: "/wedding-venues" },
+      { name: "Wedding Photographers Deals", url: "/wedding-photographers" },
+      { name: "Bridal Makeup Deals", url: "/bridal-makeup-artists" },
+      { name: "Catering Packages", url: "/caterers" },
+    ],
+  })
+  const breadcrumbLd = breadcrumbsLD([
+    { name: "Home", url: "/" },
+    { name: "Deals", url: "/deals" },
+  ])
+  const combined = combineGraph(collectionLd, breadcrumbLd)
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(combined) }}
+      />
       <section className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <Tag className="w-12 h-12 mx-auto mb-4 text-bridal-gold/40" />

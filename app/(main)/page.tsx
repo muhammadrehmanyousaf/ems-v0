@@ -1,6 +1,14 @@
 import type { Metadata } from "next"
 import dynamic from "next/dynamic"
-import { SITE_NAME, SITE_TITLE, SITE_DESCRIPTION, SITE_URL } from "@/lib/seo"
+import {
+  SITE_NAME,
+  SITE_TITLE,
+  SITE_DESCRIPTION,
+  SITE_URL,
+  faqLD,
+  combineGraph,
+} from "@/lib/seo"
+import { safeJsonLd } from "@/lib/seo/jsonld"
 // Hero stays EAGER — it holds the LCP element (above the fold).
 import { HeroSection } from "@/components/homepage/hero-section"
 import { HeroBackdrop } from "@/components/homepage/hero-backdrop"
@@ -59,8 +67,58 @@ const FinalNewsletterCTA = dynamic(() => import("@/components/homepage/monetizat
  *   • City Spotlights              — paid sponsor per city
  */
 export default function Home() {
+  const homeFaqs = [
+    {
+      question: "What is Wedding Wala?",
+      answer:
+        "Wedding Wala is Pakistan's premier wedding planning marketplace. We connect couples with verified banquet halls, marquees, photographers, caterers, makeup artists, and event professionals across all major cities in Pakistan.",
+    },
+    {
+      question: "How do I book wedding vendors on Wedding Wala?",
+      answer:
+        "You can explore verified portfolios, review transparent PKR pricing packages, check real client ratings, and message or request a quotation directly through the platform.",
+    },
+    {
+      question: "Are vendor prices on Wedding Wala verified?",
+      answer:
+        "Yes, Wedding Wala enforces a strict pricing transparency standard with date-stamped rates and direct vendor confirmation to eliminate hidden charges.",
+    },
+    {
+      question: "In which Pakistani cities is Wedding Wala available?",
+      answer:
+        "Wedding Wala covers wedding vendors and venues in Karachi, Lahore, Islamabad, Rawalpindi, Faisalabad, Multan, Peshawar, Sialkot, Gujranwala, Quetta, and nationwide across Pakistan.",
+    },
+    {
+      question: "Is Wedding Wala free to use for couples?",
+      answer:
+        "Yes, browsing vendor directories, using planning tools (budget calculator, guest list manager, checklist), and contacting vendors is 100% free for couples.",
+    },
+  ]
+
+  const homeWebPageLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${SITE_URL}#webpage`,
+    url: SITE_URL,
+    name: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    isPartOf: { "@id": `${SITE_URL}#website` },
+    about: { "@id": `${SITE_URL}#organization` },
+    primaryImageOfPage: {
+      "@type": "ImageObject",
+      url: `${SITE_URL}/og/home.jpg`,
+    },
+    inLanguage: ["en-PK", "ur-PK"],
+  }
+
+  const combined = combineGraph(homeWebPageLd, faqLD(homeFaqs))
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(combined) }}
+      />
       {/* 1 · Hero — cinematic photography + Playfair italic + bridal search */}
       <HeroSection backdrop={<HeroBackdrop />} />
 

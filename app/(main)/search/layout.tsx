@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
-import { buildPageMetadata, SITE_NAME } from "@/lib/seo"
+import { buildPageMetadata, SITE_NAME, breadcrumbsLD } from "@/lib/seo"
+import { safeJsonLd } from "@/lib/seo/jsonld"
 
 /**
  * Wrapper layout for `/search` so the underlying client component can
@@ -25,5 +26,18 @@ export default function SearchLayout({
 }: {
   children: React.ReactNode
 }) {
-  return children
+  const breadcrumbLd = breadcrumbsLD([
+    { name: "Home", url: "/" },
+    { name: "Search", url: "/search" },
+  ])
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbLd) }}
+      />
+      {children}
+    </>
+  )
 }

@@ -13,7 +13,7 @@ import * as React from "react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import {
-  ArrowLeft, ChevronRight, ChevronsUpDown, Check, Plus, Wallet, Settings2, MoreHorizontal,
+  LifeBuoy, ArrowLeft, ChevronRight, ChevronsUpDown, Check, Plus, Wallet, Settings2, MoreHorizontal,
   LayoutGrid, Inbox, CalendarCheck, CalendarDays, MessageSquare, FileText, Users,
   CircleDollarSign, ReceiptText, Undo2, ArrowDownUp, HandCoins, Truck, BookOpen, Landmark,
   ListChecks, Zap, CalendarClock, Package, Building2, Boxes, Fuel, ShieldCheck, Plane,
@@ -109,6 +109,8 @@ const ZYADA: Group[] = [
   { grp: "Grow", items: [
     { name: "Reports", url: "/dashboard/insights", icon: BarChart3 },
     { name: "Plan & billing", url: "/dashboard/billing", icon: CreditCard } ] },
+  { grp: "Help & Feedback", items: [
+    { name: "Bug report & Support", url: "/dashboard/support", icon: LifeBuoy } ] },
 ]
 
 const anyActive = (pathname: string | null, items: NItem[]) => items.some((i) => isActiveForNav(pathname, i.url))

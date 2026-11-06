@@ -1,16 +1,18 @@
 import type { Metadata } from "next"
-import { SITE_NAME, SITE_URL } from "@/lib/seo"
+import {
+  SITE_NAME,
+  SITE_URL,
+  contactPageLD,
+  breadcrumbsLD,
+  combineGraph,
+} from "@/lib/seo"
+import { safeJsonLd } from "@/lib/seo/jsonld"
 
 /**
  * Canonical for /contact forces Google to dedupe every `/contact?vendor=…`
- * variant back to the bare /contact URL. GSC's "Page indexing" report
- * was flooded with one row per vendor query string (Floral Affair Karachi,
- * Mehfil Stationers, etc.) — they're not real pages, they're contact-form
- * deep-links from vendor detail pages. Canonical = `/contact` collapses
- * them all into a single indexable URL.
+ * variant back to the bare /contact URL.
  *
- * Layout exports metadata so we can hint canonical without converting the
- * page itself off `"use client"`.
+ * Emits ContactPage + BreadcrumbList JSON-LD server-side.
  */
 export const metadata: Metadata = {
   title: `Contact us — ${SITE_NAME}`,
@@ -26,5 +28,20 @@ export const metadata: Metadata = {
 }
 
 export default function ContactLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+  const contactLd = contactPageLD()
+  const breadcrumbsLd = breadcrumbsLD([
+    { name: "Home", url: "/" },
+    { name: "Contact Us", url: "/contact" },
+  ])
+  const combined = combineGraph(contactLd, breadcrumbsLd)
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(combined) }}
+      />
+      {children}
+    </>
+  )
 }

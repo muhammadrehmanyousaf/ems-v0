@@ -1,28 +1,15 @@
 import { notFound } from "next/navigation"
 import VendorDetailsMobile from "@/components/VendorDetails/VendorDetailsMobile"
 import { BACKEND_URL } from "@/lib/backend-url"
-import { vendorCacheTag } from "@/lib/seo/fetch-vendor"
+import { vendorCacheTag, slugifyName } from "@/lib/seo/fetch-vendor"
+import { venueLD, vendorLD } from "@/lib/seo/jsonld"
+import { safeJsonLd } from "@/lib/seo/jsonld"
 
 /**
  * The vendor profile page, server-rendered.
  *
- * WW-PERF. The seven `(vendorListings)/<type>/[id]/page.tsx` routes — venues,
- * photographers, catering, decor, makeup-artists, henna-artists, car-rental —
- * were seven near-identical 139-line CLIENT components. Each shipped an empty
- * shell, then fetched its vendor in a `useEffect`, so a visitor arriving from
- * search or the homepage got a spinner while a round-trip completed, and a
- * crawler got a page with no content in the HTML.
- *
- * The canonical SEO route next door (`/wedding-venues/[city]/[vendorSlug]`)
- * has always been `revalidate = 3600` and server-rendered. These never got the
- * same treatment. Now they do: one shared server component, fetched with the
- * same 1-hour ISR cache and the same `vendor-<id>` revalidation tag the SEO
- * pages use, so an on-demand revalidate clears both.
- *
- * Dropped on the way: a `localStorage.getItem('all_vendors')` fallback. It read
- * a client-side copy of the entire catalogue that the homepage used to
- * download — 3,272 vendors — and that download is gone, so the fallback could
- * only ever return nothing.
+ * Emits complete Schema.org JSON-LD (EventVenue or LocalBusiness)
+ * with ratings and contact details for Google rich search results.
  */
 export const VENDOR_DETAIL_REVALIDATE = 3600
 
@@ -38,9 +25,6 @@ async function fetchVendor(id: string) {
     const json = await res.json()
     return json?.data ?? null
   } catch {
-    // Backend unreachable. Returning null renders the 404 page rather than a
-    // spinner that never resolves — the old client version sat on "Loading
-    // venue details..." forever in this case.
     return null
   }
 }
@@ -48,9 +32,51 @@ async function fetchVendor(id: string) {
 export async function VendorDetailRoute({ id }: { id: string }) {
   const vendor = await fetchVendor(id)
   if (!vendor) notFound()
-  // WP36 / VENDORTYPES-012: this server route passes the raw API row, which has no `type` (the client transform that
-  // sets it never runs here), so every type-conditional block of the page and the "Vendor" badge fell back to the
-  // generic one. The type is the owner's vendorType.
+
   const type = typeof vendor.type === "string" && vendor.type.trim() ? vendor.type : vendor.vendor?.vendorType || ""
-  return <VendorDetailsMobile vendor={{ ...vendor, type }} />
+  const isVenue = type?.toLowerCase().includes("venue") || type?.toLowerCase().includes("hall") || type?.toLowerCase().includes("marquee")
+  const city = vendor.city || "Pakistan"
+  const slug = `${slugifyName(vendor.name || "vendor")}-${vendor.id}`
+  
+  const ld = isVenue
+    ? venueLD({
+        id: vendor.id,
+        name: vendor.name,
+        slug,
+        vendorType: "Wedding Venue",
+        vendorTypeSlug: "wedding-venues",
+        description: vendor.description || "",
+        imageUrl: vendor.featuredImage || vendor.images?.[0] || "",
+        citySlug: slugifyName(city),
+        cityName: city,
+        addressLine: vendor.address,
+        phone: vendor.phone,
+        email: vendor.email,
+        rating: vendor.rating ? { value: Number(vendor.rating), count: Number(vendor.reviewCount || 1) } : undefined,
+      })
+    : vendorLD({
+        id: vendor.id,
+        name: vendor.name,
+        slug,
+        vendorType: type || "Wedding Vendor",
+        vendorTypeSlug: "vendors",
+        description: vendor.description || "",
+        imageUrl: vendor.featuredImage || vendor.images?.[0] || "",
+        citySlug: slugifyName(city),
+        cityName: city,
+        addressLine: vendor.address,
+        phone: vendor.phone,
+        email: vendor.email,
+        rating: vendor.rating ? { value: Number(vendor.rating), count: Number(vendor.reviewCount || 1) } : undefined,
+      })
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(ld) }}
+      />
+      <VendorDetailsMobile vendor={{ ...vendor, type }} />
+    </>
+  )
 }
