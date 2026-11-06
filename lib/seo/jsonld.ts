@@ -247,6 +247,7 @@ export interface VendorInput {
   imageUrl: string;
   citySlug: string;
   cityName: string;
+  regionName?: string;
   addressLine?: string;
   postalCode?: string;
   latitude?: number;
@@ -257,52 +258,112 @@ export interface VendorInput {
   priceRange?: string; // "$$" or "PKR 50,000–250,000"
   rating?: { value: number; count: number };
   yearsActive?: number;
+  amenities?: string[];
+  photos?: string[];
+}
+
+export function resolveSchemaType(vendorTypeSlug: string): string | string[] {
+  switch (vendorTypeSlug) {
+    case "wedding-venues":
+      return "EventVenue";
+    case "wedding-photographers":
+      return ["LocalBusiness", "Photographer"];
+    case "bridal-makeup-artists":
+      return ["LocalBusiness", "BeautySalon"];
+    case "caterers":
+      return ["LocalBusiness", "FoodEstablishment", "CateringService"];
+    case "wedding-planners":
+      return ["LocalBusiness", "ProfessionalService"];
+    case "wedding-decorators":
+      return ["LocalBusiness", "HomeAndConstructionBusiness"];
+    case "wedding-cake-designers":
+    case "wedding-mithai":
+      return ["LocalBusiness", "Bakery"];
+    case "wedding-cars":
+      return ["LocalBusiness", "AutoRental"];
+    case "wedding-djs":
+      return ["LocalBusiness", "EntertainmentBusiness"];
+    case "mehndi-artists":
+      return ["LocalBusiness", "BeautySalon"];
+    case "bridal-wear":
+      return ["LocalBusiness", "ClothingStore"];
+    case "wedding-stationery":
+      return ["LocalBusiness", "Store"];
+    default:
+      return "LocalBusiness";
+  }
 }
 
 export function vendorLD(v: VendorInput) {
   const url = `${SITE_URL}/${v.vendorTypeSlug}/${v.citySlug}/${v.slug}`;
-  return {
+  const schemaType = resolveSchemaType(v.vendorTypeSlug);
+
+  const postalAddress: Record<string, any> = {
+    "@type": "PostalAddress",
+    addressLocality: v.cityName,
+    addressCountry: "PK",
+  };
+  if (v.addressLine) postalAddress.streetAddress = v.addressLine;
+  if (v.postalCode) postalAddress.postalCode = v.postalCode;
+  if (v.regionName) postalAddress.addressRegion = v.regionName;
+
+  const images = v.photos && v.photos.length > 0
+    ? v.photos
+    : (v.imageUrl ? [v.imageUrl] : undefined);
+
+  const out: Record<string, any> = {
     "@context": "https://schema.org",
-    "@type": "LocalBusiness",
+    "@type": schemaType,
     "@id": `${url}#vendor`,
     name: v.name,
     url,
-    image: v.imageUrl,
     description: v.description,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: v.cityName,
-      addressCountry: "PK",
-      ...(v.addressLine ? { streetAddress: v.addressLine } : {}),
-      ...(v.postalCode ? { postalCode: v.postalCode } : {}),
-    },
-    ...(v.latitude && v.longitude
-      ? {
-          geo: {
-            "@type": "GeoCoordinates",
-            latitude: v.latitude,
-            longitude: v.longitude,
-          },
-        }
-      : {}),
-    ...(v.phone ? { telephone: v.phone } : {}),
-    ...(v.email ? { email: v.email } : {}),
-    ...(v.priceRange ? { priceRange: v.priceRange } : {}),
-    ...(v.rating
-      ? {
-          aggregateRating: {
-            "@type": "AggregateRating",
-            ratingValue: v.rating.value,
-            reviewCount: v.rating.count,
-            bestRating: 5,
-            worstRating: 1,
-          },
-        }
-      : {}),
-    knowsAbout: v.vendorType,
-    areaServed: { "@type": "City", name: v.cityName, "@id": `${SITE_URL}/cities/${v.citySlug}` },
+    address: postalAddress,
+    currenciesAccepted: "PKR",
+    paymentAccepted: "Cash, Credit Card, Bank Transfer, JazzCash, Easypaisa",
     parentOrganization: { "@id": `${SITE_URL}#organization` },
   };
+
+  if (images && images.length > 0) out.image = images;
+  if (v.phone) out.telephone = v.phone;
+  if (v.email) out.email = v.email;
+  if (v.websiteUrl) out.sameAs = v.websiteUrl;
+  if (v.priceRange) out.priceRange = v.priceRange;
+
+  if (v.latitude && v.longitude) {
+    out.geo = {
+      "@type": "GeoCoordinates",
+      latitude: v.latitude,
+      longitude: v.longitude,
+    };
+  }
+
+  if (v.amenities && v.amenities.length > 0) {
+    out.amenityFeature = v.amenities.map((a) => ({
+      "@type": "LocationFeatureSpecification",
+      name: a,
+      value: true,
+    }));
+  }
+
+  if (v.rating && v.rating.count > 0 && v.rating.value > 0) {
+    out.aggregateRating = {
+      "@type": "AggregateRating",
+      ratingValue: Number(v.rating.value.toFixed(1)),
+      reviewCount: v.rating.count,
+      bestRating: 5,
+      worstRating: 1,
+    };
+  }
+
+  out.knowsAbout = v.vendorType;
+  out.areaServed = {
+    "@type": "City",
+    name: v.cityName,
+    "@id": `${SITE_URL}/cities/${v.citySlug}`,
+  };
+
+  return out;
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -315,44 +376,76 @@ export interface VenueInput extends VendorInput {
 
 export function venueLD(v: VenueInput) {
   const url = `${SITE_URL}/venues/${v.citySlug}/${v.slug}`;
-  return {
+  const postalAddress: Record<string, any> = {
+    "@type": "PostalAddress",
+    addressLocality: v.cityName,
+    addressCountry: "PK",
+  };
+  if (v.addressLine) postalAddress.streetAddress = v.addressLine;
+  if (v.postalCode) postalAddress.postalCode = v.postalCode;
+  if (v.regionName) postalAddress.addressRegion = v.regionName;
+
+  const images = v.photos && v.photos.length > 0
+    ? v.photos
+    : (v.imageUrl ? [v.imageUrl] : undefined);
+
+  const out: Record<string, any> = {
     "@context": "https://schema.org",
     "@type": "EventVenue",
     "@id": `${url}#venue`,
     name: v.name,
     url,
-    image: v.imageUrl,
     description: v.description,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: v.cityName,
-      addressCountry: "PK",
-      ...(v.addressLine ? { streetAddress: v.addressLine } : {}),
-      ...(v.postalCode ? { postalCode: v.postalCode } : {}),
-    },
-    ...(v.latitude && v.longitude
-      ? {
-          geo: {
-            "@type": "GeoCoordinates",
-            latitude: v.latitude,
-            longitude: v.longitude,
-          },
-        }
-      : {}),
-    ...(v.capacity?.max ? { maximumAttendeeCapacity: v.capacity.max } : {}),
-    ...(v.rating
-      ? {
-          aggregateRating: {
-            "@type": "AggregateRating",
-            ratingValue: v.rating.value,
-            reviewCount: v.rating.count,
-            bestRating: 5,
-            worstRating: 1,
-          },
-        }
-      : {}),
+    address: postalAddress,
+    currenciesAccepted: "PKR",
+    paymentAccepted: "Cash, Credit Card, Bank Transfer, JazzCash, Easypaisa",
     parentOrganization: { "@id": `${SITE_URL}#organization` },
   };
+
+  if (images && images.length > 0) out.image = images;
+  if (v.phone) out.telephone = v.phone;
+  if (v.email) out.email = v.email;
+  if (v.websiteUrl) out.sameAs = v.websiteUrl;
+  if (v.priceRange) out.priceRange = v.priceRange;
+
+  if (v.latitude && v.longitude) {
+    out.geo = {
+      "@type": "GeoCoordinates",
+      latitude: v.latitude,
+      longitude: v.longitude,
+    };
+  }
+
+  if (v.capacity?.max) {
+    out.maximumAttendeeCapacity = v.capacity.max;
+  }
+
+  if (v.amenities && v.amenities.length > 0) {
+    out.amenityFeature = v.amenities.map((a) => ({
+      "@type": "LocationFeatureSpecification",
+      name: a,
+      value: true,
+    }));
+  }
+
+  if (v.rating && v.rating.count > 0 && v.rating.value > 0) {
+    out.aggregateRating = {
+      "@type": "AggregateRating",
+      ratingValue: Number(v.rating.value.toFixed(1)),
+      reviewCount: v.rating.count,
+      bestRating: 5,
+      worstRating: 1,
+    };
+  }
+
+  out.knowsAbout = "Weddings, Marquee Events, Barat, Walima, Mehndi, Corporate Events";
+  out.areaServed = {
+    "@type": "City",
+    name: v.cityName,
+    "@id": `${SITE_URL}/cities/${v.citySlug}`,
+  };
+
+  return out;
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -365,6 +458,9 @@ export interface ReviewInput {
   reviewBody: string;
   datePublished: string;
   itemReviewedName: string;
+  itemReviewedType?: string;
+  itemReviewedUrl?: string;
+  itemReviewedImage?: string;
 }
 
 export function reviewLD(r: ReviewInput) {
@@ -381,8 +477,10 @@ export function reviewLD(r: ReviewInput) {
     reviewBody: r.reviewBody,
     datePublished: r.datePublished,
     itemReviewed: {
-      "@type": "LocalBusiness",
+      "@type": r.itemReviewedType || "LocalBusiness",
       name: r.itemReviewedName,
+      ...(r.itemReviewedUrl ? { url: r.itemReviewedUrl } : {}),
+      ...(r.itemReviewedImage ? { image: r.itemReviewedImage } : {}),
     },
   };
 }
@@ -399,6 +497,7 @@ export function serviceLD({
   serviceType,
   areaServed,
   priceRange,
+  aggregateRating,
 }: {
   name: string;
   description: string;
@@ -407,6 +506,7 @@ export function serviceLD({
   serviceType: string;
   areaServed: string;
   priceRange?: string;
+  aggregateRating?: { value: number; count: number };
 }) {
   return {
     "@context": "https://schema.org",
@@ -416,9 +516,20 @@ export function serviceLD({
     url: url.startsWith("http") ? url : `${SITE_URL}${url}`,
     ...(imageUrl ? { image: imageUrl } : {}),
     serviceType,
-    areaServed: { "@type": "Country", name: areaServed },
+    areaServed: { "@type": "City", name: areaServed },
     provider: { "@id": `${SITE_URL}#organization` },
     ...(priceRange ? { priceRange } : {}),
+    ...(aggregateRating && aggregateRating.count > 0 && aggregateRating.value > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: Number(aggregateRating.value.toFixed(1)),
+            reviewCount: aggregateRating.count,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }
+      : {}),
   };
 }
 
@@ -430,6 +541,12 @@ export interface ListItemInput {
   name: string;
   url: string;
   imageUrl?: string;
+  type?: string | string[];
+  description?: string;
+  addressLocality?: string;
+  addressRegion?: string;
+  priceRange?: string;
+  rating?: { value: number; count: number };
 }
 
 export function collectionPageLD({
@@ -453,13 +570,39 @@ export function collectionPageLD({
     isPartOf: { "@id": `${SITE_URL}#website` },
     mainEntity: {
       "@type": "ItemList",
-      itemListElement: items.map((it, i) => ({
-        "@type": "ListItem",
-        position: i + 1,
-        name: it.name,
-        url: it.url.startsWith("http") ? it.url : `${SITE_URL}${it.url}`,
-        ...(it.imageUrl ? { image: it.imageUrl } : {}),
-      })),
+      numberOfItems: items.length,
+      itemListElement: items.map((it, i) => {
+        const itemObj: Record<string, any> = {
+          "@type": it.type || "LocalBusiness",
+          name: it.name,
+          url: it.url.startsWith("http") ? it.url : `${SITE_URL}${it.url}`,
+        };
+        if (it.imageUrl) itemObj.image = it.imageUrl;
+        if (it.description) itemObj.description = it.description;
+        if (it.addressLocality) {
+          itemObj.address = {
+            "@type": "PostalAddress",
+            addressLocality: it.addressLocality,
+            ...(it.addressRegion ? { addressRegion: it.addressRegion } : {}),
+            addressCountry: "PK",
+          };
+        }
+        if (it.priceRange) itemObj.priceRange = it.priceRange;
+        if (it.rating && it.rating.count > 0 && it.rating.value > 0) {
+          itemObj.aggregateRating = {
+            "@type": "AggregateRating",
+            ratingValue: Number(it.rating.value.toFixed(1)),
+            reviewCount: it.rating.count,
+            bestRating: 5,
+            worstRating: 1,
+          };
+        }
+        return {
+          "@type": "ListItem",
+          position: i + 1,
+          item: itemObj,
+        };
+      }),
     },
   };
 }

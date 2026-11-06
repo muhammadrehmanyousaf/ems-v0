@@ -26,6 +26,7 @@ import {
   faqLD,
   combineGraph,
   serviceLD,
+  resolveSchemaType,
   type VendorTypeSlug,
 } from "@/lib/seo"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
@@ -239,16 +240,31 @@ export async function VendorTypeCityPage({
   const isVenue = vt.slug === 'wedding-venues' || vt.slug === 'caterers';
   const priceRangeStr = formatPriceRange(vendors, isVenue);
 
+  // Calculate city-level aggregate rating for Schema.org rich snippets
+  const ratedVendors = vendors.filter((v) => v.rating > 0 && v.reviewCount > 0);
+  const totalCityReviews = ratedVendors.reduce((acc, v) => acc + v.reviewCount, 0);
+  const avgCityRating = ratedVendors.length > 0 && totalCityReviews > 0
+    ? ratedVendors.reduce((acc, v) => acc + (v.rating * v.reviewCount), 0) / totalCityReviews
+    : 0;
+
+  const schemaItemType = resolveSchemaType(vt.slug);
+
   const collectionLd = collectionPageLD({
     name: `${vt.plural} in ${city.name} — ${SITE_NAME}`,
     description: `${vt.plural} serving weddings in ${city.name}, Pakistan.`,
     url: `/${vt.slug}/${city.slug}`,
-    items: vendors.slice(0, 10).map((v) => ({
+    items: vendors.slice(0, 15).map((v) => ({
       name: v.name,
       url: v.href && v.href !== "#" ? `${SITE_URL}${v.href}` : url,
       imageUrl: v.imageUrl,
+      type: schemaItemType,
+      description: v.description,
+      addressLocality: city.name,
+      addressRegion: city.region,
+      priceRange: v.priceMin ? `PKR ${v.priceMin.toLocaleString("en-PK")}` : undefined,
+      rating: v.rating > 0 && v.reviewCount > 0 ? { value: v.rating, count: v.reviewCount } : undefined,
     })),
-  })
+  });
 
   const svcLd = serviceLD({
     name: `${vt.plural} in ${city.name}`,
@@ -257,7 +273,10 @@ export async function VendorTypeCityPage({
     serviceType: vt.singular,
     areaServed: city.name,
     priceRange: priceRangeStr ?? range ?? undefined,
-  })
+    aggregateRating: totalCityReviews > 0 && avgCityRating > 0
+      ? { value: avgCityRating, count: totalCityReviews }
+      : undefined,
+  });
 
   const faqs = [
     {

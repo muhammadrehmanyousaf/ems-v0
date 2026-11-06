@@ -205,7 +205,11 @@ export async function VendorDetailPage(input: PageInput) {
    */
   const amenityList = resolveAmenityLabels(vendor.raw, vendor.amenities)
 
-  const isVenue = vt.slug === "wedding-venues"
+  const isVenue = vt.slug === "wedding-venues";
+  const venuePhotos = (vendor.images && vendor.images.length > 0)
+    ? vendor.images
+    : (vendor.imageUrl ? [vendor.imageUrl] : []);
+
   const ldSchema = isVenue
     ? venueLD({
         id: vendor.id,
@@ -217,8 +221,24 @@ export async function VendorDetailPage(input: PageInput) {
         imageUrl: vendor.imageUrl ?? "",
         citySlug: city.slug,
         cityName: city.name,
+        regionName: city.region,
+        addressLine: vendor.raw?.address,
+        postalCode: vendor.raw?.postalCode,
+        latitude: vendor.raw?.latitude ? Number(vendor.raw.latitude) : undefined,
+        longitude: vendor.raw?.longitude ? Number(vendor.raw.longitude) : undefined,
+        capacity: vendor.raw?.maxCapacity
+          ? { min: vendor.raw?.minCapacity, max: vendor.raw?.maxCapacity }
+          : undefined,
+        phone: vendor.phone || vendor.raw?.contactPhone,
+        email: vendor.email || vendor.raw?.contactEmail,
+        websiteUrl: vendor.websiteUrl || vendor.raw?.website,
+        priceRange: priceDisplay.metaPrice !== "Price on request"
+          ? priceDisplay.metaPrice
+          : undefined,
+        amenities: amenityList,
+        photos: venuePhotos,
         rating:
-          vendor.rating > 0
+          vendor.rating > 0 && vendor.reviewCount > 0
             ? { value: vendor.rating, count: vendor.reviewCount }
             : undefined,
       })
@@ -232,27 +252,37 @@ export async function VendorDetailPage(input: PageInput) {
         imageUrl: vendor.imageUrl ?? "",
         citySlug: city.slug,
         cityName: city.name,
-        phone: vendor.phone,
-        email: vendor.email,
-        websiteUrl: vendor.websiteUrl,
+        regionName: city.region,
+        addressLine: vendor.raw?.address,
+        postalCode: vendor.raw?.postalCode,
+        latitude: vendor.raw?.latitude ? Number(vendor.raw.latitude) : undefined,
+        longitude: vendor.raw?.longitude ? Number(vendor.raw.longitude) : undefined,
+        phone: vendor.phone || vendor.raw?.contactPhone,
+        email: vendor.email || vendor.raw?.contactEmail,
+        websiteUrl: vendor.websiteUrl || vendor.raw?.website,
         priceRange: priceDisplay.metaPrice !== "Price on request"
           ? priceDisplay.metaPrice
           : undefined,
+        amenities: amenityList,
+        photos: venuePhotos,
         rating:
-          vendor.rating > 0
+          vendor.rating > 0 && vendor.reviewCount > 0
             ? { value: vendor.rating, count: vendor.reviewCount }
             : undefined,
-      })
+      });
 
   const reviewLds = vendor.reviews.slice(0, 5).map((r: any) =>
     reviewLD({
-      authorName: r?.author?.fullName ?? r?.authorName ?? "Customer",
+      authorName: r?.author?.fullName ?? r?.authorName ?? "Verified Customer",
       rating: Number(r?.rating ?? 5),
       reviewBody: r?.comment ?? r?.review ?? "",
       datePublished: r?.createdAt ?? r?.datePublished ?? new Date().toISOString(),
       itemReviewedName: vendor.name,
+      itemReviewedType: isVenue ? "EventVenue" : "LocalBusiness",
+      itemReviewedUrl: `${SITE_URL}/${vt.slug}/${city.slug}/${vendor.nameSlug}-${vendor.id}`,
+      itemReviewedImage: vendor.imageUrl,
     }),
-  )
+  );
 
   // WP29: the policy as the refund engine will apply it (server summary), not only the registration label
   const cancelShown = cancellationDisplay(vendor)
