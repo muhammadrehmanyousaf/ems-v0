@@ -4,6 +4,13 @@ import { Button } from "@/components/ui/button"
 import { Trophy, Star, TrendingUp, Users, ArrowRight, Quote } from "lucide-react"
 import Link from "next/link"
 import { buildPageMetadata } from "@/lib/seo/metadata"
+import {
+  SITE_NAME,
+  policyPageLD,
+  breadcrumbsLD,
+  combineGraph,
+} from "@/lib/seo"
+import { safeJsonLd } from "@/lib/seo/jsonld"
 
 export const metadata = buildPageMetadata({
   title: "Vendor Success Stories",
@@ -12,8 +19,23 @@ export const metadata = buildPageMetadata({
 })
 
 export default function VendorSuccessPage() {
+  const pageLd = policyPageLD({
+    name: `Vendor Success Stories — ${SITE_NAME}`,
+    description: "How wedding vendors across Pakistan grow their business with Wedding Wala.",
+    url: "/vendor-success",
+  })
+  const breadcrumbLd = breadcrumbsLD([
+    { name: "Home", url: "/" },
+    { name: "Vendor Success Stories", url: "/vendor-success" },
+  ])
+  const combined = combineGraph(pageLd, breadcrumbLd)
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(combined) }}
+      />
       <section className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <Trophy className="w-12 h-12 mx-auto mb-4 text-bridal-gold/40" />

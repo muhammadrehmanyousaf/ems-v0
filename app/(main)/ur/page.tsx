@@ -7,7 +7,11 @@ import {
   SUPPORT_EMAIL,
   SUPPORT_PHONE_DISPLAY,
   SUPPORT_PHONE_TEL,
+  policyPageLD,
+  breadcrumbsLD,
+  combineGraph,
 } from "@/lib/seo"
+import { safeJsonLd } from "@/lib/seo/jsonld"
 
 /**
  * Urdu landing scaffold.
@@ -43,8 +47,24 @@ export const metadata: Metadata = buildPageMetadata({
 })
 
 export default function UrduLandingPage() {
+  const pageLd = policyPageLD({
+    name: "ویڈنگ والا — Wedding Wala",
+    description:
+      "پاکستان کا شادی پلیٹ فارم — جلد ہی اردو میں مکمل دستیاب ہو گا۔ The Wedding Wala marketplace coming soon in full Urdu translation.",
+    url: "/ur",
+  })
+  const breadcrumbLd = breadcrumbsLD([
+    { name: "Home", url: "/" },
+    { name: "اردو", url: "/ur" },
+  ])
+  const combined = combineGraph(pageLd, breadcrumbLd)
+
   return (
     <div lang="ur" dir="rtl" className="min-h-screen bg-gradient-to-br from-bridal-cream via-white to-bridal-cream/30 px-4 py-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(combined) }}
+      />
       <div className="max-w-2xl mx-auto text-center">
         <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold-dark mb-3">
           اردو

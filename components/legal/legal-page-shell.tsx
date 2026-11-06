@@ -12,6 +12,10 @@
 import Link from "next/link"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 import {
+  policyPageLD,
+  breadcrumbsLD,
+  combineGraph,
+  safeJsonLd,
   SUPPORT_EMAIL,
   SUPPORT_PHONE_DISPLAY,
   SUPPORT_PHONE_TEL,
@@ -42,8 +46,25 @@ export function LegalPageShell({
   children,
   breadcrumbs,
 }: LegalPageShellProps) {
+  const pageHref = breadcrumbs[breadcrumbs.length - 1]?.href || "/"
+  const policyLd = policyPageLD({
+    name: title,
+    description: typeof intro === "string" ? intro : `${title} — ${SITE_NAME}`,
+    url: pageHref,
+    dateModified: lastUpdated,
+  })
+  const breadcrumbLd = breadcrumbsLD([
+    { name: "Home", url: "/" },
+    ...breadcrumbs.map((b) => ({ name: b.name, url: b.href || pageHref })),
+  ])
+  const combined = combineGraph(policyLd, breadcrumbLd)
+
   return (
     <div className="container-responsive py-10 sm:py-14">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(combined) }}
+      />
       <Breadcrumbs items={breadcrumbs} className="mb-6" />
 
       <header className="mb-10 max-w-3xl">

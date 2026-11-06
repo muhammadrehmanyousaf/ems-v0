@@ -70,7 +70,7 @@ export default function VenuesPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(ld) }}
       />
-      <ListingRoute vendorType="venues" />
+      <ListingRoute vendorType="venues" omitSchema={true} />
     </>
   )
 }

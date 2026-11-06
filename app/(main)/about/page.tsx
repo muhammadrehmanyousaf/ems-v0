@@ -10,7 +10,11 @@ import {
   SUPPORT_PHONE_DISPLAY,
   SUPPORT_PHONE_TEL,
   CITIES,
+  aboutPageLD,
+  breadcrumbsLD,
+  combineGraph,
 } from "@/lib/seo"
+import { safeJsonLd } from "@/lib/seo/jsonld"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 
 export const metadata: Metadata = buildPageMetadata({
@@ -53,8 +57,19 @@ const stats = [
 ]
 
 export default function AboutPage() {
+  const aboutLd = aboutPageLD()
+  const breadcrumbLd = breadcrumbsLD([
+    { name: "Home", url: "/" },
+    { name: "About", url: "/about" },
+  ])
+  const combined = combineGraph(aboutLd, breadcrumbLd)
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(combined) }}
+      />
       {/* Breadcrumbs */}
       <div className="container-responsive pt-6">
         <Breadcrumbs items={[{ name: "About", href: "/about" }]} />

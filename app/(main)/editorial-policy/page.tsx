@@ -4,7 +4,11 @@ import {
   buildPageMetadata,
   SITE_NAME,
   SUPPORT_EMAIL,
+  policyPageLD,
+  breadcrumbsLD,
+  combineGraph,
 } from "@/lib/seo"
+import { safeJsonLd } from "@/lib/seo/jsonld"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 import {
   Scale,
@@ -56,8 +60,25 @@ export default function EditorialPolicyPage() {
     },
   ]
 
+  const policyLd = policyPageLD({
+    name: "Editorial & Pricing Transparency Policy",
+    description:
+      "How Wedding Wala gathers, calculates, and validates wedding venue and vendor pricing in Pakistan. Zero fabricated quotes, single source of truth rules, and date-stamped prices.",
+    url: "/editorial-policy",
+    dateModified: "2026-05-07",
+  })
+  const breadcrumbLd = breadcrumbsLD([
+    { name: "Home", url: "/" },
+    { name: "Editorial Policy", url: "/editorial-policy" },
+  ])
+  const combined = combineGraph(policyLd, breadcrumbLd)
+
   return (
     <div className="container-responsive py-10 sm:py-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(combined) }}
+      />
       <Breadcrumbs
         items={[{ name: "Editorial & Pricing Policy", href: "/editorial-policy" }]}
         className="mb-6"

@@ -17,6 +17,7 @@ import {
   SITE_NAME,
   SITE_DESCRIPTION,
   SUPPORT_EMAIL,
+  SUPPORT_PHONE_DISPLAY,
   SUPPORT_PHONE_E164,
   ONBOARDING_EMAIL,
   LEGAL_ENTITY_NAME,
@@ -606,6 +607,135 @@ export function collectionPageLD({
     },
   };
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// AboutPage & ContactPage
+// ──────────────────────────────────────────────────────────────────────────
+
+export function aboutPageLD() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "@id": `${SITE_URL}/about#webpage`,
+    url: `${SITE_URL}/about`,
+    name: `About ${SITE_NAME} — Pakistan's Premier Wedding Planning Platform`,
+    description: SITE_DESCRIPTION,
+    isPartOf: { "@id": `${SITE_URL}#website` },
+    about: { "@id": `${SITE_URL}#organization` },
+    inLanguage: ["en-PK", "ur-PK"],
+  };
+}
+
+export function contactPageLD() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ContactPage",
+    "@id": `${SITE_URL}/contact#webpage`,
+    url: `${SITE_URL}/contact`,
+    name: `Contact Us — ${SITE_NAME}`,
+    description: `Contact Wedding Wala support, vendor relations, and partnership teams across Pakistan. Phone: ${SUPPORT_PHONE_DISPLAY}, Email: ${SUPPORT_EMAIL}.`,
+    isPartOf: { "@id": `${SITE_URL}#website` },
+    mainEntity: { "@id": `${SITE_URL}#organization` },
+    inLanguage: ["en-PK", "ur-PK"],
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// WebApplication — for planning tools & interactive calculators
+// ──────────────────────────────────────────────────────────────────────────
+
+export function webApplicationLD(params: {
+  name: string;
+  description: string;
+  url: string;
+  applicationCategory?: string;
+}) {
+  const normUrl = params.url.startsWith("/") ? params.url : `/${params.url}`;
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "@id": `${SITE_URL}${normUrl}#app`,
+    name: params.name,
+    description: params.description,
+    url: `${SITE_URL}${normUrl}`,
+    applicationCategory: params.applicationCategory || "LifestyleApplication",
+    operatingSystem: "All (Web Browser)",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "PKR",
+      availability: "https://schema.org/InStock",
+    },
+    browserRequirements: "Requires JavaScript. Requires HTML5.",
+    provider: { "@id": `${SITE_URL}#organization` },
+    inLanguage: ["en-PK", "ur-PK"],
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// WebPage / PolicyPage — for terms, privacy & institutional disclosures
+// ──────────────────────────────────────────────────────────────────────────
+
+export function policyPageLD(params: {
+  name: string;
+  description: string;
+  url: string;
+  dateModified?: string;
+}) {
+  const normUrl = params.url.startsWith("/") ? params.url : `/${params.url}`;
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${SITE_URL}${normUrl}#webpage`,
+    name: params.name,
+    description: params.description,
+    url: `${SITE_URL}${normUrl}`,
+    isPartOf: { "@id": `${SITE_URL}#website` },
+    publisher: { "@id": `${SITE_URL}#organization` },
+    inLanguage: ["en-PK", "ur-PK"],
+    ...(params.dateModified ? { dateModified: params.dateModified } : {}),
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// JobPosting — for careers
+// ──────────────────────────────────────────────────────────────────────────
+
+export function jobPostingLD(job: {
+  title: string;
+  description: string;
+  employmentType?: string;
+  location?: string;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "JobPosting",
+    title: job.title,
+    description: job.description,
+    datePosted: "2026-05-01",
+    validThrough: "2026-12-31",
+    employmentType: job.employmentType || "FULL_TIME",
+    hiringOrganization: {
+      "@type": "Organization",
+      name: SITE_NAME,
+      sameAs: SITE_URL,
+      logo: `${SITE_URL}/logo.png`,
+    },
+    jobLocation: {
+      "@type": "Place",
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: job.location?.includes("Lahore") ? "Lahore" : "Lahore",
+        addressCountry: "PK",
+      },
+    },
+    applicantLocationRequirements: {
+      "@type": "Country",
+      name: "Pakistan",
+    },
+  };
+}
+
 
 // ──────────────────────────────────────────────────────────────────────────
 // Helper: combine multiple LD objects into a @graph

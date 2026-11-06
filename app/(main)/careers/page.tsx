@@ -4,7 +4,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Briefcase, MapPin, Clock, Rocket, Users, Heart, Zap, ArrowRight } from "lucide-react"
 import Link from "next/link"
-import { SITE_NAME, SITE_URL } from "@/lib/seo"
+import {
+  SITE_NAME,
+  SITE_URL,
+  jobPostingLD,
+  breadcrumbsLD,
+  combineGraph,
+} from "@/lib/seo"
+import { safeJsonLd } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: `Careers — Join the ${SITE_NAME} team`,
@@ -35,8 +42,26 @@ const openings = [
 ]
 
 export default function CareersPage() {
+  const jobLds = openings.map((o) =>
+    jobPostingLD({
+      title: o.title,
+      description: `${o.title} at ${SITE_NAME} (${o.department}). ${o.type} role based in ${o.location}.`,
+      employmentType: o.type === "Part-time" ? "PART_TIME" : "FULL_TIME",
+      location: o.location,
+    })
+  )
+  const breadcrumbLd = breadcrumbsLD([
+    { name: "Home", url: "/" },
+    { name: "Careers", url: "/careers" },
+  ])
+  const combined = combineGraph(...jobLds, breadcrumbLd)
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(combined) }}
+      />
       <section className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <Briefcase className="w-12 h-12 mx-auto mb-4 text-bridal-gold/40" />

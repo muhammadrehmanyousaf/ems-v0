@@ -4,7 +4,14 @@ import { Button } from "@/components/ui/button"
 import { Globe, Palette, Share2, Heart, Clock, Gift, MapPin, Camera, Bell, ArrowRight, Sparkles } from "lucide-react"
 import Link from "next/link"
 import type { Metadata } from "next"
-import { buildPageMetadata, SITE_NAME } from "@/lib/seo"
+import {
+  buildPageMetadata,
+  SITE_NAME,
+  webApplicationLD,
+  breadcrumbsLD,
+  combineGraph,
+} from "@/lib/seo"
+import { safeJsonLd } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Free Wedding Website Builder — ${SITE_NAME}`,
@@ -24,8 +31,24 @@ const features = [
 ]
 
 export default function WeddingWebsitePage() {
+  const appLd = webApplicationLD({
+    name: `Free Wedding Website Builder — ${SITE_NAME}`,
+    description: `Build a beautiful wedding website with ${SITE_NAME} — elegant templates, your love story, RSVP, gift registry and a live countdown.`,
+    url: "/wedding-website",
+    applicationCategory: "LifestyleApplication",
+  })
+  const breadcrumbLd = breadcrumbsLD([
+    { name: "Home", url: "/" },
+    { name: "Wedding Website", url: "/wedding-website" },
+  ])
+  const combined = combineGraph(appLd, breadcrumbLd)
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(combined) }}
+      />
       <section className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <Globe className="w-12 h-12 mx-auto mb-4 text-bridal-gold/40" />
