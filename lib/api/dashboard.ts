@@ -392,6 +392,8 @@ export class BusinessesAPI {
     // area). Passed through so the admin screen can search all 3,272 rather than
     // filtering whichever page happens to be loaded.
     q?: string,
+    sort = "newest",
+    city?: string,
   ): Promise<{
     data: ApiBusiness[];
     pagination: {
@@ -403,6 +405,8 @@ export class BusinessesAPI {
   }> {
     const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (q) qs.set("q", q);
+    if (sort) qs.set("sort", sort);
+    if (city && city.toLowerCase() !== "all" && city.toLowerCase() !== "all cities") qs.set("city", city);
     const res = await axiosInstance.get(`/api/v1/businesses?${qs.toString()}`);
     return (
       res.data?.data ?? {

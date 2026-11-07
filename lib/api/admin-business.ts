@@ -180,4 +180,20 @@ export class AdminBusinessAPI {
     const res = await axiosInstance.patch(`/api/v1/admin/businesses/${businessId}/details`, updates)
     return res.data?.data
   }
+  /**
+   * POST /api/v1/admin/businesses/bulk-status
+   * Bulk transition business status (approved, suspended, submitted, rejected).
+   */
+  static async bulkUpdateStatus(
+    ids: number[],
+    status: "approved" | "suspended" | "submitted" | "rejected",
+    notes?: string,
+  ): Promise<{ updatedCount: number; ids: number[]; status: string }> {
+    const res = await axiosInstance.post(`/api/v1/admin/businesses/bulk-status`, {
+      ids,
+      status,
+      notes,
+    })
+    return res.data?.data
+  }
 }
