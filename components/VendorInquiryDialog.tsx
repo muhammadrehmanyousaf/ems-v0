@@ -176,13 +176,11 @@ export default function VendorInquiryDialog({
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
               <CheckCircle2 className="h-8 w-8" />
             </span>
-            <h3 className="text-lg font-semibold">
-              {vendorOnPlatform ? "Inquiry sent" : "We’ve got your enquiry"}
+            <h3 className="text-lg font-semibold text-bridal-charcoal">
+              Enquiry Received!
             </h3>
-            <p className="text-sm text-muted-foreground">
-              {vendorOnPlatform
-                ? `${vendorName} has it in their inbox and will get back to you. Keep an eye on your phone.`
-                : `${vendorName} hasn’t joined Wedding Wala yet, so we’ll contact them for you and come back with their answer. It usually takes a day or two.`}
+            <p className="text-sm text-muted-foreground max-w-sm">
+              Thank you! Your enquiry for <span className="font-semibold text-foreground">{vendorName}</span> has been received. Our dedicated Booking Manager will contact you shortly on WhatsApp / Phone with complete pricing, packages, and date availability.
             </p>
             <Button className="mt-2" onClick={() => onOpenChange(false)}>Done</Button>
           </div>

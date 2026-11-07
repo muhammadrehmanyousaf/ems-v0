@@ -25,6 +25,7 @@ export interface CityVendorListingGridProps {
   cityName: string
   citySlug: string
   typeSlug: string
+  backendType?: string | null
   waLink: string
 }
 
@@ -38,8 +39,11 @@ export function CityVendorListingGrid({
   cityName,
   citySlug,
   typeSlug,
+  backendType,
   waLink,
 }: CityVendorListingGridProps) {
+  const [vendors, setVendors] = useState<VendorListItem[]>(initialVendors)
+  const [loading, setLoading] = useState<boolean>(initialVendors.length === 0 && !!backendType)
   const [search, setSearch] = useState("")
   const [priceFilter, setPriceFilter] = useState<PriceFilterKey>("all")
   const [minRating, setMinRating] = useState<number>(0)
@@ -48,21 +52,88 @@ export function CityVendorListingGrid({
   const [sortBy, setSortBy] = useState<SortKey>("recommended")
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
+  // Client hydration fallback: If server-rendered with 0 vendors due to a build-time timeout,
+  // immediately fetch live listings directly from the API so visitors never see an empty screen.
+  React.useEffect(() => {
+    if (initialVendors.length > 0) {
+      setVendors(initialVendors)
+      setLoading(false)
+      return
+    }
+    if (!backendType) {
+      setLoading(false)
+      return
+    }
+
+    let isMounted = true
+    setLoading(true)
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://ems-v0-backend-production.up.railway.app"
+    const base = backendUrl.endsWith("/") ? backendUrl : backendUrl + "/"
+    const targetUrl = `${base}api/v1/businesses?city=${encodeURIComponent(citySlug)}&vendorTypes=${encodeURIComponent(backendType)}&limit=60`
+
+    fetch(targetUrl)
+      .then((r) => r.json())
+      .then((res) => {
+        if (!isMounted) return
+        const rawList = Array.isArray(res?.data) ? res.data : (res?.data?.data || [])
+        const normalized = rawList.map((raw: any) => {
+          const v = raw?.vendor ?? {}
+          const vType = raw?.type || v?.vendorType || raw?.subBusinessType
+          let img = Array.isArray(raw?.images) ? raw.images[0] : (typeof raw?.images === "string" ? raw.images : raw?.image)
+          if (img && typeof img === "object") img = img.url
+          let priceMin = raw?.minimumPrice ? Number(raw.minimumPrice) : null
+          if (!priceMin && Array.isArray(raw?.packages) && raw.packages.length > 0) {
+            const p = raw.packages.map((pk: any) => Number(pk?.price)).filter((n: number) => n > 0)
+            if (p.length) priceMin = Math.min(...p)
+          }
+          const slugPart = raw.slug || (raw.name ? raw.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + raw.id : raw.id)
+          return {
+            id: raw.id,
+            name: raw.name,
+            slug: raw.slug,
+            city: raw.city || cityName,
+            description: raw.description,
+            imageUrl: img,
+            rating: Number(raw.rating || 0),
+            reviewCount: Number(raw.reviewCount || 0),
+            priceMin,
+            vendorType: vType,
+            href: `/${typeSlug}/${citySlug}/${slugPart}`,
+            subArea: raw.subArea,
+            maxCapacity: raw.maxCapacity,
+            verificationTier: raw.verificationTier,
+            status: raw.status,
+            raw,
+          }
+        }).filter((v: any) => !/\b(demo|test|sample|lorem|example|dummy)\b/i.test(v.name || ""))
+
+        setVendors(normalized)
+        setLoading(false)
+      })
+      .catch(() => {
+        if (isMounted) setLoading(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [initialVendors, citySlug, backendType, cityName, typeSlug])
+
   // Unique sub-areas / localities extracted from vendor listings
   const availableAreas = useMemo(() => {
     const areas = new Set<string>()
-    for (const v of initialVendors) {
+    for (const v of vendors) {
       const area = v.subArea || v.areaServed
       if (area && area.trim().length > 1 && area.trim().toLowerCase() !== cityName.toLowerCase()) {
         areas.add(area.trim())
       }
     }
     return Array.from(areas).sort((a, b) => a.localeCompare(b))
-  }, [initialVendors, cityName])
+  }, [vendors, cityName])
 
   // Filtered & sorted vendor list
   const filteredVendors = useMemo(() => {
-    let result = [...initialVendors]
+    let result = [...vendors]
 
     // 1. Text Search (name, area, description, specialties)
     if (search.trim()) {
@@ -150,7 +221,7 @@ export function CityVendorListingGrid({
     }
 
     return result
-  }, [initialVendors, search, priceFilter, minRating, selectedArea, verifiedOnly, sortBy])
+  }, [vendors, search, priceFilter, minRating, selectedArea, verifiedOnly, sortBy])
 
   // Count active filters
   const activeFilterCount = useMemo(() => {
@@ -170,6 +241,41 @@ export function CityVendorListingGrid({
     setSelectedArea("all")
     setVerifiedOnly(false)
     setSortBy("recommended")
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-16 rounded-2xl border border-bridal-beige bg-bridal-cream/60 animate-pulse" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="h-96 rounded-2xl border border-bridal-beige/70 bg-bridal-cream/40 animate-pulse" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (vendors.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-bridal-gold/30 bg-bridal-cream/40 p-10 text-center">
+        <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-bridal-gold/10 font-display text-[22px] italic text-bridal-gold-dark">
+          ✦
+        </span>
+        <p className="mx-auto mt-4 max-w-md font-bridal text-[14px] leading-relaxed text-bridal-text-soft">
+          Tell us your date and guest count and our dedicated Booking Manager will send you verified{" "}
+          {categoryPlural.toLowerCase()} in {cityName} with transparent pricing — usually within an hour.
+        </p>
+        <a
+          href={waLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-2 mt-5 rounded-full bg-bridal-gold px-6 py-3 font-bridal text-[14px] font-semibold text-white shadow-md hover:bg-bridal-gold-dark transition-all"
+        >
+          Get free quotes on WhatsApp
+        </a>
+      </div>
+    )
   }
 
   return (

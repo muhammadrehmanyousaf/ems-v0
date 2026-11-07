@@ -795,51 +795,16 @@ export async function VendorTypeCityPage({
             kicker={hasListings ? `${vendors.length} listed` : genuinelyEmpty ? "Coming soon" : "Get matched"}
             title={`Top ${vt.plural.toLowerCase()} in ${city.name}`}
           />
-          {vendors.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-bridal-gold/30 bg-bridal-cream/40 p-10 text-center">
-              <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-bridal-gold/10 font-display text-[22px] italic text-bridal-gold-dark">
-                ✦
-              </span>
-              {/* Two different situations, two different sentences. Telling a
-                  family "we're still onboarding venues in Lahore" when we have
-                  24 of them — because a request timed out — is worse than
-                  saying nothing. The fallback makes the same offer without the
-                  false claim about our inventory. */}
-              <p className="mx-auto mt-4 max-w-md font-bridal text-[14px] leading-relaxed text-bridal-text-soft">
-                {genuinelyEmpty ? (
-                  <>
-                    We&apos;re onboarding {vt.plural.toLowerCase()} in {city.name} now.
-                    Tell us what you need and we&apos;ll send you matched quotes — usually within a
-                    day.
-                  </>
-                ) : (
-                  <>
-                    Tell us your date and guest count and we&apos;ll send you matched{" "}
-                    {vt.plural.toLowerCase()} in {city.name} with real prices — usually within a
-                    day.
-                  </>
-                )}
-              </p>
-              <a
-                href={waLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`mt-5 ${BTN_PRIMARY}`}
-              >
-                Get free quotes
-              </a>
-            </div>
-          ) : (
-            <CityVendorListingGrid
-              initialVendors={vendors}
-              categoryLabel={vt.singular}
-              categoryPlural={vt.plural}
-              cityName={city.name}
-              citySlug={city.slug}
-              typeSlug={vt.slug}
-              waLink={waLink}
-            />
-          )}
+          <CityVendorListingGrid
+            initialVendors={vendors}
+            categoryLabel={vt.singular}
+            categoryPlural={vt.plural}
+            cityName={city.name}
+            citySlug={city.slug}
+            typeSlug={vt.slug}
+            backendType={backendType}
+            waLink={waLink}
+          />
         </section>
 
         {/* ─────────── B3 CITY EDITORIAL ─────────── */}

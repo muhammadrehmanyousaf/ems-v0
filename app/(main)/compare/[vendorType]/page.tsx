@@ -20,7 +20,7 @@ interface RouteProps {
 }
 
 // Pre-render one comparison page per vendor type.
-export const dynamicParams = false
+export const dynamicParams = true
 
 export function generateStaticParams() {
   return VENDOR_TYPES.map((v) => ({ vendorType: v.slug }))

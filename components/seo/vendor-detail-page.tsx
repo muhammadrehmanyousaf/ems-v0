@@ -20,6 +20,7 @@ import { isListingIndexable } from "@/lib/pricing/pricing-validator";
 
 import { safeJsonLd } from "@/lib/seo/jsonld";
 import Image from "next/image"
+import { Phone, MessageCircle } from "lucide-react"
 import Link from "next/link"
 import type { Metadata } from "next"
 import { notFound, redirect, permanentRedirect } from "next/navigation"
@@ -504,15 +505,84 @@ export async function VendorDetailPage(input: PageInput) {
             */}
             <VenueAnswers raw={vendor.raw} />
 
-            {vendor.description ? (
-              <p className="mt-5 font-bridal text-[14.5px] text-bridal-text leading-relaxed">
-                {vendor.description}
-              </p>
-            ) : (
-              <p className="mt-5 font-bridal text-[14.5px] text-bridal-text leading-relaxed">
-                {vendor.name} is a trusted {vt.singular.toLowerCase()} serving couples across {city.name} and surrounding areas. Known for quality service across Mehndi, Barat, and Walima celebrations, {vendor.name} offers transparent booking options, bespoke packages, and verified support on Wedding Wala.
-              </p>
-            )}
+            {(() => {
+              const hasCleanDesc = vendor.description && !/public records|unclaimed/i.test(vendor.description);
+              const displayDesc = hasCleanDesc
+                ? vendor.description
+                : `${vendor.name} is a premier ${vt.singular.toLowerCase()} in ${city.name}, offering exceptional event spaces and verified wedding packages for Barat, Walima, Mehndi, and intimate family celebrations. Managed with dedicated on-site support, reliable generator backup, and transparent booking management on Wedding Wala.`;
+              return (
+                <p className="mt-5 font-bridal text-[14.5px] text-bridal-text leading-relaxed">
+                  {displayDesc}
+                </p>
+              );
+            })()}
+
+            {/* Interactive Planning Tool Bridge for Vendor Intent */}
+            <div className="mt-5 rounded-2xl border border-bridal-gold/30 bg-bridal-cream/50 p-4">
+              <div className="flex items-start gap-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-lg shadow-sm">
+                  {isVenue ? "🏛️" : vt.slug === "caterers" ? "🍲" : vt.slug === "nikah-khwan" ? "📜" : "💍"}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-bridal text-[11px] font-semibold uppercase tracking-wider text-bridal-gold-dark">
+                    {isVenue
+                      ? "Marquee Hidden Charges & AC Cost"
+                      : vt.slug === "caterers"
+                      ? "Degh & Catering Portion Calculator"
+                      : vt.slug === "nikah-khwan"
+                      ? "Nikkah Nama & Legal Clauses"
+                      : "Free Pakistani Wedding Planning Tools"}
+                  </p>
+                  <p className="mt-0.5 font-bridal text-[13px] leading-relaxed text-bridal-text">
+                    {isVenue ? (
+                      <>
+                        Calculate generator diesel fuel, AC surcharge &amp; PRA/SRB tax estimates for {vendor.name} with our{" "}
+                        <Link
+                          href="/planning-tools/marquee-hidden-cost-calculator-pakistan"
+                          className="font-semibold text-bridal-gold-dark underline hover:text-bridal-charcoal"
+                        >
+                          Marquee Cost Calculator
+                        </Link>
+                        .
+                      </>
+                    ) : vt.slug === "caterers" ? (
+                      <>
+                        Calculate exact 12kg deghs of Biryani &amp; Qorma for your guest count with our{" "}
+                        <Link
+                          href="/planning-tools/degh-catering-calculator-pakistan"
+                          className="font-semibold text-bridal-gold-dark underline hover:text-bridal-charcoal"
+                        >
+                          Degh Catering Calculator
+                        </Link>
+                        .
+                      </>
+                    ) : vt.slug === "nikah-khwan" ? (
+                      <>
+                        Review Column 18 right of divorce &amp; NADRA MRC registration requirements with our{" "}
+                        <Link
+                          href="/planning-tools/nikkah-nama-clauses-nadra-checklist-pakistan"
+                          className="font-semibold text-bridal-gold-dark underline hover:text-bridal-charcoal"
+                        >
+                          Nikkah Nama Checklist
+                        </Link>
+                        .
+                      </>
+                    ) : (
+                      <>
+                        Plan your entire shaadi budget in PKR and track vendor allocations with our{" "}
+                        <Link
+                          href="/planning-tools/budget"
+                          className="font-semibold text-bridal-gold-dark underline hover:text-bridal-charcoal"
+                        >
+                          Wedding Budget Calculator
+                        </Link>
+                        .
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {/* Interactive Planning Tool Bridge for Vendor Intent */}
             <div className="mt-5 rounded-2xl border border-bridal-gold/30 bg-bridal-cream/50 p-4">
@@ -624,6 +694,22 @@ export async function VendorDetailPage(input: PageInput) {
                 vendorName={vendor.name}
                 vendorType={vendor.vendorType}
               />
+              <a
+                href="tel:03274811220"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full bg-emerald-800 text-white font-bridal text-[13px] font-semibold hover:bg-emerald-900 transition-colors shadow-sm"
+              >
+                <Phone className="w-3.5 h-3.5" />
+                <span>Call Booking Desk (0327-4811220)</span>
+              </a>
+              <a
+                href={`https://wa.me/923274811220?text=${encodeURIComponent(`Hi Wedding Wala, I am interested in booking ${vendor.name} in ${city.name}. Can you share pricing and date availability?`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full bg-[#25D366] text-white font-bridal text-[13px] font-semibold hover:bg-[#20bd5a] transition-colors shadow-sm"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                <span>WhatsApp Booking Desk</span>
+              </a>
               </>
               )}
             </div>
@@ -781,13 +867,54 @@ export async function VendorDetailPage(input: PageInput) {
             what that list is for. */}
         {guidance && (
           <section className="mb-12 grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
-            <div className="max-w-2xl">
+            <div className="max-w-2xl space-y-4">
               <h2 className="font-display italic text-[24px] text-bridal-charcoal mb-4">
                 Booking a {vt.singular.toLowerCase()} in {city.name}
               </h2>
               <p className="font-bridal text-[14.5px] text-bridal-text leading-relaxed">
                 {fillCity(guidance.intro)}
               </p>
+
+              {/* Essential Pakistani Shaadi Guidelines to eliminate empty whitespace */}
+              <div className="mt-6 rounded-2xl border border-bridal-beige bg-bridal-cream/60 p-5 space-y-3">
+                <p className="font-bridal text-[11px] uppercase tracking-[0.2em] font-semibold text-bridal-gold-dark">
+                  Important Guidelines for {city.name} Weddings
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2 pt-1">
+                  <div className="rounded-xl border border-bridal-beige/80 bg-white/80 p-3.5">
+                    <p className="font-bridal text-[12.5px] font-semibold text-bridal-charcoal">
+                      🕒 Closing Curfew &amp; Timings
+                    </p>
+                    <p className="mt-1 font-bridal text-[12px] text-bridal-text-soft leading-normal">
+                      Venues in {city.name} adhere strictly to official 10:00 PM closing laws. Schedule stage entries and dinner buffet early to ensure a relaxed celebration.
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-bridal-beige/80 bg-white/80 p-3.5">
+                    <p className="font-bridal text-[12.5px] font-semibold text-bridal-charcoal">
+                      ⚡ Generator &amp; AC Backup
+                    </p>
+                    <p className="mt-1 font-bridal text-[12px] text-bridal-text-soft leading-normal">
+                      Confirm diesel generator fuel arrangements (typically PKR 6,000–12,000/hr) and ensure seamless AC load capacity throughout the function.
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-bridal-beige/80 bg-white/80 p-3.5">
+                    <p className="font-bridal text-[12.5px] font-semibold text-bridal-charcoal">
+                      🍲 One-Dish Rule Compliance
+                    </p>
+                    <p className="mt-1 font-bridal text-[12px] text-bridal-text-soft leading-normal">
+                      Verify that your menu complies with provincial One-Dish standards (1 meat item + 1 sweet) to avoid municipal inspection penalties.
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-bridal-beige/80 bg-white/80 p-3.5">
+                    <p className="font-bridal text-[12.5px] font-semibold text-bridal-charcoal">
+                      🛡️ Dedicated Booking Manager
+                    </p>
+                    <p className="mt-1 font-bridal text-[12px] text-bridal-text-soft leading-normal">
+                      Need immediate help booking {vendor.name}? Call our concierge desk directly at <strong className="text-bridal-charcoal">0327-4811220</strong> for instant date checks.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="rounded-xl border border-bridal-beige bg-bridal-cream/40 p-5">
               <p className="font-bridal text-[11px] uppercase tracking-[0.22em] font-medium text-bridal-gold mb-3">

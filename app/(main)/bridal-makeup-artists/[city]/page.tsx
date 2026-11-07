@@ -6,7 +6,7 @@ import {
 
 const SLUG = "bridal-makeup-artists" as const
 
-export const dynamicParams = false
+export const dynamicParams = true
 export const revalidate = 3600
 
 export const generateStaticParams = () => generateVendorTypeCityStaticParams()

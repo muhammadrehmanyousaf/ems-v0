@@ -105,10 +105,10 @@ interface FetchOptions {
  * build timeout. A page that gives up renders its editorial shell and refreshes
  * on the next ISR pass an hour later — a far better outcome than a failed deploy.
  */
-const FETCH_TIMEOUT_MS = 12000
+const FETCH_TIMEOUT_MS = 20000
 
 /** One retry, because a cold Railway container answers the second call. */
-const RETRY_DELAY_MS = 700
+const RETRY_DELAY_MS = 1200
 
 /**
  * The outcome of a listings fetch, with the one distinction that matters:

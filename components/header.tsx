@@ -115,12 +115,27 @@ const VENDOR_GROUPS = [
   },
 ]
 
-const planningTools = [
-  { name: "Checklist",  href: "/planning-tools/checklist",  icon: Calendar,    desc: "Stay organised" },
-  { name: "Budget",     href: "/planning-tools/budget",     icon: DollarSign,  desc: "Track every rupee" },
-  { name: "Guest List", href: "/planning-tools/guest-list", icon: Users,       desc: "Manage invites" },
-  { name: "Timeline",   href: "/planning-tools/timeline",   icon: Clock,       desc: "Plan your day" },
-]
+const corePlanningTools = [
+  { name: "Checklist",  href: "/planning-tools/checklist",  icon: Calendar,    desc: "12-month Shaadi roadmap" },
+  { name: "Budget",     href: "/planning-tools/budget",     icon: DollarSign,  desc: "Track every rupee in PKR" },
+  { name: "Guest List", href: "/planning-tools/guest-list", icon: Users,       desc: "Ladkiwale vs Ladkewale seating" },
+  { name: "Timeline",   href: "/planning-tools/timeline",   icon: Clock,       desc: "Curfew-safe wedding day" },
+];
+
+const pakistaniCalculators = [
+  { name: "Marquee Hidden Cost", href: "/planning-tools/marquee-hidden-cost-calculator-pakistan", icon: Tent, desc: "Generator fuel & AC tax" },
+  { name: "Degh & Catering", href: "/planning-tools/degh-catering-calculator-pakistan", icon: Utensils, desc: "12kg deghs & portions" },
+  { name: "Haq Mehr & Gold", href: "/planning-tools/haq-mehr-gold-calculator-pakistan", icon: Crown, desc: "Live 24K tola rates" },
+  { name: "One-Dish Checker", href: "/planning-tools/one-dish-menu-checker-pakistan", icon: ChefHat, desc: "Provincial law & 10 PM curfew" },
+  { name: "Stage & Decor Cost", href: "/planning-tools/wedding-decor-stage-lighting-cost-calculator", icon: Palette, desc: "Floral & entryway pricing" },
+  { name: "Car Rental Convoy", href: "/planning-tools/pakistan-wedding-car-rental-convoy-calculator", icon: Car, desc: "Audi, Prado & Fortuner" },
+  { name: "Nikkah Nama & NADRA", href: "/planning-tools/nikkah-nama-clauses-nadra-checklist-pakistan", icon: ScrollText, desc: "Clause 18 & MRC guide" },
+  { name: "Salami & Bari Ledger", href: "/planning-tools/salami-bari-trousseau-tracker-pakistan", icon: Sparkles, desc: "Trousseau gifts & cash" },
+  { name: "Currency Converter", href: "/planning-tools/wedding-currency-converter-overseas-pakistanis", icon: DollarSign, desc: "GBP, USD, AED to PKR" },
+  { name: "Dholki & Qawwali", href: "/planning-tools/dholki-qawwali-night-budget-calculator-pakistan", icon: Drum, desc: "Sound, dhol & troupe" },
+];
+
+const planningTools = [...corePlanningTools, ...pakistaniCalculators];
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false)
@@ -643,36 +658,91 @@ export function Header() {
                   Planning
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="w-[440px] p-4 bg-bridal-cream border border-bridal-beige rounded-md">
-                    <div className="grid grid-cols-2 gap-2">
-                      {planningTools.map((item) => {
-                        const Icon = item.icon
-                        return (
-                          <NavigationMenuLink key={item.name} asChild>
-                            <Link
-                              href={item.href}
-                              className="
-                                group/item flex items-center gap-3 p-3 rounded-md
-                                border border-transparent
-                                hover:bg-bridal-blush/45 hover:border-bridal-beige
-                                transition-all duration-200
-                              "
-                            >
-                              <span className="w-10 h-10 rounded-md bg-bridal-blush/70 border border-bridal-beige flex items-center justify-center flex-shrink-0 group-hover/item:bg-bridal-gold/15 group-hover/item:border-bridal-gold/55 transition-colors">
-                                <Icon className="w-[18px] h-[18px] text-bridal-gold-dark" strokeWidth={1.6} />
-                              </span>
-                              <div>
-                                <div className="font-display italic text-[15px] text-bridal-charcoal leading-tight">
-                                  {item.name}
-                                </div>
-                                <div className="font-bridal text-[11.5px] text-bridal-text-soft">
-                                  {item.desc}
-                                </div>
-                              </div>
-                            </Link>
-                          </NavigationMenuLink>
-                        )
-                      })}
+                  <div className="w-[660px] p-5 bg-bridal-cream border border-bridal-beige rounded-xl shadow-xl max-h-[85vh] overflow-y-auto">
+                    <div className="grid grid-cols-2 gap-6">
+                      {/* Left: Core Planners */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-2.5 pb-1.5 border-b border-bridal-beige">
+                          <span className="font-bridal text-[10px] uppercase tracking-[0.2em] font-semibold text-bridal-gold-dark">
+                            Essential Planning Tools
+                          </span>
+                        </div>
+                        <div className="space-y-1">
+                          {corePlanningTools.map((item) => {
+                            const Icon = item.icon;
+                            return (
+                              <NavigationMenuLink key={item.name} asChild>
+                                <Link
+                                  href={item.href}
+                                  className="group/item flex items-center gap-3 p-2 rounded-lg border border-transparent hover:bg-bridal-blush/45 hover:border-bridal-beige transition-all"
+                                >
+                                  <span className="w-8 h-8 rounded-lg bg-bridal-blush/80 border border-bridal-beige flex items-center justify-center flex-shrink-0 group-hover/item:bg-bridal-gold/15 transition-colors">
+                                    <Icon className="w-4 h-4 text-bridal-gold-dark" strokeWidth={1.6} />
+                                  </span>
+                                  <div className="min-w-0">
+                                    <div className="font-display italic text-[14px] text-bridal-charcoal leading-tight">
+                                      {item.name}
+                                    </div>
+                                    <div className="font-bridal text-[11px] text-bridal-text-soft truncate">
+                                      {item.desc}
+                                    </div>
+                                  </div>
+                                </Link>
+                              </NavigationMenuLink>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Right: Pakistani Calculators */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-2.5 pb-1.5 border-b border-bridal-beige">
+                          <span className="font-bridal text-[10px] uppercase tracking-[0.2em] font-semibold text-bridal-gold-dark">
+                            Shaadi Calculators (Pakistan)
+                          </span>
+                        </div>
+                        <div className="space-y-1">
+                          {pakistaniCalculators.slice(0, 6).map((item) => {
+                            const Icon = item.icon;
+                            return (
+                              <NavigationMenuLink key={item.name} asChild>
+                                <Link
+                                  href={item.href}
+                                  className="group/item flex items-center gap-2.5 p-1.5 rounded-lg border border-transparent hover:bg-bridal-blush/45 hover:border-bridal-beige transition-all"
+                                >
+                                  <span className="w-7 h-7 rounded-lg bg-bridal-blush/80 border border-bridal-beige flex items-center justify-center flex-shrink-0 group-hover/item:bg-bridal-gold/15 transition-colors">
+                                    <Icon className="w-3.5 h-3.5 text-bridal-gold-dark" strokeWidth={1.6} />
+                                  </span>
+                                  <div className="min-w-0">
+                                    <div className="font-bridal text-[12.5px] font-medium text-bridal-charcoal leading-tight truncate">
+                                      {item.name}
+                                    </div>
+                                    <div className="font-bridal text-[10.5px] text-bridal-text-soft truncate">
+                                      {item.desc}
+                                    </div>
+                                  </div>
+                                </Link>
+                              </NavigationMenuLink>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom All Tools CTA */}
+                    <div className="mt-4 pt-3 border-t border-bridal-beige flex items-center justify-between">
+                      <span className="font-bridal text-[11.5px] text-bridal-text-soft">
+                        14 Interactive Pakistani Wedding Calculators & Guides
+                      </span>
+                      <NavigationMenuLink asChild>
+                        <Link
+                          href="/planning-tools"
+                          className="inline-flex items-center gap-1.5 font-bridal text-[12px] font-semibold text-bridal-gold-dark hover:underline"
+                        >
+                          View all planning tools
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+                      </NavigationMenuLink>
                     </div>
                   </div>
                 </NavigationMenuContent>

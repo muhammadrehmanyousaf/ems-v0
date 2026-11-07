@@ -153,6 +153,16 @@ export default function RootLayout({
   return (
     <html lang="en-PK" suppressHydrationWarning>
       <head>
+        {/* Google Tag Manager */}
+        <script
+          async
+          src="https://www.googletagmanager.com/gtm.js?id=GTM-KJDM6LSP"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date());",
+          }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationLD()) }}
