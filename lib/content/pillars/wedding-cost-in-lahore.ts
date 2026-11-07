@@ -2,10 +2,10 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   slug: "wedding-cost-in-lahore",
-  title: "Wedding Cost in Lahore 2026: Full Budget Guide (PKR Ranges)",
+  title: "Wedding Cost in Lahore 2026: Full Budget & Per Head Rates",
   h1: "Wedding Cost in Lahore 2026: How Much Does a Wedding Really Cost?",
   metaDescription:
-    "How much does a wedding cost in Lahore in 2026? Indicative PKR ranges for venues, catering per head, photography, decor, makeup and more, plus a 400-guest sample budget and area-by-area cost guide.",
+    "How much does a wedding in Lahore cost in 2026? Realistic PKR budget breakdown for 200 to 500 guests: marquee per-head rates, catering, decor & darzi costs.",
   eyebrow: "Wedding Budget Guide",
   updatedLabel: "October 2026 (Updated for 2026/2027 Season)",
   lead:

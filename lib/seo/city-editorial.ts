@@ -139,6 +139,132 @@ export const CITY_EDITORIAL: Partial<Record<CitySlug, CityEditorial>> = {
     priceContext:
       "Lower PKR range — Bahawalpur typically runs at the most affordable end of Punjab pricing.",
   },
+  abbottabad: {
+    intro:
+      "Abbottabad is Khyber Pakhtunkhwa's premier hill-station wedding hub, offering scenic outdoor ceremonies against pine-covered mountain vistas. Destination weddings and summer ceremonies (May–August) are uniquely popular here when Punjab experiences intense heat.",
+    peakSeason: "May–September (summer hill-station season) and October–November",
+    notable:
+      "Shimla Hill marquees, PMA Kakul Road lawns, and Abbottabad Club banquets host the city's largest wedding receptions. Forest-view resorts along Murree Road host intimate nikkah and dholki gatherings.",
+    priceContext:
+      "Mid-tier pricing — 20–30% below Islamabad rates, with outdoor venue setups and scenic catering packages.",
+  },
+  sargodha: {
+    intro:
+      "Sargodha weddings are deeply rooted in Central Punjab's agricultural and military traditions, characterized by massive family gatherings, lavish desi feasts, and vibrant dholki nights. The city features modern luxury marquees along University Road.",
+    peakSeason: "November–February",
+    notable:
+      "University Road marquee belt, Satellite Town banquet halls, and PAF Base / Cantt lawns host the city's premier baraat and walima functions.",
+    priceContext:
+      "Accessible value — high-quality catering and expansive marquee spaces at 25–35% below Lahore rates.",
+  },
+  gujrat: {
+    intro:
+      "Gujrat's wedding industry is heavily powered by its affluent overseas diaspora (UK, Norway, Middle East), making December–January a high-octane luxury shaadi season. Expect bespoke designer stages, luxury car entries, and expansive live BBQ setups.",
+    peakSeason: "December–January (overseas diaspora peak) and February–March",
+    notable:
+      "GT Road marquee strip, Bhimber Road banquets, and Jalalpur Jattan farmhouses host multi-day celebrations with 800+ guests.",
+    priceContext:
+      "Mid-to-upper PKR range — diaspora weddings often match Lahore per-head spend on premium stage decor and lighting.",
+  },
+  jhelum: {
+    intro:
+      "Jhelum weddings blend Potohar cultural heritage with high overseas expatriate investment. Overlooking the Jhelum River and Mangla hills, wedding venues here are designed for grand family reunions and traditional Barat entries.",
+    peakSeason: "November–February (peak overseas shaadi season)",
+    notable:
+      "GT Road banquet halls, Cantt lawns, and Mangla Dam view farmhouses host the highest-rated wedding events.",
+    priceContext:
+      "Mid-tier spend with premium peaks during overseas return months.",
+  },
+  sheikhupura: {
+    intro:
+      "Sheikhupura weddings combine historic Mughal-era culinary heritage (famous for regional mutton and karahi) with modern marquee setups. Located just outside Lahore, many families utilize Sheikhupura's expansive farmhouses for large-scale outdoor events.",
+    peakSeason: "October–March",
+    notable:
+      "Lahore-Sheikhupura Road marquee strip, Housing Colony halls, and Hiran Minar bypass farmhouses.",
+    priceContext:
+      "Value-friendly — 30% below central Lahore rates, with Lahore vendors frequently traveling out.",
+  },
+  "rahim-yar-khan": {
+    intro:
+      "Rahim Yar Khan weddings reflect the royal desert hospitality of South Punjab and the Cholistan gateway. Sprawling lawns, majestic palace-inspired arches, and extensive guest lists (1,000+) define weddings here.",
+    peakSeason: "November–February",
+    notable:
+      "Abu Dhabi Palace Road marquees, Canal Road lawns, and City Park banquet halls host the premier weddings.",
+    priceContext:
+      "Affordable per-head rates with large guest scale; all-inclusive venue packages are standard.",
+  },
+  sukkur: {
+    intro:
+      "Sukkur is Upper Sindh's wedding capital, centered around the historic Indus riverfront. Weddings here are vibrant Sindhi celebrations featuring traditional Sufi musical soirees, rich biryani catering, and separate colorful mehndi setups.",
+    peakSeason: "November–February (avoiding severe summer temperatures)",
+    notable:
+      "Military Road banquet strip, Airport Road marquees, and riverfront lawns near the Lansdowne Bridge.",
+    priceContext:
+      "Budget-to-mid range — substantially more accessible than Karachi while offering full-service halls.",
+  },
+  mardan: {
+    intro:
+      "Mardan weddings follow traditional Pashtun ceremonial structure, emphasizing separate grand men/women halls, ceremonial attan dance, and legendary Shinwari mutton catering. Family hospitality and generous banquet seating are paramount.",
+    peakSeason: "October–March",
+    notable:
+      "Nowshera Road marquee complex, Charsadda Road banquet halls, and Mardan Cantt lawns.",
+    priceContext:
+      "Package-driven — generous per-head meat portions with fixed hall rental models.",
+  },
+  "mirpur-khas": {
+    intro:
+      "Mirpur Khas weddings feature vibrant agricultural community celebrations, renowned mango-orchard farmhouse events, and traditional Sindhi-Muhajir wedding banquets.",
+    peakSeason: "November–February",
+    notable:
+      "Hyderabad Road banquet halls, Satellite Town halls, and orchard farmhouses.",
+    priceContext:
+      "Very accessible per-head pricing with strong local catering traditions.",
+  },
+  sahiwal: {
+    intro:
+      "Sahiwal weddings in the heart of the Lower Bari Doab region are family-centric, celebrated across multi-day dholkis, high-capacity baraats, and traditional Punjabi breakfasts. Marquees are built for large community gatherings.",
+    peakSeason: "October–February",
+    notable:
+      "High Street banquet halls, Farid Town halls, and GT Road / Lahore-Multan bypass marquees.",
+    priceContext:
+      "Affordable luxury — per-head catering typically 30% below Lahore.",
+  },
+  okara: {
+    intro:
+      "Okara's prosperous agricultural and military families host grand shaadis known for lavish culinary spreads, live dairy and halwa stations, and energetic bhangra entries. Modern AC marquees have rapidly expanded along the bypass.",
+    peakSeason: "October–March",
+    notable:
+      "GT Road bypass marquees, Cantt club lawns, and Faisalabad Road halls.",
+    priceContext:
+      "Accessible pricing with generous food portions and spacious free parking.",
+  },
+  kasur: {
+    intro:
+      "Kasur weddings celebrate the city's legendary culinary legacy — famous Kasuri fish, androon-shehar sweets, and passionate Sufi musical nights. Located adjacent to Lahore, couples enjoy top Lahore-grade decorators at localized rates.",
+    peakSeason: "November–February",
+    notable:
+      "Ferozepur Road marquee row, Model Town banquets, and Ganda Singh bypass farmhouses.",
+    priceContext:
+      "Highly competitive pricing — budget-friendly alternatives to south Lahore venues.",
+  },
+  "dera-ghazi-khan": {
+    intro:
+      "Dera Ghazi Khan weddings bring together Saraiki and Baloch wedding customs, renowned for expansive hospitality, roasted lamb sajji feasts, and extended family gatherings.",
+    peakSeason: "October–February",
+    notable:
+      "Jampur Road marquees, Multan Road banquet halls, and Model Town halls.",
+    priceContext:
+      "Accessible per-head rates with large guest guarantees (500–1,200 guests).",
+  },
+  "wah-cantonment": {
+    intro:
+      "Wah Cantonment weddings are celebrated in pristine, disciplined cantonment environments, characterized by manicured lawns, strict 10 PM curfew adherence, and proximity to Rawalpindi and Taxila.",
+    peakSeason: "October–March",
+    notable:
+      "POF Officers Club lawns, GT Road marquees, and Aslam Market area banquet halls.",
+    priceContext:
+      "Mid-tier spend comparable to Rawalpindi with excellent civil order and parking.",
+  },
 }
 
 /**
@@ -170,6 +296,14 @@ export const VENDOR_TYPE_GUIDE: Record<string, string> = {
     "Luxury car rental for shaadi runs hourly with daily caps. Confirm chauffeur is included (it usually is), fuel allowance / extra-km charges, decoration setup, and whether the car is for baraat entry only or full-day use including doli.",
   "wedding-djs":
     "Confirm setup and sound-check time (some DJs charge for early setup), playlist customization rounds, lighting included or extra, and whether the DJ provides MC services for the entry / cake-cut moments.",
+  "wedding-mithai":
+    "Confirm shelf-life and storage conditions (especially for milk-based sweets like Cham Cham vs dry fruit barfi in summer), request a tasting box for the family, verify custom box printing timelines (typically 7–10 days for embossed initials), and ensure separate tamper-proof seals for out-of-city distributions.",
+  "nikah-khwan":
+    "Verify that the Nikah Khwan holds an active Union Council registrar license and brings the official government four-copy register. Ask about legal document requirements (CNICs, witnesses, Wali consent), the solemnization honorarium, and post-ceremony assistance in obtaining the computerized NADRA Marriage Registration Certificate (MRC).",
+  "wedding-generators":
+    "Always calculate total electrical load in kVA before booking: running heavy marquee AC chillers requires at least 150–250 kVA, while basic lighting and sound need 30–50 kVA. Confirm whether diesel fuel is included or billed per hour (PKR 6,000–12,000/hr), verify that the genset has a certified silent canopy to avoid noise during speeches, and ensure a dedicated technician is on-site.",
+  "wedding-cake-designers":
+    "Confirm guest serving portions (a 3-tier cake typically feeds 80–120 guests), ask whether flowers are handcrafted sugar florals or fresh food-safe stems, verify whether temperature-controlled refrigerated delivery to the venue is included, and inspect the cake stand and ceremonial knife setup in advance.",
 }
 
 /**

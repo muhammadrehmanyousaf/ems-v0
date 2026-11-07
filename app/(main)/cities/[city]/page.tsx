@@ -29,8 +29,8 @@ export function generateMetadata({ params }: RouteProps): Metadata {
   if (!city) return { title: "Not Found" }
 
   return buildPageMetadata({
-    title: `Wedding Services in ${city.name}`,
-    description: `Plan your wedding in ${city.name}. Browse verified venues, photographers, planners, caterers, and every shaadi vendor — all reviewed by real Pakistani couples.`,
+    fullTitle: `Wedding Planning & Venues in ${city.name} (2026 Directory)`,
+    description: `Planning your wedding in ${city.name}? Compare top wedding venues, photographers, caterers & makeup artists. View 2026 rates, packages & book on ${SITE_NAME}.`.slice(0, 155),
     path: `/cities/${city.slug}`,
   })
 }

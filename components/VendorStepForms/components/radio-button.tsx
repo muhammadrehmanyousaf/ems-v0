@@ -38,7 +38,7 @@ const RadioButton:React.FC<RadioCompontent> = ({data, selectedOption, setSelecte
                             value={option.id}
                             checked={selected}
                             onChange={() => setSelectedOption(option.id)}
-                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                            className="sr-only absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
                         />
                         <div className="size-8 flex items-center justify-center">
                             <span

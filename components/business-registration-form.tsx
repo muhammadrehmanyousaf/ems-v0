@@ -914,8 +914,7 @@ export function BusinessRegistrationForm() {
         name: formData.name,
         brandLogo: formData.profilePicture,
         roleIds: [2],
-        subBusinessType: carRentalSubTypes(
-          formData.businessType || (businessType as string),
+        subBusinessType: carRentalSubTypes(formData.businessType || (businessType as string),
           formData.subBusinessType,
           formData.packages
         ),

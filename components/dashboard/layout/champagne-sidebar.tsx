@@ -268,6 +268,8 @@ const ADMIN_PLATFORM: NItem[] = [
 function getAdminOperations(isSuper: boolean): NItem[] {
   const items: NItem[] = [
     { name: "Vendor queue", url: "/dashboard/admin/vendor-queue", icon: UserCheck },
+    { name: "Inquiries & leads", url: "/dashboard/leads", icon: Inbox },
+    { name: "All bookings", url: "/dashboard/bookings", icon: CalendarCheck },
   ]
   if (isSuper) {
     items.push({ name: "Manual payments", url: "/dashboard/admin/manual-payments", icon: Banknote })

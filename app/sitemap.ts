@@ -78,6 +78,18 @@ function buildCoreShard(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/planning-tools/checklist`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/planning-tools/guest-list`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/planning-tools/timeline`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${SITE_URL}/planning-tools/degh-catering-calculator-pakistan`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${SITE_URL}/planning-tools/haq-mehr-gold-calculator-pakistan`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${SITE_URL}/planning-tools/salami-bari-trousseau-tracker-pakistan`, lastModified: now, changeFrequency: "weekly", priority: 0.75 },
+    { url: `${SITE_URL}/planning-tools/marquee-hidden-cost-calculator-pakistan`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${SITE_URL}/planning-tools/whatsapp-wedding-card-maker-pakistan`, lastModified: now, changeFrequency: "weekly", priority: 0.75 },
+    { url: `${SITE_URL}/planning-tools/segregated-islamic-wedding-planner-pakistan`, lastModified: now, changeFrequency: "weekly", priority: 0.75 },
+    { url: `${SITE_URL}/planning-tools/pakistani-mehndi-songs-dholki-tappay-generator`, lastModified: now, changeFrequency: "weekly", priority: 0.75 },
+    { url: `${SITE_URL}/planning-tools/wedding-stage-decor-cost-calculator-pakistan`, lastModified: now, changeFrequency: "weekly", priority: 0.75 },
+    { url: `${SITE_URL}/planning-tools/baraat-car-rental-fleet-calculator-pakistan`, lastModified: now, changeFrequency: "weekly", priority: 0.75 },
+    { url: `${SITE_URL}/planning-tools/bridal-makeup-salon-cost-calculator-pakistan`, lastModified: now, changeFrequency: "weekly", priority: 0.75 },
+    { url: `${SITE_URL}/planning-tools/overseas-pakistani-wedding-planner-calculator`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${SITE_URL}/planning-tools/nikkah-nama-clauses-nadra-checklist-pakistan`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
   ]
 
   const vendorTypeHubs: MetadataRoute.Sitemap = VENDOR_TYPES.map((v) => ({

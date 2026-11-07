@@ -162,24 +162,375 @@ export function generateVendorTypeCityMetadata(
   const city = getCity(citySlug)
   if (!vt || !city) return { title: "Not Found" }
 
-  const isVenue = typeSlug === "wedding-venues"
-  const title = isVenue
-    ? `Wedding Halls & Venues in ${city.name} (2026 Price List & Rates)`
-    : `${vt.plural} in ${city.name} (2026 Prices, Packages & Reviews)`
+  let fullTitle = `Best ${vt.plural} in ${city.name} (2026 Rates & Reviews)`
+  let description = `Compare top ${vt.plural.toLowerCase()} in ${city.name}: ✅ 2026 package rates ✅ Verified couple reviews ✅ Direct booking on ${SITE_NAME}!`
 
-  const description = isVenue
-    ? `Compare top wedding halls, marquees & marriage venues in ${city.name}. View 2026 per-head rates, booking price lists, capacity, photos & reviews on ${SITE_NAME}.`
-    : `Compare the best ${vt.plural.toLowerCase()} in ${city.name}. Indicative PKR prices, verified packages, customer reviews, and direct booking on ${SITE_NAME}.`
+  switch (typeSlug) {
+    case "wedding-venues":
+      fullTitle = `Wedding Halls in ${city.name} with Rates: 2026 Price List`
+      description = `Compare wedding halls in ${city.name} with rates: ✅ 2026 per-head prices (PKR 1,500+) ✅ AC marquee menus ✅ Guest capacity & photos. Get instant quotes on ${SITE_NAME}!`
+      break
+    case "wedding-photographers":
+      fullTitle = `Best Wedding Photographers in ${city.name} (2026 Packages)`
+      description = `Compare wedding photographers in ${city.name}: ✅ 2026 shoot packages ✅ Female photo crews ✅ Cinematic portfolios & verified couple reviews on ${SITE_NAME}!`
+      break
+    case "caterers":
+      fullTitle = `Best Wedding Caterers in ${city.name} (2026 Rates & Menus)`
+      description = `Compare top wedding caterers in ${city.name}: ✅ 2026 per-head rates ✅ 12kg degh portions ✅ Live BBQ & one-dish menus. Get quotes on ${SITE_NAME}!`
+      break
+    case "bridal-makeup-artists":
+      fullTitle = `Best Bridal Makeup Artists in ${city.name} (2026 Rates)`
+      description = `Book bridal makeup in ${city.name}: ✅ 2026 signature bridal & party packages ✅ Salon addresses & real bride photos. Book on ${SITE_NAME}!`
+      break
+    case "mehndi-artists":
+      fullTitle = `Best Bridal Mehndi Artists in ${city.name} (2026 Rates)`
+      description = `Book bridal mehndi in ${city.name}: ✅ 2026 dulhan henna packages ✅ Home service available ✅ Organic dark stain. Book on ${SITE_NAME}!`
+      break
+    case "wedding-decorators":
+      fullTitle = `Best Wedding Stage Decorators in ${city.name} (2026 Rates)`
+      description = `Compare stage decorators in ${city.name}: ✅ 2026 floral stage packages ✅ Entryways, truss & ambient lighting. Get free quotes on ${SITE_NAME}!`
+      break
+    case "bridal-wear":
+      fullTitle = `Best Bridal Wear & Sherwani in ${city.name} (2026 Prices)`
+      description = `Compare bridal boutiques in ${city.name}: ✅ 2026 bridal lehengas, maxi & sherwani packages ✅ Custom fittings. Book trials on ${SITE_NAME}!`
+      break
+    case "wedding-cars":
+      fullTitle = `Wedding Car Rental in ${city.name} (2026 Rates & Models)`
+      description = `Rent wedding cars in ${city.name}: ✅ Audi, Prado, Fortuner & Limousines ✅ Driver & fuel included ✅ Flower ribbon decor. Book on ${SITE_NAME}!`
+      break
+    case "wedding-planners":
+      fullTitle = `Best Wedding & Event Planners in ${city.name} (2026)`
+      description = `Hire wedding planners in ${city.name}: ✅ End-to-end management for Mehndi, Barat & Walima ✅ Budget & vendor coordination on ${SITE_NAME}!`
+      break
+    case "nikah-khwan":
+      fullTitle = `Licensed Nikah Khwan in ${city.name} (Official Registrar)`
+      description = `Find registered Nikah Khwan in ${city.name}: ✅ Union Council certified ✅ Official 4-copy register & NADRA MRC guidance. Book on ${SITE_NAME}!`
+      break
+    case "wedding-stationery":
+      fullTitle = `Wedding Cards & Digital Invites in ${city.name} (2026)`
+      description = `Order shaadi cards in ${city.name}: ✅ 2026 print prices ✅ Islamic calligraphy ✅ Digital WhatsApp e-cards & maps. Order on ${SITE_NAME}!`
+      break
+    case "wedding-cake-designers":
+      fullTitle = `Best Wedding Cakes in ${city.name} (2026 Flavors & Prices)`
+      description = `Order wedding cakes in ${city.name}: ✅ 2026 multi-tier fondant cakes ✅ Fresh floral styling ✅ Safe delivery to venue. Book on ${SITE_NAME}!`
+      break
+    case "wedding-djs":
+      fullTitle = `Wedding DJs & Sound Systems in ${city.name} (2026 Rates)`
+      description = `Book wedding sound & DJs in ${city.name}: ✅ Dholki, Mehndi & Qawwali sound systems ✅ Smoke effects & truss lights. Get quotes on ${SITE_NAME}!`
+      break
+    case "wedding-generators":
+      fullTitle = `Wedding Generator Rental in ${city.name} (2026 Rates)`
+      description = `Rent wedding generators in ${city.name}: ✅ 50kVA to 500kVA silent gensets ✅ AC & heavy marquee load backup. Book on ${SITE_NAME}!`
+      break
+    case "wedding-mithai":
+      fullTitle = `Wedding Mithai Boxes in ${city.name} (2026 Prices & Menu)`
+      description = `Order wedding mithai in ${city.name}: ✅ 2026 per kg sweet rates ✅ Custom luxury boxes & Baat Pakki gifts. Order on ${SITE_NAME}!`
+      break
+  }
 
   return buildPageMetadata({
-    title,
-    description,
+    fullTitle,
+    description: description.slice(0, 155),
     path: `/${vt.slug}/${city.slug}`,
   })
 }
 
 function formatPriceRange(vendors: VendorListItem[], isVenue = false): string | undefined {
   return computeCityPriceRange(vendors, isVenue);
+}
+
+
+interface CategoryTool {
+  title: string;
+  desc: string;
+  href: string;
+  badge: string;
+  icon: string;
+}
+
+function getCategoryTools(slug: string, cityName: string): CategoryTool[] {
+  switch (slug) {
+    case "wedding-venues":
+      return [
+        {
+          title: "Marquee Hidden Cost & AC Calculator",
+          desc: `Calculate generator diesel (PKR 6,000–12,000/hr), AC charges, and PRA/SRB taxes for ${cityName} venues.`,
+          href: "/planning-tools/marquee-hidden-cost-calculator-pakistan",
+          badge: "Saves PKR 100K+",
+          icon: "⚡",
+        },
+        {
+          title: "Punjab & Sindh One-Dish Checker",
+          desc: `Check if your 1-dish meat + 1 sweet menu complies with ${cityName} marriage laws and 10 PM curfew.`,
+          href: "/planning-tools/one-dish-menu-checker-pakistan",
+          badge: "Curfew & Law",
+          icon: "📋",
+        },
+        {
+          title: "Guest List & Seating Manager",
+          desc: `Allocate guest count between Ladkiwale and Ladkewale, track RSVPs, and calculate hall capacity.`,
+          href: "/planning-tools/guest-list",
+          badge: "RSVP Manager",
+          icon: "👥",
+        },
+        {
+          title: "Pakistani Wedding Budget Calculator",
+          desc: `Estimate total wedding venue, catering, and decor budget in PKR with real-time variance.`,
+          href: "/planning-tools/budget",
+          badge: "Essential",
+          icon: "💰",
+        },
+      ];
+    case "caterers":
+      return [
+        {
+          title: "Degh & Catering Portion Calculator",
+          desc: `Calculate how many 12kg deghs of Biryani, Qorma, and Zarda are needed for your ${cityName} wedding.`,
+          href: "/planning-tools/degh-catering-calculator-pakistan",
+          badge: "Zero Food Waste",
+          icon: "🍲",
+        },
+        {
+          title: "One-Dish Rule Compliance Checker",
+          desc: `Ensure your catering menu adheres to provincial One-Dish regulations in ${cityName}.`,
+          href: "/planning-tools/one-dish-menu-checker-pakistan",
+          badge: "Curfew & Law",
+          icon: "📋",
+        },
+        {
+          title: "Wedding Budget Calculator",
+          desc: `Track per-head catering spend vs overall Shaadi budget in PKR.`,
+          href: "/planning-tools/budget",
+          badge: "PKR Tracker",
+          icon: "💰",
+        },
+        {
+          title: "Day-of Event Timeline Creator",
+          desc: `Schedule buffet opening before 10 PM curfew to avoid venue lights-off penalties.`,
+          href: "/planning-tools/timeline",
+          badge: "Curfew Safe",
+          icon: "⏱️",
+        },
+      ];
+    case "wedding-photographers":
+      return [
+        {
+          title: "Day-of Event Timeline Creator",
+          desc: `Schedule golden-hour couple shoot, Baraat entry, stage family photos, and Rukhsati in ${cityName}.`,
+          href: "/planning-tools/timeline",
+          badge: "Shot List Sync",
+          icon: "⏱️",
+        },
+        {
+          title: "12-Month Shaadi Checklist",
+          desc: `Book your photographer 6–9 months ahead of ${cityName}'s peak wedding season.`,
+          href: "/planning-tools/checklist",
+          badge: "Roadmap",
+          icon: "📅",
+        },
+        {
+          title: "Wedding Budget Calculator",
+          desc: `Allocate budget for cinematic film, drone, and traditional photography packages.`,
+          href: "/planning-tools/budget",
+          badge: "Budgeting",
+          icon: "💰",
+        },
+        {
+          title: "Salami & Bari Trousseau Tracker",
+          desc: `Catalog bride and groom outfits and record photo session deliverables.`,
+          href: "/planning-tools/salami-bari-trousseau-tracker-pakistan",
+          badge: "Tracker",
+          icon: "🎁",
+        },
+      ];
+    case "wedding-decorators":
+      return [
+        {
+          title: "Wedding Stage & Floral Decor Calculator",
+          desc: `Compare fresh floral vs artificial stage setup costs, entry walkways, and truss lighting in ${cityName}.`,
+          href: "/planning-tools/wedding-decor-stage-lighting-cost-calculator",
+          badge: "Cost Estimator",
+          icon: "🌸",
+        },
+        {
+          title: "Marquee Hidden Cost Calculator",
+          desc: `Calculate venue outside-decorator royalties and stage power supply charges.`,
+          href: "/planning-tools/marquee-hidden-cost-calculator-pakistan",
+          badge: "Hidden Fees",
+          icon: "⚡",
+        },
+        {
+          title: "Day-of Event Timeline Creator",
+          desc: `Coordinate setup and teardown hours before the 10 PM curfew in ${cityName}.`,
+          href: "/planning-tools/timeline",
+          badge: "Setup Sync",
+          icon: "⏱️",
+        },
+        {
+          title: "Wedding Budget Calculator",
+          desc: `Plan decor allocations for Mehndi, Baraat, and Walima events in PKR.`,
+          href: "/planning-tools/budget",
+          badge: "Essential",
+          icon: "💰",
+        },
+      ];
+    case "nikah-khwan":
+      return [
+        {
+          title: "Nikkah Nama Clauses & NADRA Checklist",
+          desc: `Understand Column 18 (Tafweez-e-Talaq), Column 17 (Maintenance), and NADRA MRC requirements in ${cityName}.`,
+          href: "/planning-tools/nikkah-nama-clauses-nadra-checklist-pakistan",
+          badge: "Legal Guide",
+          icon: "📜",
+        },
+        {
+          title: "Haq Mehr & Gold Rate Calculator",
+          desc: `Calculate Haq Mehr based on live 2026 24K gold tola rates with Islamic jurisprudence guidelines.`,
+          href: "/planning-tools/haq-mehr-gold-calculator-pakistan",
+          badge: "Live Tola Rates",
+          icon: "🪙",
+        },
+        {
+          title: "Day-of Event Timeline Creator",
+          desc: `Schedule Nikah recitation, witness signatures, and dua before dinner buffet.`,
+          href: "/planning-tools/timeline",
+          badge: "Nikah Sync",
+          icon: "⏱️",
+        },
+        {
+          title: "12-Month Shaadi Checklist",
+          desc: `Track Nikahnama Union Council registration and NADRA certificate collection.`,
+          href: "/planning-tools/checklist",
+          badge: "Checklist",
+          icon: "📅",
+        },
+      ];
+    case "bridal-makeup-artists":
+    case "bridal-wear":
+      return [
+        {
+          title: "Haq Mehr & Gold Rate Calculator",
+          desc: `Calculate gold jewelry set costs (tola + making + wastage charges) for ${cityName} weddings.`,
+          href: "/planning-tools/haq-mehr-gold-calculator-pakistan",
+          badge: "Gold Estimator",
+          icon: "👑",
+        },
+        {
+          title: "Salami & Bari Trousseau Tracker",
+          desc: `Catalog bridal lehengas, jewelry sets, and trousseau gifts with photos.`,
+          href: "/planning-tools/salami-bari-trousseau-tracker-pakistan",
+          badge: "Bari Ledger",
+          icon: "🎁",
+        },
+        {
+          title: "Day-of Event Timeline Creator",
+          desc: `Plan salon appointment slots, dupatta setting, and photoshoot departure times.`,
+          href: "/planning-tools/timeline",
+          badge: "Slot Scheduler",
+          icon: "⏱️",
+        },
+        {
+          title: "Wedding Budget Calculator",
+          desc: `Budget for bridal salon looks, party makeup for family, and bridal attire.`,
+          href: "/planning-tools/budget",
+          badge: "PKR Budget",
+          icon: "💰",
+        },
+      ];
+    case "wedding-cars":
+      return [
+        {
+          title: "Wedding Car Rental & Convoy Calculator",
+          desc: `Estimate rental costs for Audi, Prado, Fortuner & Limousines with fuel and flower decor in ${cityName}.`,
+          href: "/planning-tools/pakistan-wedding-car-rental-convoy-calculator",
+          badge: "Convoy Cost",
+          icon: "🚗",
+        },
+        {
+          title: "Day-of Event Timeline Creator",
+          desc: `Schedule Rukhsati departure and convoy timings to ensure smooth arrival.`,
+          href: "/planning-tools/timeline",
+          badge: "Departure Sync",
+          icon: "⏱️",
+        },
+        {
+          title: "Marquee Hidden Cost Calculator",
+          desc: `Check valet parking provisions and venue entrance restrictions.`,
+          href: "/planning-tools/marquee-hidden-cost-calculator-pakistan",
+          badge: "Parking & Access",
+          icon: "⚡",
+        },
+        {
+          title: "Wedding Budget Calculator",
+          desc: `Track transport logistics within your overall shaadi budget in PKR.`,
+          href: "/planning-tools/budget",
+          badge: "Budgeting",
+          icon: "💰",
+        },
+      ];
+    case "wedding-djs":
+      return [
+        {
+          title: "Dholki & Qawwali Night Budget Calculator",
+          desc: `Estimate costs for live Qawwali troupe, dhol players, sound system, and floor seating in ${cityName}.`,
+          href: "/planning-tools/dholki-qawwali-night-budget-calculator-pakistan",
+          badge: "Sangeet & Qawwali",
+          icon: "🪕",
+        },
+        {
+          title: "Day-of Event Timeline Creator",
+          desc: `Plan musical entries, cake cutting fanfare, and comply with the 10 PM sound curfew.`,
+          href: "/planning-tools/timeline",
+          badge: "Sound Curfew",
+          icon: "⏱️",
+        },
+        {
+          title: "Marquee Hidden Cost Calculator",
+          desc: `Check venue sound system NOC charges and generator power capacity for DJ gear.`,
+          href: "/planning-tools/marquee-hidden-cost-calculator-pakistan",
+          badge: "Sound NOC",
+          icon: "⚡",
+        },
+        {
+          title: "Wedding Budget Calculator",
+          desc: `Keep entertainment costs aligned with your overall shaadi budget.`,
+          href: "/planning-tools/budget",
+          badge: "Budgeting",
+          icon: "💰",
+        },
+      ];
+    default:
+      return [
+        {
+          title: "Pakistani Wedding Budget Calculator",
+          desc: `Plan and track your entire wedding expenditure in PKR with realistic Pakistani benchmarks.`,
+          href: "/planning-tools/budget",
+          badge: "Essential",
+          icon: "💰",
+        },
+        {
+          title: "12-Month Wedding Checklist",
+          desc: `A complete Pakistani shaadi roadmap from Baat Pakki to Walima.`,
+          href: "/planning-tools/checklist",
+          badge: "Roadmap",
+          icon: "📅",
+        },
+        {
+          title: "Guest List & Seating Manager",
+          desc: `Track guest counts for Ladkiwale and Ladkewale with instant headcount tally.`,
+          href: "/planning-tools/guest-list",
+          badge: "RSVP Manager",
+          icon: "👥",
+        },
+        {
+          title: "Overseas Wedding Currency Converter",
+          desc: `Convert GBP, USD, AED, SAR, and CAD to PKR for diaspora weddings in ${cityName}.`,
+          href: "/planning-tools/wedding-currency-converter-overseas-pakistanis",
+          badge: "Diaspora",
+          icon: "💱",
+        },
+      ];
+  }
 }
 
 export async function VendorTypeCityPage({
@@ -698,6 +1049,53 @@ export async function VendorTypeCityPage({
             </div>
           </section>
         )}
+
+        {/* ─────────── INTERACTIVE PLANNING TOOLS (Zero Friction Desi Lead Magnets) ─────────── */}
+        <section className="mb-16">
+          <SectionHeading
+            kicker="Free Interactive Tools"
+            title={`Shaadi planning tools for ${city.name} weddings`}
+          />
+          <div className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-2">
+            {getCategoryTools(vt.slug, city.name).map((tool) => (
+              <Link
+                key={tool.href}
+                href={tool.href}
+                className="group relative flex flex-col justify-between rounded-2xl border border-bridal-beige bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:border-bridal-gold hover:shadow-md"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-bridal-cream text-xl">
+                      {tool.icon}
+                    </span>
+                    <span className="rounded-full bg-bridal-gold/10 px-3 py-1 font-bridal text-[11px] font-semibold text-bridal-gold-dark">
+                      {tool.badge}
+                    </span>
+                  </div>
+                  <h3 className="mt-4 font-display text-[19px] italic text-bridal-charcoal group-hover:text-bridal-gold-dark transition-colors">
+                    {tool.title}
+                  </h3>
+                  <p className="mt-2 font-bridal text-[13px] leading-relaxed text-bridal-text-soft">
+                    {tool.desc}
+                  </p>
+                </div>
+                <div className="mt-5 flex items-center gap-1.5 font-bridal text-[13px] font-semibold text-bridal-gold-dark">
+                  <span>Open interactive tool</span>
+                  <span className="transition-transform group-hover:translate-x-1">→</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+          <p className="mt-6 text-center">
+            <Link
+              href="/planning-tools"
+              className="inline-flex items-center gap-1.5 font-bridal text-[13.5px] font-semibold text-bridal-gold-dark hover:underline"
+            >
+              <span>Explore all 16 free wedding planning tools</span>
+              <span>→</span>
+            </Link>
+          </p>
+        </section>
 
         {/* ─────────── B11 FAQ ─────────── */}
         <section className="mb-16">

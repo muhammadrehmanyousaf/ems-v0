@@ -112,18 +112,46 @@ export function generateListicleMetadata(slug: string): Metadata {
   if (!parsed) return { title: "Not Found" }
   const { vendorType: vt, city } = parsed
 
-  const isVenue = vt.slug === "wedding-venues"
-  const title = isVenue
-    ? `Best Wedding Halls & Venues in ${city.name} (${LISTICLE_YEAR}) — Rates & Reviews`
-    : `Best ${vt.plural} in ${city.name} (${LISTICLE_YEAR}) — Prices & Reviews`
+  let fullTitle = `10 Best ${vt.plural} in ${city.name} (${LISTICLE_YEAR} Reviews)`
+  let description = `Ranked: Top ${vt.plural.toLowerCase()} in ${city.name} for ${LISTICLE_YEAR}: ✅ Verified pricing & packages ✅ Real couple reviews. Book on ${SITE_NAME}!`
 
-  const description = isVenue
-    ? `The best wedding halls, marquees & marriage venues in ${city.name} (${LISTICLE_YEAR}), ranked by real couples. Compare per-head rates, packages & book on ${SITE_NAME}.`
-    : `The best ${vt.plural.toLowerCase()} in ${city.name} (${LISTICLE_YEAR}), ranked by real couples. Compare ratings, packages & PKR prices, then book a ${vt.singular.toLowerCase()} in minutes on ${SITE_NAME}.`
-
+  switch (vt.slug) {
+    case "wedding-venues":
+      fullTitle = `10 Best Wedding Halls in ${city.name} (${LISTICLE_YEAR} Rates & Reviews)`
+      description = `Ranked: Top 10 wedding halls in ${city.name} (${LISTICLE_YEAR}): ✅ Verified per-head rates ✅ One-dish menus ✅ Capacity & photos. Book on ${SITE_NAME}!`
+      break
+    case "wedding-photographers":
+      fullTitle = `10 Best Wedding Photographers in ${city.name} (${LISTICLE_YEAR} Packages)`
+      description = `Ranked: Top 10 wedding photographers in ${city.name} (${LISTICLE_YEAR}): ✅ 2026 shoot packages ✅ Female photo crews & video. Book on ${SITE_NAME}!`
+      break
+    case "caterers":
+      fullTitle = `10 Best Wedding Caterers in ${city.name} (${LISTICLE_YEAR} Menus & Rates)`
+      description = `Ranked: Top 10 wedding caterers in ${city.name} (${LISTICLE_YEAR}): ✅ Per-head rates ✅ 12kg degh portions ✅ Live BBQ & menus on ${SITE_NAME}!`
+      break
+    case "bridal-makeup-artists":
+      fullTitle = `10 Best Bridal Makeup Artists in ${city.name} (${LISTICLE_YEAR} Rates)`
+      description = `Ranked: Top 10 bridal makeup artists in ${city.name} (${LISTICLE_YEAR}): ✅ Signature bridal & party packages ✅ Salon addresses on ${SITE_NAME}!`
+      break
+    case "mehndi-artists":
+      fullTitle = `10 Best Bridal Mehndi Artists in ${city.name} (${LISTICLE_YEAR} Henna)`
+      description = `Ranked: Top 10 bridal mehndi artists in ${city.name} (${LISTICLE_YEAR}): ✅ Dulhan henna packages ✅ Home service & dark stain on ${SITE_NAME}!`
+      break
+    case "wedding-decorators":
+      fullTitle = `10 Best Wedding Stage Decorators in ${city.name} (${LISTICLE_YEAR})`
+      description = `Ranked: Top 10 stage decorators in ${city.name} (${LISTICLE_YEAR}): ✅ Floral stage packages ✅ Entryway tunnels & truss lights on ${SITE_NAME}!`
+      break
+    case "wedding-cars":
+      fullTitle = `10 Best Wedding Car Rentals in ${city.name} (${LISTICLE_YEAR} Luxury)`
+      description = `Ranked: Top wedding car rentals in ${city.name} (${LISTICLE_YEAR}): ✅ Audi, Prado, Fortuner & Limousines ✅ Driver & fuel included on ${SITE_NAME}!`
+      break
+    default:
+      fullTitle = `10 Best ${vt.plural} in ${city.name} (${LISTICLE_YEAR} Rates & Reviews)`
+      description = `Ranked: Top ${vt.plural.toLowerCase()} in ${city.name} for ${LISTICLE_YEAR}: ✅ Verified pricing & packages ✅ Real couple reviews. Book on ${SITE_NAME}!`
+      break
+  }
   return buildPageMetadata({
-    title,
-    description,
+    fullTitle,
+    description: description.slice(0, 155),
     path: `/best/${slug}`,
     ogType: "article",
   })

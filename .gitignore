@@ -67,3 +67,11 @@ scratchpad/
 
 # QA journey output (screenshots, session state)
 .qa/
+
+# Temporary local artifacts
+scratch/
+*.bat
+*.png
+crm_token.json
+.agents/
+.claude/

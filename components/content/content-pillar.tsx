@@ -26,9 +26,17 @@ const DEFAULT_PUBLISHED = "2026-06-14"
 const DEFAULT_UPDATED = "2026-06-14"
 
 export function buildPillarMetadata(data: PillarData): Metadata {
+  const cleanDescription = data.metaDescription.length > 155
+    ? data.metaDescription.slice(0, 152) + "..."
+    : data.metaDescription;
+
+  const fullTitle = data.title.includes(SITE_NAME)
+    ? data.title
+    : (data.title.length > 44 ? data.title : `${data.title} | ${SITE_NAME}`);
+
   return buildPageMetadata({
-    title: data.title,
-    description: data.metaDescription,
+    fullTitle,
+    description: cleanDescription,
     path: `/${data.slug}`,
     ogType: "article",
     article: {

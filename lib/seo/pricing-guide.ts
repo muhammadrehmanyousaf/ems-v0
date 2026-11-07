@@ -379,6 +379,122 @@ export const VENDOR_TYPE_PRICING: Record<string, VendorTypePricing> = {
     ],
     note: `Entertainment is priced per event — a seasoned dhol pair alone can run up to ~PKR 50,000; sound system, lighting, mics and extra functions add up quickly. ${INDICATIVE_SUFFIX}`,
   },
+  "wedding-mithai": {
+    tiers: [
+      {
+        tier: "Standard Mithai",
+        band: "PKR 1,200–1,800/kg",
+        includes:
+          "Classic Gulab Jamun, Cham Cham, Laddu, Balushahi, and Jalebi in standard bakery boxes — perfect for family distributions and dholki gatherings.",
+      },
+      {
+        tier: "Premium Desi Ghee",
+        band: "PKR 2,000–3,200/kg",
+        includes:
+          "Pure desi ghee preparations including Patisa, Habshi Halwa, Badam Barfi, and Motichoor Laddu with premium branded packaging.",
+      },
+      {
+        tier: "Luxury / Kaju & Dry Fruit",
+        band: "PKR 3,500–6,500/kg",
+        includes:
+          "Kaju Katli, Pista Roll, Anjeer Barfi, stuffed dates, and saffron sweets crafted exclusively for Baat Pakki and VIP wedding guests.",
+      },
+      {
+        tier: "Bespoke Shaadi Boxes",
+        band: "PKR 1,500–5,000/box",
+        includes:
+          "Custom velvet, acrylic, or wooden bridal mithai hampers with personalized calligraphy tags, ribbons, and assorted dry fruits.",
+      },
+    ],
+    note: `Wedding sweets are priced per kg or per custom gift box — confirm packaging customization lead time and bulk order discounts for 50+ boxes. ${INDICATIVE_SUFFIX}`,
+  },
+  "nikah-khwan": {
+    tiers: [
+      {
+        tier: "Local Mosque Khateeb",
+        band: "PKR 5,000–10,000/ceremony",
+        includes:
+          "Solemnization of Nikah ceremony at home or local masjid, basic recitation, and signing of standard Nikahnama copies.",
+      },
+      {
+        tier: "Official Registered Registrar",
+        band: "PKR 12,000–25,000/ceremony",
+        includes:
+          "Union Council licensed Nikah Registrar attending venue/marquee, official government register entry, 4 signed duplicate copies, and legal documentation guidance.",
+      },
+      {
+        tier: "Prestige Scholar / Orator",
+        band: "PKR 30,000–60,000/ceremony",
+        includes:
+          "Prominent Islamic scholar delivering a personalized Khutba-e-Nikah (sermon), formal dua, and complete Union Council registration assistance.",
+      },
+      {
+        tier: "Complete Legal & NADRA MRC Package",
+        band: "PKR 25,000–50,000/package",
+        includes:
+          "Nikah solemnization plus end-to-end processing of computerized NADRA Marriage Registration Certificate (MRC) and foreign embassy attestation guidance.",
+      },
+    ],
+    note: `Nikah Khwan fees typically cover the religious solemnization and official registration fee; always verify that the officiant holds an active Union Council registrar license. ${INDICATIVE_SUFFIX}`,
+  },
+  "wedding-generators": {
+    tiers: [
+      {
+        tier: "Compact (25–50 kVA)",
+        band: "PKR 18,000–35,000/event",
+        includes:
+          "Suitable for intimate home dholki or mehndi setups, basic lighting, sound system, and fan circuits — includes 4–6 hours runtime.",
+      },
+      {
+        tier: "Medium Marquee (100–150 kVA)",
+        band: "PKR 40,000–75,000/event",
+        includes:
+          "Heavy-duty silent canopy genset powering marquee lighting, sound, food warmers, and partial air conditioning for 250–400 guests.",
+      },
+      {
+        tier: "Full Load / AC Heavy (200–350 kVA)",
+        band: "PKR 85,000–160,000/event",
+        includes:
+          "High-capacity industrial generator capable of running 20–40 tons of marquee chillers / AC units plus full stage production during summer heat.",
+      },
+      {
+        tier: "Mega Farmhouse Dual Genset (500+ kVA)",
+        band: "PKR 180,000–320,000/event",
+        includes:
+          "Dual synchronized generators (primary + hot backup) with dedicated on-site technician, cabling distribution, and fuel replenishment for 800+ guests.",
+      },
+    ],
+    note: `Generator rentals are priced per function (typically 6–8 hours) and fuel is either included up to a capped liter limit or billed separately at live diesel rates (PKR 6,000–12,000/hr). ${INDICATIVE_SUFFIX}`,
+  },
+  "wedding-cake-designers": {
+    tiers: [
+      {
+        tier: "Single-Tier Semi-Naked",
+        band: "PKR 8,000–16,000",
+        includes:
+          "Minimalist buttercream cake with fresh floral toppers for intimate Nikkah or engagement events (serves 20–35 guests).",
+      },
+      {
+        tier: "2-Tier Classic Fondant",
+        band: "PKR 18,000–32,000",
+        includes:
+          "Custom fondant finish, sugar pearl details, and choice of standard gourmet flavors (Belgian Chocolate, Red Velvet, Vanilla Salted Caramel; serves 50–80 guests).",
+      },
+      {
+        tier: "3–4 Tier Grand Statement",
+        band: "PKR 35,000–75,000",
+        includes:
+          "Multi-tier architectural design with hand-crafted sugar flowers, edible gold foil accents, and customized flavor tiers for Barat or Walima (serves 100–200 guests).",
+      },
+      {
+        tier: "Luxury Suspended / Chandelier Cake",
+        band: "PKR 80,000–180,000+",
+        includes:
+          "Bespoke 5+ tier showstopper cake with hanging acrylic crystal structures, motorized rotation, LED illumination, and on-site assembly team.",
+      },
+    ],
+    note: `Wedding cakes are priced by design complexity and guest servings — temperature-controlled refrigerated delivery to the venue is essential to avoid cake melting. ${INDICATIVE_SUFFIX}`,
+  },
 };
 
 /**
@@ -476,6 +592,38 @@ export const VENDOR_TYPE_QUESTIONS: Record<string, string[]> = {
     "Can we share a must-play and do-not-play list in advance?",
     "Is there an MC/host, and what is the overtime rate beyond the booked hours?",
   ],
+  "wedding-mithai": [
+    "Is the price calculated per kilogram or per customized gift box?",
+    "What is the lead time required for custom velvet, acrylic, or wooden boxes with personalized initials?",
+    "Are your sweets prepared in 100% pure desi ghee, and what is the shelf life in winter vs summer?",
+    "Do you provide a tasting box prior to confirming a bulk order for 100+ wedding boxes?",
+    "Can you arrange direct delivery to our wedding hall or marquee on the morning of the event?",
+    "Do you offer assorted dry fruit and saffron sweet combinations for Baat Pakki?",
+  ],
+  "nikah-khwan": [
+    "Are you an officially licensed Nikah Registrar registered with the local Union Council?",
+    "Do you bring and register the official 4-copy government Nikahnama register on the event day?",
+    "What legal documents (CNICs of bride, groom, wali, and two male witnesses) must be prepared in advance?",
+    "Will you guide and assist us through obtaining the computerized NADRA Marriage Registration Certificate (MRC)?",
+    "What is your solemnization honorarium, and is travel to our marquee or farmhouse included?",
+    "Can you deliver a customized Khutba-e-Nikah (sermon) highlighting Islamic marital ethics?",
+  ],
+  "wedding-generators": [
+    "What is the exact kVA rating, and will it comfortably sustain all marquee AC chillers and stage lighting simultaneously?",
+    "Is diesel fuel included in the quoted rental charge, or is fuel billed separately per running hour?",
+    "Is the generator enclosed in a certified silent sound-attenuated canopy to prevent engine noise?",
+    "Will a certified electrical technician remain stationed on-site throughout the function?",
+    "What is your standby emergency protocol if the primary generator encounters a fault?",
+    "Are distribution panels, heavy-gauge cables, and ATS changeover switches provided?",
+  ],
+  "wedding-cake-designers": [
+    "How many guest portions does this tiered cake provide, and can we choose distinct flavors per tier?",
+    "Is refrigerated temperature-controlled delivery and on-site stand assembly at the venue included?",
+    "Are floral decorations handcrafted edible sugar flowers, fresh organic florals, or silk faux flowers?",
+    "Do you provide or rent luxury crystal cake stands and ceremonial cake-cutting knives?",
+    "How many days in advance must we finalize the design and secure the booking date?",
+    "Do you offer cake tasting sessions for wedding couples before final confirmation?",
+  ],
 };
 
 /**
@@ -523,6 +671,22 @@ export const VENDOR_TYPE_GUIDE_PILLAR: Record<string, { label: string; href: str
   "wedding-stationery": {
     label: "Pakistani Wedding Invitation Wording",
     href: "/pakistani-wedding-invitation-wording",
+  },
+  "wedding-mithai": {
+    label: "Wedding Sweets & Mithai Price Guide Pakistan",
+    href: "/wedding-cost-in-pakistan",
+  },
+  "nikah-khwan": {
+    label: "Nikah Registration & Legal Requirements in Pakistan",
+    href: "/one-dish-law-and-wedding-guest-limits-pakistan",
+  },
+  "wedding-generators": {
+    label: "Wedding Generator & AC Power Backup Guide",
+    href: "/wedding-venue-cost-in-lahore",
+  },
+  "wedding-cake-designers": {
+    label: "Pakistani Wedding Cake & Budget Breakdown",
+    href: "/wedding-cost-in-pakistan",
   },
 };
 

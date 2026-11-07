@@ -78,9 +78,76 @@ function indicativeRange(pricing: VendorTypePricing | null, slug?: string): stri
 export function generateVendorTypeHubMetadata(slug: VendorTypeSlug): Metadata {
   const vt = getVendorType(slug)
   if (!vt) return { title: "Not Found" }
+
+  let fullTitle = `Best ${vt.plural} in Pakistan (2026 Packages & Rates)`
+  let description = `Find verified ${vt.plural.toLowerCase()} across Pakistan: ✅ 2026 package rates ✅ Real couple reviews ✅ Direct booking across 86 cities on ${SITE_NAME}!`
+
+  switch (slug) {
+    case "wedding-venues":
+      fullTitle = `Wedding Venues in Pakistan (2026 Rates & Directory)`
+      description = `Discover top wedding halls, marquees & farmhouses across Pakistan: ✅ 2026 per-head rates (PKR 1,500+) ✅ Menus & capacity across 86 cities on ${SITE_NAME}!`
+      break
+    case "wedding-photographers":
+      fullTitle = `Wedding Photographers in Pakistan (2026 Packages)`
+      description = `Book top wedding photographers across Pakistan: ✅ 2026 shoot packages ✅ Female photo crews & cinematic portfolios across 86 cities on ${SITE_NAME}!`
+      break
+    case "caterers":
+      fullTitle = `Wedding Caterers in Pakistan (2026 Rates & Menus)`
+      description = `Compare wedding caterers across Pakistan: ✅ 2026 per-head rates ✅ One-dish menu packages, live BBQ stalls & degh cooking on ${SITE_NAME}!`
+      break
+    case "bridal-makeup-artists":
+      fullTitle = `Bridal Makeup Artists in Pakistan (2026 Rates)`
+      description = `Book top bridal makeup artists across Pakistan: ✅ 2026 bridal & party makeup packages ✅ Salon addresses & real bride photos on ${SITE_NAME}!`
+      break
+    case "mehndi-artists":
+      fullTitle = `Bridal Mehndi Artists in Pakistan (2026 Rates)`
+      description = `Book bridal mehndi artists across Pakistan: ✅ 2026 dulhan henna packages ✅ Home service available across 86 cities on ${SITE_NAME}!`
+      break
+    case "wedding-decorators":
+      fullTitle = `Wedding Stage Decorators in Pakistan (2026 Rates)`
+      description = `Compare wedding stage decorators across Pakistan: ✅ 2026 floral stage packages ✅ Entryways, truss & ambient lighting on ${SITE_NAME}!`
+      break
+    case "bridal-wear":
+      fullTitle = `Bridal Wear & Sherwani in Pakistan (2026 Prices)`
+      description = `Compare top bridal boutiques across Pakistan: ✅ 2026 designer lehengas, maxi & sherwani packages ✅ Custom fittings on ${SITE_NAME}!`
+      break
+    case "wedding-cars":
+      fullTitle = `Wedding Car Rental in Pakistan (2026 Rates & Fleet)`
+      description = `Rent luxury bridal cars across Pakistan: ✅ Audi, Prado, Fortuner & Limousines ✅ Driver & fuel included ✅ Flower ribbon decor on ${SITE_NAME}!`
+      break
+    case "wedding-planners":
+      fullTitle = `Wedding Planners in Pakistan (2026 Directory)`
+      description = `Hire verified wedding planners across Pakistan: ✅ Complete event coordination for Mehndi, Barat & Walima across 86 cities on ${SITE_NAME}!`
+      break
+    case "nikah-khwan":
+      fullTitle = `Licensed Nikah Khwan in Pakistan (Official Registrar)`
+      description = `Find registered Nikah Khwan across Pakistan: ✅ Union Council licensed ✅ Official 4-copy register & NADRA MRC guidance on ${SITE_NAME}!`
+      break
+    case "wedding-stationery":
+      fullTitle = `Wedding Cards in Pakistan (2026 Prices & E-Cards)`
+      description = `Order shaadi cards across Pakistan: ✅ 2026 print prices ✅ Islamic calligraphy ✅ Digital WhatsApp e-cards & maps on ${SITE_NAME}!`
+      break
+    case "wedding-cake-designers":
+      fullTitle = `Wedding Cakes in Pakistan (2026 Flavors & Prices)`
+      description = `Order custom wedding cakes across Pakistan: ✅ 2026 multi-tier fondant cakes ✅ Fresh floral styling ✅ Safe venue delivery on ${SITE_NAME}!`
+      break
+    case "wedding-djs":
+      fullTitle = `Wedding DJs & Sound Systems in Pakistan (2026)`
+      description = `Book wedding sound & DJs across Pakistan: ✅ Dholki, Mehndi & Qawwali sound systems ✅ Smoke effects & lights on ${SITE_NAME}!`
+      break
+    case "wedding-generators":
+      fullTitle = `Wedding Generator Rental in Pakistan (2026 Rates)`
+      description = `Rent wedding generators across Pakistan: ✅ 50kVA to 500kVA silent diesel gensets ✅ AC & heavy marquee load backup on ${SITE_NAME}!`
+      break
+    case "wedding-mithai":
+      fullTitle = `Wedding Mithai Boxes in Pakistan (2026 Prices)`
+      description = `Order wedding mithai boxes across Pakistan: ✅ 2026 per kg sweet rates ✅ Custom luxury boxes & Baat Pakki gifts on ${SITE_NAME}!`
+      break
+  }
+
   return buildPageMetadata({
-    title: `${vt.plural} in Pakistan`,
-    description: `Find and book the best ${vt.plural.toLowerCase()} across Pakistan. ${vt.description} Compare prices, read real reviews and book on ${SITE_NAME}.`,
+    fullTitle,
+    description: description.slice(0, 155),
     path: `/${vt.slug}`,
   })
 }
