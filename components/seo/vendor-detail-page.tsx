@@ -334,6 +334,7 @@ export async function VendorDetailPage(input: PageInput) {
     ? priceDisplay.metaPrice
     : "2026 packages & per-head rates";
 
+
   // WP29: the policy as the refund engine will apply it (server summary), not only the registration label
   const cancelShown = cancellationDisplay(vendor)
   const venueFaqs = isVenue

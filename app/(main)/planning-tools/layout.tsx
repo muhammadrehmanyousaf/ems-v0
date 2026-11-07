@@ -37,7 +37,7 @@ export default function PlanningToolsLayout({
   const combined = combineGraph(appLd, breadcrumbsLd);
 
   return (
-    <div className="min-h-screen bg-slate-50/50">
+    <div className="min-h-screen bg-gradient-to-br from-bridal-cream via-white to-bridal-cream/80">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(combined) }}
