@@ -127,12 +127,12 @@ const pakistaniCalculators = [
   { name: "Degh & Catering", href: "/planning-tools/degh-catering-calculator-pakistan", icon: Utensils, desc: "12kg deghs & portions" },
   { name: "Haq Mehr & Gold", href: "/planning-tools/haq-mehr-gold-calculator-pakistan", icon: Crown, desc: "Live 24K tola rates" },
   { name: "One-Dish Checker", href: "/planning-tools/one-dish-menu-checker-pakistan", icon: ChefHat, desc: "Provincial law & 10 PM curfew" },
-  { name: "Stage & Decor Cost", href: "/planning-tools/wedding-decor-stage-lighting-cost-calculator", icon: Palette, desc: "Floral & entryway pricing" },
-  { name: "Car Rental Convoy", href: "/planning-tools/pakistan-wedding-car-rental-convoy-calculator", icon: Car, desc: "Audi, Prado & Fortuner" },
+  { name: "Stage & Decor Cost", href: "/planning-tools/wedding-stage-decor-cost-calculator-pakistan", icon: Palette, desc: "Floral & entryway pricing" },
+  { name: "Car Rental Convoy", href: "/planning-tools/baraat-car-rental-fleet-calculator-pakistan", icon: Car, desc: "Audi, Prado & Fortuner" },
   { name: "Nikkah Nama & NADRA", href: "/planning-tools/nikkah-nama-clauses-nadra-checklist-pakistan", icon: ScrollText, desc: "Clause 18 & MRC guide" },
   { name: "Salami & Bari Ledger", href: "/planning-tools/salami-bari-trousseau-tracker-pakistan", icon: Sparkles, desc: "Trousseau gifts & cash" },
-  { name: "Currency Converter", href: "/planning-tools/wedding-currency-converter-overseas-pakistanis", icon: DollarSign, desc: "GBP, USD, AED to PKR" },
-  { name: "Dholki & Qawwali", href: "/planning-tools/dholki-qawwali-night-budget-calculator-pakistan", icon: Drum, desc: "Sound, dhol & troupe" },
+  { name: "Currency Converter", href: "/planning-tools/overseas-pakistani-wedding-planner-calculator", icon: DollarSign, desc: "GBP, USD, AED to PKR" },
+  { name: "Dholki & Qawwali", href: "/planning-tools/pakistani-mehndi-songs-dholki-tappay-generator", icon: Drum, desc: "Sound, dhol & troupe" },
 ];
 
 const planningTools = [...corePlanningTools, ...pakistaniCalculators];
