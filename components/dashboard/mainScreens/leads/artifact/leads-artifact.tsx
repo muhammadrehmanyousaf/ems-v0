@@ -18,6 +18,7 @@ import { leadBudgetError, leadGuestsError, leadNumberMessageUr } from "@/lib/lea
 import { venueSpacesApi, type SubVenueNode } from "@/lib/api/venueSpaces"
 import { openBookingForm, bookingIdFromSaved } from "@/components/dashboard/mainScreens/artifact/booking-form"
 import { StaffAPI } from "@/lib/api/staff"
+import { AssignToBusinessModal } from "@/components/dashboard/admin/assignment/AssignToBusinessModal"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useBusiness } from "@/context/BusinessContext"
 import { useUser } from "@/context/UserContext"
@@ -185,7 +186,8 @@ function rowHtml(l: Lead): string {
   const bookBtn = canBook ? `<button class="iconbtn book" data-lead-book="${l.id}" title="Booking banayein" aria-label="Booking banayein"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M12 13v4M10 15h4"/></svg></button>` : ""
   // WP39 / LEADS-013: a WhatsApp-only lead still has a number to ring / message
   const telWa = `${phone ? `<button class="iconbtn" data-tel="${escHtml(phone)}" data-lead-id="${l.id}" title="Call" aria-label="Call">${callSvg}</button>` : ""}${waPhone ? `<button class="iconbtn wa" data-wa="${escHtml(waPhone)}" data-lead-id="${l.id}" title="WhatsApp" aria-label="WhatsApp">${waSvg}</button>` : ""}`
-  const acts = `<div class="lead-acts">${telWa}${bookBtn}${editBtn}</div>`
+  const assignBtn = `<button class="iconbtn" data-lead-assign="${l.id}" title="Venue badlein / Assign" aria-label="Venue badlein / Assign"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg></button>`
+  const acts = `<div class="lead-acts">${telWa}${assignBtn}${bookBtn}${editBtn}</div>`
   const bz = (l as unknown as { business?: { name?: string; city?: string } })?.business
   const venueBadge = bz?.name ? `<div style="font-size:11px;color:var(--ink-3);margin-top:2px;font-weight:500">🏢 ${escHtml(bz.name)}${bz.city ? ` · ${escHtml(bz.city)}` : ""}</div>` : ""
   return `<tr data-status="${st.tab}">
@@ -239,6 +241,7 @@ function leadQuickViewHtml(l: Lead, businesses?: BizLite[]): string {
       ${advBtns}
       ${bookingLink}
       ${canBook ? `<button class="btn btn-ghost sm" data-lead-book="${l.id}">→ Booking banayein</button>` : ""}
+      <button class="btn btn-ghost sm" data-lead-assign="${l.id}">⇄ Venue badlein</button>
       <button class="btn btn-ghost sm" data-lead-edit="${l.id}">Edit</button>
       <button class="btn btn-ghost sm" data-nav-btn="/dashboard/leads/${l.id}">Poori profile ›</button>
     </div>`
@@ -337,6 +340,7 @@ export function LeadsArtifact() {
   const { data, isError } = useQuery({ queryKey: ["leads-artifact"], queryFn: () => LeadAPI.listAll({}) })
   const leads = data?.leads ?? []
   const leadsRef = React.useRef(leads); leadsRef.current = leads
+  const [assignLead, setAssignLead] = React.useState<Lead | null>(null)
   const searchParams = useSearchParams()
   const { user: me } = useUser()
   const meRef = React.useRef<{ id: number; name?: string | null } | null>(null)
@@ -382,6 +386,13 @@ export function LeadsArtifact() {
         // quick-view drawer (row click)
         const lv = t.closest("[data-lead-view]") as HTMLElement | null
         if (lv?.dataset.leadView) { const l = leadsRef.current.find((x) => x.id === Number(lv.dataset.leadView)); if (l) openDrawer(s, l.contactName || "Lead", leadQuickViewHtml(l, bizListRef.current)); return }
+        // assign venue modal
+        const assign = t.closest("[data-lead-assign]") as HTMLElement | null
+        if (assign?.dataset.leadAssign) {
+          const l = leadsRef.current.find((x) => x.id === Number(assign.dataset.leadAssign))
+          if (l) setAssignLead(l)
+          return
+        }
         if (t.closest("[data-lead-new]")) { openDrawer(s, "Naya lead", leadFormHtml(undefined, undefined, bizListRef.current, bizRef.current)); populateLeadDeps(s, Number(bizRef.current), undefined, undefined, meRef.current); return }
         // one-tap pipeline stage-advance (contacted/qualified/quoted) or mark lost
         const adv = t.closest("[data-lead-adv]") as HTMLElement | null
@@ -491,7 +502,28 @@ export function LeadsArtifact() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, data, isError])
 
-  return <div ref={hostRef} />
+  return (
+    <>
+      <div ref={hostRef} />
+      {assignLead && (
+        <AssignToBusinessModal
+          open={!!assignLead}
+          onOpenChange={(v) => !v && setAssignLead(null)}
+          lead={{
+            id: assignLead.id,
+            contactName: assignLead.contactName,
+            contactPhone: assignLead.contactPhone,
+            businessName: (assignLead as unknown as { business?: { name?: string } })?.business?.name || "Unassigned",
+            eventType: assignLead.eventType,
+          }}
+          onSuccess={() => {
+            qc.invalidateQueries({ queryKey: ["leads-artifact"] })
+            setAssignLead(null)
+          }}
+        />
+      )}
+    </>
+  )
 }
 
 export default LeadsArtifact
