@@ -198,18 +198,109 @@ export function VendorBugReportWidget() {
     (t) => t.status === "open" || t.status === "in_progress" || t.status === "waiting_on_vendor"
   ).length
 
+  // Draggable position state — allows user to move the widget anywhere so it never obstructs tables or buttons
+  const [position, setPosition] = React.useState<{ x: number; y: number } | null>(null)
+  const [isDragging, setIsDragging] = React.useState(false)
+  const dragRef = React.useRef<{
+    startX: number
+    startY: number
+    origX: number
+    origY: number
+    hasMoved: boolean
+  } | null>(null)
+
+  // Restore saved position from localStorage
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem("ww-help-btn-pos")
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (typeof parsed?.x === "number" && typeof parsed?.y === "number") {
+          const clampedX = Math.min(Math.max(10, parsed.x), window.innerWidth - 220)
+          const clampedY = Math.min(Math.max(10, parsed.y), window.innerHeight - 60)
+          setPosition({ x: clampedX, y: clampedY })
+        }
+      }
+    } catch {}
+  }, [])
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      origX: rect.left,
+      origY: rect.top,
+      hasMoved: false,
+    }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!dragRef.current) return
+    const dx = e.clientX - dragRef.current.startX
+    const dy = e.clientY - dragRef.current.startY
+    if (Math.hypot(dx, dy) > 5) {
+      dragRef.current.hasMoved = true
+      setIsDragging(true)
+      const newX = Math.min(Math.max(10, dragRef.current.origX + dx), window.innerWidth - 220)
+      const newY = Math.min(Math.max(10, dragRef.current.origY + dy), window.innerHeight - 60)
+      setPosition({ x: newX, y: newY })
+    }
+  }
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!dragRef.current) return
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    } catch {}
+    if (dragRef.current.hasMoved && position) {
+      try {
+        localStorage.setItem("ww-help-btn-pos", JSON.stringify(position))
+      } catch {}
+      setTimeout(() => setIsDragging(false), 50)
+    } else {
+      setIsDragging(false)
+    }
+    dragRef.current = null
+  }
+
   return (
     <>
-      {/* Floating Action Button Docked Bottom-Right (offset from DevTools) */}
+      {/* Moveable Floating Action Button — Drag to reposition anywhere */}
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-[76px] max-sm:right-4 z-50 flex items-center gap-3 px-3.5 py-2 rounded-full border border-[#C4A484]/70 shadow-2xl transition-all duration-200 hover:scale-105 active:scale-95 hover:border-[#D8A85A] group"
-        style={{
-          background: "linear-gradient(135deg, #1A1815 0%, #2A251E 100%)",
-          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(184, 134, 59, 0.25)",
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onClick={(e) => {
+          if (isDragging || dragRef.current?.hasMoved) {
+            e.preventDefault()
+            e.stopPropagation()
+            return
+          }
+          setOpen(true)
         }}
-        aria-label="Report a bug or get support"
+        className={`fixed z-50 flex items-center gap-3 px-3.5 py-2 rounded-full border border-[#C4A484]/70 shadow-2xl select-none touch-none transition-shadow duration-200 ${
+          isDragging ? "cursor-grabbing opacity-95 scale-105" : "cursor-grab hover:border-[#D8A85A] hover:scale-105"
+        } group`}
+        style={
+          position
+            ? {
+                left: `${position.x}px`,
+                top: `${position.y}px`,
+                background: "linear-gradient(135deg, #1A1815 0%, #2A251E 100%)",
+                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(184, 134, 59, 0.25)",
+              }
+            : {
+                bottom: "20px",
+                right: "76px",
+                background: "linear-gradient(135deg, #1A1815 0%, #2A251E 100%)",
+                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(184, 134, 59, 0.25)",
+              }
+        }
+        aria-label="Report a bug or get support (drag to reposition)"
       >
         <span
           className="relative w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm"

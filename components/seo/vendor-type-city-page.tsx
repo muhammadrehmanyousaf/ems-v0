@@ -348,7 +348,7 @@ function getCategoryTools(slug: string, cityName: string): CategoryTool[] {
         {
           title: "Wedding Stage & Floral Decor Calculator",
           desc: `Compare fresh floral vs artificial stage setup costs, entry walkways, and truss lighting in ${cityName}.`,
-          href: "/planning-tools/wedding-decor-stage-lighting-cost-calculator",
+          href: "/planning-tools/wedding-stage-decor-cost-calculator-pakistan",
           badge: "Cost Estimator",
           icon: "🌸",
         },
@@ -442,7 +442,7 @@ function getCategoryTools(slug: string, cityName: string): CategoryTool[] {
         {
           title: "Wedding Car Rental & Convoy Calculator",
           desc: `Estimate rental costs for Audi, Prado, Fortuner & Limousines with fuel and flower decor in ${cityName}.`,
-          href: "/planning-tools/pakistan-wedding-car-rental-convoy-calculator",
+          href: "/planning-tools/baraat-car-rental-fleet-calculator-pakistan",
           badge: "Convoy Cost",
           icon: "🚗",
         },
@@ -473,7 +473,7 @@ function getCategoryTools(slug: string, cityName: string): CategoryTool[] {
         {
           title: "Dholki & Qawwali Night Budget Calculator",
           desc: `Estimate costs for live Qawwali troupe, dhol players, sound system, and floor seating in ${cityName}.`,
-          href: "/planning-tools/dholki-qawwali-night-budget-calculator-pakistan",
+          href: "/planning-tools/pakistani-mehndi-songs-dholki-tappay-generator",
           badge: "Sangeet & Qawwali",
           icon: "🪕",
         },
@@ -525,7 +525,7 @@ function getCategoryTools(slug: string, cityName: string): CategoryTool[] {
         {
           title: "Overseas Wedding Currency Converter",
           desc: `Convert GBP, USD, AED, SAR, and CAD to PKR for diaspora weddings in ${cityName}.`,
-          href: "/planning-tools/wedding-currency-converter-overseas-pakistanis",
+          href: "/planning-tools/overseas-pakistani-wedding-planner-calculator",
           badge: "Diaspora",
           icon: "💱",
         },

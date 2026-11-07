@@ -74,6 +74,27 @@ const nextConfig = {
       // the time of removal — see 2026-05-07 rebrand sweep). Anyone landing on
       // these old URLs from a bookmark or external link goes to the new
       // SEO Master Plan Phase T1: Duplicate URL pairs -> 301 redirect to canonicals
+      // Planning Tools canonical redirects
+      {
+        source: "/planning-tools/pakistan-wedding-car-rental-convoy-calculator",
+        destination: "/planning-tools/baraat-car-rental-fleet-calculator-pakistan",
+        permanent: true,
+      },
+      {
+        source: "/planning-tools/wedding-decor-stage-lighting-cost-calculator",
+        destination: "/planning-tools/wedding-stage-decor-cost-calculator-pakistan",
+        permanent: true,
+      },
+      {
+        source: "/planning-tools/wedding-currency-converter-overseas-pakistanis",
+        destination: "/planning-tools/overseas-pakistani-wedding-planner-calculator",
+        permanent: true,
+      },
+      {
+        source: "/planning-tools/dholki-qawwali-night-budget-calculator-pakistan",
+        destination: "/planning-tools/pakistani-mehndi-songs-dholki-tappay-generator",
+        permanent: true,
+      },
       { source: "/venues", destination: "/wedding-venues", permanent: true },
       { source: "/venues/:city([a-zA-Z-]+)", destination: "/wedding-venues/:city", permanent: true },
       { source: "/photographers", destination: "/wedding-photographers", permanent: true },
