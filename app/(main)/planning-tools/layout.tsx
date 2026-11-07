@@ -10,9 +10,9 @@ import {
 import { safeJsonLd } from "@/lib/seo/jsonld";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Wedding Planning Tools & Checklists",
+  title: "Free Pakistani Wedding Planning Tools & Calculators (2026)",
   description:
-    "Free planning tools for Pakistani weddings — wedding checklist, budget calculator, guest list manager, and event timeline by Wedding Wala.",
+    "16 free interactive tools for Pakistani weddings: Degh catering calculator, Haq Mehr & gold tola rates, Marquee AC & hidden costs, Nikkah Nama legal guide, Salami tracker, and 12-month checklist.",
   path: "/planning-tools",
 });
 
@@ -22,9 +22,9 @@ export default function PlanningToolsLayout({
   children: React.ReactNode;
 }) {
   const appLd = webApplicationLD({
-    name: `Wedding Planning Tools Suite — ${SITE_NAME}`,
+    name: `Pakistani Wedding Planning Tools & Calculators Suite — ${SITE_NAME}`,
     description:
-      "Interactive planning tools for Pakistani weddings: wedding budget calculator, checklist, guest list manager, and event timeline.",
+      "Interactive 2026 planning tools for Pakistani weddings: Degh catering calculator, Haq Mehr tola calculator, marquee hidden cost estimator, Nikkah Nama checklist, wedding budget, and checklist.",
     url: "/planning-tools",
     applicationCategory: "LifestyleApplication",
   });
@@ -37,7 +37,7 @@ export default function PlanningToolsLayout({
   const combined = combineGraph(appLd, breadcrumbsLd);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-bridal-cream via-white to-bridal-cream/80">
+    <div className="min-h-screen bg-slate-50/50">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(combined) }}

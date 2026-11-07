@@ -2,9 +2,9 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "one-dish-law-and-wedding-guest-limits-pakistan",
-  "title": "One Dish Wedding Law Pakistan (2026 Rules, Menu List, Guest Limits & Fines)",
+  "title": "One-Dish Law in Pakistan 2026: Menu Rules, Curfew & Fines",
   "h1": "One Dish Wedding Law Pakistan (2026 Rules, Menu List, Guest Limits & Penalties)",
-  "metaDescription": "Complete 2026 guide to Pakistan's One-Dish wedding law: permitted menu items (Punjab Marriage Functions Act 2016), 200-guest limit, 10 PM cut-off, and fine penalties.",
+  "metaDescription": "Official 2026 guide to Punjab & ICT One-Dish marriage laws: allowed menu items, 10:00 PM curfew rules, magistrate inspection fines & legal exceptions.",
   "eyebrow": "Wedding Laws & Compliance 2026",
   "updatedLabel": "October 2026",
   "lead": "The \"one-dish law\" restricts wedding hosts across Pakistan to serving a single main course to curb ostentatious and wasteful spending. In Punjab (under the Punjab Marriage Functions Act 2016) and Islamabad, it is strictly enforced alongside a mandatory 10:00 PM lights-off cut-off; Sindh and Islamabad enforce a 200–300 guest limit. Penalties include fines up to PKR 2,000,000 and sealing of wedding halls.",

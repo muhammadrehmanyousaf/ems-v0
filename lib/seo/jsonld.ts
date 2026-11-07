@@ -312,13 +312,17 @@ export function vendorLD(v: VendorInput) {
     ? v.photos
     : (v.imageUrl ? [v.imageUrl] : undefined);
 
+  const cleanDesc = (v.description && !v.description.includes("Unclaimed") && !v.description.includes("public records"))
+    ? v.description
+    : `Explore ${v.name} in ${v.cityName}: 2026 packages, rates, real photos, verified couple reviews & direct booking on ${SITE_NAME}.`;
+
   const out: Record<string, any> = {
     "@context": "https://schema.org",
     "@type": schemaType,
     "@id": `${url}#vendor`,
     name: v.name,
     url,
-    description: v.description,
+    description: cleanDesc,
     address: postalAddress,
     currenciesAccepted: "PKR",
     paymentAccepted: "Cash, Credit Card, Bank Transfer, JazzCash, Easypaisa",
@@ -376,7 +380,7 @@ export interface VenueInput extends VendorInput {
 }
 
 export function venueLD(v: VenueInput) {
-  const url = `${SITE_URL}/venues/${v.citySlug}/${v.slug}`;
+  const url = `${SITE_URL}/${v.vendorTypeSlug || "wedding-venues"}/${v.citySlug}/${v.slug}`;
   const postalAddress: Record<string, any> = {
     "@type": "PostalAddress",
     addressLocality: v.cityName,
@@ -390,13 +394,17 @@ export function venueLD(v: VenueInput) {
     ? v.photos
     : (v.imageUrl ? [v.imageUrl] : undefined);
 
+  const cleanDesc = (v.description && !v.description.includes("Unclaimed") && !v.description.includes("public records"))
+    ? v.description
+    : `Explore ${v.name} in ${v.cityName}: 2026 per-head rates, hall capacity, real photos, verified couple reviews & direct booking on ${SITE_NAME}.`;
+
   const out: Record<string, any> = {
     "@context": "https://schema.org",
     "@type": "EventVenue",
     "@id": `${url}#venue`,
     name: v.name,
     url,
-    description: v.description,
+    description: cleanDesc,
     address: postalAddress,
     currenciesAccepted: "PKR",
     paymentAccepted: "Cash, Credit Card, Bank Transfer, JazzCash, Easypaisa",

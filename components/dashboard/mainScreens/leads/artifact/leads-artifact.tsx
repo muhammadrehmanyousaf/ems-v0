@@ -186,8 +186,10 @@ function rowHtml(l: Lead): string {
   // WP39 / LEADS-013: a WhatsApp-only lead still has a number to ring / message
   const telWa = `${phone ? `<button class="iconbtn" data-tel="${escHtml(phone)}" data-lead-id="${l.id}" title="Call" aria-label="Call">${callSvg}</button>` : ""}${waPhone ? `<button class="iconbtn wa" data-wa="${escHtml(waPhone)}" data-lead-id="${l.id}" title="WhatsApp" aria-label="WhatsApp">${waSvg}</button>` : ""}`
   const acts = `<div class="lead-acts">${telWa}${bookBtn}${editBtn}</div>`
+  const bz = (l as unknown as { business?: { name?: string; city?: string } })?.business
+  const venueBadge = bz?.name ? `<div style="font-size:11px;color:var(--ink-3);margin-top:2px;font-weight:500">🏢 ${escHtml(bz.name)}${bz.city ? ` · ${escHtml(bz.city)}` : ""}</div>` : ""
   return `<tr data-status="${st.tab}">
-    <td><div class="c-couple" data-lead-view="${l.id}" style="cursor:pointer"><span class="ava">${escHtml(initialsOf(name))}</span><div><div class="cc-nm">${escHtml(name)}</div><div class="cc-ev">${escHtml(phone || "—")}</div></div></div></td>
+    <td><div class="c-couple" data-lead-view="${l.id}" style="cursor:pointer"><span class="ava">${escHtml(initialsOf(name))}</span><div><div class="cc-nm">${escHtml(name)}</div><div class="cc-ev">${escHtml(phone || "—")}</div>${venueBadge}</div></div></td>
     <td class="td-mut">${escHtml(cap(l.eventType))}</td>
     <td class="td-date">${escHtml(shortDate(l.eventDate))}</td>
     <td><span class="mth"><span class="srcdot" style="background:${src.color}"></span> ${escHtml(src.label)}</span></td>
@@ -227,7 +229,7 @@ function leadQuickViewHtml(l: Lead, businesses?: BizLite[]): string {
       ${item("Shaadi kab", shortDate(l.eventDate))}
       ${item("Budget", l.estimatedBudget != null ? `Rs ${pkNum(Number(l.estimatedBudget))}` : "—")}
       ${item("Mehmaan", l.estimatedGuests != null ? String(l.estimatedGuests) : "—")}
-      ${item("Venue", venue || "—")}
+      ${item("Venue", ((l as unknown as { business?: { name?: string; city?: string } })?.business?.name || venue || "—") + (((l as unknown as { business?: { city?: string } })?.business?.city) ? ` (${(l as unknown as { business?: { city?: string } })?.business?.city})` : ""))}
       ${item("Agli follow-up", fuTxt)}
       ${item("Email", l.contactEmail || "—")}
       ${item("WhatsApp", l.contactWhatsapp || "—")}

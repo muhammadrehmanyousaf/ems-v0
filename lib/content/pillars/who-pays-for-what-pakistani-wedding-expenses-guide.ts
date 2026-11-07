@@ -2,9 +2,9 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "who-pays-for-what-pakistani-wedding-expenses-guide",
-  "title": "Who Pays for What in a Pakistani Wedding? (Barat vs Walima Cost Split & Islamic Rules)",
+  "title": "Who Pays for What in Pakistani Wedding? (2026 Cost Split)",
   "h1": "Who Pays for What in a Pakistani Wedding? Barat vs Walima Cost Split & Islamic Guide",
-  "metaDescription": "In Pakistani culture, who pays for the wedding? Complete breakdown of bride vs groom family expenses, Barat vs Walima split, who pays in Islam (Mahr & Sunnah), and modern 50/50 budgeting.",
+  "metaDescription": "Bride or groom side? Exact 2026 breakdown of who pays for Barat, Walima, Mehndi, Jahez & Haq Mehr in Pakistani culture and Islam. Avoid family disputes!",
   "eyebrow": "Wedding Planning & Budget 2026",
   "updatedLabel": "October 2026",
   "lead": "In Pakistani culture, wedding expenses are customarily divided between the two families: the bride's family pays for the Barat (the main wedding and feast), while the groom's family pays for the Walima (the reception banquet). In Islam, the only obligatory financial responsibility on the groom is Mahr (Haq Mehr) paid directly to the bride, while hosting the Walima is a strongly emphasized Sunnah. Everything else is social tradition.",
@@ -39,7 +39,7 @@ export const data: PillarData = {
     },
     {
       "type": "h2",
-      "text": "The short answer: Barat vs Walima at a glance"
+      "text": "Who Pays for What in a Pakistani Wedding? Barat vs Walima Cost Split"
     },
     {
       "type": "p",

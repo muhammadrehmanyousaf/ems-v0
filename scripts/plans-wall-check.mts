@@ -44,7 +44,7 @@ const check = (name: string, fn: () => void | Promise<void>) =>
 const ok = (c: unknown, m?: string) => { if (!c) throw new Error(m ?? "expected true"); };
 const eq = (a: unknown, b: unknown, m?: string) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${m ?? "expected"} ${JSON.stringify(b)}, got ${JSON.stringify(a)}`); };
 
-function walk(dir: string, out: string[] = [], skip: string[] = ["node_modules", ".next", ".git", "e2e", "cypress", "qa", "docs"]): string[] {
+function walk(dir: string, out: string[] = [], skip: string[] = ["node_modules", ".next", ".git", "e2e", "cypress", "qa", "docs", ".claude", ".agents"]): string[] {
   for (const f of readdirSync(dir)) {
     if (skip.includes(f)) continue;
     const p = path.join(dir, f);

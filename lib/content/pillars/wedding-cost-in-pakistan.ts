@@ -2,9 +2,9 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "wedding-cost-in-pakistan",
-  "title": "Wedding Cost in Pakistan (2026): Per Head Rates, Budget Breakdown & Guest Tiers",
+  "title": "Wedding Cost in Pakistan 2026: Budget Guide & Per Head Rates",
   "h1": "Wedding Cost in Pakistan (2026): Per Head Rates, Guest Tiers & Full Budget Breakdown",
-  "metaDescription": "How much does a wedding cost in Pakistan? Complete 2026 budget guide: per head reception rates (PKR 1,500 - 15,000+), total costs for 100, 150, 200, 250, 400 guests, and per-category expenses.",
+  "metaDescription": "How much does a Pakistani wedding cost in 2026? Complete budget breakdown for 100 to 500 guests: marquee per-head prices, catering deghs, gold & bridal wear.",
   "eyebrow": "Wedding Budget Guide 2026",
   "updatedLabel": "October 2026",
   "lead": "A typical wedding in Pakistan costs anywhere from roughly PKR 1.5-3.5 million for a budget affair to PKR 8-15 million and well beyond for an elite one, with most middle-class weddings landing around PKR 4-7 million. Catering and per-head reception fees represent the single largest expense, scaling directly with your guest count (100, 200, 250, or 400+ guests), city, venue tier, and season.",

@@ -90,39 +90,85 @@ export async function generateVendorDetailMetadata(
 
   const priceDisplay = formatPrice(vendor.raw || vendor);
   const indexable = isListingIndexable(vendor.raw || vendor);
+  const priceStr = (priceDisplay.metaPrice && priceDisplay.metaPrice !== "Price on request")
+    ? priceDisplay.metaPrice
+    : "2026 packages & per-head rates";
 
-  if (input.typeSlug === "wedding-venues") {
-    const area = String(vendor.raw?.subArea || "").trim();
-    const areaStr = area ? `${area}, ` : "";
-    title = `${vendor.name}, ${areaStr}${city.name} — Price, Capacity & Photos (2026)`;
-    const capStr = vendor.raw?.minCapacity && vendor.raw?.maxCapacity
-      ? `, capacity ${vendor.raw.minCapacity}–${vendor.raw.maxCapacity}`
-      : vendor.raw?.maxCapacity
-      ? `, capacity up to ${vendor.raw.maxCapacity}`
-      : "";
-    description = `${vendor.name} in ${areaStr}${city.name}: ${priceDisplay.metaPrice}${capStr}. See photos, menu options & book a visit.`.slice(0, 155);
-  } else if (input.typeSlug === "wedding-photographers") {
-    title = `${vendor.name} (${city.name}) — Wedding Packages, Rates & Portfolio`
-    description = `Book ${vendor.name} in ${city.name}. Compare wedding photography and cinematography packages, rates, real portfolio photos & reviews on ${SITE_NAME}.`
-  } else if (input.typeSlug === "caterers") {
-    title = `${vendor.name} (${city.name}) — Wedding Catering Menu, Rates & Reviews`
-    description = `View authentic Pakistani wedding menus and per head rates for ${vendor.name} in ${city.name}. Compare wedding packages and reviews on ${SITE_NAME}.`
-  } else if (input.typeSlug === "bridal-makeup-artists") {
-    title = `${vendor.name} (${city.name}) — Bridal Makeup Charges & Portfolio`
-    description = `View ${vendor.name} bridal and party makeup packages in ${city.name}. Check real bride transformations, salon address, and reviews on ${SITE_NAME}.`
-  } else if (input.typeSlug === "wedding-mithai") {
-    title = `${vendor.name} (${city.name}) — Wedding Mithai Menu, Prices & Reviews`
-    description = `Order custom wedding mithai boxes from ${vendor.name} in ${city.name}. View sweet menu, per kg price list, and reviews on ${SITE_NAME}.`
-  } else {
-    title = `${vendor.name} — ${vt.singular} in ${city.name} (2026 Prices & Reviews)`
-    description = vendor.description
-      ? vendor.description.slice(0, 155)
-      : `Compare ${vendor.name} (${vt.singular.toLowerCase()}) in ${city.name}, Pakistan. Check rates, packages, and book on ${SITE_NAME}.`
+  let fullTitle = `${vendor.name} ${city.name}: 2026 Rates & Reviews`;
+
+  switch (input.typeSlug) {
+    case "wedding-venues":
+      fullTitle = `${vendor.name} ${city.name} Booking Price: 2026 Rates & Photos`;
+      if (fullTitle.length > 58) {
+        fullTitle = `${vendor.name} ${city.name}: 2026 Rates & Photos`;
+      }
+      const capStr = vendor.raw?.maxCapacity ? ` (${vendor.raw.maxCapacity} guests)` : "";
+      description = `Planning your event at ${vendor.name} in ${city.name}? ✅ 2026 per-head rates (${priceStr}) ✅ Hall photos & capacity${capStr}. View menus & book on ${SITE_NAME}!`.slice(0, 155);
+      break;
+    case "wedding-photographers":
+      fullTitle = `${vendor.name} ${city.name}: 2026 Packages & Photos`;
+      description = `Book ${vendor.name} in ${city.name}. ✅ 2026 packages (${priceStr}) ✅ Photo & video portfolio ✅ Verified reviews. Check dates & book on ${SITE_NAME}!`.slice(0, 155);
+      break;
+    case "caterers":
+      fullTitle = `${vendor.name} ${city.name}: 2026 Catering Menu & Rates`;
+      description = `Book ${vendor.name} in ${city.name}. ✅ 2026 per-head rates (${priceStr}) ✅ Live degh & BBQ menu ✅ One-dish packages. Get instant quotes on ${SITE_NAME}!`.slice(0, 155);
+      break;
+    case "bridal-makeup-artists":
+      fullTitle = `${vendor.name} ${city.name}: 2026 Bridal Makeup Rates`;
+      description = `Book ${vendor.name} in ${city.name}. ✅ 2026 bridal packages (${priceStr}) ✅ Real bride looks ✅ Salon address. Book your slot on ${SITE_NAME}!`.slice(0, 155);
+      break;
+    case "mehndi-artists":
+      fullTitle = `${vendor.name} ${city.name}: 2026 Mehndi Rates & Henna`;
+      description = `Book ${vendor.name} in ${city.name}. ✅ 2026 bridal mehndi rates (${priceStr}) ✅ Dulhan henna photos ✅ Home service available. Book on ${SITE_NAME}!`.slice(0, 155);
+      break;
+    case "wedding-decorators":
+      fullTitle = `${vendor.name} ${city.name}: 2026 Stage Decor Rates`;
+      description = `Book ${vendor.name} in ${city.name}. ✅ 2026 stage decor rates (${priceStr}) ✅ Floral backdrops, walkway & lights. Book on ${SITE_NAME}!`.slice(0, 155);
+      break;
+    case "bridal-wear":
+      fullTitle = `${vendor.name} ${city.name}: 2026 Bridal Lehenga Prices`;
+      description = `Explore ${vendor.name} in ${city.name}. ✅ 2026 bridal lehengas & sherwani collection (${priceStr}) ✅ Custom fittings on ${SITE_NAME}!`.slice(0, 155);
+      break;
+    case "wedding-cars":
+      fullTitle = `${vendor.name} ${city.name}: 2026 Wedding Car Rental Rates`;
+      description = `Rent wedding cars from ${vendor.name} in ${city.name}. ✅ 2026 rates (${priceStr}) ✅ Audi, Prado & Fortuner with driver on ${SITE_NAME}!`.slice(0, 155);
+      break;
+    case "wedding-planners":
+      fullTitle = `${vendor.name} ${city.name}: 2026 Wedding Planner Rates`;
+      description = `Plan your wedding with ${vendor.name} in ${city.name}. ✅ 2026 packages (${priceStr}) ✅ End-to-end event coordination on ${SITE_NAME}!`.slice(0, 155);
+      break;
+    case "nikah-khwan":
+      fullTitle = `${vendor.name} ${city.name}: Registered Nikah Khwan`;
+      description = `Book ${vendor.name} in ${city.name}. ✅ Union Council registered Nikah Khwan ✅ NADRA MRC compliance & Nikkahnama signing on ${SITE_NAME}!`.slice(0, 155);
+      break;
+    case "wedding-stationery":
+      fullTitle = `${vendor.name} ${city.name}: 2026 Wedding Card Prices`;
+      description = `Order shaadi cards from ${vendor.name} in ${city.name}. ✅ 2026 prices (${priceStr}) ✅ Custom Islamic calligraphy & e-cards on ${SITE_NAME}!`.slice(0, 155);
+      break;
+    case "wedding-cake-designers":
+      fullTitle = `${vendor.name} ${city.name}: 2026 Wedding Cake Prices`;
+      description = `Order wedding cakes from ${vendor.name} in ${city.name}. ✅ 2026 multi-tier cake prices (${priceStr}) ✅ Delivery to venue on ${SITE_NAME}!`.slice(0, 155);
+      break;
+    case "wedding-djs":
+      fullTitle = `${vendor.name} ${city.name}: 2026 Wedding Sound & DJ Rates`;
+      description = `Book ${vendor.name} in ${city.name}. ✅ 2026 sound & DJ rates (${priceStr}) ✅ Dholki, Mehndi & Qawwali sound systems on ${SITE_NAME}!`.slice(0, 155);
+      break;
+    case "wedding-generators":
+      fullTitle = `${vendor.name} ${city.name}: 2026 Wedding Generator Rates`;
+      description = `Rent backup generators from ${vendor.name} in ${city.name}. ✅ 2026 rental rates (${priceStr}) ✅ 50kVA-500kVA silent gensets on ${SITE_NAME}!`.slice(0, 155);
+      break;
+    case "wedding-mithai":
+      fullTitle = `${vendor.name} ${city.name}: 2026 Mithai Box Prices`;
+      description = `Order mithai from ${vendor.name} in ${city.name}. ✅ 2026 sweet box prices (${priceStr}) ✅ Custom shaadi packaging. Order on ${SITE_NAME}!`.slice(0, 155);
+      break;
+    default:
+      fullTitle = `${vendor.name} ${city.name}: 2026 Rates & Packages`;
+      description = `Planning your wedding with ${vendor.name} in ${city.name}? ✅ 2026 rates (${priceStr}) ✅ Verified portfolio & direct booking on ${SITE_NAME}!`.slice(0, 155);
+      break;
   }
-
   return {
     ...buildPageMetadata({
-      title,
+      fullTitle,
       description,
       path: `/${vt.slug}/${city.slug}/${vendor.nameSlug}-${vendor.id}`,
       imageUrl: vendor.imageUrl,
@@ -284,23 +330,39 @@ export async function VendorDetailPage(input: PageInput) {
     }),
   );
 
+  const priceStr = (priceDisplay.metaPrice && priceDisplay.metaPrice !== "Price on request")
+    ? priceDisplay.metaPrice
+    : "2026 packages & per-head rates";
+
   // WP29: the policy as the refund engine will apply it (server summary), not only the registration label
   const cancelShown = cancellationDisplay(vendor)
+  const venueFaqs = isVenue
+    ? [
+        {
+          question: `What is the 2026 per-head price at ${vendor.name}?`,
+          answer: `Per-head rates at ${vendor.name} in ${city.name} start from ${priceStr}. Packages include banquet hall seating, stage decor, ambient lighting, and one-dish or multi-course dinner menus.`,
+        },
+        {
+          question: `What is the guest capacity of ${vendor.name}?`,
+          answer: `${vendor.name} can accommodate up to ${vendor.raw?.maxCapacity || "500+"} guests, suitable for intimate Nikkah ceremonies as well as grand Barat and Walima receptions.`,
+        },
+      ]
+    : [
+        {
+          question: `What are the 2026 packages and rates for ${vendor.name}?`,
+          answer: `Packages for ${vendor.name} in ${city.name} start from ${priceStr}. View full service breakdown, photo portfolio, and real couple reviews on ${SITE_NAME}.`,
+        },
+      ];
+
   const faqs = [
+    ...venueFaqs,
     {
-      question: `How do I book ${vendor.name}?`,
-      answer: `Click "Check availability" below to start the booking. ${SITE_NAME} holds your deposit until ${vendor.name} confirms — full refund if they decline.`,
+      question: `How do I book ${vendor.name} through Wedding Wala?`,
+      answer: `You can check live dates, request a direct quote, or message ${vendor.name} on WhatsApp directly through Wedding Wala with verified price transparency.`,
     },
     {
-      question: `What's ${vendor.name}'s cancellation policy?`,
-      answer:
-        cancelShown
-          ? `${cancelShown.headline.replace(/[.\s]+$/, "")}. ${cancelShown.detail ? `${cancelShown.detail} ` : ""}Full details on our Cancellation Policy page.`
-          : `See ${SITE_NAME}'s default Cancellation Policy. Tier (Flexible / Moderate / Strict) is shown at checkout.`,
-    },
-    {
-      question: `Where is ${vendor.name} based?`,
-      answer: `${vendor.name} is based in ${city.name}, ${city.region}, and is listed on ${SITE_NAME} as a ${vt.singular.toLowerCase()}.`,
+      question: `Where is ${vendor.name} located?`,
+      answer: `${vendor.name} is located in ${city.name}, ${city.region}, Pakistan. Verified location, directions, and hall photos are available on ${SITE_NAME}.`,
     },
   ]
 
@@ -450,6 +512,73 @@ export async function VendorDetailPage(input: PageInput) {
                 {vendor.name} is a trusted {vt.singular.toLowerCase()} serving couples across {city.name} and surrounding areas. Known for quality service across Mehndi, Barat, and Walima celebrations, {vendor.name} offers transparent booking options, bespoke packages, and verified support on Wedding Wala.
               </p>
             )}
+
+            {/* Interactive Planning Tool Bridge for Vendor Intent */}
+            <div className="mt-5 rounded-2xl border border-bridal-gold/30 bg-bridal-cream/50 p-4">
+              <div className="flex items-start gap-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-lg shadow-sm">
+                  {isVenue ? "🏛️" : vt.slug === "caterers" ? "🍲" : vt.slug === "nikah-khwan" ? "📜" : "💍"}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-bridal text-[11px] font-semibold uppercase tracking-wider text-bridal-gold-dark">
+                    {isVenue
+                      ? "Marquee Hidden Charges & AC Cost"
+                      : vt.slug === "caterers"
+                      ? "Degh & Catering Portion Calculator"
+                      : vt.slug === "nikah-khwan"
+                      ? "Nikkah Nama & Legal Clauses"
+                      : "Free Pakistani Wedding Planning Tools"}
+                  </p>
+                  <p className="mt-0.5 font-bridal text-[13px] leading-relaxed text-bridal-text">
+                    {isVenue ? (
+                      <>
+                        Calculate generator diesel fuel, AC surcharge &amp; PRA/SRB tax estimates for {vendor.name} with our{" "}
+                        <Link
+                          href="/planning-tools/marquee-hidden-cost-calculator-pakistan"
+                          className="font-semibold text-bridal-gold-dark underline hover:text-bridal-charcoal"
+                        >
+                          Marquee Cost Calculator
+                        </Link>
+                        .
+                      </>
+                    ) : vt.slug === "caterers" ? (
+                      <>
+                        Calculate exact 12kg deghs of Biryani &amp; Qorma for your guest count with our{" "}
+                        <Link
+                          href="/planning-tools/degh-catering-calculator-pakistan"
+                          className="font-semibold text-bridal-gold-dark underline hover:text-bridal-charcoal"
+                        >
+                          Degh Catering Calculator
+                        </Link>
+                        .
+                      </>
+                    ) : vt.slug === "nikah-khwan" ? (
+                      <>
+                        Review Column 18 right of divorce &amp; NADRA MRC registration requirements with our{" "}
+                        <Link
+                          href="/planning-tools/nikkah-nama-clauses-nadra-checklist-pakistan"
+                          className="font-semibold text-bridal-gold-dark underline hover:text-bridal-charcoal"
+                        >
+                          Nikkah Nama Checklist
+                        </Link>
+                        .
+                      </>
+                    ) : (
+                      <>
+                        Plan your entire shaadi budget in PKR and track vendor allocations with our{" "}
+                        <Link
+                          href="/planning-tools/budget"
+                          className="font-semibold text-bridal-gold-dark underline hover:text-bridal-charcoal"
+                        >
+                          Wedding Budget Calculator
+                        </Link>
+                        .
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {/* A venue whose plan is paused (PLANS-SPEC contract 6): the page stays up (200) with a calm notice, the enquiry /
                 booking / quote doors are shown disabled, and an existing booking is not affected. */}

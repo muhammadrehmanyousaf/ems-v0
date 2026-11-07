@@ -425,6 +425,43 @@ export function CityVendorListingGrid({
         </div>
       </div>
 
+      {/* ── POPULAR LOCALITIES QUICK-FILTER PILLS ── */}
+      {availableAreas.length > 0 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin">
+          <span className="shrink-0 font-bridal text-[11px] uppercase tracking-[0.16em] text-bridal-text-label font-medium mr-1">
+            Areas:
+          </span>
+          <button
+            type="button"
+            onClick={() => setSelectedArea("all")}
+            className={`shrink-0 rounded-full px-3 py-1 font-bridal text-[12px] font-medium transition-all ${
+              selectedArea === "all"
+                ? "bg-bridal-gold text-bridal-charcoal font-semibold shadow-xs"
+                : "border border-bridal-beige bg-bridal-ivory/80 text-bridal-text-soft hover:border-bridal-gold/60 hover:text-bridal-charcoal"
+            }`}
+          >
+            All {cityName}
+          </button>
+          {availableAreas.map((area) => {
+            const isSelected = selectedArea.toLowerCase() === area.toLowerCase();
+            return (
+              <button
+                key={area}
+                type="button"
+                onClick={() => setSelectedArea(isSelected ? "all" : area)}
+                className={`shrink-0 rounded-full px-3 py-1 font-bridal text-[12px] font-medium transition-all ${
+                  isSelected
+                    ? "bg-bridal-gold text-bridal-charcoal font-semibold shadow-xs"
+                    : "border border-bridal-beige bg-bridal-ivory/80 text-bridal-text-soft hover:border-bridal-gold/60 hover:text-bridal-charcoal"
+                }`}
+              >
+                {area}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Results Header Counter */}
       <div className="flex items-center justify-between px-1">
         <p className="font-bridal text-[13px] text-bridal-text-soft">

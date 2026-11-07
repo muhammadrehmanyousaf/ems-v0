@@ -2,9 +2,9 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "dowry-jahez-guide-pakistan",
-  "title": "Complete Jahez List for Marriage in Pakistan (2026 Checklist & Saman List)",
+  "title": "Complete Jahez List for Marriage in Pakistan (2026 Checklist)",
   "h1": "Complete Jahez List for Marriage in Pakistan: 2026 Saman Checklist, Laws & Recovery",
-  "metaDescription": "Download the complete Jahez list for marriage in Pakistan (2026 checklist): itemized saman-e-jahez breakdown (kitchen, electronics, furniture), legal template, and laws explained.",
+  "metaDescription": "Download free itemized Saman-e-Jahez list for Pakistani marriage (Kitchen, Electronics, Bedroom, Gold). Includes official signed legal stamp paper template!",
   "eyebrow": "Wedding Culture & Law",
   "updatedLabel": "October 2026",
   "lead": "Looking for a complete Jahez list for marriage in Pakistan? While jahez (dowry) is a cultural tradition rather than an Islamic obligation, millions of families prepare an itemized saman-e-jahez list to organize household gifts or legally document bridal property under the Dowry Act 1976. This comprehensive 2026 guide provides the full itemized jahez saman checklist, legal signed list template, court recovery process, and Islamic perspective.",
@@ -30,7 +30,7 @@ export const data: PillarData = {
     },
     {
       "type": "h2",
-      "text": "What is jahez (dowry)?"
+      "text": "Complete Jahez List for Marriage in Pakistan: What is Included in Saman-e-Jahez?"
     },
     {
       "type": "p",

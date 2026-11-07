@@ -35,6 +35,7 @@ import {
 } from "@/lib/api/analytics"
 import axiosInstance from "@/lib/axiosConfig"
 import { lastMonths, summariseRange, periodLabel, layoutChart, monthShort, monthLong, type MonthPoint } from "@/lib/utils/overview-chart"
+import { fmtYmd } from "@/lib/utils/ymd"
 
 /* ── helper icons (SVG strings for shadow DOM) ────────────────── */
 const calSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>`
@@ -451,7 +452,7 @@ export function AdminOverviewArtifact() {
         .map((b) => {
           const ini = initialsOf(b.customerName)
           const tone = bookingStatusTone(b.status)
-          const fmtDate = b.bookingDate ? new Date(b.bookingDate).toLocaleDateString("en-PK", { day: "numeric", month: "short" }) : "—"
+          const fmtDate = fmtYmd(b.bookingDate, "dayMonth")
           return `
             <div class="row" data-nav-btn="/dashboard/bookings">
               <span class="ava">${escHtml(ini)}</span>

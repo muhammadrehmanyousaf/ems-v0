@@ -42,13 +42,14 @@ const priorities = [
 
 export default function BudgetPage() {
   const [items, setItems] = useState<BudgetItem[]>([
-    { id: '1', category: 'Venue', item: 'Reception Hall', estimated: 5000, actual: 5200, notes: 'Including setup fee', priority: 'high' },
-    { id: '2', category: 'Catering', item: 'Wedding Dinner', estimated: 3000, actual: 0, notes: 'Per person cost', priority: 'high' },
-    { id: '3', category: 'Photography', item: 'Wedding Photos', estimated: 1500, actual: 0, notes: 'Full day coverage', priority: 'medium' },
-    { id: '4', category: 'Attire', item: 'Wedding Dress', estimated: 2000, actual: 0, notes: 'Bridal gown', priority: 'medium' },
-    { id: '5', category: 'Decor', item: 'Flowers & Centerpieces', estimated: 1200, actual: 0, notes: 'Ceremony & reception', priority: 'low' },
+    { id: '1', category: 'Venue', item: 'Reception Marquee / Banquet Hall', estimated: 850000, actual: 820000, notes: 'Including AC generator & hall lighting', priority: 'high' },
+    { id: '2', category: 'Catering', item: 'One-Dish Wedding Dinner (300 guests)', estimated: 750000, actual: 0, notes: 'Mutton Pulao, Chicken Qorma, Naan, Kheer', priority: 'high' },
+    { id: '3', category: 'Photography', item: 'Bridal Shoot & Cinematic Video', estimated: 250000, actual: 0, notes: 'Full 3-day coverage (Mehndi, Barat, Walima)', priority: 'medium' },
+    { id: '4', category: 'Attire', item: 'Bridal Lehenga & Groom Sherwani', estimated: 350000, actual: 0, notes: 'Bespoke bridal wear & accessories', priority: 'high' },
+    { id: '5', category: 'Decor', item: 'Stage Backdrop & Floral Entryway', estimated: 180000, actual: 0, notes: 'Fresh floral stage & fairy lights', priority: 'medium' },
+    { id: '6', category: 'Beauty', item: 'Bridal Signature Makeup & Henna', estimated: 120000, actual: 0, notes: 'Barat + Walima signature looks', priority: 'medium' },
   ]);
-  const [totalBudget, setTotalBudget] = useState(15000);
+  const [totalBudget, setTotalBudget] = useState(2500000);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newItem, setNewItem] = useState<Partial<BudgetItem>>({
     category: 'Other',
