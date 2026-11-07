@@ -475,11 +475,11 @@ export default function VendorCard({
                     <p className="font-bridal text-[10px] uppercase tracking-[0.2em] font-medium text-bridal-text-label">
                       {priceDisplay.model.priceBasis === "per_head" ? "Per Guest" : "Starting from"}
                     </p>
-                    <p className="font-display italic text-[20px] sm:text-[22px] text-bridal-gold-dark mt-0.5 leading-none">
+                    <p className="font-bridal font-bold text-[17px] sm:text-[18px] text-bridal-charcoal mt-1 tracking-tight leading-snug">
                       {priceDisplay.headline !== "Price on request" ? (
                         priceDisplay.headline
                       ) : (
-                        <span className="text-[15px] text-bridal-text-soft">
+                        <span className="text-[14px] font-normal text-bridal-text-soft">
                           Price on request
                         </span>
                       )}

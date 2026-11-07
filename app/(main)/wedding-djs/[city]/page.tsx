@@ -6,7 +6,7 @@ import {
 
 const SLUG = "wedding-djs" as const
 
-export const dynamicParams = false
+export const dynamicParams = true
 export const revalidate = 3600
 
 export const generateStaticParams = () => generateVendorTypeCityStaticParams()

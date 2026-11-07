@@ -47,7 +47,7 @@ interface RouteProps {
   params: { cluster: string; slug: string }
 }
 
-export const dynamicParams = false
+export const dynamicParams = true
 
 export function generateStaticParams() {
   return POSTS.map((p) => ({ cluster: p.cluster, slug: p.slug }))

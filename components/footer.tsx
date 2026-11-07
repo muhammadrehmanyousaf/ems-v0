@@ -302,27 +302,35 @@ export function Footer() {
               })()}
             </StaggerItem>
 
-            {/* For Couples */}
+            {/* For Couples & Planning Tools */}
             <StaggerItem className="lg:col-span-2 space-y-4">
               <h4 className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-gold font-medium">
-                For Couples
+                Shaadi Tools &amp; Planning
               </h4>
-              <ul className="space-y-2.5">
+              <ul className="space-y-2">
                 {[
-                  { href: "/how-it-works",    name: "How it works" },
-                  { href: "/planning-tools",  name: "Planning tools" },
+                  { href: "/planning-tools",  name: "All 14 Planning Tools" },
+                  { href: "/planning-tools/budget", name: "Budget Calculator (PKR)" },
+                  { href: "/planning-tools/checklist", name: "12-Month Checklist" },
+                  { href: "/planning-tools/guest-list", name: "Guest List & Seating" },
+                  { href: "/planning-tools/timeline", name: "Day-of Event Timeline" },
+                  { href: "/planning-tools/marquee-hidden-cost-calculator-pakistan", name: "Marquee Hidden Cost & AC" },
+                  { href: "/planning-tools/degh-catering-calculator-pakistan", name: "Degh & Catering Portions" },
+                  { href: "/planning-tools/haq-mehr-gold-calculator-pakistan", name: "Haq Mehr & Gold Rate" },
+                  { href: "/planning-tools/one-dish-menu-checker-pakistan", name: "One-Dish Law Checker" },
+                  { href: "/planning-tools/wedding-decor-stage-lighting-cost-calculator", name: "Stage & Decor Cost" },
+                  { href: "/planning-tools/pakistan-wedding-car-rental-convoy-calculator", name: "Wedding Car Rental" },
+                  { href: "/planning-tools/nikkah-nama-clauses-nadra-checklist-pakistan", name: "Nikkah Nama & NADRA" },
                   { href: "/wedding-guides",  name: "Wedding guides" },
                   { href: "/cities",          name: "Browse by city" },
                   { href: "/real-weddings",   name: "Real weddings" },
-                  { href: "/blog",            name: "Wedding blog" },
-                  { href: "/help",            name: "Help & support" },
                 ].map((item) => (
                   <li key={item.href}>
                     <Link
                       href={item.href}
                       className="
                         group inline-flex items-center gap-1.5
-                        font-bridal text-[14px] text-bridal-text
+                        font-bridal text-[13px] text-bridal-text
                         hover:text-bridal-gold transition-colors duration-200
                       "
                     >

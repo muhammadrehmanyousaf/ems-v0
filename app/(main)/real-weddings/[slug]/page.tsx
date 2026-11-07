@@ -22,7 +22,7 @@ interface RouteProps {
   params: { slug: string }
 }
 
-export const dynamicParams = false
+export const dynamicParams = true
 
 export function generateStaticParams() {
   return REAL_WEDDINGS.map((r) => ({ slug: r.slug }))
