@@ -24,6 +24,8 @@ interface AssignToBusinessModalProps {
     businessName?: string | null
     eventType?: string | null
   } | null
+  /** If assigning multiple Leads */
+  bulkLeadIds?: number[] | null
   /** If assigning a Booking */
   booking?: {
     id: number
@@ -52,6 +54,7 @@ export function AssignToBusinessModal({
   open,
   onOpenChange,
   lead,
+  bulkLeadIds,
   booking,
   onSuccess,
 }: AssignToBusinessModalProps) {
@@ -115,7 +118,10 @@ export function AssignToBusinessModal({
 
     try {
       setIsSubmitting(true)
-      if (lead) {
+      if (bulkLeadIds && bulkLeadIds.length > 0) {
+        await AdminBusinessAPI.bulkAssignLeads(bulkLeadIds, selectedBusiness.id, adminNote.trim() || undefined)
+        showSuccessToast(`${bulkLeadIds.length} leads assigned to ${selectedBusiness.name}`)
+      } else if (lead) {
         await AdminBusinessAPI.assignLeadToBusiness(lead.id, selectedBusiness.id, adminNote.trim() || undefined)
         showSuccessToast(`Lead reassigned to ${selectedBusiness.name}`)
       } else if (booking) {
@@ -131,11 +137,13 @@ export function AssignToBusinessModal({
     }
   }
 
-  const title = lead
-    ? `Assign Lead #${lead.id} to Business`
-    : booking
-      ? `Assign Booking #${booking.id} to Business`
-      : "Assign to Business"
+  const title = bulkLeadIds && bulkLeadIds.length > 0
+    ? `Assign ${bulkLeadIds.length} Leads to Venue`
+    : lead
+      ? `Assign Lead #${lead.id} to Business`
+      : booking
+        ? `Assign Booking #${booking.id} to Business`
+        : "Assign to Business"
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -146,7 +154,12 @@ export function AssignToBusinessModal({
             {title}
           </DialogTitle>
           <DialogDescription>
-            {lead && (
+            {bulkLeadIds && bulkLeadIds.length > 0 && (
+              <span>
+                Assigning <strong>{bulkLeadIds.length} selected inquiries</strong> to a target venue in batch.
+              </span>
+            )}
+            {!bulkLeadIds && lead && (
               <span>
                 Assigning inquiry from <strong>{lead.contactName || "Client"}</strong> ({lead.contactPhone || "No phone"}) · Currently linked to:{" "}
                 <strong>{lead.businessName || "Unassigned"}</strong>

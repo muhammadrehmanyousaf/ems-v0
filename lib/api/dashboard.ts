@@ -1602,6 +1602,20 @@ export class BookingsAPI {
   static async markCompleted(id: number): Promise<void> {
     await axiosInstance.patch(`/api/v1/bookings/${id}`, { status: "Completed" });
   }
+
+  static async delete(id: number): Promise<void> {
+    await axiosInstance.delete(`/api/v1/bookings/${id}`);
+  }
+
+  static async bulkDelete(ids: number[]): Promise<{ deleted: number; failed: number }> {
+    const res = await axiosInstance.post("/api/v1/bookings/bulk-delete", { ids });
+    return res.data?.data;
+  }
+
+  static async bulkUpdateStatus(ids: number[], status: string): Promise<{ updated: number; failed: number }> {
+    const res = await axiosInstance.post("/api/v1/bookings/bulk-status", { ids, status });
+    return res.data?.data;
+  }
 }
 
 // ─── Packages ─────────────────────────────────────────────────

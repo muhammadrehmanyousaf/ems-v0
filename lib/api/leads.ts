@@ -355,6 +355,10 @@ export class LeadAPI {
     await axiosInstance.delete(`/api/v1/leads/${id}`);
   }
 
+  static async delete(id: number): Promise<void> {
+    return LeadAPI.remove(id);
+  }
+
   /**
    * GET /api/v1/leads/conversion-analytics
    * Per-source funnel + revenue. Optional date-window filter.

@@ -23,12 +23,12 @@ import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useBusiness } from "@/context/BusinessContext"
 import { useUser } from "@/context/UserContext"
 import { safeDateValue, assignableReps } from "@/lib/lead-form-safety"
-import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, initTablePager, setPagerFilter, restoreTab, savePref, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
+import { useArtifactShell, pkNum, escHtml, initialsOf, openDrawer, closeDrawer, openConfirm, initTablePager, setPagerFilter, restoreTab, savePref, errorBannerHtml } from "@/components/dashboard/mainScreens/artifact/artifact-shell"
 
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
 function shortDate(s?: string | null) {
   if (!s) return "—"
-  if (dateOnlyOf(s)) return fmtYmd(s, "short") // WP23: a calendar day is printed from the string, never through the browser zone
+  if (dateOnlyOf(s)) return fmtYmd(s, "short")
   const d = new Date(s); if (isNaN(d.getTime())) return String(s)
   return d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })
 }
@@ -59,12 +59,6 @@ function relTime(s?: string | null) {
   const mo = Math.floor(days / 30); return `${mo} mahine pehle`
 }
 
-// The stage vocabulary is shared with the Overview (lib/lead-stage.ts), so a
-// lead reads "Naya" on both screens, not "Naya" here and "New" there.
-/**
- * A save the server refuses is shown ON the field that is wrong, in plain words. The server's own sentence lists
- * internal names (form_inquiry, manual_walkin) and, as a toast, covered the drawer's title and first field.
- */
 const LEAD_FIELD_ID: Record<string, string> = {
   source: "ld-source", status: "ld-status", eventType: "ld-event", contactName: "ld-name", contactPhone: "ld-phone",
   contactWhatsapp: "ld-wa", contactEmail: "ld-email", eventDate: "ld-date", estimatedBudget: "ld-budget",
@@ -96,14 +90,8 @@ function markLeadField(root: ShadowRoot, field: string, text: string): boolean {
 function showLeadFieldError(root: ShadowRoot, err: unknown): boolean {
   const d = (err as { response?: { data?: { message?: string; data?: { field?: string } } } })?.response?.data
   const field = d?.data?.field || ""
-  // estimatedBudget / estimatedGuests carry no LEAD_FIELD_TEXT entry: the server's own sentence names the rule
   return markLeadField(root, field, LEAD_FIELD_TEXT[field] || d?.message || "Ye field sahi nahi")
 }
-/**
- * WP21 — Budget / Mehmaan are checked BEFORE the round trip (lib/lead-numbers.ts mirrors the server rule: empty ok,
- * otherwise Budget > 0 and Mehmaan a whole number >= 1). On EDIT a stored legacy value that the vendor did not
- * change is not re-judged (older leads carry a 0), exactly as the server lets it through.
- */
 function leadNumberProblem(root: ShadowRoot, raw: { budget: string; guests: string }, orig?: Lead): boolean {
   const same = (typed: string, stored: unknown) => stored != null && stored !== "" && Number(typed) === Number(stored)
   const be = leadBudgetError(raw.budget)
@@ -125,12 +113,7 @@ const SOURCE: Record<LeadSource, { label: string; color: string }> = {
 }
 const stageOf = (s?: LeadStatus) => STAGE[s || "new"] || STAGE.new
 const sourceOf = (s?: LeadSource) => SOURCE[s || "other"] || SOURCE.other
-// WP39 / LEADS-010: the pipeline order and the plain one-tap advance live in lib/lead-stage.ts (nextStageOf), shared with the detail page.
 
-/**
- * WP39 / LEADS-011 (decision): marking a lead Khoya asks WHY (a mis-tap no longer closes a wedding enquiry in one tap, and the reason
- * is stored). Shared by the list quick view and the detail page.
- */
 export function lostReasonFormHtml(leadId: number): string {
   const opts = LOST_REASONS.map((r) => `<option value="${escHtml(r)}">${escHtml(r)}</option>`).join("")
   return `<div class="dfield"><label class="dlabel">Lead kyun khoyi?</label><select id="lost-reason">${opts}</select></div>
@@ -138,7 +121,6 @@ export function lostReasonFormHtml(leadId: number): string {
     <div class="qv-note">Khoya lead baad mein \"Dobara kholein\" se wapas khul sakti hai.</div>
     <div class="ww-dfoot"><button class="btn btn-ghost" data-drawer-close>Rehne dein</button><button class="btn btn-danger" data-lead-lost-go="${leadId}">Haan, khoya mark karein</button></div>`
 }
-/** The text stored as the lead's status reason for a lost lead: the picked reason, plus the note when one was typed. */
 export function lostReasonText(reason: string, note: string): string {
   const n = (note || "").trim()
   return n ? `${reason} — ${n}` : reason
@@ -147,44 +129,28 @@ export function lostReasonText(reason: string, note: string): string {
 const EXTRA_CSS = String.raw`
 .ferr{ color:var(--bad); font-size:11.5px; line-height:1.4; margin-top:4px; } [aria-invalid=true]{ border-color:var(--bad) !important; }
 .srcdot{ width:8px; height:8px; border-radius:50%; display:inline-block; flex:none; }
-.lead-acts{ display:flex; gap:6px; justify-content:flex-end; }
-.iconbtn{ width:32px; height:32px; flex:none; border-radius:8px; border:1px solid var(--border-2); background:var(--surface); color:var(--ink-2); display:grid; place-items:center; transition:background .12s,color .12s,border-color .12s; }
-.iconbtn:hover{ background:var(--surface-3); color:var(--ink); } .iconbtn.wa:hover{ color:var(--ok); border-color:var(--ok); } .iconbtn:disabled{ opacity:.4; cursor:default; }
-.iconbtn svg{ width:15px; height:15px; }
+.lead-acts{ display:flex; gap:5px; justify-content:flex-end; align-items:center; }
+.iconbtn{ width:30px; height:30px; flex:none; border-radius:8px; border:1px solid var(--border-2); background:var(--surface); color:var(--ink-2); display:grid; place-items:center; transition:background .12s,color .12s,border-color .12s; }
+.iconbtn:hover{ background:var(--surface-3); color:var(--ink); } .iconbtn.wa:hover{ color:var(--ok); border-color:var(--ok); } .iconbtn.del:hover{ color:var(--bad); border-color:var(--bad); } .iconbtn:disabled{ opacity:.4; cursor:default; }
+.iconbtn svg{ width:14px; height:14px; }
 .qv-top{ display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; } .qv-src{ font-size:12px; color:var(--ink-3); display:inline-flex; align-items:center; gap:5px; }
 .qv-contact{ display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; } .qv-contact .btn svg{ width:14px; height:14px; }
 .qv-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; margin-bottom:16px; }
 .qv-item .k{ font-size:10.5px; color:var(--ink-3); font-weight:600; text-transform:uppercase; letter-spacing:.04em; } .qv-item .v{ font-size:13px; color:var(--ink); font-weight:500; margin-top:2px; }
 .qv-note{ background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:10px 12px; font-size:12.5px; color:var(--ink-2); line-height:1.5; margin-bottom:16px; }
 .qv-acts{ display:flex; gap:8px; flex-wrap:wrap; }
+.f-select{ appearance:none; background:var(--surface); border:1px solid var(--border-2); border-radius:8px; padding:6px 28px 6px 10px; font-size:12px; color:var(--ink); cursor:pointer; height:34px; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 8px center; }
+.f-select:focus{ outline:none; border-color:var(--gold, #d97706); }
 `
 const waSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 20l1.2-5.6A8.4 8.4 0 1 1 21 11.5z"/></svg>`
 const callSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>`
 
-/**
- * WW-LEADREPLY — record that the vendor reached this lead.
- *
- * Both lead screens hand off to wa.me or the dialer and, until now, told the
- * server nothing. `respondedAt` is stamped on the first transition off "new",
- * on POST /leads/:id/whatsapp, and on POST /leads/:id/contacted — none of which
- * a wa.me hand-off triggers. So a vendor could answer every enquiry on WhatsApp
- * and the platform still counted them all unanswered: 62 on the test account,
- * the oldest 116 days, with response-time analytics reading zero.
- *
- * `contacted` is the right endpoint and exists for exactly this: it logs and
- * stamps WITHOUT sending, where `sendWhatsapp` would fire the provider a second
- * time and double-message the customer.
- *
- * Best-effort and silent: the vendor's WhatsApp is already open, and a failed
- * log is not worth a toast on top of it.
- */
 export async function logContact(leadId: string | number | undefined, channel: "whatsapp" | "call") {
   const id = Number(leadId)
   if (!Number.isFinite(id) || id <= 0) return
   try { await LeadAPI.markContacted(id, channel) } catch { /* best effort */ }
 }
 
-/** PK number → wa.me digits: strip non-digits, drop a leading 0, ensure 92. */
 export function waDigits(phone?: string | null): string {
   let d = (phone || "").replace(/\D/g, "")
   if (!d) return ""
@@ -201,14 +167,17 @@ function rowHtml(l: Lead): string {
   const editBtn = `<button class="iconbtn" data-lead-edit="${l.id}" title="Edit" aria-label="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`
   const canBook = !["booked", "lost", "archived"].includes(l.status || "")
   const bookBtn = canBook ? `<button class="iconbtn book" data-lead-book="${l.id}" title="Booking banayein" aria-label="Booking banayein"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M12 13v4M10 15h4"/></svg></button>` : ""
-  // WP39 / LEADS-013: a WhatsApp-only lead still has a number to ring / message
   const telWa = `${phone ? `<button class="iconbtn" data-tel="${escHtml(phone)}" data-lead-id="${l.id}" title="Call" aria-label="Call">${callSvg}</button>` : ""}${waPhone ? `<button class="iconbtn wa" data-wa="${escHtml(waPhone)}" data-lead-id="${l.id}" title="WhatsApp" aria-label="WhatsApp">${waSvg}</button>` : ""}`
   const assignBtn = `<button class="iconbtn" data-lead-assign="${l.id}" title="Venue badlein / Assign" aria-label="Venue badlein / Assign"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg></button>`
-  const acts = `<div class="lead-acts">${telWa}${assignBtn}${bookBtn}${editBtn}</div>`
-  const bz = (l as unknown as { business?: { name?: string; city?: string } })?.business
+  const delBtn = `<button class="iconbtn del" data-lead-del="${l.id}" title="Delete lead" aria-label="Delete lead" style="color:var(--bad, #ef4444)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg></button>`
+  const acts = `<div class="lead-acts">${telWa}${assignBtn}${bookBtn}${editBtn}${delBtn}</div>`
+  const bz = (l as unknown as { business?: { id?: number; name?: string; city?: string } })?.business
   const venueBadge = bz?.name ? `<div style="font-size:11px;color:var(--ink-3);margin-top:2px;font-weight:500">🏢 ${escHtml(bz.name)}${bz.city ? ` · ${escHtml(bz.city)}` : ""}</div>` : ""
-  return `<tr data-status="${st.tab}">
-    <td><div class="c-couple" data-lead-view="${l.id}" style="cursor:pointer"><span class="ava">${escHtml(initialsOf(name))}</span><div><div class="cc-nm">${escHtml(name)}</div><div class="cc-ev">${escHtml(phone || "—")}</div>${venueBadge}</div></div></td>
+  const lx = l as unknown as LeadExtra
+  const bizId = lx.businessId ?? bz?.id ?? ""
+  return `<tr data-status="${st.tab}" data-biz-id="${bizId}" data-event="${escHtml(l.eventType || "")}" data-src="${escHtml(l.source || "")}" data-lead-id="${l.id}">
+    <td style="width:36px;text-align:center"><input type="checkbox" class="lead-row-check" data-id="${l.id}" style="cursor:pointer;width:15px;height:15px;accent-color:var(--gold, #d97706)"/></td>
+    <td><div class="c-couple" data-lead-view="${l.id}" style="cursor:pointer"><span class="ava">${escHtml(initialsOf(name))}</span><div><div class="cc-nm">${escHtml(name)}${slaBadgeHtml(l)}</div><div class="cc-ev">${escHtml(phone || "—")}</div>${venueBadge}</div></div></td>
     <td class="td-mut">${escHtml(cap(l.eventType))}</td>
     <td class="td-date">${escHtml(shortDate(l.eventDate))}</td>
     <td><span class="mth"><span class="srcdot" style="background:${src.color}"></span> ${escHtml(src.label)}</span></td>
@@ -218,9 +187,6 @@ function rowHtml(l: Lead): string {
   </tr>`
 }
 
-/** Booking-create form prefilled from a lead (name/phone/date/guests/amount). */
-/** Quick-view drawer for a lead — details + inline actions, with a link to the
- * full profile page. Actions reuse the existing data-* handlers. */
 function leadQuickViewHtml(l: Lead, businesses?: BizLite[]): string {
   const lx = l as unknown as LeadExtra
   const st = stageOf(l.status), src = sourceOf(l.source)
@@ -236,7 +202,6 @@ function leadQuickViewHtml(l: Lead, businesses?: BizLite[]): string {
   const canBook = !["booked", "lost", "archived"].includes(l.status || "")
   const nx = nextStageOf(l.status)
   const isTerminal = LEAD_CLOSED.includes((l.status || "new") as LeadStatus)
-  // WP39 / LEADS-011: a lost / archived lead can be re-opened (booked cannot: it has a booking)
   const canReopen = l.status === "lost" || l.status === "archived"
   const advBtns = `${nx ? `<button class="btn btn-primary sm" data-lead-adv="${nx}" data-adv-id="${l.id}">✓ ${escHtml(STAGE[nx].label)} mark karein</button>` : ""}${!isTerminal ? `<button class="btn btn-ghost sm" data-lead-adv="lost" data-adv-id="${l.id}" style="color:var(--bad)">Khoya</button>` : ""}${canReopen ? `<button class="btn btn-primary sm" data-lead-adv="new" data-adv-id="${l.id}">Dobara kholein</button>` : ""}`
   const bookingId = l.booking?.id ?? l.bookingId ?? null
@@ -260,18 +225,16 @@ function leadQuickViewHtml(l: Lead, businesses?: BizLite[]): string {
       ${canBook ? `<button class="btn btn-ghost sm" data-lead-book="${l.id}">→ Booking banayein</button>` : ""}
       <button class="btn btn-ghost sm" data-lead-assign="${l.id}">⇄ Venue badlein</button>
       <button class="btn btn-ghost sm" data-lead-edit="${l.id}">Edit</button>
+      <button class="btn btn-danger sm" data-lead-del="${l.id}">Delete</button>
       <button class="btn btn-ghost sm" data-nav-btn="/dashboard/leads/${l.id}">Poori profile ›</button>
     </div>`
 }
 
 const EVENT_TYPES: LeadEventType[] = ["mehndi", "nikah", "baraat", "walima", "engagement", "dholki", "other"]
 
-/** Fields the FE Lead type may not declare yet (backend-added). */
 type LeadExtra = { businessId?: number; subVenueId?: number | null; assignedToUserId?: number | null; nextFollowUpAt?: string | null }
 type BizLite = { id: number; name?: string | null }
 
-/** Fill the dependent Hall/space + Assign-to selects for the chosen venue.
- * Backend-ready: venueSpacesApi.getTree + StaffAPI.listMembers. */
 async function populateLeadDeps(s: ShadowRoot, businessId: number, selSub?: number | null, selRep?: number | null, me?: { id: number; name?: string | null } | null) {
   const subSel = s.getElementById("ld-subvenue") as HTMLSelectElement | null
   const repSel = s.getElementById("ld-rep") as HTMLSelectElement | null
@@ -289,9 +252,6 @@ async function populateLeadDeps(s: ShadowRoot, businessId: number, selSub?: numb
   try {
     const st = await StaffAPI.listMembers({ businessId }) as unknown as { members?: { id: number; userId?: number | null; fullName?: string; name?: string }[] } | { id: number; userId?: number | null; fullName?: string; name?: string }[]
     const members = (Array.isArray(st) ? st : st?.members) || []
-    // WP33 / LEADS-061: the option value is a USER id (Lead.assignedToUserId is a Users FK), never the StaffMember id; only people
-    // who can act on the lead (the owner, and staff with a login) are offered. The roster used to be mapped straight into the
-    // options, so picking "Ahmed (waiter)" assigned the lead to whichever stranger owned that user id.
     const reps = assignableReps(members, me ?? null)
     if (repSel) repSel.innerHTML = `<option value="">— koi nahi —</option>` +
       reps.map((r) => `<option value="${r.userId}"${r.userId === selRep ? " selected" : ""}>${escHtml(r.label)}</option>`).join("")
@@ -304,14 +264,12 @@ function leadFormHtml(l?: Lead, prefillDate?: string, businesses?: BizLite[], cu
   const evOpts = EVENT_TYPES.map((e) => `<option value="${e}"${l?.eventType === e ? " selected" : ""}>${cap(e)}</option>`).join("")
   const srcOpts = (Object.keys(SOURCE) as LeadSource[]).map((k) => `<option value="${k}"${l?.source === k ? " selected" : ""}>${SOURCE[k].label}</option>`).join("")
   const stOpts = (Object.keys(STAGE) as LeadStatus[]).map((k) => `<option value="${k}"${(l?.status || "new") === k ? " selected" : ""}>${STAGE[k].label}</option>`).join("")
-  // WP33 / LEADS-060: ?new= is attacker-controllable (a link in WhatsApp / e-mail) and was written raw into value="..." and then
-  // innerHTML: a reflected DOM XSS in the vendor's session. Only a real YYYY-MM-DD survives, and it is attribute-escaped anyway.
   const dateVal = escHtml(l?.eventDate ? String(l.eventDate).slice(0, 10) : safeDateValue(prefillDate))
   const selBiz = lx.businessId ?? curBiz ?? (businesses && businesses[0]?.id) ?? ""
-  const bizOpts = (businesses || []).map((b) => `<option value="${b.id}"${b.id === selBiz ? " selected" : ""}>${escHtml(b.name || `Venue #${b.id}`)}</option>`).join("")
-  // WP39 / LEADS-008: prefilled in Karachi wall time (the stored instant sliced as text was the UTC time, five hours early)
+  const bizOpts = (businesses || []).map((b) => `<option value="${b.id}"${Number(b.id) === Number(selBiz) ? " selected" : ""}>${escHtml(b.name || "Venue")}</option>`).join("")
   const fuVal = followUpInputValue(lx.nextFollowUpAt)
-  return `<input type="hidden" id="ld-id" value="${l ? l.id : ""}"/><input type="hidden" id="ld-upd" value="${l ? escHtml(l.updatedAt || "") : ""}"/>
+  return `<input type="hidden" id="ld-id" value="${l?.id ? escHtml(String(l.id)) : ""}"/>
+    <input type="hidden" id="ld-upd" value="${l?.updatedAt ? escHtml(String(l.updatedAt)) : ""}"/>
     <div class="dfield"><label class="dlabel">Naam <span class="req">*</span></label><input id="ld-name" value="${v(l?.contactName)}" placeholder="Customer ka naam"/></div>
     <div class="dfield row2"><div><label class="dlabel">Phone</label><input id="ld-phone" value="${v(l?.contactPhone)}" placeholder="0300…"/></div><div><label class="dlabel">WhatsApp</label><input id="ld-wa" value="${v(l?.contactWhatsapp)}" placeholder="agar alag ho"/></div></div>
     <div class="dfield"><label class="dlabel">Email</label><input id="ld-email" value="${v(l?.contactEmail)}" placeholder="optional"/></div>
@@ -324,40 +282,108 @@ function leadFormHtml(l?: Lead, prefillDate?: string, businesses?: BizLite[], cu
     <div class="ww-dfoot"><button class="btn btn-ghost" data-drawer-close>Cancel</button><button class="btn btn-primary" data-lead-save>${l ? "Update karein" : "Lead add karein"}</button></div>`
 }
 
-function buildContent(leads: Lead[]): string {
+function buildContent(leads: Lead[], businesses: BizLite[]): string {
   const counts: Record<string, number> = { all: leads.length }
   leads.forEach((l) => { const t = stageOf(l.status).tab; counts[t] = (counts[t] || 0) + 1 })
-  const tab = (f: string, label: string, dot: string, cnt: number, on = false) => `<button class="tab${on ? " on" : ""}" data-f="${f}">${dot ? `<span class="dot" style="background:${dot}"></span> ` : ""}${label} <span class="cnt">${cnt || 0}</span></button>`
-  const toolbar = `<div class="toolbar"><div class="tabs" id="tabs" role="tablist">
-    <button class="tab on" data-f="all">Sab <span class="cnt">${counts.all}</span></button>
-    ${tab("new", "Naya", "var(--info)", counts.new)}
-    ${tab("contacted", "Raabta", "var(--warn)", counts.contacted)}
-    ${tab("quoted", "Quote", "var(--warn)", counts.quoted)}
-    ${tab("qualified", "Visit", "var(--info)", counts.qualified)}
-    ${tab("booked", "Jeeta", "var(--ok)", counts.booked)}
-    ${tab("lost", "Khoya", "var(--bad)", counts.lost)}
-    </div><div class="filters"><label class="f-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="Naam ya number dhoondein…" aria-label="Filter"/></label></div></div>`
+  const tab = (f: string, label: string, dot: string, cnt: number, on = false) =>
+    `<button class="tab${on ? " on" : ""}" data-f="${f}">${dot ? `<span class="dot" style="background:${dot}"></span> ` : ""}${label} <span class="cnt">${cnt || 0}</span></button>`
+
+  // Collect unique venues
+  const venueMap = new Map<number, string>()
+  businesses.forEach((b) => { if (b.id && b.name) venueMap.set(b.id, b.name) })
+  leads.forEach((l) => {
+    const lx = l as unknown as LeadExtra
+    const bz = (l as unknown as { business?: { id?: number; name?: string } })?.business
+    const bid = lx.businessId ?? bz?.id
+    const bname = bz?.name
+    if (bid && bname && !venueMap.has(bid)) venueMap.set(bid, bname)
+  })
+  const venueOpts = Array.from(venueMap.entries())
+    .map(([id, name]) => `<option value="${id}">${escHtml(name)}</option>`)
+    .join("")
+
+  const toolbar = `
+  <div class="toolbar" style="display:flex;flex-direction:column;gap:12px;align-items:stretch">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div class="tabs" id="tabs" role="tablist">
+        <button class="tab on" data-f="all">Sab <span class="cnt">${counts.all}</span></button>
+        ${tab("new", "Naya", "var(--info)", counts.new)}
+        ${tab("contacted", "Raabta", "var(--warn)", counts.contacted)}
+        ${tab("quoted", "Quote", "var(--warn)", counts.quoted)}
+        ${tab("qualified", "Visit", "var(--info)", counts.qualified)}
+        ${tab("booked", "Jeeta", "var(--ok)", counts.booked)}
+        ${tab("lost", "Khoya", "var(--bad)", counts.lost)}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <select id="filter-venue" class="f-select" title="Filter by Venue">
+          <option value="all">🏢 Saare venues (All listings)</option>
+          ${venueOpts}
+        </select>
+        <select id="filter-event" class="f-select" title="Filter by Event">
+          <option value="all">🎭 Saare events</option>
+          <option value="baraat">Baraat</option>
+          <option value="walima">Walima</option>
+          <option value="mehndi">Mehndi</option>
+          <option value="nikah">Nikah</option>
+          <option value="engagement">Engagement</option>
+          <option value="dholki">Dholki</option>
+          <option value="other">Other</option>
+        </select>
+        <select id="filter-source" class="f-select" title="Filter by Source">
+          <option value="all">📱 Saare zariye (All sources)</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="form_inquiry">Website</option>
+          <option value="manual_phone">Phone</option>
+          <option value="manual_walkin">Walk-in</option>
+          <option value="instagram">Instagram</option>
+          <option value="referral">Referral</option>
+          <option value="in_app_chat">Chat</option>
+          <option value="other">Other</option>
+        </select>
+        <label class="f-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="lead-search-input" placeholder="Naam ya number dhoondein…" aria-label="Filter"/></label>
+      </div>
+    </div>
+  </div>`
+
   const body = leads.map(rowHtml).join("")
-  return `${toolbar}<div class="card"><div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th style="width:36px;text-align:center"><input type="checkbox" id="lead-select-all" title="Select all" style="cursor:pointer;width:15px;height:15px;accent-color:var(--gold, #d97706)"/></th><th>Lead</th><th>Event</th><th>Shaadi kab</th><th>Zariya</th><th>Status</th><th>Aakhri raabta</th><th></th></tr></thead>
-    <tbody id="tbody">${body}</tbody></table></div>
-    ${leads.length ? `<div class="tbl-foot"><span id="rowcount">${leads.length} leads</span></div>` : `<div class="empty">Abhi koi lead nahi. Nayi puchh-gichh yahan aayegi.<div style="margin-top:12px"><button class="btn btn-primary" data-lead-new>+ Naya lead</button></div></div>`}</div>
-    <div id="lead-bulk-bar" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#18181b;color:#fff;padding:8px 18px;border-radius:9999px;box-shadow:0 12px 30px rgba(0,0,0,0.35);z-index:9999;align-items:center;gap:12px;font-size:13px;font-family:inherit">
-      <span id="lead-bulk-count" style="font-weight:600">0 leads selected</span>
-      <span style="opacity:0.3">|</span>
-      <button class="btn btn-primary sm" data-bulk-assign-btn style="background:#eab308;color:#000;font-weight:600;padding:4px 12px;border-radius:6px;border:none;cursor:pointer;font-size:12px">🏢 Assign Venue</button>
-      <select id="lead-bulk-status-select" style="background:#27272a;color:#fff;border:1px solid #3f3f46;border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer">
-        <option value="">Status badlein...</option>
-        <option value="new">Naya (New)</option>
-        <option value="contacted">Raabta (Contacted)</option>
-        <option value="quoted">Quote</option>
-        <option value="qualified">Visit / Qualified</option>
-        <option value="booked">Jeeta (Booked)</option>
-        <option value="lost">Khoya (Lost)</option>
-      </select>
-      <button class="btn btn-ghost sm" data-bulk-export-btn style="background:transparent;color:#d4d4d8;padding:4px 8px;border:none;cursor:pointer;font-size:12px">📥 Export</button>
-      <button class="btn btn-ghost sm" data-bulk-clear-btn style="background:transparent;color:#f87171;padding:4px 8px;border:none;cursor:pointer;font-size:12px">✕ Clear</button>
-    </div>`
+  return `${toolbar}
+  <div class="card">
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width:36px;text-align:center"><input type="checkbox" id="lead-select-all" title="Select all" style="cursor:pointer;width:15px;height:15px;accent-color:var(--gold, #d97706)"/></th>
+            <th>Lead</th>
+            <th>Event</th>
+            <th>Shaadi kab</th>
+            <th>Zariya</th>
+            <th>Status</th>
+            <th>Aakhri raabta</th>
+            <th style="text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">${body}</tbody>
+      </table>
+    </div>
+    ${leads.length ? `<div class="tbl-foot"><span id="rowcount">${leads.length} leads</span></div>` : `<div class="empty">Abhi koi lead nahi. Nayi puchh-gichh yahan aayegi.<div style="margin-top:12px"><button class="btn btn-primary" data-lead-new>+ Naya lead</button></div></div>`}
+  </div>
+  <div id="lead-bulk-bar" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface, #18181b);color:var(--ink, #fff);padding:8px 18px;border-radius:9999px;border:1px solid var(--border-2, #3f3f46);box-shadow:0 12px 30px rgba(0,0,0,0.4);z-index:9999;align-items:center;gap:12px;font-size:13px;font-family:inherit">
+    <span id="lead-bulk-count" style="font-weight:600;color:var(--gold, #d97706)">0 selected</span>
+    <span style="opacity:0.3">|</span>
+    <button class="btn btn-primary sm" data-bulk-assign-btn style="background:var(--gold, #d97706);color:#000;font-weight:600;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;font-size:12px;display:inline-flex;align-items:center;gap:5px">🏢 Assign Venue</button>
+    <select id="lead-bulk-status-select" style="background:var(--surface-2, #27272a);color:var(--ink, #fff);border:1px solid var(--border-2, #3f3f46);border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer">
+      <option value="">Status badlein...</option>
+      <option value="new">Naya (New)</option>
+      <option value="contacted">Raabta (Contacted)</option>
+      <option value="quoted">Quote</option>
+      <option value="qualified">Visit / Qualified</option>
+      <option value="booked">Jeeta (Booked)</option>
+      <option value="lost">Khoya (Lost)</option>
+    </select>
+    <button class="btn btn-danger sm" data-bulk-delete-btn style="background:#ef4444;color:#fff;font-weight:600;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;font-size:12px;display:inline-flex;align-items:center;gap:5px">🗑️ Delete</button>
+    <button class="btn btn-ghost sm" data-bulk-export-btn style="background:transparent;color:var(--ink-2, #d4d4d8);padding:4px 8px;border:none;cursor:pointer;font-size:12px">📥 Export</button>
+    <button class="btn btn-ghost sm" data-bulk-clear-btn style="background:transparent;color:var(--bad, #f87171);padding:4px 8px;border:none;cursor:pointer;font-size:12px">✕ Clear</button>
+  </div>`
 }
 
 export function LeadsArtifact() {
@@ -381,8 +407,6 @@ export function LeadsArtifact() {
   const meRef = React.useRef<{ id: number; name?: string | null } | null>(null)
   meRef.current = me ? { id: Number(me.id), name: (me as { fullName?: string | null }).fullName } : null
 
-  // calendar "+" deep-link: /dashboard/leads?new=YYYY-MM-DD opens the create
-  // drawer prefilled with that date.
   const autoOpened = React.useRef(false)
   React.useEffect(() => {
     const s = shadowRef.current
@@ -402,25 +426,211 @@ export function LeadsArtifact() {
       if (isError) { wwc.innerHTML = `<div class="head"><div><h1>Leads</h1></div></div>${errorBannerHtml()}` }
       else if (!data) { wwc.innerHTML = `<div class="loadwrap">Leads load ho rahe hain…</div>` }
       else {
-        wwc.innerHTML = head + buildContent(leads)
+        wwc.innerHTML = head + buildContent(leads, bizListRef.current)
         initTablePager(s, { pageSize: 25, noun: "leads" })
         restoreTab(s, "tab:leads", (f) => setPagerFilter(s, (tr) => f === "all" || tr.dataset.status === f))
       }
     }
+
+    const updateBulkBar = () => {
+      const bar = s.getElementById("lead-bulk-bar")
+      const countEl = s.getElementById("lead-bulk-count")
+      const selectAll = s.getElementById("lead-select-all") as HTMLInputElement | null
+      const count = selectedLeadIds.current.size
+      if (bar) bar.style.display = count > 0 ? "flex" : "none"
+      if (countEl) countEl.textContent = `${count} selected`
+      const checks = s.querySelectorAll<HTMLInputElement>(".lead-row-check")
+      let allChecked = checks.length > 0
+      checks.forEach((chk) => {
+        const id = Number(chk.dataset.id)
+        chk.checked = selectedLeadIds.current.has(id)
+        if (!chk.checked) allChecked = false
+      })
+      if (selectAll) selectAll.checked = allChecked && checks.length > 0
+    }
+
+    const runFilters = () => {
+      const activeTab = (s.querySelector("#tabs .tab.on") as HTMLElement)?.dataset.f || "all"
+      const venueVal = (s.getElementById("filter-venue") as HTMLSelectElement | null)?.value || "all"
+      const eventVal = (s.getElementById("filter-event") as HTMLSelectElement | null)?.value || "all"
+      const sourceVal = (s.getElementById("filter-source") as HTMLSelectElement | null)?.value || "all"
+
+      setPagerFilter(s, (tr) => {
+        if (activeTab !== "all" && tr.dataset.status !== activeTab) return false
+        if (venueVal !== "all" && tr.dataset.bizId !== venueVal) return false
+        if (eventVal !== "all" && tr.dataset.event !== eventVal) return false
+        if (sourceVal !== "all" && tr.dataset.src !== sourceVal) return false
+        return true
+      })
+      updateBulkBar()
+    }
+
     if (!bound.current) {
       bound.current = true
       const val = (id: string) => (s.getElementById(id) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null)?.value?.trim() ?? ""
+
+      s.addEventListener("change", async (e) => {
+        const t = e.target as HTMLElement
+        if (t.id === "filter-venue" || t.id === "filter-event" || t.id === "filter-source") {
+          runFilters()
+          return
+        }
+        if (t.id === "ld-biz") {
+          populateLeadDeps(s, Number((t as HTMLSelectElement).value), undefined, undefined, meRef.current)
+          return
+        }
+        if (t.id === "lead-select-all") {
+          const checked = (t as HTMLInputElement).checked
+          const checks = s.querySelectorAll<HTMLInputElement>(".lead-row-check")
+          checks.forEach((chk) => {
+            const tr = chk.closest("tr")
+            if (tr && !tr.hidden) {
+              const id = Number(chk.dataset.id)
+              if (checked) selectedLeadIds.current.add(id)
+              else selectedLeadIds.current.delete(id)
+              chk.checked = checked
+            }
+          })
+          updateBulkBar()
+          return
+        }
+        if (t.classList.contains("lead-row-check")) {
+          const chk = t as HTMLInputElement
+          const id = Number(chk.dataset.id)
+          if (chk.checked) selectedLeadIds.current.add(id)
+          else selectedLeadIds.current.delete(id)
+          updateBulkBar()
+          return
+        }
+        if (t.id === "lead-bulk-status-select") {
+          const sel = t as HTMLSelectElement
+          const newStatus = sel.value as LeadStatus
+          if (!newStatus || selectedLeadIds.current.size === 0) return
+          const ids = Array.from(selectedLeadIds.current)
+          try {
+            await LeadAPI.bulkTransition({ ids, to: newStatus })
+            toast.success(`${ids.length} leads status badal diya gaya: ${STAGE[newStatus]?.label || newStatus}`)
+            selectedLeadIds.current.clear()
+            sel.value = ""
+            updateBulkBar()
+            qc.invalidateQueries({ queryKey: ["leads-artifact"] })
+          } catch (err: unknown) {
+            toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Status nahi badla")
+            sel.value = ""
+          }
+          return
+        }
+      })
+
       s.addEventListener("click", async (e) => {
         const t = e.target as HTMLElement
         if (t.closest("[data-retry]")) { qc.invalidateQueries({ queryKey: ["leads-artifact"] }); return }
+
+        // Bulk clear
+        if (t.closest("[data-bulk-clear-btn]")) {
+          selectedLeadIds.current.clear()
+          updateBulkBar()
+          return
+        }
+
+        // Bulk delete
+        if (t.closest("[data-bulk-delete-btn]")) {
+          const count = selectedLeadIds.current.size
+          if (count === 0) return
+          openConfirm(s, {
+            title: "Selected leads delete karein?",
+            message: `${count} leads platform se mukammal delete ho jayengi. Kya aap waqai delete karna chahte hain?`,
+            danger: true,
+            confirmLabel: `Haan, ${count} leads delete karein`,
+            onConfirm: async () => {
+              try {
+                const ids = Array.from(selectedLeadIds.current)
+                await LeadAPI.bulkDelete(ids)
+                toast.success(`${count} leads kamiyabi se delete ho gayin`)
+                selectedLeadIds.current.clear()
+                updateBulkBar()
+                qc.invalidateQueries({ queryKey: ["leads-artifact"] })
+              } catch (err: unknown) {
+                toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Delete fail ho gaya")
+              }
+            },
+          })
+          return
+        }
+
+        // Bulk assign
+        if (t.closest("[data-bulk-assign-btn]")) {
+          const ids = Array.from(selectedLeadIds.current)
+          if (ids.length === 0) return
+          setBulkAssignLeadIds(ids)
+          return
+        }
+
+        // Bulk export
+        if (t.closest("[data-bulk-export-btn]")) {
+          const selLeads = leadsRef.current.filter((l) => selectedLeadIds.current.has(l.id))
+          if (selLeads.length === 0) { toast.info("Pehle leads select karein"); return }
+          const rows = selLeads.map((l) => [
+            l.id,
+            l.contactName || "",
+            l.contactPhone || "",
+            l.contactEmail || "",
+            l.eventType || "",
+            l.eventDate ? String(l.eventDate).slice(0, 10) : "",
+            l.estimatedBudget ?? "",
+            l.estimatedGuests ?? "",
+            l.source || "",
+            l.status || "",
+            (l as unknown as { business?: { name?: string } })?.business?.name || "",
+          ])
+          const head = ["ID", "Name", "Phone", "Email", "Event", "Event Date", "Budget", "Guests", "Source", "Status", "Venue"]
+          const csv = [head, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n")
+          const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement("a")
+          a.href = url
+          a.download = `leads-export-${new Date().toISOString().slice(0, 10)}.csv`
+          a.click()
+          URL.revokeObjectURL(url)
+          toast.success(`${selLeads.length} leads export ho gayin`)
+          return
+        }
+
+        // Single lead delete
+        const delBtn = t.closest("[data-lead-del]") as HTMLElement | null
+        if (delBtn?.dataset.leadDel) {
+          const id = Number(delBtn.dataset.leadDel)
+          const l = leadsRef.current.find((x) => x.id === id)
+          openConfirm(s, {
+            title: "Lead delete karein?",
+            message: `Lead #${id} (${l?.contactName || "Client"}) delete ho jayegi. Kya aap waqai delete karna chahte hain?`,
+            danger: true,
+            confirmLabel: "Haan, delete karein",
+            onConfirm: async () => {
+              try {
+                await LeadAPI.delete(id)
+                toast.success("Lead delete ho gayi")
+                selectedLeadIds.current.delete(id)
+                updateBulkBar()
+                closeDrawer(s)
+                qc.invalidateQueries({ queryKey: ["leads-artifact"] })
+              } catch (err: unknown) {
+                toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Delete nahi hui")
+              }
+            },
+          })
+          return
+        }
+
         const wa = t.closest("[data-wa]") as HTMLElement | null
         if (wa) { const p = waDigits(wa.dataset.wa); if (p) window.open(`https://wa.me/${p}?text=${encodeURIComponent("Assalam-o-Alaikum! Aap ki puchh-gichh ka shukriya.")}`, "_blank", "noopener"); void logContact(wa.dataset.leadId, "whatsapp"); return }
         const tel = t.closest("[data-tel]") as HTMLElement | null
         if (tel) { if (tel.dataset.tel) { window.location.href = `tel:${tel.dataset.tel.replace(/\s/g, "")}`; void logContact(tel.dataset.leadId, "call") } return }
-        // ── right-side drawer: create / edit ──
+
         // quick-view drawer (row click)
         const lv = t.closest("[data-lead-view]") as HTMLElement | null
         if (lv?.dataset.leadView) { const l = leadsRef.current.find((x) => x.id === Number(lv.dataset.leadView)); if (l) openDrawer(s, l.contactName || "Lead", leadQuickViewHtml(l, bizListRef.current)); return }
+
         // assign venue modal
         const assign = t.closest("[data-lead-assign]") as HTMLElement | null
         if (assign?.dataset.leadAssign) {
@@ -429,11 +639,11 @@ export function LeadsArtifact() {
           return
         }
         if (t.closest("[data-lead-new]")) { openDrawer(s, "Naya lead", leadFormHtml(undefined, undefined, bizListRef.current, bizRef.current)); populateLeadDeps(s, Number(bizRef.current), undefined, undefined, meRef.current); return }
-        // one-tap pipeline stage-advance (contacted/qualified/quoted) or mark lost
+
+        // one-tap pipeline stage-advance
         const adv = t.closest("[data-lead-adv]") as HTMLElement | null
         if (adv?.dataset.leadAdv) {
           const id = Number(adv.dataset.advId); const to = adv.dataset.leadAdv as LeadStatus
-          // WP39 / LEADS-011: closing a lead as lost asks why first (one deliberate step, reason stored)
           if (to === "lost") { openDrawer(s, "Lead khoya mark karein", lostReasonFormHtml(id)); return }
           adv.setAttribute("disabled", "true")
           try { await LeadAPI.transition(id, { to }); toast.success(`Status: ${STAGE[to]?.label || to}`); closeDrawer(s); qc.invalidateQueries({ queryKey: ["leads-artifact"] }) }
@@ -450,7 +660,8 @@ export function LeadsArtifact() {
         }
         const led = t.closest("[data-lead-edit]") as HTMLElement | null
         if (led?.dataset.leadEdit) { const l = leadsRef.current.find((x) => x.id === Number(led.dataset.leadEdit)); if (l) { const lx = l as unknown as LeadExtra; openDrawer(s, "Lead edit karein", leadFormHtml(l, undefined, bizListRef.current, bizRef.current)); populateLeadDeps(s, Number(lx.businessId ?? bizRef.current), lx.subVenueId, lx.assignedToUserId, meRef.current) } return }
-        // lead → booking — shared BookingForm, prefilled; marks the lead won on save
+
+        // lead → booking
         const lbk = t.closest("[data-lead-book]") as HTMLElement | null
         if (lbk?.dataset.leadBook) {
           const l = leadsRef.current.find((x) => x.id === Number(lbk.dataset.leadBook)); if (!l) return
@@ -458,11 +669,6 @@ export function LeadsArtifact() {
           openBookingForm(s, {
             prefill: { customerName: l.contactName || undefined, customerPhone: callNumber(l) || undefined, customerEmail: l.contactEmail || undefined, bookingDate: l.eventDate ? String(l.eventDate).slice(0, 10) : undefined, guestCount: l.estimatedGuests ?? undefined, businessId: lx.businessId ?? Number(bizRef.current), subVenueId: lx.subVenueId ?? undefined, leadId: l.id },
             businesses: bizListRef.current, activeBiz: bizRef.current,
-            // WW-LEADLINK — same fix as the lead-detail screen: record WHICH
-            // booking the lead became, and say so if the link fails. This wrote
-            // status="booked" with no booking id at all, so a converted lead
-            // never named its wedding. (Won leads with no booking id also come
-            // from "Jeeta mark karein", which legitimately makes them.)
             onSaved: async (res) => {
               const newBookingId = bookingIdFromSaved(res)
               try {
@@ -476,6 +682,7 @@ export function LeadsArtifact() {
           })
           return
         }
+
         if (t.closest("[data-lead-save]")) {
           const name = val("ld-name"); if (!name) { toast.error("Naam likhein"); return }
           const editId = Number(val("ld-id"))
@@ -488,37 +695,31 @@ export function LeadsArtifact() {
             source: val("ld-source") as LeadSource, status: val("ld-status") as LeadStatus, inquiry: val("ld-inquiry") || undefined,
             subVenueId: val("ld-subvenue") ? Number(val("ld-subvenue")) : null,
             assignedToUserId: val("ld-rep") ? Number(val("ld-rep")) : null,
-            nextFollowUpAt: followUpPayload(val("ld-followup")), // WP39 / LEADS-008: Karachi wall time as typed, no offset
+            nextFollowUpAt: followUpPayload(val("ld-followup")),
           }
           const btn = t.closest("[data-lead-save]") as HTMLButtonElement; btn.disabled = true; btn.textContent = "Save ho raha…"
           let dupWarn = ""
           try {
             if (editId) {
-              // WP39 / LEADS-005: send only what the vendor changed. The drawer used to re-send every field, so a closed lead got
-              // content it cannot take (the server now answers that with a 409 instead of a silent 200).
               const orig = leadsRef.current.find((x) => x.id === editId)
               const diff = orig ? changedLeadFields(common as unknown as Record<string, unknown>, orig as unknown as Record<string, unknown>) : common
               const lxo = orig as unknown as LeadExtra | undefined
               const bizChanged = !!(bizPick && lxo?.businessId && bizPick !== lxo.businessId)
               if (orig && !Object.keys(diff).length && !bizChanged) { toast.info("Kuch badla nahi"); closeDrawer(s); return }
-              // a field the vendor emptied is CLEARED (null), not silently left out of the request
               for (const k of Object.keys(diff)) if ((diff as Record<string, unknown>)[k] === undefined) (diff as Record<string, unknown>)[k] = null
-              // CONCURRENCY-009: the updatedAt the drawer was opened on; the server refuses the save if the lead moved on
               await LeadAPI.update(editId, { ...diff, ...(bizChanged ? { businessId: bizPick } : {}), ...(val("ld-upd") ? { expectedUpdatedAt: val("ld-upd") } : {}) } as UpdateLeadInput)
             } else {
               if (!bizPick) { toast.error("Venue select karein"); btn.disabled = false; return }
               const made = await LeadAPI.createWithMeta({ businessId: bizPick, ...common } as CreateLeadInput)
-              // WP39 / LEADS-004: the same number is already an open lead at this venue: say so (the lead is still saved)
               if (made.possibleDuplicates.length) dupWarn = made.possibleDuplicates.map((d) => `${d.contactName || "Lead"} #${d.id}`).join(", ")
             }
-            // WP21 — the list shows the venue picked in the sidebar. A lead saved under ANOTHER venue is real, but it is not in
-            // this list: say where it went instead of a plain "ban gaya" next to a list that did not change.
             const elsewhere = bizPick && bizRef.current != null && Number(bizRef.current) !== bizPick
             if (dupWarn) toast.warning(`Is number ki lead pehle se khuli hai: ${dupWarn}. Dobara to nahi?`)
             toast.success(editId ? "Lead update ho gaya" : elsewhere ? `Naya lead ban gaya — ${bizListRef.current.find((b) => b.id === bizPick)?.name || "doosre venue"} mein (sidebar se wo venue chunein)` : "Naya lead ban gaya"); closeDrawer(s); qc.invalidateQueries({ queryKey: ["leads-artifact"] })
           } catch (err: unknown) { if (!showLeadFieldError(s, err)) toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Save nahi hua"); if ((err as { response?: { status?: number } })?.response?.status === 409) qc.invalidateQueries({ queryKey: ["leads-artifact"] }); btn.disabled = false; btn.textContent = editId ? "Update karein" : "Lead add karein" }
           return
         }
+
         const btn = t.closest(".tab") as HTMLElement | null
         if (!btn) return
         const tabsEl = s.getElementById("tabs"); if (!tabsEl) return
@@ -526,12 +727,7 @@ export function LeadsArtifact() {
         btn.classList.add("on")
         const f = btn.dataset.f || "all"
         savePref("tab:leads", f)
-        setPagerFilter(s, (tr) => f === "all" || tr.dataset.status === f)
-      })
-      // venue change → refill dependent Hall/space + Assign-to selects
-      s.addEventListener("change", (e) => {
-        const t = e.target as HTMLElement
-        if (t.id === "ld-biz") populateLeadDeps(s, Number((t as HTMLSelectElement).value), undefined, undefined, meRef.current)
+        runFilters()
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -554,6 +750,18 @@ export function LeadsArtifact() {
           onSuccess={() => {
             qc.invalidateQueries({ queryKey: ["leads-artifact"] })
             setAssignLead(null)
+          }}
+        />
+      )}
+      {bulkAssignLeadIds.length > 0 && (
+        <AssignToBusinessModal
+          open={bulkAssignLeadIds.length > 0}
+          onOpenChange={(v) => !v && setBulkAssignLeadIds([])}
+          bulkLeadIds={bulkAssignLeadIds}
+          onSuccess={() => {
+            selectedLeadIds.current.clear()
+            qc.invalidateQueries({ queryKey: ["leads-artifact"] })
+            setBulkAssignLeadIds([])
           }}
         />
       )}
