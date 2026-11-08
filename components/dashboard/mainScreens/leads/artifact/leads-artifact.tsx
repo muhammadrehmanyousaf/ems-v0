@@ -32,6 +32,23 @@ function shortDate(s?: string | null) {
   const d = new Date(s); if (isNaN(d.getTime())) return String(s)
   return d.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })
 }
+
+function slaBadgeHtml(l: Lead): string {
+  if (l.status !== "new" && l.status !== "contacted") return ""
+  const created = l.createdAt ? new Date(l.createdAt).getTime() : 0
+  if (!created || isNaN(created)) return ""
+  const diffMinutes = Math.floor((Date.now() - created) / 60000)
+  if (diffMinutes < 30) {
+    return `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:#16a34a;background:#dcfce7;padding:1px 6px;border-radius:9999px;margin-left:6px" title="Nayi inquiry (<30m)">⏱️ ${diffMinutes}m</span>`
+  } else if (diffMinutes < 120) {
+    const h = Math.floor(diffMinutes / 60), m = diffMinutes % 60
+    return `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:#d97706;background:#fef3c7;padding:1px 6px;border-radius:9999px;margin-left:6px" title="Jaldi raabta karein (>30m)">⚠️ ${h}h ${m}m</span>`
+  } else {
+    const h = Math.floor(diffMinutes / 60)
+    return `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:#dc2626;background:#fee2e2;padding:1px 6px;border-radius:9999px;margin-left:6px" title="SLA Breached (>2h)">🚨 ${h}h</span>`
+  }
+}
+
 function relTime(s?: string | null) {
   if (!s) return "—"
   const d = new Date(s).getTime(); if (isNaN(d)) return "—"
@@ -322,9 +339,25 @@ function buildContent(leads: Lead[]): string {
     </div><div class="filters"><label class="f-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="Naam ya number dhoondein…" aria-label="Filter"/></label></div></div>`
   const body = leads.map(rowHtml).join("")
   return `${toolbar}<div class="card"><div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Lead</th><th>Event</th><th>Shaadi kab</th><th>Zariya</th><th>Status</th><th>Aakhri raabta</th><th></th></tr></thead>
+    <thead><tr><th style="width:36px;text-align:center"><input type="checkbox" id="lead-select-all" title="Select all" style="cursor:pointer;width:15px;height:15px;accent-color:var(--gold, #d97706)"/></th><th>Lead</th><th>Event</th><th>Shaadi kab</th><th>Zariya</th><th>Status</th><th>Aakhri raabta</th><th></th></tr></thead>
     <tbody id="tbody">${body}</tbody></table></div>
-    ${leads.length ? `<div class="tbl-foot"><span id="rowcount">${leads.length} leads</span></div>` : `<div class="empty">Abhi koi lead nahi. Nayi puchh-gichh yahan aayegi.<div style="margin-top:12px"><button class="btn btn-primary" data-lead-new>+ Naya lead</button></div></div>`}</div>`
+    ${leads.length ? `<div class="tbl-foot"><span id="rowcount">${leads.length} leads</span></div>` : `<div class="empty">Abhi koi lead nahi. Nayi puchh-gichh yahan aayegi.<div style="margin-top:12px"><button class="btn btn-primary" data-lead-new>+ Naya lead</button></div></div>`}</div>
+    <div id="lead-bulk-bar" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#18181b;color:#fff;padding:8px 18px;border-radius:9999px;box-shadow:0 12px 30px rgba(0,0,0,0.35);z-index:9999;align-items:center;gap:12px;font-size:13px;font-family:inherit">
+      <span id="lead-bulk-count" style="font-weight:600">0 leads selected</span>
+      <span style="opacity:0.3">|</span>
+      <button class="btn btn-primary sm" data-bulk-assign-btn style="background:#eab308;color:#000;font-weight:600;padding:4px 12px;border-radius:6px;border:none;cursor:pointer;font-size:12px">🏢 Assign Venue</button>
+      <select id="lead-bulk-status-select" style="background:#27272a;color:#fff;border:1px solid #3f3f46;border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer">
+        <option value="">Status badlein...</option>
+        <option value="new">Naya (New)</option>
+        <option value="contacted">Raabta (Contacted)</option>
+        <option value="quoted">Quote</option>
+        <option value="qualified">Visit / Qualified</option>
+        <option value="booked">Jeeta (Booked)</option>
+        <option value="lost">Khoya (Lost)</option>
+      </select>
+      <button class="btn btn-ghost sm" data-bulk-export-btn style="background:transparent;color:#d4d4d8;padding:4px 8px;border:none;cursor:pointer;font-size:12px">📥 Export</button>
+      <button class="btn btn-ghost sm" data-bulk-clear-btn style="background:transparent;color:#f87171;padding:4px 8px;border:none;cursor:pointer;font-size:12px">✕ Clear</button>
+    </div>`
 }
 
 export function LeadsArtifact() {
@@ -341,6 +374,8 @@ export function LeadsArtifact() {
   const leads = data?.leads ?? []
   const leadsRef = React.useRef(leads); leadsRef.current = leads
   const [assignLead, setAssignLead] = React.useState<Lead | null>(null)
+  const [bulkAssignLeadIds, setBulkAssignLeadIds] = React.useState<number[]>([])
+  const selectedLeadIds = React.useRef<Set<number>>(new Set())
   const searchParams = useSearchParams()
   const { user: me } = useUser()
   const meRef = React.useRef<{ id: number; name?: string | null } | null>(null)

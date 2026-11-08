@@ -138,6 +138,23 @@ export class AdminBusinessAPI {
   }
 
   /**
+   * POST /api/v1/admin/leads/bulk-assign
+   * Assign or reassign multiple inquiries/leads to a target business in a batch.
+   */
+  static async bulkAssignLeads(
+    leadIds: number[],
+    targetBusinessId: number,
+    adminNote?: string,
+  ): Promise<{ assignedCount: number; targetBusiness: { id: number; name: string } }> {
+    const res = await axiosInstance.post('/api/v1/admin/leads/bulk-assign', {
+      leadIds,
+      targetBusinessId,
+      adminNote,
+    })
+    return res.data?.data
+  }
+
+  /**
    * POST /api/v1/admin/bookings/:id/assign-business
    * Assign or reassign a booking order to a target business.
    */
