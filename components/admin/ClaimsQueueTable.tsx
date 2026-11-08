@@ -56,6 +56,9 @@ export function ClaimsQueueTable() {
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
   const [reason, setReason] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [search, setSearch] = useState("")
+  const [cityFilter, setCityFilter] = useState("all")
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
 
   const refresh = async () => {
     try {
@@ -109,6 +112,19 @@ export function ClaimsQueueTable() {
     }
   }
 
+  const filteredClaims = claims.filter((c) => {
+    const q = search.trim().toLowerCase()
+    const matchesSearch = !q ||
+      businessName(c).toLowerCase().includes(q) ||
+      (c.claimantName || "").toLowerCase().includes(q) ||
+      (c.claimantPhoneE164 || "").toLowerCase().includes(q) ||
+      (c.claimantEmail || "").toLowerCase().includes(q);
+    const matchesCity = cityFilter === "all" || (c.business?.city || "").toLowerCase() === cityFilter.toLowerCase();
+    return matchesSearch && matchesCity;
+  });
+
+  const cities = Array.from(new Set(claims.map((c) => c.business?.city).filter(Boolean))) as string[];
+
   return (
     <div className="space-y-4">
       <Tabs value={statusTab} onValueChange={(v) => setStatusTab(v as ClaimStatus)}>
@@ -122,9 +138,40 @@ export function ClaimsQueueTable() {
       </Tabs>
 
       <Card>
-        <CardHeader>
+              {/* Search and City Filter */}
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="text"
+          placeholder="Search venue name, claimant, or phone..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-8 max-w-sm flex-1 rounded-md border border-input bg-background px-3 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        <select
+          value={cityFilter}
+          onChange={(e) => setCityFilter(e.target.value)}
+          className="h-8 rounded-md border border-input bg-background px-2.5 text-xs font-medium"
+        >
+          <option value="all">All Cities</option>
+          {cities.map((city) => (
+            <option key={city} value={city}>{city}</option>
+          ))}
+        </select>
+        {(search || cityFilter !== "all") && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-xs text-muted-foreground"
+            onClick={() => { setSearch(""); setCityFilter("all"); }}
+          >
+            Clear
+          </Button>
+        )}
+      </div>
+
+      <CardHeader>
           <CardTitle className="text-base">
-            {claims.length} {claims.length === 1 ? "claim" : "claims"}{" "}
+            {filteredClaims.length} of {claims.length} claims{" "}
             {statusTab.replace("_", " ")}
           </CardTitle>
         </CardHeader>
@@ -140,7 +187,7 @@ export function ClaimsQueueTable() {
             </p>
           ) : (
             <div className="space-y-3">
-              {claims.map((c) => (
+              {filteredClaims.map((c) => (
                 <div
                   key={c.id}
                   className="rounded-md border border-bridal-beige/70 p-4 flex flex-col gap-3"
