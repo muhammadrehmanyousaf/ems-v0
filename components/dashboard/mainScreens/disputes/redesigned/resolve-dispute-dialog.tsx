@@ -35,13 +35,34 @@ export function ResolveDisputeDialog({
   label?: string
   onSaved?: () => void
 }) {
-  const [resolution, setResolution] = React.useState<DisputeResolution>("refund")
+  const [resolution, setResolution] = React.useState<DisputeResolution | "split">("refund")
   const [notes, setNotes] = React.useState("")
-  React.useEffect(() => { if (open) { setResolution("refund"); setNotes("") } }, [open])
+  const [customerRefundPct, setCustomerRefundPct] = React.useState(40)
+  const [vendorReleasePct, setVendorReleasePct] = React.useState(50)
+
+  React.useEffect(() => {
+    if (open) {
+      setResolution("refund")
+      setNotes("")
+      setCustomerRefundPct(40)
+      setVendorReleasePct(50)
+    }
+  }, [open])
 
   const mut = useMutation({
-    mutationFn: () => resolveDispute(disputeId!, { resolution, notes: notes.trim() || undefined }),
-    onSuccess: (res: any) => { showSuccessToast(res?.restoredPayoutCount ? `Resolved — ${res.restoredPayoutCount} payout(s) restored` : "Dispute resolved"); onSaved?.(); onOpenChange(false) },
+    mutationFn: () => {
+      const isSplit = resolution === "split"
+      const resVal: DisputeResolution = isSplit ? "refund" : (resolution as DisputeResolution)
+      const splitNote = isSplit
+        ? `[ARBITRATED SPLIT: ${customerRefundPct}% Refund to Customer, ${vendorReleasePct}% Released to Vendor, ${Math.max(0, 100 - customerRefundPct - vendorReleasePct)}% Platform Fee] ${notes.trim()}`
+        : notes.trim() || undefined
+      return resolveDispute(disputeId!, { resolution: resVal, notes: splitNote })
+    },
+    onSuccess: (res: any) => {
+      showSuccessToast(res?.restoredPayoutCount ? `Resolved — ${res.restoredPayoutCount} payout(s) restored` : "Dispute resolved")
+      onSaved?.()
+      onOpenChange(false)
+    },
     onError: (e: any) => toast.error(errorMessage(e, "Couldn't resolve dispute")),
   })
   const current = RESOLUTIONS.find((r) => r.value === resolution)
@@ -57,6 +78,50 @@ export function ResolveDisputeDialog({
               {RESOLUTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
             </select>
             {current && <p className="text-[11px] text-muted-foreground">{current.hint}</p>}
+          {resolution === "split" && (
+            <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+              <div className="text-xs font-semibold text-foreground flex items-center justify-between">
+                <span>Escrow Split Calculator</span>
+                <span className="text-[11px] text-muted-foreground">Platform Fee: {Math.max(0, 100 - customerRefundPct - vendorReleasePct)}%</span>
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="text-rose-700 font-medium">Customer Refund</span>
+                  <span className="font-semibold">{customerRefundPct}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={customerRefundPct}
+                  onChange={(e) => {
+                    const c = Number(e.target.value)
+                    setCustomerRefundPct(c)
+                    if (c + vendorReleasePct > 100) setVendorReleasePct(100 - c)
+                  }}
+                  className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-rose-600"
+                />
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="text-emerald-700 font-medium">Vendor Payout Release</span>
+                  <span className="font-semibold">{vendorReleasePct}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={vendorReleasePct}
+                  onChange={(e) => {
+                    const v = Number(e.target.value)
+                    setVendorReleasePct(v)
+                    if (v + customerRefundPct > 100) setCustomerRefundPct(100 - v)
+                  }}
+                  className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                />
+              </div>
+            </div>
+          )}
           </div>
           <div className="space-y-1.5">
             <label className={labelCls}>Notes (optional)</label>
