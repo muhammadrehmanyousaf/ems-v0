@@ -52,6 +52,9 @@ export default function AdminManualPaymentsView() {
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [reason, setReason] = useState("");
   const [zoom, setZoom] = useState<string | null>(null);
+  const [zoomRotate, setZoomRotate] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [methodFilter, setMethodFilter] = useState("all");
 
   const load = useCallback((s: ManualStatus) => {
     setLoading(true);
@@ -92,6 +95,31 @@ export default function AdminManualPaymentsView() {
       toast.error(adminErrorMessage(e, "Could not reject"));
     } finally { setBusyId(null); }
   };
+
+  // Duplicate Transaction ID (TID) / Reference detector
+  const refCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    rows.forEach((r) => {
+      const ref = (r.reference || "").trim().toLowerCase();
+      if (ref && ref !== "none" && ref !== "cash" && ref.length >= 4) {
+        map[ref] = (map[ref] || 0) + 1;
+      }
+    });
+    return map;
+  }, [rows]);
+
+  const filteredRows = useMemo(() => {
+    return rows.filter((r) => {
+      const q = searchQuery.trim().toLowerCase();
+      const matchesSearch = !q ||
+        (r.vendor?.fullName || "").toLowerCase().includes(q) ||
+        (r.vendor?.email || "").toLowerCase().includes(q) ||
+        (r.vendor?.phoneNumber || "").toLowerCase().includes(q) ||
+        (r.reference || "").toLowerCase().includes(q);
+      const matchesMethod = methodFilter === "all" || r.method === methodFilter;
+      return matchesSearch && matchesMethod;
+    });
+  }, [rows, searchQuery, methodFilter]);
 
   const total = useMemo(() => rows.reduce((a, r) => a + (r.amountPkr || 0), 0), [rows]);
 
@@ -142,8 +170,37 @@ export default function AdminManualPaymentsView() {
               {status === "pending" ? "Nothing is waiting. New proofs appear here as vendors send them." : `No ${STATUS_STYLE[status].label.toLowerCase()} payments yet.`}
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  placeholder="Search vendor name, phone, or reference number..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8 max-w-sm text-xs"
+                />
+                <select
+                  value={methodFilter}
+                  onChange={(e) => setMethodFilter(e.target.value)}
+                  className="h-8 rounded-md border border-input bg-background px-2.5 text-xs font-medium"
+                >
+                  <option value="all">All Payment Methods</option>
+                  <option value="bank">Bank Transfer (IBFT)</option>
+                  <option value="jazzcash">JazzCash</option>
+                  <option value="easypaisa">Easypaisa</option>
+                </select>
+                {(searchQuery || methodFilter !== "all") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs text-muted-foreground"
+                    onClick={() => { setSearchQuery(""); setMethodFilter("all"); }}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-[11px] uppercase tracking-wide text-muted-foreground">
                     <th className="py-2 pr-3 font-medium">Sent</th>
@@ -157,7 +214,7 @@ export default function AdminManualPaymentsView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => {
+                  {filteredRows.map((r) => {
                     const st = STATUS_STYLE[r.status] || { label: r.status, cls: "" };
                     const price = prices[r.tier];
                     const matches = price != null && r.amountPkr != null && Math.round(price) === Math.round(r.amountPkr);
@@ -174,6 +231,11 @@ export default function AdminManualPaymentsView() {
                           <td className="py-2.5 pr-3">
                             <div className="whitespace-nowrap">{METHOD_LABEL[r.method] || r.method}</div>
                             <div className="font-mono text-[11px] text-muted-foreground break-all">{r.reference}</div>
+                            {r.reference && (refCounts[r.reference.trim().toLowerCase()] || 0) > 1 && (
+                              <div className="mt-1 inline-flex items-center gap-1 rounded bg-rose-100 text-rose-800 text-[10px] font-semibold px-1.5 py-0.5 border border-rose-200">
+                                ⚠️ Duplicate TID ({(refCounts[r.reference.trim().toLowerCase()] || 0)}x submissions)
+                              </div>
+                            )}
                           </td>
                           <td className="py-2.5 pr-3 whitespace-nowrap tabular-nums">
                             <div className="font-medium">{rs(r.amountPkr)}</div>
@@ -250,6 +312,7 @@ export default function AdminManualPaymentsView() {
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </CardContent>
