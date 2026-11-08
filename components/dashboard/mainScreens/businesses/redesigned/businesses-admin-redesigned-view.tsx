@@ -41,6 +41,11 @@ import { AssignToBusinessModal } from "@/components/dashboard/admin/assignment/A
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 
+const getBizPhone = (b: ApiBusiness): string | null => {
+  const anyB = b as any
+  return anyB.contactPhone || anyB.phone || anyB.vendor?.phoneNumber || null
+}
+
 const label = (v: unknown): string => {
   if (Array.isArray(v)) return v.filter((x) => typeof x === "string" && x.trim()).join(", ")
   if (typeof v === "string") return v
@@ -414,6 +419,37 @@ export function BusinessesAdminRedesignedView() {
                 ✓ Approve
               </Button>
             )}
+
+            {/* Quick Contact Icons */}
+            {(() => {
+              const phone = getBizPhone(b);
+              if (!phone) return null;
+              const cleanPhone = phone.replace(/\D/g, "");
+              const p = cleanPhone.startsWith("0") ? "92" + cleanPhone.slice(1) : cleanPhone;
+              const text = encodeURIComponent(`Assalam-o-Alaikum! WeddingWala team here regarding "${b.name}".`);
+              return (
+                <div className="flex items-center gap-0.5">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0 text-emerald-700 hover:bg-emerald-50"
+                    title={`WhatsApp: ${phone}`}
+                    onClick={() => window.open(`https://wa.me/${p}?text=${text}`, "_blank")}
+                  >
+                    <Icon name="MessageSquare" size={14} />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                    title={`Call: ${phone}`}
+                    onClick={() => { window.location.href = `tel:${phone}`; }}
+                  >
+                    <Icon name="Phone" size={13} />
+                  </Button>
+                </div>
+              );
+            })()}
 
             {/* 360 View */}
             <Button
