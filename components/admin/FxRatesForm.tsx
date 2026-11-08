@@ -31,6 +31,15 @@ import { Button } from "@/components/ui/button"
 
 const today = () => new Date().toISOString().slice(0, 10)
 
+const MARKET_ESTIMATES: Record<string, string> = {
+  USD: "279.80",
+  GBP: "365.40",
+  AED: "76.20",
+  SAR: "74.60",
+  CAD: "203.90",
+  EUR: "303.50",
+};
+
 function readErr(e: unknown, fallback: string): string {
   const r = e as { response?: { data?: { message?: string } }; message?: string }
   return r?.response?.data?.message || r?.message || fallback
@@ -62,6 +71,32 @@ export function FxRatesForm() {
   useEffect(() => {
     void reload()
   }, [reload])
+
+  const autoFillMarketRates = () => {
+    setDrafts((prev) => ({
+      ...prev,
+      ...MARKET_ESTIMATES,
+    }));
+  };
+
+  const saveAllDrafts = async () => {
+    const toSave = Object.entries(drafts).filter(([_, v]) => Number(v) > 0);
+    if (toSave.length === 0) return;
+    setLoading(true);
+    try {
+      for (const [cur, val] of toSave) {
+        await fxApi.set(cur, Number(val), today());
+      }
+      setDrafts({});
+      await reload();
+      setSaved("All");
+      setTimeout(() => setSaved(null), 4000);
+    } catch (e) {
+      setError(readErr(e, "Failed to save some rates"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const save = async (currency: string) => {
     const raw = drafts[currency]
@@ -129,6 +164,32 @@ export function FxRatesForm() {
           </span>
         </p>
       )}
+
+            <div className="flex items-center justify-between gap-2 flex-wrap pt-2">
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={autoFillMarketRates}
+            className="text-xs gap-1.5"
+          >
+            ⚡ Auto-Fill Market Rates
+          </Button>
+          {Object.values(drafts).some((v) => Number(v) > 0) && (
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              onClick={saveAllDrafts}
+              className="text-xs gap-1.5 bg-primary text-primary-foreground"
+            >
+              ✓ Save All Entered Rates
+            </Button>
+          )}
+        </div>
+        <span className="text-xs text-muted-foreground">Showing rates active for 7 days</span>
+      </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
