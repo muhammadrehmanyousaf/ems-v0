@@ -250,6 +250,18 @@ export function VendorQueueRedesignedView() {
     )
   }, [all, search])
 
+  // Duplicate business detector (fuzzy match on name & city)
+  const duplicateMap = React.useMemo(() => {
+    const map = new Map<string, number>();
+    all.forEach((b) => {
+      const key = `${(b.name || "").trim().toLowerCase()}::${(b.city || "").trim().toLowerCase()}`;
+      if (b.name && b.name.length > 3) {
+        map.set(key, (map.get(key) || 0) + 1);
+      }
+    });
+    return map;
+  }, [all]);
+
   const avgCompleteness = all.length
     ? Math.round(all.reduce((sum, r) => sum + num(r.completenessScore), 0) / all.length)
     : 0
@@ -336,7 +348,32 @@ export function VendorQueueRedesignedView() {
       cellClassName: "tabular-nums",
       render: (r) => `${num(r.completenessScore)}%`,
     },
-    { key: "createdAt", header: "Submitted", cellClassName: "text-muted-foreground", render: (r) => fmtDate(r.createdAt) },
+    {
+      key: "createdAt",
+      header: "Submitted",
+      cellClassName: "text-muted-foreground",
+      render: (r) => {
+        const ms = r.createdAt ? Date.now() - new Date(r.createdAt).getTime() : 0;
+        const hours = Math.floor(ms / (1000 * 60 * 60));
+        const isPendingState = r.status === "submitted" || r.status === "pending_review";
+        return (
+          <div>
+            <div className="text-xs">{fmtDate(r.createdAt)}</div>
+            {isPendingState && ms > 0 && (
+              <div className="mt-0.5">
+                {hours < 12 ? (
+                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full">⏱️ {hours}h wait</span>
+                ) : hours < 24 ? (
+                  <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded-full">⚠️ {hours}h (due)</span>
+                ) : (
+                  <span className="text-[10px] font-semibold text-rose-800 bg-rose-100 px-1.5 py-0.5 rounded-full">🚨 {Math.floor(hours / 24)}d {hours % 24}h SLA</span>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
     {
       key: "status",
       header: "Status",
