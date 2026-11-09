@@ -77,13 +77,18 @@ export async function generateVendorDetailMetadata(
 ): Promise<Metadata> {
   const vt = getVendorType(input.typeSlug)
   const city = getCity(input.citySlug)
-  if (!vt || !city) return { title: "Not Found" }
+  if (!vt || !city) return { title: `Wedding Vendors | ${SITE_NAME}` }
 
   const { id } = parseVendorSlugAndId(input.vendorSlug)
-  if (!id) return { title: "Not Found" }
+  if (!id) return { title: `${vt?.plural || "Vendors"} in ${city?.name || "Pakistan"} | ${SITE_NAME}` }
 
   const vendor = await fetchVendorById(id)
-  if (!vendor) return { title: "Not Found" }
+  if (!vendor) {
+    return {
+      title: `${vt.plural} in ${city.name} | ${SITE_NAME}`,
+      description: `Browse verified ${vt.plural.toLowerCase()} in ${city.name}, Pakistan on ${SITE_NAME}.`,
+    }
+  }
 
   let title = `${vendor.name} — ${vt.singular} in ${city.name}`
   let description = `${vendor.name} — ${vt.singular.toLowerCase()} in ${city.name}, Pakistan. Book on ${SITE_NAME}.`
@@ -182,13 +187,20 @@ export async function generateVendorDetailMetadata(
 export async function VendorDetailPage(input: PageInput) {
   const vt = getVendorType(input.typeSlug)
   const city = getCity(input.citySlug)
-  if (!vt || !city) notFound()
+  if (!vt || !city) {
+    permanentRedirect("/wedding-venues")
+  }
 
   const parsed = parseVendorSlugAndId(input.vendorSlug)
-  if (!parsed.id) notFound()
+  if (!parsed.id) {
+    permanentRedirect(`/${vt.slug}/${city.slug}`)
+  }
 
   const vendor = await fetchVendorById(parsed.id)
-  if (!vendor) notFound()
+  if (!vendor) {
+    // Stale or deleted vendor ID: 301 redirect to the city category hub instead of 404
+    permanentRedirect(`/${vt.slug}/${city.slug}`)
+  }
   const priceDisplay = formatPrice(vendor.raw || vendor)
 
   // Editorial stand-in for a vendor with no photos of their own. Category-
@@ -199,34 +211,24 @@ export async function VendorDetailPage(input: PageInput) {
     alt: imagery.heroAlt ?? `${vt.singular} in ${city.name}`,
   }
 
+  // Type / city sanity — if vendor category or city was reclassified, 301 redirect
+  // to their real canonical profile URL instead of returning 404 to Google
+  const actualTypeSlug = (vendor.vendorType && backendToSeoSlug(vendor.vendorType)) || vt.slug
+  const actualCitySlug = slugifyName(vendor.city || city.slug)
+
+  if (actualTypeSlug !== vt.slug || (city.slug !== "pakistan" && actualCitySlug !== city.slug)) {
+    const targetCity = getCity(actualCitySlug) || city
+    permanentRedirect(buildVendorCanonicalPath(actualTypeSlug, targetCity.slug, vendor))
+  }
+
   // Canonicalization — if the user typed a stale slug, 301 to the
   // canonical URL. Compare against the slugified DB name.
   if (parsed.slug !== vendor.nameSlug) {
     permanentRedirect(buildVendorCanonicalPath(vt.slug, city.slug, vendor))
   }
 
-  // Type / city sanity — refuse to serve a vendor under a URL that doesn't
-  // match its actual category or city. Could 301, but 404 is safer for SEO
-  // (avoid duplicate-content footguns).
-  const expectedBackendType = getBackendVendorType(vt.slug)
-  // Alias-aware: a vendor belongs on this type page when its backend type
-  // resolves (directly or via a fold alias, e.g. Marquee->wedding-venues) to
-  // this SEO slug. Using backendToSeoSlug keeps folds from 404-ing here.
-  if (vendor.vendorType && backendToSeoSlug(vendor.vendorType) !== vt.slug) {
-    notFound()
-  }
-  // The "pakistan" national catch-all accepts vendors whose real city is
-  // unknown/unparseable in the source data, so skip the city-match guard there.
-  if (
-    city.slug !== "pakistan" &&
-    vendor.city &&
-    city.name &&
-    vendor.city.toLowerCase() !== city.name.toLowerCase()
-  ) {
-    notFound()
-  }
-
   // Related vendors (same type + city) — internal-link flywheel + crawl depth.
+  const expectedBackendType = getBackendVendorType(vt.slug)
   const related = (
     expectedBackendType
       ? await fetchCityVendors({

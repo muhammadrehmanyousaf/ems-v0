@@ -18,7 +18,7 @@ import { computeCityPriceRange } from "@/lib/pricing/pricing-model";
 import { safeJsonLd } from "@/lib/seo/jsonld";
 import Link from "next/link"
 import type { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { notFound, permanentRedirect } from "next/navigation"
 import {
   CITIES,
   SITE_NAME,
@@ -107,9 +107,13 @@ export async function generateListicleStaticParams(): Promise<{ slug: string }[]
 }
 
 export function generateListicleMetadata(slug: string): Metadata {
-  if (!LISTICLE_PAGES_ENABLED) return { title: "Not Found" }
   const parsed = parseListicleSlug(slug)
-  if (!parsed) return { title: "Not Found" }
+  if (!parsed || !LISTICLE_PAGES_ENABLED) {
+    return {
+      title: `Best Wedding Vendors | ${SITE_NAME}`,
+      description: `Browse verified wedding vendors, venues, and photographers across Pakistan on ${SITE_NAME}.`,
+    }
+  }
   const { vendorType: vt, city } = parsed
 
   let fullTitle = `10 Best ${vt.plural} in ${city.name} (${LISTICLE_YEAR} Reviews)`
@@ -170,9 +174,13 @@ function joinNames(names: string[]): string {
 }
 
 export async function BestVendorListiclePage({ slug }: { slug: string }) {
-  if (!LISTICLE_PAGES_ENABLED) notFound()
+  if (!LISTICLE_PAGES_ENABLED) {
+    permanentRedirect("/wedding-venues")
+  }
   const parsed = parseListicleSlug(slug)
-  if (!parsed) notFound()
+  if (!parsed) {
+    permanentRedirect("/wedding-venues")
+  }
   const { vendorType: vt, city } = parsed
 
   const backendType = getBackendVendorType(vt.slug)
@@ -180,8 +188,10 @@ export async function BestVendorListiclePage({ slug }: { slug: string }) {
     await fetchCityVendors({ city: city.slug, vendorType: backendType, limit: 50 }),
   )
 
-  // Never publish a thin "best of" list.
-  if (all.length < MIN_VENDORS_FOR_LISTICLE) notFound()
+  // Never publish a thin "best of" list. 301 redirect to canonical city category hub!
+  if (all.length < MIN_VENDORS_FOR_LISTICLE) {
+    permanentRedirect(`/${vt.slug}/${city.slug}`)
+  }
 
   const ranked = all.slice(0, LISTICLE_MAX_RANKED)
   const isVenue = vt.slug === 'wedding-venues' || vt.slug === 'caterers';

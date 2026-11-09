@@ -1,15 +1,16 @@
-import { notFound } from "next/navigation"
-import VendorDetailsMobile from "@/components/VendorDetails/VendorDetailsMobile"
+import React from "react"
+import { permanentRedirect } from "next/navigation"
 import { BACKEND_URL } from "@/lib/backend-url"
 import { vendorCacheTag, slugifyName } from "@/lib/seo/fetch-vendor"
-import { venueLD, vendorLD } from "@/lib/seo/jsonld"
-import { safeJsonLd } from "@/lib/seo/jsonld"
+import { backendToSeoSlug } from "@/lib/seo"
 
 /**
- * The vendor profile page, server-rendered.
+ * Legacy vendor profile route handler.
  *
- * Emits complete Schema.org JSON-LD (EventVenue or LocalBusiness)
- * with ratings and contact details for Google rich search results.
+ * Canonical 301 router: redirects all legacy short ID routes (/venues/[id],
+ * /photographers/[id], /makeup-artists/[id], etc.) to their canonical
+ * L6 slug: /{typeSlug}/{citySlug}/{slug}. If the vendor was deleted or not found,
+ * permanently redirects to the main /wedding-venues hub to eliminate 404s.
  */
 export const VENDOR_DETAIL_REVALIDATE = 3600
 
@@ -29,54 +30,18 @@ async function fetchVendor(id: string) {
   }
 }
 
-export async function VendorDetailRoute({ id }: { id: string }) {
+export async function VendorDetailRoute({ id }: { id: string }): Promise<React.JSX.Element | null> {
   const vendor = await fetchVendor(id)
-  if (!vendor) notFound()
+  if (!vendor) {
+    permanentRedirect("/wedding-venues")
+  }
 
   const type = typeof vendor.type === "string" && vendor.type.trim() ? vendor.type : vendor.vendor?.vendorType || ""
-  const isVenue = type?.toLowerCase().includes("venue") || type?.toLowerCase().includes("hall") || type?.toLowerCase().includes("marquee")
-  const city = vendor.city || "Pakistan"
+  const typeSlug = backendToSeoSlug(type) || "wedding-venues"
+  const citySlug = slugifyName(vendor.city || "pakistan")
   const slug = `${slugifyName(vendor.name || "vendor")}-${vendor.id}`
-  
-  const ld = isVenue
-    ? venueLD({
-        id: vendor.id,
-        name: vendor.name,
-        slug,
-        vendorType: "Wedding Venue",
-        vendorTypeSlug: "wedding-venues",
-        description: vendor.description || "",
-        imageUrl: vendor.featuredImage || vendor.images?.[0] || "",
-        citySlug: slugifyName(city),
-        cityName: city,
-        addressLine: vendor.address,
-        phone: vendor.phone,
-        email: vendor.email,
-        rating: vendor.rating ? { value: Number(vendor.rating), count: Number(vendor.reviewCount || 1) } : undefined,
-      })
-    : vendorLD({
-        id: vendor.id,
-        name: vendor.name,
-        slug,
-        vendorType: type || "Wedding Vendor",
-        vendorTypeSlug: "vendors",
-        description: vendor.description || "",
-        imageUrl: vendor.featuredImage || vendor.images?.[0] || "",
-        citySlug: slugifyName(city),
-        cityName: city,
-        addressLine: vendor.address,
-        phone: vendor.phone,
-        email: vendor.email,
-        rating: vendor.rating ? { value: Number(vendor.rating), count: Number(vendor.reviewCount || 1) } : undefined,
-      })
 
-  return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: safeJsonLd(ld) }}
-      />
-      <VendorDetailsMobile vendor={{ ...vendor, type }} />
-    </>
-  )
+  // 301 Permanent Redirect to canonical SEO leaf URL
+  permanentRedirect(`/${typeSlug}/${citySlug}/${slug}`)
+  return null
 }

@@ -386,7 +386,7 @@ export function CitySpotlights() {
           {cities.map((c, i) => (
             <Link
               key={c.city}
-              href={`/vendors?location=${encodeURIComponent(c.city)}`}
+              href={`/cities/${c.city.toLowerCase()}`}
               className="group block"
             >
               <article className="relative aspect-[3/4] rounded-md overflow-hidden bridal-card p-0">
