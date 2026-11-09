@@ -13,11 +13,31 @@
 
 import { resolvePricingModel } from "./pricing-model";
 
-const JUNK_SYMBOLS_RE = /(&\^|[%@$*~<>{}|[\]\\]|(\?{2,})|(!{2,}))/;
+const JUNK_SYMBOLS_RE = /(&\^|[%@$*~<>{}\[\]\\]|(\|{2,})|(\?{2,})|(!{2,}))/;
 const TEST_WORDS_RE = /\b(test|demo|asdf|dummy|sample|testing)\b/i;
 
-// Businesses improperly categorized into wedding services
-const OFF_TOPIC_RE = /\b(dental|dentist|clinic|hospital|doctor|motors|automotive|exim|import export|pizza|burger|fast food|shawarma|paratha|chai dhabba|photocopy|stationery|stationers|electronics|electric store|pharmacy|chemist|hardware|sanitary|plumber|plumbing)\b/i;
+// Strict off-topic keywords (always off-topic across all categories)
+const STRICT_OFF_TOPIC_RE = /\b(dental|dentist|clinic|hospital|doctor|exim|import export|pizza|burger|shawarma|chai dhabba|pharmacy|chemist|hardware|sanitary|plumber|plumbing)\b/i;
+
+function isListingOffTopic(name: string, description: string, raw: any): boolean {
+  const type = String(raw?.type || raw?.vendorType || raw?.vendor?.vendorType || raw?.subBusinessType || "").toLowerCase();
+
+  // Contextual exceptions for legitimate wedding categories
+  const isCarService = type.includes("car") || /rent\s*a\s*car|car\s*rental|wedding\s*car/i.test(name);
+  const isGeneratorService = type.includes("generator") || /generator/i.test(name);
+  const isStationeryService = type.includes("stationery") || type.includes("invitation") || /wedding\s*card|invitation|printer|printing/i.test(name);
+  const isCateringOrMithai = type.includes("cater") || type.includes("mithai") || /halwa|mithai|dastarkhwan|pakwan/i.test(name);
+
+  if (STRICT_OFF_TOPIC_RE.test(name)) return true;
+
+  // Category-specific checks: allow motors for car services, electronics for generators, stationery for printers, halwa/paratha for catering
+  if (!isCarService && /\b(motors|automotive|auto repair|workshop)\b/i.test(name)) return true;
+  if (!isGeneratorService && /\b(electronics|electric store|home appliances)\b/i.test(name)) return true;
+  if (!isStationeryService && /\b(photocopy|stationers)\b/i.test(name)) return true;
+  if (!isCateringOrMithai && /\b(paratha|fast food)\b/i.test(name)) return true;
+
+  return false;
+}
 
 export interface ValidationResult {
   isValid: boolean;
@@ -57,7 +77,7 @@ export function validateListing(raw: any): ValidationResult {
   }
 
   // 2. Off-topic checks
-  const isOffTopic = OFF_TOPIC_RE.test(name) || OFF_TOPIC_RE.test(description);
+  const isOffTopic = isListingOffTopic(name, description, raw);
   if (isOffTopic) {
     reasons.push(`Business appears off-topic / non-wedding: "${name}"`);
   }
