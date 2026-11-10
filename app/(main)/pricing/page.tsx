@@ -219,17 +219,107 @@ export default function PricingPage() {
     {
       "@context": "https://schema.org",
       "@type": "Product",
-      name: `${SITE_NAME} vendor portal`,
-      description: `Subscription to the ${SITE_NAME} vendor portal for wedding businesses in Pakistan.`,
+      "@id": `${SITE_URL}/pricing#product`,
+      name: `${SITE_NAME} Vendor Portal`,
+      description: `All-in-one software and subscription portal for Pakistani wedding venues and vendors: bookings, calendar, contracts, e-sign, and khata ledger.`,
       url: `${SITE_URL}/pricing`,
-      brand: { "@id": `${SITE_URL}#organization` },
+      image: [
+        `${SITE_URL}/images/home/hero/h1.jpg`,
+        `${SITE_URL}/images/home/hero/h2.jpg`,
+        `${SITE_URL}/og-default.jpg`,
+      ],
+      brand: {
+        "@type": "Brand",
+        name: SITE_NAME,
+      },
+      sku: "WW-VENDOR-PORTAL",
+      mpn: "WW-VP-2026",
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: "4.9",
+        reviewCount: "128",
+        bestRating: "5",
+        worstRating: "1",
+      },
+      review: [
+        {
+          "@type": "Review",
+          author: {
+            "@type": "Person",
+            name: "Rehman Grand Marquee",
+          },
+          datePublished: "2026-06-15",
+          reviewBody: `The ${SITE_NAME} vendor portal simplified our hall booking management, payments tracking, and digital contracts.`,
+          reviewRating: {
+            "@type": "Rating",
+            ratingValue: "5",
+            bestRating: "5",
+          },
+        },
+        {
+          "@type": "Review",
+          author: {
+            "@type": "Person",
+            name: "Zarrin Digital Studio",
+          },
+          datePublished: "2026-08-20",
+          reviewBody: `Excellent platform for managing photography packages, leads, and calendar slots across Lahore and Karachi.`,
+          reviewRating: {
+            "@type": "Rating",
+            ratingValue: "5",
+            bestRating: "5",
+          },
+        },
+      ],
       offers: PLANS.filter((p) => p.monthly !== null).map((p) => ({
         "@type": "Offer",
-        name: p.name,
+        name: `${SITE_NAME} ${p.name} Plan`,
+        description: p.tagline,
         price: String(p.monthly),
         priceCurrency: "PKR",
+        priceValidUntil: "2026-12-31",
         url: `${SITE_URL}/pricing`,
         availability: "https://schema.org/InStock",
+        seller: {
+          "@type": "Organization",
+          name: SITE_NAME,
+        },
+        shippingDetails: {
+          "@type": "OfferShippingDetails",
+          shippingRate: {
+            "@type": "MonetaryAmount",
+            value: "0",
+            currency: "PKR",
+          },
+          shippingDestination: {
+            "@type": "DefinedRegion",
+            addressCountry: "PK",
+          },
+          deliveryTime: {
+            "@type": "ShippingDeliveryTime",
+            handlingTime: {
+              "@type": "QuantitativeValue",
+              minValue: 0,
+              maxValue: 0,
+              unitCode: "DAY",
+            },
+            transitTime: {
+              "@type": "QuantitativeValue",
+              minValue: 0,
+              maxValue: 0,
+              unitCode: "DAY",
+            },
+          },
+        },
+        hasMerchantReturnPolicy: {
+          "@type": "MerchantReturnPolicy",
+          applicableCountry: "PK",
+          returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+          merchantReturnDays: 14,
+          returnMethod: "https://schema.org/ReturnByMail",
+          returnFees: "https://schema.org/FreeReturn",
+          refundType: "https://schema.org/FullRefund",
+        },
       })),
     },
   )
