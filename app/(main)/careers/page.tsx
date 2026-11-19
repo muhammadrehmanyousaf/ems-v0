@@ -14,7 +14,7 @@ import {
 import { safeJsonLd } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
-  title: `Careers — Join the ${SITE_NAME} team`,
+  title: { absolute: `Careers at ${SITE_NAME} — Join Our Team` },
   description: `Help us build Pakistan's wedding marketplace. Open roles in engineering, design, marketing, and vendor relations at ${SITE_NAME}.`,
   alternates: { canonical: `${SITE_URL}/careers` },
   openGraph: {

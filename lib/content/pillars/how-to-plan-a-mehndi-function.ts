@@ -2,7 +2,7 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "how-to-plan-a-mehndi-function",
-  "title": "How to Plan a Mehndi Function",
+  "title": "How to Plan a Mehndi Function in Pakistan (2026 Guide)",
   "h1": "How to Plan a Mehndi Function in Pakistan: Logistics, Order of Events & What You Need",
   "metaDescription": "How to plan a mehndi function in Pakistan: an 8-week timeline, vendor checklist, indicative PKR costs, the night's order of events and FAQs.",
   "eyebrow": "Wedding Planning · Pakistan",

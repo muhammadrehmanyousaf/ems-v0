@@ -38,7 +38,7 @@ import {
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Our services — what Wedding Wala does",
+  fullTitle: "Wedding Wala Services — Venues, Vendors & Planning Tools",
   description: `${SITE_NAME} helps Pakistani couples find, compare and book verified wedding vendors, and gives those vendors a portal to run their business. Free for couples; vendors pay a monthly subscription.`,
   path: "/services",
 })

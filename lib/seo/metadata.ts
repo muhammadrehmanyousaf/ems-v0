@@ -55,6 +55,22 @@ function normalizePath(p: string): string {
   return p.toLowerCase(); // L3 lowercase
 }
 
+/** Google shows roughly 60 characters of a title; past that the end (usually the hook: "2026 Rates & Photos") is cut. */
+const SERP_TITLE_MAX = 60
+
+/**
+ * The root layout appends " | Wedding Wala" to every title, which pushed ~90% of titles past 60 characters (median 69), cut
+ * the hook off in search results, and doubled the brand on titles that already named it. So a full title is now rendered
+ * as-is (`absolute`) and the brand is added only when the whole thing still fits. Google shows the site name next to the
+ * result anyway, so nothing is lost by leaving it out of a long title.
+ */
+export function composeSerpTitle(fullTitle: string): string {
+  const t = fullTitle.trim()
+  if (t.includes(SITE_NAME)) return t
+  const withBrand = `${t} | ${SITE_NAME}`
+  return withBrand.length <= SERP_TITLE_MAX ? withBrand : t
+}
+
 export function buildPageMetadata(input: PageMetadataInput): Metadata {
   const path = normalizePath(input.path);
   const url = `${SITE_URL}${path}`;
@@ -65,7 +81,7 @@ export function buildPageMetadata(input: PageMetadataInput): Metadata {
 
   // Compose title — Next.js template handles `%s | Wedding Wala` if `title` set.
   const title = input.fullTitle
-    ? input.fullTitle
+    ? composeSerpTitle(input.fullTitle)
     : input.title
       ? input.title // template applied by parent layout
       : `${SITE_NAME} — ${SITE_TAGLINE}`;
@@ -84,7 +100,7 @@ export function buildPageMetadata(input: PageMetadataInput): Metadata {
   }
 
   return {
-    title: input.fullTitle ?? input.title ?? undefined,
+    title: input.fullTitle ? { absolute: composeSerpTitle(input.fullTitle) } : (input.title ?? undefined),
     description,
     alternates: {
       canonical: path,

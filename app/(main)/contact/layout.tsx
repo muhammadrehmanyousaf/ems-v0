@@ -15,7 +15,7 @@ import { safeJsonLd } from "@/lib/seo/jsonld"
  * Emits ContactPage + BreadcrumbList JSON-LD server-side.
  */
 export const metadata: Metadata = {
-  title: `Contact us — ${SITE_NAME}`,
+  title: { absolute: `Contact ${SITE_NAME} — Support & Vendor Enquiries` },
   description: `Get in touch with the ${SITE_NAME} team. Vendor enquiries, booking support, partnership opportunities — we respond within one business day.`,
   alternates: { canonical: `${SITE_URL}/contact` },
   openGraph: {

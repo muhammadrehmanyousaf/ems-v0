@@ -14,7 +14,7 @@ import {
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "List your business on Wedding Wala",
+  fullTitle: "List Your Wedding Business on Wedding Wala — Free Signup",
   description: `Reach Pakistani couples planning their wedding right now. ${SITE_NAME} is the trust-first marketplace for Pakistani wedding vendors — verified profiles, real reviews, secure deposits, no chargeback drama.`,
   path: "/list-your-business",
 })

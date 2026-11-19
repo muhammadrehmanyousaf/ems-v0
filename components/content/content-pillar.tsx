@@ -30,9 +30,8 @@ export function buildPillarMetadata(data: PillarData): Metadata {
     ? data.metaDescription.slice(0, 152) + "..."
     : data.metaDescription;
 
-  const fullTitle = data.title.includes(SITE_NAME)
-    ? data.title
-    : (data.title.length > 44 ? data.title : `${data.title} | ${SITE_NAME}`);
+  // The brand is added (or not) by buildPageMetadata, which keeps the title within one search-result line.
+  const fullTitle = data.title;
 
   return buildPageMetadata({
     fullTitle,

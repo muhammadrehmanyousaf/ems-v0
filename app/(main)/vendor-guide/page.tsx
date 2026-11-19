@@ -13,7 +13,7 @@ import {
 import { safeJsonLd } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = buildPageMetadata({
-  title: `Vendor Guide — Grow Your Wedding Business on ${SITE_NAME}`,
+  fullTitle: `Vendor Guide: Grow Your Wedding Business | ${SITE_NAME}`,
   description: `How to list, price and grow your wedding business on ${SITE_NAME} (weddingwala.pk) — from creating your account to winning more bookings across Pakistan.`,
   path: "/vendor-guide",
 })

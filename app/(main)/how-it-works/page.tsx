@@ -12,7 +12,7 @@ import {
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "How Wedding Wala Works",
+  fullTitle: "How Wedding Wala Works — Book Wedding Vendors in Pakistan",
   description: `${SITE_NAME} is a marketplace. Here's how booking, payment, and vendor payouts work — explained plainly.`,
   path: "/how-it-works",
 })

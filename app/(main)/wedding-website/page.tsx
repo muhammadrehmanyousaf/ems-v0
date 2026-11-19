@@ -14,7 +14,7 @@ import {
 import { safeJsonLd } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = buildPageMetadata({
-  title: `Free Wedding Website Builder — ${SITE_NAME}`,
+  fullTitle: `Free Wedding Website Builder | ${SITE_NAME}`,
   description: `Build a beautiful wedding website with ${SITE_NAME} (weddingwala.pk) — elegant templates, your love story, RSVP, gift registry and a live countdown, shareable on WhatsApp.`,
   path: "/wedding-website",
 })

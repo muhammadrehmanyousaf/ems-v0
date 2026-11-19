@@ -534,6 +534,87 @@ function getCategoryTools(slug: string, cityName: string): CategoryTool[] {
   }
 }
 
+/**
+ * "Price list" block for venue and caterer pages, built ONLY from rates the listings themselves publish (the backend's
+ * priceMin). It answers the single most common query family on this site ("wedding halls in <city> with rates / price
+ * list / cheap") with a real table and a snippet-sized answer, and it is unique per city. Nothing is estimated: it renders
+ * only when at least three listings carry a per-head rate (the same 800-15,000 PKR band the pricing helper uses to tell a
+ * per-head rate from a flat package price).
+ */
+function CityPriceTable({
+  vendors,
+  cityName,
+  plural,
+  isVenue,
+}: {
+  vendors: VendorListItem[]
+  cityName: string
+  plural: string
+  isVenue: boolean
+}) {
+  const rows = vendors
+    .map((v) => ({ v, price: Number(v.priceMin) }))
+    .filter((r) => Number.isFinite(r.price) && r.price >= 800 && r.price <= 15000 && r.v.href)
+    .sort((a, b) => a.price - b.price)
+  if (rows.length < 3) return null
+
+  const prices = rows.map((r) => r.price)
+  const min = prices[0]
+  const max = prices[prices.length - 1]
+  const median = prices.length % 2 ? prices[(prices.length - 1) / 2] : Math.round((prices[prices.length / 2 - 1] + prices[prices.length / 2]) / 2)
+  const pkr = (n: number) => `PKR ${n.toLocaleString("en-PK")}`
+  const noun = isVenue ? "wedding halls" : "wedding caterers"
+  const shown = rows.slice(0, 10)
+  const anyCapacity = shown.some((r) => r.v.capacity)
+
+  return (
+    <section id="price-list" className="mb-16 scroll-mt-24" aria-labelledby="price-list-h">
+      <SectionHeading kicker="2026 price list" title={isVenue ? `How much do wedding halls cost in ${cityName}?` : `How much does wedding catering cost in ${cityName}?`} />
+      <div className="mx-auto max-w-3xl">
+        <p className="mb-5 font-bridal text-[15.5px] leading-relaxed text-bridal-text">
+          Across the {rows.length} {noun} in {cityName} that publish a per-head rate on {SITE_NAME}, prices start from{" "}
+          <strong>{pkr(min)}</strong> to <strong>{pkr(max)}</strong> per head, and the typical starting rate is{" "}
+          <strong>{pkr(median)}</strong> per head. The final bill depends on guest count, menu, day of the week and season
+          (October to February is peak), so treat these as starting prices and confirm with the {isVenue ? "hall" : "caterer"}.
+        </p>
+        <div className="overflow-x-auto rounded-xl border border-bridal-beige/70 bg-white">
+          <table className="w-full text-left text-sm text-bridal-text">
+            <caption id="price-list-h" className="sr-only">
+              {plural} in {cityName} by starting price per head, lowest first
+            </caption>
+            <thead className="bg-bridal-cream/60 text-xs uppercase tracking-wider text-bridal-charcoal">
+              <tr>
+                <th scope="col" className="px-4 py-3 font-semibold">{isVenue ? "Hall" : "Caterer"}</th>
+                <th scope="col" className="px-4 py-3 font-semibold">Area</th>
+                {anyCapacity && <th scope="col" className="px-4 py-3 font-semibold">Capacity</th>}
+                <th scope="col" className="px-4 py-3 text-right font-semibold">Starts from</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map(({ v, price }) => (
+                <tr key={String(v.id)} className="border-t border-bridal-beige/60">
+                  <td className="px-4 py-3 font-medium text-bridal-charcoal">
+                    <Link href={v.href as string} className="hover:text-bridal-gold-dark hover:underline">
+                      {v.name}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3">{v.subArea || cityName}</td>
+                  {anyCapacity && <td className="px-4 py-3">{v.capacity ? `${v.capacity.toLocaleString("en-PK")} guests` : "—"}</td>}
+                  <td className="px-4 py-3 text-right font-semibold text-bridal-charcoal">{pkr(price)} / head</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-3 font-bridal text-xs text-bridal-text-soft">
+          Lowest {shown.length} of {rows.length} published rates, cheapest first. Rates are taken from each listing and may
+          change; the listings above show every {isVenue ? "hall" : "caterer"} in {cityName}.
+        </p>
+      </div>
+    </section>
+  )
+}
+
 export async function VendorTypeCityPage({
   typeSlug,
   citySlug,
@@ -816,7 +897,7 @@ export async function VendorTypeCityPage({
               }
             />
             <StatItem label="Peak season" value={editorial.peakSeason ?? "Nov–Feb"} />
-            <StatItem label="Last updated" value="June 2026" />
+            <StatItem label="Last updated" value={new Date().toLocaleString("en-US", { month: "long", year: "numeric" })} />
           </div>
         </div>
       </section>
@@ -839,6 +920,10 @@ export async function VendorTypeCityPage({
             waLink={waLink}
           />
         </section>
+
+        {isVenue && hasListings && (
+          <CityPriceTable vendors={vendors} cityName={city.name} plural={vt.plural} isVenue={vt.slug === "wedding-venues"} />
+        )}
 
         {/* ─────────── B3 CITY EDITORIAL ─────────── */}
         <section className="mb-16">

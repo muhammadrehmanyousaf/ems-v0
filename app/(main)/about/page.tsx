@@ -18,7 +18,7 @@ import { safeJsonLd } from "@/lib/seo/jsonld"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 
 export const metadata: Metadata = buildPageMetadata({
-  title: `About ${SITE_NAME}`,
+  fullTitle: `About ${SITE_NAME} — Pakistan's Wedding Marketplace`,
   description: `${SITE_NAME} (weddingwala.pk) — ${SITE_TAGLINE}. Founded in Pakistan to make planning Pakistani weddings simpler, fairer, and more transparent.`,
   path: "/about",
 })
