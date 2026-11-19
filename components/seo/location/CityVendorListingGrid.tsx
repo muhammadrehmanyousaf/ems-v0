@@ -69,7 +69,7 @@ export function CityVendorListingGrid({
     setLoading(true)
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://ems-v0-backend-production.up.railway.app"
     const base = backendUrl.endsWith("/") ? backendUrl : backendUrl + "/"
-    const targetUrl = `${base}api/v1/businesses?city=${encodeURIComponent(citySlug)}&vendorTypes=${encodeURIComponent(backendType)}&limit=60`
+    const targetUrl = `${base}api/v1/businesses?city=${encodeURIComponent(cityName)}&vendorTypes=${encodeURIComponent(backendType)}&limit=60`
 
     fetch(targetUrl)
       .then((r) => r.json())

@@ -49,7 +49,8 @@ function buildCoreShard(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/help`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
     // /blog is emitted by the blog block below, which owns the index and its
     // clusters. Listing it here too put it in the sitemap twice.
-    { url: `${SITE_URL}/search`, lastModified: now, changeFrequency: "weekly", priority: 0.6 },
+    // /search is deliberately NOT listed: the page is `noindex,follow`, and a sitemap URL that is noindex shows up in GSC
+    // as "Submitted URL marked noindex" / "Discovered - not indexed".
     { url: `${SITE_URL}/vendor-guide`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/vendor-success`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE_URL}/careers`, lastModified: now, changeFrequency: "weekly", priority: 0.5 },

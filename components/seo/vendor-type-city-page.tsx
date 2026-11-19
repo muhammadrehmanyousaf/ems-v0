@@ -42,6 +42,7 @@ import { getVendorTypeRelatedGuides } from "@/lib/seo/related-guides"
 import { getVendorTypeChecklist } from "@/lib/seo/things-to-check"
 import { getVendorTypeEventNotes } from "@/lib/seo/event-notes"
 import { getLocationImagery } from "@/lib/seo/location-imagery"
+import { getListicleCounts } from "@/lib/seo/listicle-inventory"
 import { CityVendorListingGrid } from "@/components/seo/location/CityVendorListingGrid"
 
 const WHATSAPP_E164 = "923274811220"
@@ -545,11 +546,24 @@ export async function VendorTypeCityPage({
   if (!vt || !city) notFound()
 
   const backendType = getBackendVendorType(vt.slug)
-  const { vendors: fetched, ok: listingsOk } = await fetchCityVendorsResult({
+  let { vendors: fetched, ok: listingsOk } = await fetchCityVendorsResult({
     city: city.slug,
     vendorType: backendType,
     limit: 60,
   })
+  // At build time keep trying for a while before settling for the listing-less shell: a page baked without its vendors
+  // (and without their JSON-LD) stays that way until the first revalidation an hour later.
+  for (let i = 1; !listingsOk && i <= 3 && process.env.NEXT_PHASE === "phase-production-build"; i++) {
+    await new Promise((r) => setTimeout(r, 2500 * i))
+    ;({ vendors: fetched, ok: listingsOk } = await fetchCityVendorsResult({ city: city.slug, vendorType: backendType, limit: 60 }))
+  }
+  // At RUNTIME (ISR revalidation / first on-demand render) a failed backend call must not be baked into the page: the
+  // empty list would be cached for an hour and, to Google, a healthy city page would become a thin one (a soft 404).
+  // Throwing keeps the last good page (stale-while-revalidate) and retries on the next request. At BUILD time we still
+  // render the shell with the client-side fallback, so a slow backend cannot fail a deploy.
+  if (!listingsOk && process.env.NEXT_PHASE !== "phase-production-build") {
+    throw new Error(`city listing ${vt.slug}/${city.slug}: vendor fetch failed`)
+  }
   // Strip seed/demo vendors so a live page never shows test data. This used to
   // fall back to curated sample vendors behind NEXT_PUBLIC_UI_PREVIEW for local
   // design work; the flag was off in production, so real vendors are the only
@@ -664,7 +678,26 @@ export async function VendorTypeCityPage({
 
   const ld = combineGraph(collectionLd, svcLd, faqLD(faqs))
 
-  const otherCities = CITIES.filter((c) => c.slug !== city.slug).slice(0, 6)
+  // The curfew / one-dish text below is written for Punjab and Islamabad (and, separately, Sindh). Showing the Punjab text
+  // under "Local Wedding Laws in Mingora / Quetta / Gilgit" is wrong, so other regions get a neutral note instead.
+  const lawScope: "sindh" | "punjab" | "other" =
+    city.region === "Sindh" ? "sindh" : city.region === "Punjab" || city.region === "Islamabad Capital Territory" ? "punjab" : "other"
+  const NEUTRAL_RULES_NOTE = `Closing times and menu rules differ by province and district. Confirm the rules that apply in ${city.name} with your venue before you finalise the date, timings and menu. The Punjab and Islamabad rules are summarised in our One-Dish guide.`
+
+  // "In other cities": the same six big cities used to appear on every page, so a town like Mingora was linked only from
+  // its hub. Now: cities of the same province that have vendors of this type, taken as the neighbours of this city in
+  // that list (a ring, so every town receives links from a few others), then topped up with the biggest cities. Cities
+  // without vendors are skipped (they are noindex). If the inventory is unavailable it falls back to the old list.
+  const inventory = await getListicleCounts()
+  const hasVendors = (c: { slug: string }) => !inventory || (inventory.get(`${vt.slug}|${c.slug}`) ?? 0) >= 1
+  const candidates = CITIES.filter((c) => c.slug !== city.slug && c.slug !== "pakistan" && hasVendors(c))
+  const region = candidates.filter((c) => c.region === city.region)
+  const ring = CITIES.filter((c) => (c.region === city.region && c.slug !== "pakistan" && hasVendors(c)) || c.slug === city.slug)
+  const at = ring.findIndex((c) => c.slug === city.slug)
+  const neighbours = at < 0 ? [] : [1, -1, 2, -2, 3, -3].map((d) => ring[(((at + d) % ring.length) + ring.length) % ring.length]).filter((c) => c && c.slug !== city.slug)
+  const otherCities = inventory
+    ? [...new Map([...neighbours, ...region.slice(0, 2), ...candidates.slice(0, 8)].map((c) => [c.slug, c])).values()].slice(0, 8)
+    : CITIES.filter((c) => c.slug !== city.slug).slice(0, 6)
   const otherTypes = VENDOR_TYPES.filter((v) => v.slug !== vt.slug).slice(0, 6)
 
   return (
@@ -996,8 +1029,10 @@ export async function VendorTypeCityPage({
                   Closing Curfew Hours
                 </p>
                 <p className="text-xs leading-relaxed text-bridal-text">
-                  {['karachi', 'hyderabad', 'sukkur'].includes(city.slug)
+                  {lawScope === "sindh"
                     ? 'In Sindh, wedding halls and marquees must adhere to the 11:00 PM curfew. Noise regulations require music and loud speakers to conclude on time to avoid municipal penalties.'
+                    : lawScope === "other"
+                    ? NEUTRAL_RULES_NOTE
                     : 'Under provincial regulations in Punjab and the federal capital territory, all wedding ceremonies and banquet functions must strictly conclude by 10:00 PM. Venue lights are turned off at curfew.'}
                 </p>
               </div>
@@ -1006,8 +1041,10 @@ export async function VendorTypeCityPage({
                   Menu &amp; One-Dish Regulations
                 </p>
                 <p className="text-xs leading-relaxed text-bridal-text">
-                  {['karachi', 'hyderabad', 'sukkur'].includes(city.slug)
+                  {lawScope === "sindh"
                     ? 'Karachi and Sindh allow multi-course wedding menus, but caterers must follow food safety and hygiene guidelines issued by the Sindh Food Authority.'
+                    : lawScope === "other"
+                    ? NEUTRAL_RULES_NOTE
                     : 'The Punjab Marriage Functions Act strictly enforces the one-dish rule: one main rice or meat dish plus one dessert (with salad and bread). Serving extra dishes invites heavy fines and temporary venue sealing.'}
                 </p>
               </div>

@@ -59,6 +59,10 @@ export default function GlossaryTermPage({ params }: RouteProps) {
     ]),
   )
 
+  const alreadyLinked = new Set([t.slug, ...(t.related ?? []).map((r) => r.slug)])
+  const at = GLOSSARY.findIndex((g) => g.slug === t.slug)
+  const moreTerms = at < 0 ? [] : [1, -1, 2, -2, 3, -3, 4, -4, 5, -5].map((d) => GLOSSARY[(((at + d) % GLOSSARY.length) + GLOSSARY.length) % GLOSSARY.length]).filter((g, i, arr) => g && !alreadyLinked.has(g.slug) && arr.findIndex((x) => x.slug === g.slug) === i).slice(0, 8)
+
   return (
     <>
       <script
@@ -144,6 +148,36 @@ export default function GlossaryTermPage({ params }: RouteProps) {
                   </Link>
                 </li>
               ))}
+            </ul>
+          </section>
+        )}
+
+        {/* Every term used to be linked only from the glossary index (and a few "related" lists), which left most terms
+            with one or two internal links. A ring of neighbouring terms gives each one several, and helps the reader. */}
+        {moreTerms.length > 0 && (
+          <section className="max-w-3xl mt-12">
+            <h2 className="font-display italic text-[22px] text-bridal-charcoal mb-4">
+              More wedding terms
+            </h2>
+            <ul className="flex flex-wrap gap-2">
+              {moreTerms.map((m) => (
+                <li key={m.slug}>
+                  <Link
+                    href={`/glossary/${m.slug}`}
+                    className="inline-block px-3 py-1.5 rounded-full border border-bridal-beige hover:border-bridal-gold font-bridal text-[13px] text-bridal-text-soft hover:text-bridal-charcoal transition-all"
+                  >
+                    {m.term}
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <Link
+                  href="/glossary"
+                  className="inline-block px-3 py-1.5 rounded-full border border-bridal-beige hover:border-bridal-gold font-bridal text-[13px] text-bridal-text-soft hover:text-bridal-charcoal transition-all"
+                >
+                  All terms
+                </Link>
+              </li>
             </ul>
           </section>
         )}

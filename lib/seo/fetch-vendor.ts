@@ -135,6 +135,44 @@ export async function fetchVendorById(id: number): Promise<VendorDetail | null> 
 }
 
 /**
+ * Strict by-id fetch for the PUBLIC SEO pages. Unlike fetchVendorById (null on ANY failure), this tells a definitive
+ * "this vendor does not exist" (null) apart from "the backend could not answer right now" (throws).
+ *
+ * Why it matters: the detail page turns "null" into a permanent redirect to the city hub. If a slow or briefly
+ * unavailable backend (it answers in 1-9 s, and sometimes 5xx/429) is read as "not found", ISR caches a 308 for the
+ * hour and a healthy, indexed vendor page becomes a redirect in Google's eyes. A thrown error is never cached: Next
+ * keeps serving the last good page (or an uncached 500) and retries on the next request.
+ */
+export async function fetchVendorByIdStrict(id: number): Promise<VendorDetail | null> {
+  if (!Number.isFinite(id) || id <= 0) return null
+  const url = `${BACKEND_URL}api/v1/businesses/${id}`
+  let lastErr: unknown
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 400 * attempt))
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 20000)
+    try {
+      const res = await fetch(url, {
+        next: { revalidate: 3600, tags: [vendorCacheTag(id)] },
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      })
+      if (res.status === 404) return null // the backend answered: it really is gone
+      if (!res.ok) throw new Error(`backend ${res.status} for vendor ${id}`)
+      const json = (await res.json()) as { data?: any }
+      const raw = json?.data
+      if (!raw) return null
+      return normalize(raw)
+    } catch (e) {
+      lastErr = e
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+  throw new Error(`vendor ${id}: backend unavailable (${String((lastErr as Error)?.message ?? lastErr)})`)
+}
+
+/**
  * Whether a venue has a real multi-space tree (>1 sub-venue). Decided SERVER-SIDE
  * and ISR-cached 1h per vendor, so the public detail page makes zero per-visitor
  * calls to gate the space selector. Returns false on any error / no tree.

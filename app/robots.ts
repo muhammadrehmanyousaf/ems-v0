@@ -29,6 +29,29 @@ const AI_CRAWLERS = [
   'Meta-ExternalAgent',
 ]
 
+// A crawler with its own group ignores the `*` group entirely, so every private surface has to be repeated for the
+// AI / Bing / Apple groups (Bingbot and DuckDuckBot feed Copilot; they were crawling token links and utility pages).
+const PRIVATE_PATHS = [
+  '/api/',
+  '/dashboard/',
+  '/user/',
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/business-registration',
+  '/booking/',
+  '/checkout-callback',
+  '/onboarding',
+  '/maintenance',
+  '/review/',
+  '/sign/',
+  '/wedding/',
+  '/claim/',
+  '/staff/',
+  '/portal-shell',
+]
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
@@ -58,7 +81,7 @@ export default function robots(): MetadataRoute.Robots {
       ...AI_CRAWLERS.map((bot) => ({
         userAgent: bot,
         allow: '/',
-        disallow: ['/api/', '/dashboard/', '/user/', '/login', '/register'],
+        disallow: PRIVATE_PATHS,
       })),
     ],
     // Two sitemaps, both of which actually resolve — the sharded /sitemap/N.xml

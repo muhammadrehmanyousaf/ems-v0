@@ -150,7 +150,10 @@ export async function fetchCityVendorsResult(opts: FetchOptions): Promise<Vendor
   if (!opts.vendorType) return { vendors: [], ok: true }
 
   const params = new URLSearchParams()
-  if (opts.city) params.set("city", opts.city)
+  // The backend matches `city` against the city NAME ("Mirpur Khas"), not the URL slug ("mirpur-khas"): a slug query
+  // returns 0 rows for every multi-word city, which made real vendors invisible there and the page `noindex` while the
+  // sitemap (built from the raw inventory) still listed it. Single-word slugs are unaffected (name match is case-insensitive).
+  if (opts.city) params.set("city", opts.city.includes("-") ? opts.city.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : opts.city)
   params.set("vendorTypes", opts.vendorType)
   params.set("limit", String(opts.limit ?? 24))
   if (opts.page) params.set("page", String(opts.page))

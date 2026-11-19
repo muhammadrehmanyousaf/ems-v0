@@ -50,7 +50,7 @@ import {
   type VendorTypeSlug,
 } from "@/lib/seo"
 import {
-  fetchVendorById,
+  fetchVendorByIdStrict,
   parseVendorSlugAndId,
   buildVendorCanonicalPath,
   slugifyName,
@@ -82,7 +82,9 @@ export async function generateVendorDetailMetadata(
   const { id } = parseVendorSlugAndId(input.vendorSlug)
   if (!id) return { title: `${vt?.plural || "Vendors"} in ${city?.name || "Pakistan"} | ${SITE_NAME}` }
 
-  const vendor = await fetchVendorById(id)
+  // Strict: only a definitive 404 yields null. A backend failure throws (Next keeps the last good page / retries), instead
+  // of caching a "vendor not found" page for an hour.
+  const vendor = await fetchVendorByIdStrict(id)
   if (!vendor) {
     return {
       title: `${vt.plural} in ${city.name} | ${SITE_NAME}`,
@@ -196,9 +198,10 @@ export async function VendorDetailPage(input: PageInput) {
     permanentRedirect(`/${vt.slug}/${city.slug}`)
   }
 
-  const vendor = await fetchVendorById(parsed.id)
+  const vendor = await fetchVendorByIdStrict(parsed.id)
   if (!vendor) {
-    // Stale or deleted vendor ID: 301 redirect to the city category hub instead of 404
+    // Definitively deleted / unknown vendor ID (the backend answered 404): 301 to the city category hub instead of 404.
+    // A backend outage does NOT get here any more: it throws, so a healthy vendor page is never turned into a cached redirect.
     permanentRedirect(`/${vt.slug}/${city.slug}`)
   }
   const priceDisplay = formatPrice(vendor.raw || vendor)

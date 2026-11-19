@@ -36,7 +36,7 @@ import {
 } from "@/lib/seo"
 import { BACKEND_URL } from "@/lib/backend-url"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
-import { fetchCityVendors, type VendorListItem } from "@/lib/seo/fetch-vendors"
+import { fetchCityVendorsResult, type VendorListItem } from "@/lib/seo/fetch-vendors"
 import { getCityEditorial, getVendorTypeGuide } from "@/lib/seo/city-editorial"
 import {
   LISTICLE_PAGES_ENABLED,
@@ -184,9 +184,16 @@ export async function BestVendorListiclePage({ slug }: { slug: string }) {
   const { vendorType: vt, city } = parsed
 
   const backendType = getBackendVendorType(vt.slug)
-  const all = rankVendors(
-    await fetchCityVendors({ city: city.slug, vendorType: backendType, limit: 50 }),
-  )
+  let { vendors: fetched, ok: fetchOk } = await fetchCityVendorsResult({ city: city.slug, vendorType: backendType, limit: 50 })
+  // At build time a transient backend failure would fail the whole deploy, so keep trying for a while first.
+  for (let i = 1; !fetchOk && i <= 4 && process.env.NEXT_PHASE === "phase-production-build"; i++) {
+    await new Promise((r) => setTimeout(r, 3000 * i))
+    ;({ vendors: fetched, ok: fetchOk } = await fetchCityVendorsResult({ city: city.slug, vendorType: backendType, limit: 50 }))
+  }
+  // "Backend failed" is not "fewer than 3 vendors": treating it as thin permanently redirected a healthy ranking page to the hub
+  // (and Next cached that redirect for an hour). Throw instead, so the last good page keeps being served and is retried.
+  if (!fetchOk) throw new Error(`best listicle ${vt.slug}/${city.slug}: vendor fetch failed`)
+  const all = rankVendors(fetched)
 
   // Never publish a thin "best of" list. 301 redirect to canonical city category hub!
   if (all.length < MIN_VENDORS_FOR_LISTICLE) {
