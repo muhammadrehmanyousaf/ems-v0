@@ -4,6 +4,7 @@ import {
   CITIES,
   VENDOR_TYPES,
   backendToSeoSlug,
+  getBackendVendorType,
   type VendorTypeSlug,
 } from "@/lib/seo"
 import { slugifyName } from "@/lib/seo/fetch-vendor"
@@ -223,6 +224,9 @@ async function buildProgrammaticShard(): Promise<MetadataRoute.Sitemap> {
         raw?.type || vendor?.vendorType || raw?.subBusinessType
       const seoTypeSlug = backendToSeoSlug(backendType)
       if (!seoTypeSlug) continue
+      // The city page queries ONLY the type own backend value; a folded alias (Marquee rental -> venues, Sound system -> djs)
+      // would put the combo (and its /best page) in the sitemap while the page finds too few vendors and redirects.
+      if (backendType !== getBackendVendorType(seoTypeSlug)) continue
       const cityRaw: string = raw?.city ?? raw?.location ?? vendor?.city ?? ""
       if (!cityRaw) continue
       const citySlug = slugifyName(cityRaw)
