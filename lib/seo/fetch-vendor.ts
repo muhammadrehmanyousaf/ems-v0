@@ -147,8 +147,12 @@ export async function fetchVendorByIdStrict(id: number): Promise<VendorDetail | 
   if (!Number.isFinite(id) || id <= 0) return null
   const url = `${BACKEND_URL}api/v1/businesses/${id}`
   let lastErr: unknown
-  for (let attempt = 0; attempt < 3; attempt++) {
-    if (attempt > 0) await new Promise((r) => setTimeout(r, 400 * attempt))
+  let waitMs = 0
+  // 4 attempts. The backend rate-limits (429) when many pages render at once (a crawl, a deploy), so a rate-limited answer
+  // waits for the Retry-After the backend sends (capped at 6 s) before trying again, instead of hammering it.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, waitMs || 400 * attempt))
+    waitMs = 0
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 20000)
     try {
@@ -158,7 +162,13 @@ export async function fetchVendorByIdStrict(id: number): Promise<VendorDetail | 
         signal: controller.signal,
       })
       if (res.status === 404) return null // the backend answered: it really is gone
-      if (!res.ok) throw new Error(`backend ${res.status} for vendor ${id}`)
+      if (!res.ok) {
+        if (res.status === 429 || res.status === 503) {
+          const ra = Number(res.headers.get("retry-after"))
+          waitMs = Math.min(6000, Number.isFinite(ra) && ra > 0 ? ra * 1000 : 1500 * (attempt + 1))
+        }
+        throw new Error(`backend ${res.status} for vendor ${id}`)
+      }
       const json = (await res.json()) as { data?: any }
       const raw = json?.data
       if (!raw) return null
