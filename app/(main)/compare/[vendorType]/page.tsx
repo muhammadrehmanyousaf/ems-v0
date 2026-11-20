@@ -13,6 +13,7 @@ import {
   combineGraph,
   type VendorTypeSlug,
 } from "@/lib/seo"
+import { getCityVendorTotals } from "@/lib/seo/listicle-inventory"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 
 interface RouteProps {
@@ -84,19 +85,44 @@ const CITY_PROFILES: Record<string, {
   },
 }
 
-export default function CompareVendorTypePage({ params }: RouteProps) {
+export const revalidate = 3600
+
+export default async function CompareVendorTypePage({ params }: RouteProps) {
   const vt = getVendorType(params.vendorType)
   if (!vt) notFound()
 
+  // Real numbers from the same inventory as the sitemap. Null when the backend is unreachable: then no counts are shown.
+  const totals = await getCityVendorTotals().catch(() => null)
+  const listed = (slug: string) => totals?.get(slug)?.byType[vt.slug] ?? 0
+  const ranked = totals
+    ? CITIES.filter((c) => c.slug !== "pakistan")
+        .map((c) => ({ c, n: listed(c.slug) }))
+        .filter((x) => x.n > 0)
+        .sort((a, b) => b.n - a.n)
+    : []
+
   const cityComparisons = COMPARE_CITIES.map((slug) => {
     const city = CITIES.find((c) => c.slug === slug)
-    return city ? { city, profile: CITY_PROFILES[slug] } : null
+    return city
+      ? {
+          city,
+          profile: {
+            ...CITY_PROFILES[slug],
+            marketTraits: totals
+              ? [`${listed(slug)} ${(listed(slug) === 1 ? vt.singular : vt.plural).toLowerCase()} listed on ${SITE_NAME}`, ...CITY_PROFILES[slug].marketTraits]
+              : CITY_PROFILES[slug].marketTraits,
+          },
+        }
+      : null
   }).filter((x): x is { city: typeof CITIES[number]; profile: typeof CITY_PROFILES[string] } => x !== null)
 
   const faqs = [
     {
       question: `Which Pakistani city has the most ${vt.plural.toLowerCase()}?`,
-      answer: `Karachi has the largest vendor pool by count, but Lahore matches it for traditional categories like ${vt.plural.toLowerCase().includes("photographer") ? "photography" : vt.plural.toLowerCase()}. Islamabad has a smaller pool but more diplomatic-tier options at the top end.`,
+      answer:
+        ranked.length > 0
+          ? `On ${SITE_NAME}, ${ranked[0].c.name} lists the most ${vt.plural.toLowerCase()} (${ranked[0].n})${ranked.length > 1 ? `, followed by ${ranked.slice(1, 3).map((x) => `${x.c.name} (${x.n})`).join(" and ")}` : ""}. Listings grow as vendors join, so open a city page for the current count.`
+          : `Karachi, Lahore and Islamabad are the three biggest wedding markets in Pakistan. The city cards above show how many ${vt.plural.toLowerCase()} each has listed on ${SITE_NAME}.`,
     },
     {
       question: `Where is it cheapest to book a ${vt.singular.toLowerCase()}?`,
