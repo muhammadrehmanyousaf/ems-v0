@@ -8,6 +8,7 @@ import {
   type VendorTypeSlug,
 } from "@/lib/seo"
 import { slugifyName } from "@/lib/seo/fetch-vendor"
+import { getCityVendorTotals } from "@/lib/seo/listicle-inventory"
 import {
   fetchAllBusinesses,
   projectToCanonical,
@@ -334,5 +335,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     buildProgrammaticShard(),
     buildVendorsShard(),
   ])
-  return dedupeByUrl([...buildCoreShard(), ...programmatic, ...vendors])
+  // /cities/<city> for a city with no vendors is noindex (see that page), so it stays out of the sitemap too. When the
+  // inventory is unavailable nothing is dropped.
+  const totals = await getCityVendorTotals().catch(() => null)
+  const core = buildCoreShard().filter((e) => {
+    const m = e.url.match(/\/cities\/([^/]+)$/)
+    return !(m && totals && (totals.get(m[1])?.total ?? 0) === 0)
+  })
+  return dedupeByUrl([...core, ...programmatic, ...vendors])
 }

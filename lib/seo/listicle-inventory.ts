@@ -72,3 +72,30 @@ export async function getExistingListicleSlugs(): Promise<Set<string>> {
   }
   return out
 }
+
+export interface CityVendorTotals {
+  /** vendors in this city across every category */
+  total: number
+  /** vendor-type slug -> vendors of that type in this city (only types with at least one) */
+  byType: Record<string, number>
+}
+
+/**
+ * Per-city view of the same inventory: how many vendors a city has, split by category. Drives the /cities/<city> page (real
+ * numbers instead of a template), whether that page is indexable (a city with no vendors is noindex and left out of the
+ * sitemap), and which categories it links to (empty category pages are noindex, so they are not linked from here).
+ * Returns null when the backend could not be reached; callers then keep the old behaviour instead of guessing.
+ */
+export async function getCityVendorTotals(): Promise<Map<string, CityVendorTotals> | null> {
+  const counts = await getListicleCounts()
+  if (!counts) return null
+  const out = new Map<string, CityVendorTotals>()
+  for (const [key, n] of counts) {
+    const [typeSlug, citySlug] = key.split("|")
+    const row = out.get(citySlug) ?? { total: 0, byType: {} }
+    row.total += n
+    row.byType[typeSlug] = n
+    out.set(citySlug, row)
+  }
+  return out
+}

@@ -15,37 +15,70 @@ import {
   serviceLD,
 } from "@/lib/seo"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
+import { getCityVendorTotals } from "@/lib/seo/listicle-inventory"
 
 interface RouteProps {
   params: { city: string }
 }
 
+export const revalidate = 3600
+
 export function generateStaticParams() {
   return CITIES.map((c) => ({ city: c.slug }))
 }
 
-export function generateMetadata({ params }: RouteProps): Metadata {
+export async function generateMetadata({ params }: RouteProps): Promise<Metadata> {
   const city = getCity(params.city)
   if (!city) return { title: "Not Found" }
 
-  return buildPageMetadata({
+  const meta = buildPageMetadata({
     fullTitle: `Wedding Planning & Venues in ${city.name} (2026 Directory)`,
     description: `Planning your wedding in ${city.name}? Compare top wedding venues, photographers, caterers & makeup artists. View 2026 rates, packages & book on ${SITE_NAME}.`.slice(0, 155),
     path: `/cities/${city.slug}`,
   })
+  // A city with no listed vendors has nothing of its own to show (the copy is the same for every city), so it is noindex until
+  // vendors join. Same rule as the empty category pages. If the inventory cannot be read the page stays indexable.
+  const totals = await getCityVendorTotals().catch(() => null)
+  const empty = !!totals && (totals.get(city.slug)?.total ?? 0) === 0
+  return empty ? { ...meta, robots: { index: false, follow: true } } : meta
 }
 
-export default function CityHubPage({ params }: RouteProps) {
+export default async function CityHubPage({ params }: RouteProps) {
   const city = getCity(params.city)
   if (!city) notFound()
 
   const url = `${SITE_URL}/cities/${city.slug}`
 
+  // Real numbers for this city: vendors per category, from the same inventory as the sitemap. Categories without vendors are
+  // not linked from here (their pages are noindex). If the inventory is unavailable the page falls back to the full list.
+  const totals = await getCityVendorTotals().catch(() => null)
+  const row = totals?.get(city.slug)
+  const counts: Record<string, number> = row?.byType ?? {}
+  const withVendors = VENDOR_TYPES.filter((v) => (counts[v.slug] ?? 0) > 0)
+  const typeList = totals && withVendors.length > 0 ? withVendors : VENDOR_TYPES
+  const topTypes = [...withVendors].sort((a, b) => (counts[b.slug] ?? 0) - (counts[a.slug] ?? 0)).slice(0, 5)
+  const countFaq =
+    row && row.total > 0
+      ? {
+          question: `How many wedding vendors are listed in ${city.name}?`,
+          answer: `Wedding Wala currently lists ${row.total} wedding vendor${row.total === 1 ? "" : "s"} in ${city.name} across ${withVendors.length} categor${withVendors.length === 1 ? "y" : "ies"}: ${topTypes.map((v) => `${counts[v.slug]} ${(counts[v.slug] === 1 ? v.singular : v.plural).toLowerCase()}`).join(", ")}. Open a category on this page to compare them.`,
+        }
+      : null
+
+  // Nearby cities: cities of the same province that have vendors, taken as the neighbours of this one in that list (a ring, so
+  // every town gets links from a few others), topped up with the biggest cities. Replaces a list of every city on every page.
+  const hasV = (c: { slug: string }) => !totals || (totals.get(c.slug)?.total ?? 0) > 0
+  const ringCities = CITIES.filter((c) => (c.region === city.region && c.slug !== "pakistan" && hasV(c)) || c.slug === city.slug)
+  const at = ringCities.findIndex((c) => c.slug === city.slug)
+  const near = at < 0 ? [] : [1, -1, 2, -2, 3, -3].map((d) => ringCities[(((at + d) % ringCities.length) + ringCities.length) % ringCities.length]).filter((c) => c && c.slug !== city.slug)
+  const big = CITIES.filter((c) => c.slug !== city.slug && c.slug !== "pakistan" && hasV(c)).slice(0, 8)
+  const nearby = [...new Map([...near, ...big].map((c) => [c.slug, c])).values()].slice(0, 8)
+
   const collectionLd = collectionPageLD({
     name: `Wedding Services in ${city.name} — ${SITE_NAME}`,
     description: `Vendor categories serving weddings in ${city.name}, Pakistan.`,
     url: `/cities/${city.slug}`,
-    items: VENDOR_TYPES.map((v) => ({
+    items: typeList.map((v) => ({
       name: `${v.plural} in ${city.name}`,
       url: `/${v.slug}/${city.slug}`,
     })),
@@ -60,6 +93,7 @@ export default function CityHubPage({ params }: RouteProps) {
   })
 
   const faqs = [
+    ...(countFaq ? [countFaq] : []),
     {
       question: `How do I book wedding vendors in ${city.name}?`,
       // "We hold the deposit" removed 2026-08-29 — untrue, and this one
@@ -113,7 +147,7 @@ export default function CityHubPage({ params }: RouteProps) {
             Browse vendors by category
           </h2>
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {VENDOR_TYPES.map((v) => (
+            {typeList.map((v) => (
               <li key={v.slug}>
                 <Link
                   href={`/${v.slug}/${city.slug}`}
@@ -122,6 +156,9 @@ export default function CityHubPage({ params }: RouteProps) {
                   <p className="font-display italic text-[18px] text-bridal-charcoal group-hover:text-bridal-gold transition-colors">
                     {v.plural} in {city.name}
                   </p>
+                  {counts[v.slug] ? (
+                    <p className="mt-0.5 font-bridal text-[12px] font-medium text-bridal-gold-dark">{counts[v.slug]} listed</p>
+                  ) : null}
                   <p className="mt-1 font-bridal text-[12.5px] text-bridal-text-soft leading-relaxed line-clamp-2">
                     {v.description}
                   </p>
@@ -151,10 +188,10 @@ export default function CityHubPage({ params }: RouteProps) {
 
         <section className="mb-4">
           <h2 className="font-display italic text-[24px] text-bridal-charcoal mb-5">
-            Other cities
+            Nearby cities
           </h2>
           <ul className="flex flex-wrap gap-2">
-            {CITIES.filter((c) => c.slug !== city.slug).map((other) => (
+            {nearby.map((other) => (
               <li key={other.slug}>
                 <Link
                   href={`/cities/${other.slug}`}
