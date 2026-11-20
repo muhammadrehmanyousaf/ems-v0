@@ -42,6 +42,7 @@ import {
   getBackendVendorType,
   backendToSeoSlug,
   buildPageMetadata,
+  fitVendorTitle,
   vendorLD,
   venueLD,
   reviewLD,
@@ -174,6 +175,12 @@ export async function generateVendorDetailMetadata(
       description = `Planning your wedding with ${vendor.name} in ${city.name}? ✅ 2026 rates (${priceStr}) ✅ Verified portfolio & direct booking on ${SITE_NAME}!`.slice(0, 155);
       break;
   }
+  // Keep the vendor's name but never repeat the city, and cut a very long business name cleanly (see fitVendorTitle).
+  const nameCity = `${vendor.name} ${city.name}`
+  if (fullTitle.startsWith(nameCity)) {
+    fullTitle = fitVendorTitle(vendor.name, city.name, fullTitle.slice(nameCity.length))
+  }
+
   return {
     ...buildPageMetadata({
       fullTitle,

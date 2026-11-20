@@ -71,6 +71,37 @@ export function composeSerpTitle(fullTitle: string): string {
   return withBrand.length <= SERP_TITLE_MAX ? withBrand : t
 }
 
+/**
+ * Title for a vendor page: "{name} {city}{rest}" (rest = ": 2026 Rates & Photos" etc.).
+ * - The city is not repeated when the vendor's own name already contains it ("... Islamabad" + "Islamabad").
+ * - A very long business name is cut on a word boundary (preferring a natural break such as a comma or dash) so the whole
+ *   title stays within `max` characters and the part users actually search for ("rates", "photos") is never cut off.
+ *   No ellipsis is ever emitted.
+ */
+export function fitVendorTitle(name: string, cityName: string, rest: string, max = 70): string {
+  const n = name.replace(/\s+/g, " ").trim()
+  const cityPart = n.toLowerCase().includes(cityName.toLowerCase()) ? "" : ` ${cityName}`
+  const full = `${n}${cityPart}${rest}`
+  if (full.length <= max) return full
+  // A bilingual name ("English name  اردو نام") is cut where the Arabic script starts, so the title never ends mid-Urdu.
+  const ar = n.search(/[؀-ۿ]/)
+  if (ar >= 8) {
+    const latin = n.slice(0, ar).replace(/[s,;:|–—&.۔-]+$/, "")
+    if (latin.length >= 8) return fitVendorTitle(latin, cityName, rest, max)
+  }
+  const room = max - cityPart.length - rest.length
+  if (room < 8) return full.slice(0, max).replace(/\s+\S*$/, "")
+  const breaks = [...n.matchAll(/\s+[|–—-]\s+|,\s+|\s+\(/g)].map((m) => m.index ?? 0).filter((i) => i >= 8 && i <= room)
+  let kept = ""
+  if (breaks.length) kept = n.slice(0, breaks[breaks.length - 1])
+  else {
+    kept = n.slice(0, room + 1)
+    kept = kept.length > room ? kept.replace(/\s+\S*$/, "") : kept
+  }
+  kept = kept.replace(/[\s,;:|–—&-]+$/, "").replace(/\s+(and|&|of|the|in|at|for|to)$/i, "")
+  return kept.length >= 8 ? `${kept}${cityPart}${rest}` : full.slice(0, max).replace(/\s+\S*$/, "")
+}
+
 export function buildPageMetadata(input: PageMetadataInput): Metadata {
   const path = normalizePath(input.path);
   const url = `${SITE_URL}${path}`;
