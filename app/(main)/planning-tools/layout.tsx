@@ -10,7 +10,7 @@ import {
 import { safeJsonLd } from "@/lib/seo/jsonld";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Free Pakistani Wedding Planning Tools & Calculators (2026)",
+  fullTitle: "Free Pakistani Wedding Planning Tools & Calculators (2026)",
   description:
     "16 free interactive tools for Pakistani weddings: Degh catering calculator, Haq Mehr & gold tola rates, Marquee AC & hidden costs, Nikkah Nama legal guide, Salami tracker, and 12-month checklist.",
   path: "/planning-tools",
