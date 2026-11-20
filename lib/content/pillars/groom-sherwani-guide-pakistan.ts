@@ -2,7 +2,7 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "groom-sherwani-guide-pakistan",
-  "title": "Groom Sherwani Guide Pakistan 2026: Styles, Fabrics & What to Wear for Each Event",
+  "title": "Groom Sherwani Guide Pakistan 2026: Styles, Fabrics & Events",
   "h1": "Groom Sherwani Guide: Styles, Fabrics & What to Wear for Each Pakistani Wedding Event",
   "metaDescription": "A neutral, Pakistan-specific groom sherwani guide: garment types, what to wear for Nikah, Barat and Walima, fabrics by season, colours, fit by body type, accessories and indicative costs.",
   "eyebrow": "Groom Attire Guide",

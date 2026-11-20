@@ -3,7 +3,7 @@ import { MakeupSalonCalculatorClient } from "./MakeupSalonCalculatorClient";
 import { SITE_NAME, SITE_URL } from "@/lib/seo/constants";
 
 export const metadata: Metadata = {
-  title: "Bridal & Party Makeup Cost Calculator Pakistan [2026 Rates] | Wedding Wala",
+  title: { absolute: "Bridal & Party Makeup Cost Calculator Pakistan [2026 Rates]" },
   description:
     "Calculate your total salon bill for Bride + Mother + Sisters across Nikkah, Mehndi, Baraat & Walima! Compare Top Designer Salons vs Home-Service Freelancers!",
   alternates: {

@@ -2,7 +2,7 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "wedding-catering-menu-guide-pakistan",
-  "title": "Wedding Catering Menu Pakistan: Costs, Dishes & How to Choose a Caterer (2026)",
+  "title": "Wedding Catering Menu Pakistan: Costs, Dishes & Caterer Guide",
   "h1": "Wedding Catering & Menu Guide for Pakistan: Costs, Dishes & How to Choose a Caterer",
   "metaDescription": "Pakistan wedding catering guide: indicative per-head PKR costs, event menus, the one-dish law, tax, tasting and contract tips, plus how to choose a caterer.",
   "eyebrow": "Wedding Planning · Catering",

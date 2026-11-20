@@ -3,7 +3,7 @@ import { MehndiSongsClient } from "./MehndiSongsClient";
 import { SITE_NAME, SITE_URL } from "@/lib/seo/constants";
 
 export const metadata: Metadata = {
-  title: "Pakistani Mehndi Songs, Bridal Entry & Dholki Tappay [2026] | Wedding Wala",
+  title: { absolute: "Pakistani Mehndi Songs, Bridal Entry & Dholki Tappay [2026]" },
   description:
     "Generate the ultimate 2026 Mehndi dance playlist, emotional Bridal Entry tracks, Groom Dhol mixes & printable Punjabi/Urdu Dholki Tappay lyrics in 1 click!",
   alternates: {

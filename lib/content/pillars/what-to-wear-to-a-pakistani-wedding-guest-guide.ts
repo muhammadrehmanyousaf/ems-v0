@@ -2,7 +2,7 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "what-to-wear-to-a-pakistani-wedding-guest-guide",
-  "title": "What to Wear to a Pakistani Wedding (2026 Guest Guide): Outfits by Event + Colours to Avoid",
+  "title": "What to Wear to a Pakistani Wedding: 2026 Guest Guide by Event",
   "h1": "What to Wear to a Pakistani Wedding: Guest Guide (Outfits by Event + Colours to Avoid)",
   "metaDescription": "A Pakistan-based guest guide to what to wear to a Pakistani wedding: outfits for mehndi, nikah, barat and walima, plus which colours to avoid (red, white, black) and why.",
   "eyebrow": "Guest Style Guide",

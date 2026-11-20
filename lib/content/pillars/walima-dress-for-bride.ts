@@ -2,7 +2,7 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "walima-dress-for-bride",
-  "title": "Walima Dress for Bride 2026: Pakistani Reception Colours, Maxis, Lehengas & Cost Bands",
+  "title": "Walima Dress for Bride 2026: Pakistani Reception Colours & Styles",
   "h1": "Walima Dress for the Bride: Colours, Silhouettes, Fabrics & What to Wear for Your Reception",
   "metaDescription": "A Pakistan-specific walima dress guide for brides: soft pastel colours, maxi vs lehenga vs gown silhouettes, fabrics, designers, rent-vs-buy, indicative cost bands and timeline.",
   "eyebrow": "Bridal Attire Guide",

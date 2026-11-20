@@ -2,7 +2,7 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "barat-traditions-pakistani-wedding-guide",
-  "title": "Barat Ceremony in a Pakistani Wedding: Traditions, Doodh Pilai & Etiquette (2026)",
+  "title": "Barat Ceremony in Pakistan: Traditions, Doodh Pilai & Etiquette",
   "h1": "Barat Traditions Explained: The Groom's Procession, Doodh Pilai & Modern Etiquette",
   "metaDescription": "A complete guide to the barat ceremony in a Pakistani wedding — what it is, who hosts it, sehra bandi, doodh pilai, joota chupai, arsi mushaf, regional variations and modern etiquette.",
   "eyebrow": "Wedding Traditions Guide",

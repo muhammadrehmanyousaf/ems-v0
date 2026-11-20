@@ -3,7 +3,7 @@ import { BaraatFleetCalculatorClient } from "./BaraatFleetCalculatorClient";
 import { SITE_NAME, SITE_URL } from "@/lib/seo/constants";
 
 export const metadata: Metadata = {
-  title: "Baraat Car Rental, Coaster & Fuel Calculator Pakistan [2026] | Wedding Wala",
+  title: { absolute: "Baraat Car Rental, Coaster & Fuel Calculator Pakistan [2026]" },
   description:
     "Planning a local or out-of-city Baraat? Calculate how many cars & AC Coasters you need, plus 2026 groom luxury car rent, flower decor & fuel costs in PKR!",
   alternates: {

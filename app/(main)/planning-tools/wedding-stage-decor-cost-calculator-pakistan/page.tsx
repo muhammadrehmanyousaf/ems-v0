@@ -3,7 +3,7 @@ import { StageDecorCalculatorClient } from "./StageDecorCalculatorClient";
 import { SITE_NAME, SITE_URL } from "@/lib/seo/constants";
 
 export const metadata: Metadata = {
-  title: "Wedding Stage & Nikkah Decor Cost Calculator Pakistan [2026] | Wedding Wala",
+  title: { absolute: "Wedding Stage & Nikkah Decor Cost Calculator Pakistan [2026]" },
   description:
     "How much should you pay a decorator in 2026? Calculate exact prices for Nikkah floral partitions, Home Mayun setups & Baraat stages (Fresh vs Silk flowers)!",
   alternates: {

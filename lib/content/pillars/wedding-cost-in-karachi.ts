@@ -2,7 +2,7 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "wedding-cost-in-karachi",
-  "title": "Wedding Cost in Karachi (2026): Per Head Rates, Banquet Prices & Budget Breakdown",
+  "title": "Wedding Cost in Karachi (2026): Per Head Rates & Budget Breakdown",
   "h1": "Wedding Cost in Karachi (2026): Per Head Rates, Banquet Prices & Full Budget Guide",
   "metaDescription": "How much does a wedding cost in Karachi? 2026 per head rates (PKR 1,800 - 15,000+), banquet hall prices in DHA & Clifton, catering, and full budget calculator.",
   "eyebrow": "Karachi Wedding Budget Guide 2026",

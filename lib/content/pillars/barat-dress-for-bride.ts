@@ -2,7 +2,7 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "barat-dress-for-bride",
-  "title": "Barat Dress for Bride 2026: Colours, Silhouettes & Styling for the Pakistani Barat",
+  "title": "Barat Dress for Bride 2026: Colours, Silhouettes & Styling",
   "h1": "Barat Dress for the Bride: Colours, Silhouettes, Embellishment & Styling",
   "metaDescription": "A Pakistan-specific guide to the bridal barat dress: traditional red and maroon palettes, lehenga vs gharara silhouettes, embellishment, jewellery, designers and cost bands.",
   "eyebrow": "Bridal Attire Guide",

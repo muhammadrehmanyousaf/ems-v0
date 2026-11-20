@@ -3,7 +3,7 @@ import { DeghCalculatorClient } from "./DeghCalculatorClient";
 import { SITE_NAME, SITE_URL } from "@/lib/seo/constants";
 
 export const metadata: Metadata = {
-  title: "Shaadi Degh & Catering Calculator Pakistan [2026 Food Math] | Wedding Wala",
+  title: { absolute: "Shaadi Degh & Catering Calculator Pakistan [2026 Food Math]" },
   description:
     "How many deghs & kg of mutton/chicken do you need for 100–1000 wedding guests? Calculate exact Biryani, Qorma, Naan & sweet dish quantities + PKR costs free!",
   alternates: {

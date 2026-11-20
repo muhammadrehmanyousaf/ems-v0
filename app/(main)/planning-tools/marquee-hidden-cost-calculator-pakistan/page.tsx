@@ -3,7 +3,7 @@ import { MarqueeHiddenCostClient } from "./MarqueeHiddenCostClient";
 import { SITE_NAME, SITE_URL } from "@/lib/seo/constants";
 
 export const metadata: Metadata = {
-  title: "Marquee Per-Head & Hidden Cost Calculator Pakistan [2026] | Wedding Wala",
+  title: { absolute: "Marquee Per-Head & Hidden Cost Calculator Pakistan [2026]" },
   description:
     "Quoted PKR 2,200/head? See your TRUE marquee bill after PRA/SRB tax, generator fuel, AC hours, stage decor & waiter tips. Don't sign before checking this!",
   alternates: {

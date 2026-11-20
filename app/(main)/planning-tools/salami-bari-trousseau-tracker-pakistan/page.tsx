@@ -3,7 +3,7 @@ import { SalamiBariTrackerClient } from "./SalamiBariTrackerClient";
 import { SITE_NAME, SITE_URL } from "@/lib/seo/constants";
 
 export const metadata: Metadata = {
-  title: "Pakistani Shaadi Salami Tracker & Bridal Bari Checklist | Wedding Wala",
+  title: { absolute: "Pakistani Shaadi Salami Tracker & Bridal Bari Checklist" },
   description:
     "Digitize your family's Salami (Neundra) cash envelope register & plan Bridal Bari / Trousseau shopping (suits, shoes, gifts) without missing a single item!",
   alternates: {

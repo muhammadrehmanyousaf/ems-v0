@@ -3,7 +3,7 @@ import { HaqMehrCalculatorClient } from "./HaqMehrCalculatorClient";
 import { SITE_NAME, SITE_URL } from "@/lib/seo/constants";
 
 export const metadata: Metadata = {
-  title: "Haq Mehr & Bridal Gold Calculator Pakistan [2026 Tola Rate] | Wedding Wala",
+  title: { absolute: "Haq Mehr & Bridal Gold Calculator Pakistan [2026 Tola Rate]" },
   description:
     "Calculate today's Mehr-e-Fatimi value in PKR, convert Nikkah Haq Mehr cash into Gold Tolas, and estimate bridal gold set cost with jeweler wastage & making!",
   alternates: {

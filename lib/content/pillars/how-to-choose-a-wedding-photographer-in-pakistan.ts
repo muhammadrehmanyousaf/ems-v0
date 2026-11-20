@@ -2,7 +2,7 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "how-to-choose-a-wedding-photographer-in-pakistan",
-  "title": "How to Choose a Wedding Photographer in Pakistan (2026): Questions, Packages & Red Flags",
+  "title": "How to Choose a Wedding Photographer in Pakistan (2026 Guide)",
   "h1": "How to Choose a Wedding Photographer in Pakistan: Questions, Packages & Red Flags",
   "metaDescription": "How to choose a wedding photographer in Pakistan: indicative PKR package tiers, a full question bank, a Pakistani-function shot list, advance/contract norms, red flags and the drone-law note.",
   "eyebrow": "Vendor Hiring Guide",

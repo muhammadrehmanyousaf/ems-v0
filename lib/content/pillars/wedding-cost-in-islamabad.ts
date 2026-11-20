@@ -2,7 +2,7 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "wedding-cost-in-islamabad",
-  "title": "Wedding Cost in Islamabad (2026): Per Head Rates, Marquee Prices & Budget Guide",
+  "title": "Wedding Cost in Islamabad (2026): Per Head Rates & Budget Guide",
   "h1": "Wedding Cost in Islamabad (2026): Per Head Rates, Marquee Prices & Full Budget Breakdown",
   "metaDescription": "How much does a wedding cost in Islamabad? 2026 per head rates (PKR 2,500 - 18,000+), sector breakdown (F-sectors, Club Road, Chak Shahzad farmhouses), and budget guide.",
   "eyebrow": "Islamabad Wedding Budget Guide 2026",

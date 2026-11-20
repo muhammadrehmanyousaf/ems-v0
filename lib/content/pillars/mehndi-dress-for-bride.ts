@@ -2,7 +2,7 @@ import type { PillarData } from "@/lib/content/pillar-types"
 
 export const data: PillarData = {
   "slug": "mehndi-dress-for-bride",
-  "title": "Mehndi Dress for Bride 2026: Colours, Silhouettes & Comfortable Outfit Ideas (Pakistan)",
+  "title": "Mehndi Dress for Bride 2026: Colours, Silhouettes & Outfit Ideas",
   "h1": "Mehndi Dress for the Bride: Colours, Silhouettes & Comfortable Outfit Ideas",
   "metaDescription": "A Pakistan-specific guide to mehndi outfits for brides: festive yellow, green and multi-colour palettes, comfy silhouettes for dancing, fresh-flower jewellery, fabrics and costs.",
   "eyebrow": "Bridal Attire Guide",

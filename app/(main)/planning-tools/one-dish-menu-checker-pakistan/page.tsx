@@ -3,7 +3,7 @@ import { OneDishCheckerClient } from "./OneDishCheckerClient";
 import { SITE_NAME, SITE_URL } from "@/lib/seo/constants";
 
 export const metadata: Metadata = {
-  title: "Punjab & Sindh One-Dish Law & Wedding Menu Checker [2026 Rules] | Wedding Wala",
+  title: { absolute: "Punjab & Sindh One-Dish Law & Wedding Menu Checker [2026 Rules]" },
   description:
     "Check if your wedding menu complies with Punjab Marriage Functions Act & Sindh 10 PM curfew regulations. Avoid Rs 50,000–2,000,000 fines and venue sealing.",
   alternates: {

@@ -3,7 +3,7 @@ import { OverseasWeddingClient } from "./OverseasWeddingClient";
 import { SITE_NAME, SITE_URL } from "@/lib/seo/constants";
 
 export const metadata: Metadata = {
-  title: "Overseas Pakistani Wedding Cost Calculator (£ GBP / $ USD) | Wedding Wala",
+  title: { absolute: "Overseas Pakistani Wedding Cost Calculator (£ GBP / $ USD)" },
   description:
     "Living in the UK, USA, UAE, Canada or Saudi Arabia & planning a wedding in Pakistan? Calculate exact 2026 venue, decor & photography costs in GBP, USD & AED!",
   alternates: {

@@ -3,7 +3,7 @@ import { SegregatedWeddingClient } from "./SegregatedWeddingClient";
 import { SITE_NAME, SITE_URL } from "@/lib/seo/constants";
 
 export const metadata: Metadata = {
-  title: "Segregated & Female-Staff Wedding Finder Pakistan [Halal] | Wedding Wala",
+  title: { absolute: "Segregated & Female-Staff Wedding Finder Pakistan [Halal]" },
   description:
     "Need 100% female photographers, separate Gents/Ladies halls, Mahram-safe bridal shoots & no-music Nikkah setups? Get your verified vendor list in 30 seconds!",
   alternates: {

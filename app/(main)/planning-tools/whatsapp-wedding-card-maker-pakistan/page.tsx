@@ -3,7 +3,7 @@ import { WhatsappCardMakerClient } from "./WhatsappCardMakerClient";
 import { SITE_NAME, SITE_URL } from "@/lib/seo/constants";
 
 export const metadata: Metadata = {
-  title: "Free Pakistani WhatsApp Wedding Card Maker [Urdu & English] | Wedding Wala",
+  title: { absolute: "Free Pakistani WhatsApp Wedding Card Maker [Urdu & English]" },
   description:
     "Create stunning Nikkah, Mehndi, Baraat & Walima digital invitations in 60 seconds! Includes Bismillah calligraphy, Urdu/English templates & WhatsApp RSVP!",
   alternates: {

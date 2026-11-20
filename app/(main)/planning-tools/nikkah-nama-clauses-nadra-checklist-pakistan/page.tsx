@@ -3,7 +3,7 @@ import { NikkahClausesClient } from "./NikkahClausesClient";
 import { SITE_NAME, SITE_URL } from "@/lib/seo/constants";
 
 export const metadata: Metadata = {
-  title: "Pakistani Nikkah Nama Clauses (Col 13-22) & NADRA Checklist | Wedding Wala",
+  title: { absolute: "Pakistani Nikkah Nama Clauses (Col 13-22) & NADRA Checklist" },
   description:
     "Understand Pakistani Nikkah Nama Columns 13 to 22 (Haq Mehr, Column 18 Right to Divorce, Monthly Allowance) & generate your Nikkah Day CNIC/NADRA checklist!",
   alternates: {
