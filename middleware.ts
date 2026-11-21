@@ -80,8 +80,11 @@ export function middleware(request: NextRequest) {
   // Dynamic vendor booking routes: /[id]/booking
   const isVendorBookingRoute = /^\/\d+\/booking/.test(pathname);
 
+  // Ops Portal (call-center staff). Exact segment match so a public page that merely starts with "/ops" is never gated.
+  const isOpsRoute = pathname === '/ops' || pathname.startsWith('/ops/');
+
   const isProtectedRoute =
-    protectedRoutes.some((route) => pathname.startsWith(route)) || isVendorBookingRoute;
+    protectedRoutes.some((route) => pathname.startsWith(route)) || isVendorBookingRoute || isOpsRoute;
 
   if (isProtectedRoute && !isAuthenticated) {
     const loginUrl = new URL('/login', request.url);
@@ -114,8 +117,16 @@ export function middleware(request: NextRequest) {
     }
   })();
 
+  // Ops Portal: `ww_role=ops` is a ROUTING hint written at sign-in for a call-center account (never authorization; every
+  // /api/v1/ops call is authorised by the server). It has no vendor dashboard, so /login, /register and /dashboard send it to /ops.
+  const isOpsSession = request.cookies.get("ww_role")?.value === "ops";
+
   if ((pathname === '/login' || pathname === '/register') && isAuthenticated && !sessionEnded) {
-    return NextResponse.redirect(new URL(isCustomerSession ? '/' : '/dashboard', request.url));
+    return NextResponse.redirect(new URL(isOpsSession ? '/ops' : isCustomerSession ? '/' : '/dashboard', request.url));
+  }
+
+  if (isOpsSession && isAuthenticated && (pathname === '/dashboard' || pathname.startsWith('/dashboard/'))) {
+    return NextResponse.redirect(new URL('/ops', request.url));
   }
 
   // WW-ADDBIZ — /business-registration is a SIGNUP flow: it posts to

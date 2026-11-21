@@ -18,6 +18,7 @@ import { loginErrorMessage, loginErrorCode, requestPhoneOtp, verifyPhoneOtp } fr
 // FEAT_PHONE_OTP — additional phone+OTP sign-in path (email/password unchanged).
 import { safeRedirect } from "@/lib/auth/safe-redirect"
 import { clearAuthStorage } from "@/lib/auth/session"
+import { isOpsOnly } from "@/lib/ops/ops-role"
 
 import { BridalButton } from "@/components/bridal/bridal-button"
 import { BridalField, BridalInput } from "@/components/bridal/bridal-input"
@@ -86,6 +87,8 @@ export function LoginForm() {
   // Shared post-login routing (used by both email + phone flows).
   const routeAfterLogin = (user: any) => {
     if (nextPath) { router.push(nextPath); return }
+    // Ops Portal: a call-center account lands in /ops (it has no vendor dashboard and is not a customer).
+    if (isOpsOnly(user)) { router.push("/ops"); return }
     const isAdmin = user?.roles?.some(
       (role: any) =>
         role.id === 1 ||
@@ -190,6 +193,8 @@ export function LoginForm() {
 
         if (nextPath) {
           router.push(nextPath)
+        } else if (isOpsOnly(user)) {
+          router.push("/ops")
         } else if (isAdmin || isVendor) {
           router.push("/dashboard")
         } else {

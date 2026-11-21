@@ -50,6 +50,7 @@ const PRIVATE_PATHS = [
   '/claim/',
   '/staff/',
   '/portal-shell',
+  '/ops',
 ]
 
 export default function robots(): MetadataRoute.Robots {
