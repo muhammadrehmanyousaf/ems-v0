@@ -176,6 +176,10 @@ export function CookieConsent() {
   // shadow-DOM app shell, so it floated over the console's content.
   if (pathname?.startsWith("/dashboard")) return null
 
+  // Not in the internal Ops Portal either: it is a signed-in staff tool (essential cookies only), and the banner sat on
+  // top of its content at 360px.
+  if (pathname === "/ops" || pathname?.startsWith("/ops/")) return null
+
   if (!open) return null
 
   const acceptAll = () => {

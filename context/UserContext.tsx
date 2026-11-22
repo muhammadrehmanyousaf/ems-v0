@@ -5,6 +5,7 @@ import { getLoggedInUser } from "@/lib/authFunction";
 import Cookies from "js-cookie";
 import axiosInstance from "@/lib/axiosConfig";
 import { clearAuthStorage } from "@/lib/auth/session";
+import { isOpsOnly } from "@/lib/ops/ops-role";
 
 interface User {
   id: string;
@@ -219,7 +220,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       Cookies.set(STORAGE_KEYS.TOKEN, token, { expires: 1 });
       // WP36 / PUBLIC-035: a non-sensitive role HINT for middleware.ts (it cannot read storage): a customer account has no
       // dashboard, so /login and /business-registration must not send it there. Never used for authorization.
-      Cookies.set("ww_role", userToStore.isVendor === true || userToStore.isSuperAdmin ||
+      // Ops Portal: a call-center account (an ops_* role and nothing else) is neither a customer nor a vendor — "ops" sends it to /ops.
+      Cookies.set("ww_role", isOpsOnly(userToStore) ? "ops" : userToStore.isVendor === true || userToStore.isSuperAdmin ||
         userToStore.roles?.some((r: any) => ["vendor", "admin", "super admin"].includes(String(r?.name || "").toLowerCase()) || r?.id === 1 || r?.id === 2)
         ? "vendor" : "customer", { expires: 1 });
       Cookies.set(STORAGE_KEYS.SESSION_EXPIRY, sessionExpiry.toString(), { expires: 1 });
