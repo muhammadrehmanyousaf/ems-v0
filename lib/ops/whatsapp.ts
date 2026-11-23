@@ -29,3 +29,17 @@ export function consentMessage(p: { ownerName?: string | null; businessName: str
 export function uploadMessage(p: { ownerName?: string | null; businessName: string; url: string; hours: number }): string {
   return `${hi(p.ownerName)}\n\nPlease add your best photos and videos of ${p.businessName} here, straight from your phone:\n${p.url}\n\nThe link is for you only and expires in ${p.hours} hours.`
 }
+
+/* ------------------------------------ the client desk ------------------------------------ */
+
+export interface ShortlistVenue { id: number; name: string; city: string | null; vendorType: string | null; maxCapacity?: number | null; perHeadFromPkr?: string | number | null }
+
+/** The message an agent sends from their own WhatsApp with the shortlisted venues (names, the page link, capacity and per-head price when known). */
+export function shortlistMessage(p: { clientName?: string | null; venues: ShortlistVenue[]; origin: string; href: (v: ShortlistVenue) => string | undefined }): string {
+  const lines = p.venues.map((v, i) => {
+    const facts = [v.city, v.maxCapacity && v.maxCapacity > 1 ? `up to ${v.maxCapacity} guests` : null, v.perHeadFromPkr && Number(v.perHeadFromPkr) > 0 ? `from Rs ${Number(v.perHeadFromPkr).toLocaleString("en-PK")} per head` : null].filter(Boolean).join(", ")
+    const link = p.href(v)
+    return `${i + 1}. ${v.name}${facts ? ` (${facts})` : ""}${link ? `\n   ${p.origin}${link}` : ""}`
+  })
+  return `${hi(p.clientName)}\n\nThank you for contacting Wedding Wala. Here are the venues we shortlisted for you:\n\n${lines.join("\n")}\n\nWe are confirming dates and prices with each venue and will update you shortly.`
+}

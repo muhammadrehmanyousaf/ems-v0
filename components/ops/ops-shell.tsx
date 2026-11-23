@@ -9,7 +9,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import * as React from "react"
 import { useQuery } from "@tanstack/react-query"
-import { CalendarClock, FileSpreadsheet, Headphones, Home, ListChecks, LogOut, Menu, Moon, Search as SearchIcon, Settings, ShieldAlert, Sun, Users, UsersRound } from "lucide-react"
+import { CalendarClock, ClipboardCheck, Contact, FileSpreadsheet, Headphones, Home, ListChecks, LogOut, Menu, Moon, Search as SearchIcon, Settings, Store, ShieldAlert, Sun, Users, UsersRound } from "lucide-react"
 
 import { useUser } from "@/context/UserContext"
 import { useResolvedThemeMode, useThemePrefs } from "@/lib/store/theme-prefs"
@@ -47,7 +47,7 @@ interface NavItem { href: string; label: string; icon: typeof Home; permission?:
 const CALLERS = ["ops_prospect_call", "ops_prospect_view_team", "ops_prospect_view_all"]
 
 /** Every screen that exists. A phase adds its entries here when its screens ship, so the rail never has a dead link. */
-const CRUMB_OVERRIDES: [RegExp, string][] = [[/^\/ops\/prospects\/\d+\/onboarding\/?$/, "Call sheet"], [/^\/ops\/listings\/\d+\/?$/, "Listing"]]
+const CRUMB_OVERRIDES: [RegExp, string][] = [[/^\/ops\/prospects\/\d+\/onboarding\/?$/, "Call sheet"], [/^\/ops\/listings\/\d+\/?$/, "Listing"], [/^\/ops\/clients\/\d+\/?$/, "Client"], [/^\/ops\/assigned\/\d+\/?$/, "Assignment"]]
 
 export const OPS_NAV: NavItem[] = [
   { href: "/ops", label: "Home", icon: Home, section: "Kaam", exact: true },
@@ -55,6 +55,9 @@ export const OPS_NAV: NavItem[] = [
   { href: "/ops/tasks", label: "Callbacks", icon: CalendarClock, permission: CALLERS, section: "Kaam", badge: "tasksDue" },
   { href: "/ops/prospects", label: "Prospects", icon: ListChecks, permission: CALLERS, section: "Kaam" },
   { href: "/ops/import", label: "Import vendors", icon: FileSpreadsheet, permission: "ops_prospect_import", section: "Kaam" },
+  { href: "/ops/assigned", label: "Assigned to me", icon: ClipboardCheck, permission: "ops_prospect_call", section: "Kaam" },
+  { href: "/ops/clients", label: "Clients", icon: Contact, permission: "ops_client_manage", section: "Client desk" },
+  { href: "/ops/vendors", label: "Find venues", icon: Store, permission: "ops_vendor_search", section: "Client desk" },
   { href: "/ops/team", label: "Team", icon: UsersRound, permission: ["ops_reports_team", "ops_reports_all"], section: "Nigrani", badge: "needsReview" },
   { href: "/ops/staff", label: "Staff & teams", icon: Users, permission: "ops_settings", section: "Setup" },
   { href: "/ops/settings", label: "Settings", icon: Settings, permission: "ops_settings", section: "Setup" },
