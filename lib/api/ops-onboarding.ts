@@ -16,10 +16,10 @@ export function opsErrorData<T extends Record<string, unknown> = Record<string, 
 
 /* ----------------------------------- the call sheet ----------------------------------- */
 
-export type SheetInput = "text" | "textarea" | "url" | "phone" | "email" | "number" | "money" | "percent" | "boolean" | "select" | "multiselect" | "time" | "list"
+export type SheetInput = "text" | "textarea" | "url" | "phone" | "email" | "number" | "money" | "percent" | "boolean" | "select" | "multiselect" | "tags" | "time" | "list"
 export interface SheetField {
   key: string; label: string; input: SheetInput; destination: string
-  required?: boolean; help?: string; max?: number; min?: number
+  required?: boolean; help?: string; max?: number; min?: number; placeholder?: string
   options?: { value: string; label: string }[]
   derivedFrom?: string; alsoTsd?: string
 }
