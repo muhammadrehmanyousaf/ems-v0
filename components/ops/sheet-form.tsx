@@ -96,15 +96,18 @@ function FieldInput({ field, value, onChange, invalid, id }: { field: SheetField
         </div>
       )
     }
+    case "tags":
+      // a short list the agent types as they hear it ("Sedan, SUV, Coaster"); the server splits it and trims each label
+      return <Input id={id} value={Array.isArray(value) ? (value as string[]).join(", ") : asString(value)} invalid={invalid} placeholder={field.placeholder} autoComplete="off" onChange={(e) => onChange(e.target.value)} />
     case "textarea":
-      return <Textarea id={id} rows={4} value={asString(value)} invalid={invalid} maxLength={field.max} onChange={(e) => onChange(e.target.value)} />
+      return <Textarea id={id} rows={4} value={asString(value)} invalid={invalid} maxLength={field.max} placeholder={field.placeholder} onChange={(e) => onChange(e.target.value)} />
     case "list":
       return <ListEditor field={field} value={value} onChange={onChange} />
     default: {
       const numeric = field.input === "number" || field.input === "money" || field.input === "percent"
       const type = field.input === "email" ? "email" : field.input === "time" ? "time" : field.input === "url" ? "url" : field.input === "phone" ? "tel" : "text"
       return (
-        <Input id={id} type={type} value={asString(value)} invalid={invalid} maxLength={field.max && !numeric ? field.max : undefined}
+        <Input id={id} type={type} value={asString(value)} invalid={invalid} placeholder={field.placeholder} maxLength={field.max && !numeric ? field.max : undefined}
           inputMode={numeric ? (field.input === "number" ? "numeric" : "decimal") : undefined} autoComplete="off"
           onChange={(e) => onChange(e.target.value)} />
       )
