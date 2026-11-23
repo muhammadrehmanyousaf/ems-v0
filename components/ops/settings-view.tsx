@@ -136,18 +136,23 @@ function ClientDeskCard({ settings, canEdit }: { settings: OpsSettingsMap; canEd
 function QualityCard({ settings, canEdit }: { settings: OpsSettingsMap; canEdit: boolean }) {
   const saveQa = useSave("qa_percent")
   const saveTtl = useSave("set_password_ttl_hours")
+  const saveChase = useSave("consent_chase_hours")
   const qa = settings.qa_percent.value
   const ttl = settings.set_password_ttl_hours.value
+  const chase = settings.consent_chase_hours.value
   const [qaDraft, setQa] = useState(qa)
   const [ttlDraft, setTtl] = useState(ttl)
+  const [chaseDraft, setChase] = useState(chase)
   useEffect(() => setQa(qa), [qa])
   useEffect(() => setTtl(ttl), [ttl])
+  useEffect(() => setChase(chase), [chase])
   return (
     <Card title="Quality and access" sub="Spot-checks on new listings and how long a set-password link works.">
       <Row label="Share of new onboardings sent to a QA review" hint="A second look at a random sample. It never blocks a listing from going live." htmlFor="s-qa"><NumberInput id="s-qa" value={qaDraft} onChange={setQa} min={0} max={100} step={0.5} suffix="%" /></Row>
+      <Row label="Wait before chasing a written consent" hint="A live listing with only a spoken yes after this long is shown in Quality for a written confirmation. 1 to 720 hours." htmlFor="s-chase"><NumberInput id="s-chase" value={chaseDraft} onChange={setChase} min={1} max={720} suffix="hours" /></Row>
       <Row label="Set-password link lifetime" hint="For staff accounts you create. 1 to 720 hours." htmlFor="s-ttl"><NumberInput id="s-ttl" value={ttlDraft} onChange={setTtl} min={1} max={720} suffix="hours" /></Row>
-      <SaveBar dirty={qaDraft !== qa || ttlDraft !== ttl} pending={saveQa.isPending || saveTtl.isPending} canEdit={canEdit}
-        onSave={() => { if (qaDraft !== qa) saveQa.mutate(qaDraft); if (ttlDraft !== ttl) saveTtl.mutate(ttlDraft) }} onReset={() => { setQa(qa); setTtl(ttl) }} />
+      <SaveBar dirty={qaDraft !== qa || ttlDraft !== ttl || chaseDraft !== chase} pending={saveQa.isPending || saveTtl.isPending || saveChase.isPending} canEdit={canEdit}
+        onSave={() => { if (qaDraft !== qa) saveQa.mutate(qaDraft); if (ttlDraft !== ttl) saveTtl.mutate(ttlDraft); if (chaseDraft !== chase) saveChase.mutate(chaseDraft) }} onReset={() => { setQa(qa); setTtl(ttl); setChase(chase) }} />
     </Card>
   )
 }

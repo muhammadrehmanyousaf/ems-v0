@@ -9,7 +9,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import * as React from "react"
 import { useQuery } from "@tanstack/react-query"
-import { CalendarClock, ClipboardCheck, Contact, FileSpreadsheet, Headphones, Home, ListChecks, LogOut, Menu, Moon, Search as SearchIcon, Settings, Store, ShieldAlert, Sun, Users, UsersRound } from "lucide-react"
+import { BarChart3, CalendarClock, ClipboardCheck, Contact, FileSpreadsheet, Headphones, Home, ListChecks, LogOut, Menu, Moon, Search as SearchIcon, ScrollText, Settings, ShieldCheck, Store, ShieldAlert, Sun, Users, UsersRound } from "lucide-react"
 
 import { useUser } from "@/context/UserContext"
 import { useResolvedThemeMode, useThemePrefs } from "@/lib/store/theme-prefs"
@@ -59,6 +59,9 @@ export const OPS_NAV: NavItem[] = [
   { href: "/ops/clients", label: "Clients", icon: Contact, permission: "ops_client_manage", section: "Client desk" },
   { href: "/ops/vendors", label: "Find venues", icon: Store, permission: "ops_vendor_search", section: "Client desk" },
   { href: "/ops/team", label: "Team", icon: UsersRound, permission: ["ops_reports_team", "ops_reports_all"], section: "Nigrani", badge: "needsReview" },
+  { href: "/ops/reports", label: "Reports", icon: BarChart3, permission: ["ops_reports_team", "ops_reports_all"], section: "Nigrani" },
+  { href: "/ops/quality", label: "Quality", icon: ShieldCheck, permission: ["ops_reports_team", "ops_reports_all"], section: "Nigrani" },
+  { href: "/ops/audit", label: "Audit trail", icon: ScrollText, permission: "ops_reports_all", section: "Nigrani" },
   { href: "/ops/staff", label: "Staff & teams", icon: Users, permission: "ops_settings", section: "Setup" },
   { href: "/ops/settings", label: "Settings", icon: Settings, permission: "ops_settings", section: "Setup" },
 ]

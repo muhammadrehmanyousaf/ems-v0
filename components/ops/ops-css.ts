@@ -179,6 +179,20 @@ export const OPS_CSS = String.raw`
 .oshell .grow{ flex:1; min-width:0; } .oshell .show-sm{ display:none; }
 @media (max-width:760px){ .oshell .hide-sm{ display:none !important; } .oshell .show-sm{ display:block; } .oshell .filters{ margin-left:0; width:100%; } .oshell .f-search{ width:100%; } }
 
+/* ---- report bars (horizontal share bars and a per-day column strip) ---- */
+.oshell .hbars{ display:grid; gap:10px; }
+.oshell .hbar{ display:grid; grid-template-columns:minmax(0,150px) minmax(0,1fr) auto; align-items:center; gap:12px; font-size:12.5px; }
+.oshell .hbar .hb-l{ color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.oshell .hbar .hb-t{ height:8px; border-radius:99px; background:var(--surface-3); overflow:hidden; }
+.oshell .hbar .hb-t i{ display:block; height:100%; border-radius:99px; background:var(--accent); }
+.oshell .hbar .hb-v{ font-variant-numeric:tabular-nums; color:var(--ink); font-weight:600; min-width:28px; text-align:right; }
+.oshell .spark{ display:flex; align-items:flex-end; gap:4px; height:72px; }
+.oshell .spark .sp{ flex:1; min-width:0; display:flex; align-items:flex-end; height:100%; }
+.oshell .spark .sp i{ display:block; width:100%; border-radius:4px 4px 0 0; background:var(--accent); min-height:3px; }
+.oshell .spark-l{ display:flex; justify-content:space-between; font-size:11px; color:var(--ink-3); margin-top:6px; }
+.oshell .audit-json{ margin:6px 0 0; padding:10px 12px; border-radius:var(--r-xs); background:var(--surface-3); border:1px solid var(--border); font:11.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre-wrap; word-break:break-word; max-width:560px; max-height:220px; overflow:auto; }
+.oshell details.how summary{ cursor:pointer; font-weight:600; font-size:12.5px; } .oshell details.how ul{ margin:10px 0 0; padding-left:18px; color:var(--ink-2); font-size:12.5px; display:grid; gap:6px; }
+
 /* ---- toast ---- */
 .oshell .toasts{ position:fixed; right:18px; bottom:18px; z-index:95; display:flex; flex-direction:column; gap:8px; width:min(92vw,340px); }
 .oshell .toast{ display:flex; gap:10px; align-items:flex-start; padding:11px 14px; border-radius:var(--r-sm); background:var(--surface); border:1px solid var(--border-2); box-shadow:var(--shadow-md); font-size:12.5px; animation:opop2 .16s ease; }
