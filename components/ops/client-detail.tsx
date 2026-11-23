@@ -8,7 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, CalendarPlus, Copy, MessageCircle, Pencil, Phone, Search, Send, Trash2, UserCheck } from "lucide-react"
 
 import { useOps } from "@/components/ops/ops-shell"
-import { AvailabilityBadge, CLIENT_STATUS, CLOSED, ClientStatusBadge, EVENT_LABEL, ResponseBadge, SOURCE_LABEL, fmtPkr } from "@/components/ops/client-bits"
+import { AvailabilityBadge, CLIENT_STATUS, CLOSED, ClientStatusBadge, EVENT_LABEL, ResponseBadge, SOURCE_LABEL, StageBadge, fmtPkr } from "@/components/ops/client-bits"
 import { VendorSearchPanel } from "@/components/ops/vendor-search"
 import { fmtPhone, telHref, waHref } from "@/components/ops/prospect-bits"
 import { Btn, Card, Empty, ErrorState, Field, IconBtn, Input, Modal, Notice, PageHead, Seg, Select, SkelRows, Status, Textarea, fmtDay, fmtWhen, useOpsToast } from "@/components/ops/ops-ui"
@@ -292,6 +292,7 @@ export function ClientDetailView({ id }: { id: number }) {
               <div key={a.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
                 <div className="row between"><b>{a.assigneeName}</b><Status tone={a.status === "open" ? "info" : a.status === "done" ? "ok" : "mut"}>{a.status === "open" ? "Working on it" : a.status === "done" ? "Finished" : "Cancelled"}</Status></div>
                 <div className="small muted">{fmtWhen(a.createdAt)}{a.assignedByName ? ` · by ${a.assignedByName}` : ""}{a.firstActionAt ? ` · first check ${fmtWhen(a.firstActionAt)}` : a.status === "open" ? " · no check yet" : ""}</div>
+                {a.status === "open" && <div className="row" style={{ gap: 8, marginTop: 6, flexWrap: "wrap" }}><StageBadge stage={a.stage} />{a.stageNote ? <span className="small">{a.stageNote}</span> : null}{a.stageAt ? <span className="small muted">{fmtWhen(a.stageAt)}</span> : null}</div>}
                 {a.reason ? <div className="small">{a.reason}</div> : null}
               </div>
             ))}

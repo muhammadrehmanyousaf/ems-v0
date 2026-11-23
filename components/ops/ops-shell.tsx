@@ -47,15 +47,16 @@ interface NavItem { href: string; label: string; icon: typeof Home; permission?:
 const CALLERS = ["ops_prospect_call", "ops_prospect_view_team", "ops_prospect_view_all"]
 
 /** Every screen that exists. A phase adds its entries here when its screens ship, so the rail never has a dead link. */
-const CRUMB_OVERRIDES: [RegExp, string][] = [[/^\/ops\/prospects\/\d+\/onboarding\/?$/, "Call sheet"], [/^\/ops\/listings\/\d+\/?$/, "Listing"], [/^\/ops\/clients\/\d+\/?$/, "Client"], [/^\/ops\/assigned\/\d+\/?$/, "Assignment"]]
+const CRUMB_OVERRIDES: [RegExp, string][] = [[/^\/ops\/prospects\/\d+\/onboarding\/?$/, "Call sheet"], [/^\/ops\/listings\/\d+\/?$/, "Listing"], [/^\/ops\/clients\/\d+\/?$/, "Client"], [/^\/ops\/assigned\/\d+\/?$/, "Assignment"], [/^\/ops\/find\/\d+\/?$/, "Vendor"]]
 
 export const OPS_NAV: NavItem[] = [
   { href: "/ops", label: "Home", icon: Home, section: "Kaam", exact: true },
+  { href: "/ops/assigned", label: "Clients for me", icon: ClipboardCheck, permission: "ops_prospect_call", section: "Kaam" },
+  { href: "/ops/find", label: "Vendors", icon: Store, permission: "ops_listing_edit_on_behalf", section: "Kaam" },
   { href: "/ops/call", label: "Call queue", icon: Headphones, permission: "ops_prospect_call", section: "Kaam" },
   { href: "/ops/tasks", label: "Callbacks", icon: CalendarClock, permission: CALLERS, section: "Kaam", badge: "tasksDue" },
   { href: "/ops/prospects", label: "Prospects", icon: ListChecks, permission: CALLERS, section: "Kaam" },
   { href: "/ops/import", label: "Import vendors", icon: FileSpreadsheet, permission: "ops_prospect_import", section: "Kaam" },
-  { href: "/ops/assigned", label: "Assigned to me", icon: ClipboardCheck, permission: "ops_prospect_call", section: "Kaam" },
   { href: "/ops/clients", label: "Clients", icon: Contact, permission: "ops_client_manage", section: "Client desk" },
   { href: "/ops/vendors", label: "Find venues", icon: Store, permission: "ops_vendor_search", section: "Client desk" },
   { href: "/ops/team", label: "Team", icon: UsersRound, permission: ["ops_reports_team", "ops_reports_all"], section: "Nigrani", badge: "needsReview" },
@@ -138,7 +139,8 @@ export function OpsShell({ children }: { children: React.ReactNode }) {
     )
   }
 
-  const items = OPS_NAV.filter((n) => !n.permission || can(n.permission))
+  // "Vendors" (the vendor workspace) already finds every vendor, so someone who works on vendors and is not on the client desk does not also get the desk's "Find venues"
+  const items = OPS_NAV.filter((n) => (!n.permission || can(n.permission)) && !(n.href === "/ops/vendors" && can("ops_listing_edit_on_behalf") && !can("ops_client_manage")))
   const sections = Array.from(new Set(items.map((n) => n.section)))
   const isActive = (n: NavItem) => (n.exact ? pathname === n.href : pathname === n.href || pathname.startsWith(`${n.href}/`))
   const current = items.filter(isActive).sort((a, b) => b.href.length - a.href.length)[0]
@@ -188,7 +190,7 @@ export function OpsShell({ children }: { children: React.ReactNode }) {
                   <div className="crumb"><b>Ops Portal</b><span className="sep">/</span><span>{crumb}</span></div>
                   <div className="tb-spring" />
                   {canWork && (
-                    <form className="search" role="search" onSubmit={(e) => { e.preventDefault(); const t = search.trim(); if (t) router.push(`/ops/prospects?view=all&q=${encodeURIComponent(t)}`) }}>
+                    <form className="search" role="search" onSubmit={(e) => { e.preventDefault(); const t = search.trim(); if (t) router.push(can("ops_listing_edit_on_behalf") ? `/ops/find?q=${encodeURIComponent(t)}` : `/ops/prospects?view=all&q=${encodeURIComponent(t)}`) }}>
                       <SearchIcon aria-hidden /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Find a vendor by name or phone" aria-label="Find a vendor by name or phone" />
                     </form>
                   )}
