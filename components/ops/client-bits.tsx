@@ -3,7 +3,7 @@
 // Small pieces shared by the client-desk screens: status and response badges, labels, money.
 import { Status, type Tone } from "@/components/ops/ops-ui"
 import { dueLabel } from "@/components/ops/prospect-bits"
-import type { Availability, ClientEventKind, ClientRow, ClientSource, ClientStatus } from "@/lib/api/ops-clients"
+import type { AssignmentStage, Availability, ClientEventKind, ClientRow, ClientSource, ClientStatus } from "@/lib/api/ops-clients"
 
 export const CLIENT_STATUS: Record<ClientStatus, { label: string; tone: Tone }> = {
   new: { label: "New", tone: "warn" },
@@ -30,6 +30,18 @@ export function ResponseBadge({ row }: { row: Pick<ClientRow, "firstResponseAt" 
   const d = dueLabel(row.firstResponseDueAt)
   if (row.overdue) return <Status tone="bad">{d.text.replace("Due ", "Overdue ")}</Status>
   return <Status tone="warn">{d.text === "Due now" ? "Reply now" : `Reply ${d.text}`}</Status>
+}
+
+/** Where a handed-over client stands with the vendor, in the words both teams use. */
+export const STAGE_META: Record<AssignmentStage, { label: string; short: string; pick: string; tone: Tone }> = {
+  new: { label: "Not contacted yet", short: "Not contacted", pick: "Not yet", tone: "mut" },
+  contacted: { label: "Vendor contacted, waiting", short: "Contacted", pick: "Contacted", tone: "info" },
+  confirmed: { label: "Vendor confirmed", short: "Confirmed", pick: "Confirmed", tone: "ok" },
+  unavailable: { label: "Vendor not available", short: "Not available", pick: "Unavailable", tone: "bad" },
+}
+export function StageBadge({ stage, short }: { stage: AssignmentStage; short?: boolean }) {
+  const m = STAGE_META[stage] ?? STAGE_META.new
+  return <Status tone={m.tone}>{short ? m.short : m.label}</Status>
 }
 
 export const AVAIL_META: Record<Availability, { label: string; tone: Tone }> = {

@@ -26,7 +26,7 @@ const TABS: { value: ProspectView; label: string; perm?: string | string[] }[] =
   { value: "all", label: "All" },
 ]
 
-function AddProspectModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function AddProspectModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const qc = useQueryClient()
   const toast = useOpsToast()
   const router = useRouter()

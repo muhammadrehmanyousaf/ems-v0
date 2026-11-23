@@ -1,17 +1,19 @@
 "use client"
 
-// A vendor manager's world (Team A): the clients handed to them, and the venues to confirm by phone for each. They never see the couple's
-// phone number or e-mail: they call the VENUES. Record what each call found (available / not available / no answer, the quoted price), then finish.
+// A vendor manager's world (Team A): the clients handed to them, and the venues to confirm by phone for each. They see the couple's name and phone
+// (owner decision 2026-11-24) but not their e-mail or the desk's private notes. Say where the client stands with the vendor (both teams see it),
+// record what each call found (available / not available / no answer, the quoted price), then finish.
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, CheckCircle2, ClipboardCheck, Phone } from "lucide-react"
 
-import { AvailabilityBadge, EVENT_LABEL, ageLabel, fmtPkr } from "@/components/ops/client-bits"
+import { AvailabilityBadge, EVENT_LABEL, STAGE_META, StageBadge, ageLabel, fmtPkr } from "@/components/ops/client-bits"
+import { fmtPhone, telHref, waHref } from "@/components/ops/prospect-bits"
 import { Btn, Card, Empty, ErrorState, Field, Input, Notice, PageHead, Seg, SkelRows, Status, Textarea, fmtDay, fmtWhen, useOpsToast } from "@/components/ops/ops-ui"
 import { opsErrorMessage } from "@/lib/api/ops"
-import { assignmentsApi, type AssignedItem } from "@/lib/api/ops-clients"
+import { assignmentsApi, type AssignedItem, type AssignmentStage } from "@/lib/api/ops-clients"
 import { opsErrorData } from "@/lib/api/ops-onboarding"
 
 export function AssignedListView() {
@@ -21,7 +23,7 @@ export function AssignedListView() {
   const rows = q.data?.assignments ?? []
   return (
     <>
-      <PageHead title="Assigned to me" sub="Clients the client desk handed you. For each, confirm the shortlisted venues by phone and record what you find."
+      <PageHead title="Clients for me" sub="Clients the client desk handed you. For each, confirm the shortlisted venues by phone and record what you find."
         actions={<Btn onClick={() => setAll((a) => !a)}>{all ? "Show open only" : "Show finished too"}</Btn>} />
       <Card flush>
         {q.isLoading ? <SkelRows rows={5} /> : q.isError ? <ErrorState message={opsErrorMessage(q.error)} onRetry={() => q.refetch()} /> : rows.length === 0 ? (
@@ -34,7 +36,8 @@ export function AssignedListView() {
               {a.note ? <div className="td-sub">{a.note}</div> : null}
             </div>
             <div className="nw" style={{ textAlign: "right" }}>
-              {a.status === "done" ? <Status tone="ok">Finished</Status> : a.unchecked > 0 ? <Status tone="warn">{a.unchecked} of {a.venues} to check</Status> : <Status tone="info">Ready to finish</Status>}
+              {a.status === "done" ? <Status tone="ok">Finished</Status> : <StageBadge stage={a.stage} short />}
+              {a.status === "open" && <div className="td-sub">{a.unchecked > 0 ? `${a.unchecked} of ${a.venues} venues to check` : "Ready to finish"}</div>}
               <div className="td-sub">{ageLabel(a.createdAt)} ago</div>
             </div>
           </div>
@@ -88,6 +91,33 @@ function ItemCard({ item, open, onSaved }: { item: AssignedItem; open: boolean; 
   )
 }
 
+const STAGES: AssignmentStage[] = ["new", "contacted", "confirmed", "unavailable"]
+
+/** Where this client stands with the vendor. One tap and a line for the desk; the desk sees it at once and is told. */
+function StageCard({ id, stage, note, open }: { id: number; stage: AssignmentStage; note: string | null; open: boolean }) {
+  const qc = useQueryClient()
+  const toast = useOpsToast()
+  const [pick, setPick] = useState<AssignmentStage>(stage)
+  const [text, setText] = useState(note ?? "")
+  useEffect(() => { setPick(stage); setText(note ?? "") }, [stage, note])
+  const save = useMutation({
+    mutationFn: () => assignmentsApi.setStage(id, pick, text || undefined),
+    onSuccess: (r) => { qc.invalidateQueries({ queryKey: ["ops", "assignment", id] }); qc.invalidateQueries({ queryKey: ["ops", "assignments"] }); toast({ title: r.changed ? "The desk has been told" : "Nothing changed", body: r.changed ? STAGE_META[pick].label : undefined }) },
+    onError: (e) => toast({ title: "Couldn't save", body: opsErrorMessage(e), tone: "bad" }),
+  })
+  return (
+    <Card title="Where this stands" sub="Tell the desk how it is going with the vendor. They see it straight away.">
+      {!open ? <div className="row" style={{ gap: 8 }}><StageBadge stage={stage} />{note ? <span className="small muted">{note}</span> : null}</div> : (
+        <div style={{ display: "grid", gap: 12 }}>
+          <Seg<AssignmentStage> label="Where this stands" value={pick} onChange={setPick} options={STAGES.map((s) => ({ value: s, label: STAGE_META[s].pick }))} />
+          <Field label="A line for the desk (optional)" htmlFor="st-note"><Input id="st-note" value={text} maxLength={300} onChange={(e) => setText(e.target.value)} placeholder="They will call back at 5" /></Field>
+          <div><Btn variant="primary" loading={save.isPending} disabled={pick === stage && text === (note ?? "")} onClick={() => save.mutate()}>Save and tell the desk</Btn></div>
+        </div>
+      )}
+    </Card>
+  )
+}
+
 export function AssignedDetailView({ id }: { id: number }) {
   const qc = useQueryClient()
   const toast = useOpsToast()
@@ -110,7 +140,7 @@ export function AssignedDetailView({ id }: { id: number }) {
   const pending = d.items.filter((i) => !i.checkedAt).length
   return (
     <>
-      <div style={{ marginBottom: 10 }}><Link href="/ops/assigned" className="btn btn-link" style={{ paddingLeft: 0 }}><ArrowLeft aria-hidden />Assigned to me</Link></div>
+      <div style={{ marginBottom: 10 }}><Link href="/ops/assigned" className="btn btn-link" style={{ paddingLeft: 0 }}><ArrowLeft aria-hidden />Clients for me</Link></div>
       <PageHead title={d.client.name} sub={<span className="row" style={{ gap: 8 }}>{open ? <Status tone="info">Working on it</Status> : <Status tone="ok">Finished</Status>}<span>{[d.client.cityName, d.client.guests ? `${d.client.guests} guests` : null, d.client.budgetPkr ? fmtPkr(d.client.budgetPkr) : null].filter(Boolean).join(" · ")}</span></span>} />
       <div className="cols-main">
         <div className="stack">
@@ -118,13 +148,21 @@ export function AssignedDetailView({ id }: { id: number }) {
           {d.items.length === 0 ? <Card><Empty title="No venues on this assignment">The client desk removed them.</Empty></Card> : d.items.map((i) => <ItemCard key={i.id} item={i} open={open} onSaved={refresh} />)}
         </div>
         <div className="stack">
+          <StageCard id={id} stage={d.assignment.stage} note={d.assignment.stageNote} open={open} />
           <Card title="About this client">
             <dl className="kv">
+              <dt>Couple</dt><dd>{d.client.name}</dd>
+              <dt>Phone</dt><dd>{d.client.phones.length === 0 ? "—" : d.client.phones.map((p) => (
+                <span key={p.raw} className="row" style={{ gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
+                  <a className="btn btn-ghost sm" href={telHref(p)}><Phone size={14} aria-hidden />{fmtPhone(p)}</a>
+                  {waHref(p) && <a className="btn btn-ghost sm" target="_blank" rel="noopener noreferrer" href={waHref(p)!}>WhatsApp</a>}
+                </span>
+              ))}</dd>
               <dt>Wants</dt><dd>{d.client.requirements || "—"}</dd>
               {d.assignment.note ? <><dt>Note from the desk</dt><dd>{d.assignment.note}</dd></> : null}
             </dl>
             {d.events.length > 0 && <div style={{ marginTop: 12 }}>{d.events.map((e, i) => <div key={i} className="small" style={{ padding: "3px 0" }}><b>{EVENT_LABEL[e.kind]}</b>{e.eventDate ? ` · ${fmtDay(e.eventDate)}` : ""}{e.guests ? ` · ${e.guests} guests` : ""}</div>)}</div>}
-            <p className="small muted" style={{ margin: "12px 0 0" }}>You are calling the venues, so the couple's contact details are not shown.</p>
+            <p className="small muted" style={{ margin: "12px 0 0" }}>The client desk is the couple's main contact. Reach them only if you need to.</p>
           </Card>
           {open && (
             <Card title="When you are done">

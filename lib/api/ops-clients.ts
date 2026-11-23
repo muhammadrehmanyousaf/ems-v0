@@ -21,7 +21,7 @@ export interface ClientRow {
   id: number; name: string; phones: ClientPhone[]; primaryPhoneKey: string | null; whatsapp: string | null; email: string | null; cityName: string | null
   source: ClientSource; status: ClientStatus; guests: number | null; budgetPkr: string | null; ownerUserId: number | null; ownerName: string | null; teamId: number | null; teamName: string | null
   firstResponseDueAt: string | null; firstResponseAt: string | null; lastContactAt: string | null; createdAt: string; overdue: boolean
-  inquiries: number; shortlisted: number; nextEventDate: string | null; assigneeName: string | null
+  inquiries: number; shortlisted: number; nextEventDate: string | null; assigneeName: string | null; assignmentStage: AssignmentStage | null
 }
 export interface ClientFull extends ClientRow { requirements: string | null; notes: string | null; statusReason: string | null; cityId: number | null }
 export interface ClientEventRow { id: number; kind: ClientEventKind; eventDate: string | null; guests: number | null; budgetPkr: string | null; notes: string | null }
@@ -30,7 +30,8 @@ export interface ShortlistRow {
   id: number; businessId: number; businessName: string; city: string | null; subArea: string | null; maxCapacity: number | null; minimumPrice: string | null
   vendorType: string | null; availability: Availability; quotedPricePkr: string | null; perHeadPkr: string | null; note: string | null; checkedAt: string | null; createdAt: string; checkedByName: string | null; listedPerHeadPkr: string | null
 }
-export interface AssignmentRow { id: number; status: "open" | "done" | "cancelled"; reason: string | null; note: string | null; createdAt: string; firstActionAt: string | null; closedAt: string | null; assigneeName: string; assignedToUserId: number; assignedByName: string | null }
+export type AssignmentStage = "new" | "contacted" | "confirmed" | "unavailable"
+export interface AssignmentRow { id: number; status: "open" | "done" | "cancelled"; stage: AssignmentStage; stageNote: string | null; stageAt: string | null; reason: string | null; note: string | null; createdAt: string; firstActionAt: string | null; closedAt: string | null; assigneeName: string; assignedToUserId: number; assignedByName: string | null }
 export interface TimelineRow { id: number; kind: TimelineKind; body: string | null; meta: Record<string, unknown> | null; at: string; authorName: string | null }
 export interface ClientTaskRow { id: number; kind: string; dueAt: string; note: string | null; doneAt: string | null; businessId: number | null; assignedToUserId: number; assigneeName: string }
 export interface ClientDetail { client: ClientFull; events: ClientEventRow[]; inquiries: InquiryRow[]; shortlist: ShortlistRow[]; assignments: AssignmentRow[]; timeline: TimelineRow[]; tasks: ClientTaskRow[] }
@@ -95,7 +96,7 @@ export const vendorsApi = {
 /* ----------------------------- a vendor manager's assignments ----------------------------- */
 
 export interface MyAssignmentRow {
-  id: number; status: "open" | "done"; createdAt: string; firstActionAt: string | null; closedAt: string | null; note: string | null; clientId: number; clientName: string
+  id: number; status: "open" | "done"; stage: AssignmentStage; stageNote: string | null; stageAt: string | null; createdAt: string; firstActionAt: string | null; closedAt: string | null; note: string | null; clientId: number; clientName: string
   cityName: string | null; guests: number | null; budgetPkr: string | null; nextEventDate: string | null; venues: number; unchecked: number
 }
 export interface AssignedItem {
@@ -103,8 +104,8 @@ export interface AssignedItem {
   quotedPricePkr: string | null; perHeadPkr: string | null; note: string | null; checkedAt: string | null; contactPhone: string | null; listedPerHeadPkr: string | null
 }
 export interface AssignedDetail {
-  assignment: { id: number; status: "open" | "done"; createdAt: string; firstActionAt: string | null; closedAt: string | null; note: string | null }
-  client: { id: number; name: string; cityName: string | null; guests: number | null; budgetPkr: string | null; requirements: string | null; status: ClientStatus }
+  assignment: { id: number; status: "open" | "done"; stage: AssignmentStage; stageNote: string | null; stageAt: string | null; createdAt: string; firstActionAt: string | null; closedAt: string | null; note: string | null }
+  client: { id: number; name: string; phones: ClientPhone[]; whatsapp: string | null; cityName: string | null; guests: number | null; budgetPkr: string | null; requirements: string | null; status: ClientStatus }
   events: { kind: ClientEventKind; eventDate: string | null; guests: number | null; budgetPkr: string | null; notes: string | null }[]
   items: AssignedItem[]
 }
@@ -115,4 +116,6 @@ export const assignmentsApi = {
   check: (itemId: number, body: { availability: "available" | "unavailable" | "no_answer"; quotedPricePkr?: number | string; perHeadPkr?: number | string; note?: string }) =>
     unwrap<{ itemId: number; availability: Availability; suggestUpdate: { taskId: number; businessId: number } | null }>(api.post(`${BASE}/assignments/items/${itemId}/check`, body)),
   complete: (id: number, note?: string) => unwrap<{ done: boolean }>(api.post(`${BASE}/assignments/${id}/complete`, { note })),
+  /** Where this client stands with the vendor. Both teams see it. */
+  setStage: (id: number, stage: AssignmentStage, note?: string) => unwrap<{ stage: AssignmentStage; stageNote: string | null; changed: boolean }>(api.post(`${BASE}/assignments/${id}/stage`, { stage, note })),
 }

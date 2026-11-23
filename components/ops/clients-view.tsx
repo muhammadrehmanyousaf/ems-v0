@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus, Users } from "lucide-react"
 
 import { useOps } from "@/components/ops/ops-shell"
-import { ClientStatusBadge, EVENT_LABEL, ResponseBadge, SOURCE_LABEL, ageLabel } from "@/components/ops/client-bits"
+import { ClientStatusBadge, EVENT_LABEL, ResponseBadge, SOURCE_LABEL, STAGE_META, ageLabel } from "@/components/ops/client-bits"
 import { fmtPhone } from "@/components/ops/prospect-bits"
 import { Btn, Card, Empty, ErrorState, Field, Input, Modal, Notice, PageHead, Pager, SearchBox, Select, SkelRows, Status, TabBar, Textarea, fmtDay, useOpsToast } from "@/components/ops/ops-ui"
 import { opsApi, opsErrorMessage } from "@/lib/api/ops"
@@ -134,7 +134,7 @@ export function ClientsView() {
                           </td>
                           <td className="nw num">{p ? fmtPhone(p) : "—"}</td>
                           <td className="nw"><ResponseBadge row={r} /></td>
-                          <td><ClientStatusBadge status={r.status} />{r.assigneeName ? <div className="td-sub">{r.assigneeName}</div> : null}</td>
+                          <td><ClientStatusBadge status={r.status} />{r.assigneeName ? <div className="td-sub">{r.assigneeName}{r.assignmentStage ? ` · ${STAGE_META[r.assignmentStage].short}` : ""}</div> : null}</td>
                           <td className="nw">{r.nextEventDate ? fmtDay(r.nextEventDate) : <span className="muted">—</span>}</td>
                           <td className="r num">{r.guests ?? "—"}</td>
                           <td className="td-mut nw">{r.ownerName ?? <Status tone="acc">Pool</Status>}</td>
@@ -153,7 +153,7 @@ export function ClientsView() {
                       <div className="row between"><div className="td-name">{r.name}</div><ClientStatusBadge status={r.status} /></div>
                       <div className="td-sub">{[SOURCE_LABEL[r.source], r.cityName, r.guests ? `${r.guests} guests` : null].filter(Boolean).join(" · ")}</div>
                       <div className="row between"><span className="num small">{p ? fmtPhone(p) : "—"}</span><ResponseBadge row={r} /></div>
-                      <div className="small muted">{r.ownerName ?? "Pool"} · {ageLabel(r.createdAt)} ago{r.nextEventDate ? ` · event ${fmtDay(r.nextEventDate)}` : ""}</div>
+                      <div className="small muted">{r.ownerName ?? "Pool"} · {ageLabel(r.createdAt)} ago{r.nextEventDate ? ` · event ${fmtDay(r.nextEventDate)}` : ""}{r.assigneeName && r.assignmentStage ? ` · ${r.assigneeName}: ${STAGE_META[r.assignmentStage].short}` : ""}</div>
                     </div>
                   )
                 })}
