@@ -117,6 +117,22 @@ function CallingCard({ settings, canEdit }: { settings: OpsSettingsMap; canEdit:
   )
 }
 
+function ClientDeskCard({ settings, canEdit }: { settings: OpsSettingsMap; canEdit: boolean }) {
+  const save = useSave("client_sla")
+  const v = settings.client_sla.value
+  const [first, setFirst] = useState(v.firstResponseMinutes)
+  const [action, setAction] = useState(v.assignmentActionHours)
+  useEffect(() => { setFirst(v.firstResponseMinutes); setAction(v.assignmentActionHours) }, [v.firstResponseMinutes, v.assignmentActionHours])
+  return (
+    <Card title="Client desk response times" sub="How quickly a client should hear back, and how soon a vendor manager should start checking venues.">
+      <Row label="First reply to a new client" hint="From the moment they exist (a website inquiry: from when they asked) to the first logged call or message. 1 to 1,440 minutes." htmlFor="s-first"><NumberInput id="s-first" value={first} onChange={setFirst} min={1} max={1440} suffix="minutes" /></Row>
+      <Row label="Vendor manager's first check" hint="From being handed a shortlist to the first recorded result. 1 to 168 hours." htmlFor="s-action"><NumberInput id="s-action" value={action} onChange={setAction} min={1} max={168} suffix="hours" /></Row>
+      <SaveBar dirty={first !== v.firstResponseMinutes || action !== v.assignmentActionHours} pending={save.isPending} canEdit={canEdit}
+        onSave={() => save.mutate({ firstResponseMinutes: first, assignmentActionHours: action })} onReset={() => { setFirst(v.firstResponseMinutes); setAction(v.assignmentActionHours) }} />
+    </Card>
+  )
+}
+
 function QualityCard({ settings, canEdit }: { settings: OpsSettingsMap; canEdit: boolean }) {
   const saveQa = useSave("qa_percent")
   const saveTtl = useSave("set_password_ttl_hours")
@@ -193,6 +209,7 @@ export function SettingsView() {
             <CallingCard settings={q.data!.settings} canEdit={canEdit} />
             <QualityCard settings={q.data!.settings} canEdit={canEdit} />
           </div>
+          <ClientDeskCard settings={q.data!.settings} canEdit={canEdit} />
           <DispositionsCard canEdit={canEdit} />
         </div>
       )}
