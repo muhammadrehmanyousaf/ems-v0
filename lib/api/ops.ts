@@ -79,6 +79,7 @@ export interface OpsSettingsMap {
   attempt_cap: OpsSettingEntry<{ attempts: number; minDays: number }>
   qa_percent: OpsSettingEntry<number>
   set_password_ttl_hours: OpsSettingEntry<number>
+  consent_chase_hours: OpsSettingEntry<number>
   client_sla: OpsSettingEntry<{ firstResponseMinutes: number; assignmentActionHours: number }>
   lease_minutes: OpsSettingEntry<number>
 }
