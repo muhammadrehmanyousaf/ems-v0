@@ -1,97 +1,110 @@
 "use client"
 
-// Ops Portal shell: the frame around every /ops screen.
+// Ops Portal shell: the vendor portal's champagne chrome (236px rail, 57px topbar, gold edge-bar nav, user foot, light/dark),
+// for Wedding Wala's own call-center staff.
 //
-// One query (GET /ops/me) tells us who the caller is and what they may do. The navigation shows only the screens the
-// caller's permissions open, but that is a convenience: every endpoint behind each screen is authorised again by the
-// server, so a hand-typed URL still gets a 403 rather than data.
+// One query (GET /ops/me) says who the caller is and what they may do. The rail shows only the screens their permissions
+// open, but that is a convenience: every endpoint behind a screen is authorised again by the server.
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { createContext, useCallback, useContext, useMemo } from "react"
+import * as React from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Home, LogOut, Settings, ShieldAlert, Users } from "lucide-react"
+import { CalendarClock, FileSpreadsheet, Headphones, Home, ListChecks, LogOut, Menu, Moon, Search as SearchIcon, Settings, ShieldAlert, Sun, Users, UsersRound } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
 import { useUser } from "@/context/UserContext"
+import { useResolvedThemeMode, useThemePrefs } from "@/lib/store/theme-prefs"
 import { opsApi, opsErrorMessage, OPS_ROLE_LABEL, type OpsMe } from "@/lib/api/ops"
-import { cn } from "@/lib/utils"
+import { reportsApi } from "@/lib/api/ops-prospects"
+import { Btn, Empty, IconBtn, OpsRootContext, OpsToastProvider, Skel, cx } from "@/components/ops/ops-ui"
+import { OPS_CSS } from "@/components/ops/ops-css"
 
 interface OpsContextValue {
   me: OpsMe
   /** True when the caller holds the permission (or ANY of a list). The server re-checks every call. */
   can: (permission: string | string[]) => boolean
 }
-
-const OpsContext = createContext<OpsContextValue | null>(null)
-
+const OpsContext = React.createContext<OpsContextValue | null>(null)
 export function useOps(): OpsContextValue {
-  const ctx = useContext(OpsContext)
+  const ctx = React.useContext(OpsContext)
   if (!ctx) throw new Error("useOps must be used inside <OpsShell>")
   return ctx
 }
-
 export const OPS_ME_KEY = ["ops", "me"] as const
 
-const NAV: { href: string; label: string; icon: typeof Home; permission?: string }[] = [
-  { href: "/ops", label: "Home", icon: Home },
-  { href: "/ops/staff", label: "Staff & teams", icon: Users, permission: "ops_settings" },
-  { href: "/ops/settings", label: "Settings", icon: Settings, permission: "ops_settings" },
-]
-
-function Frame({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-screen bg-bridal-ivory text-bridal-text">{children}</div>
+/** Shows its children only to someone holding the permission (or ANY of a list); everyone else gets a plain explanation. The server still answers 403. */
+export function Gate({ permission, children }: { permission: string | string[]; children: React.ReactNode }) {
+  const { can } = useOps()
+  if (can(permission)) return <>{children}</>
+  return (
+    <div className="card" style={{ maxWidth: 520 }}>
+      <Empty icon={<ShieldAlert />} title="This screen is not part of your role">Ask your manager if you need access to it.</Empty>
+    </div>
+  )
 }
 
-function Message({ title, body, action }: { title: string; body: string; action?: React.ReactNode }) {
+interface NavItem { href: string; label: string; icon: typeof Home; permission?: string | string[]; section: string; exact?: boolean; badge?: "tasksDue" | "needsReview" }
+
+const CALLERS = ["ops_prospect_call", "ops_prospect_view_team", "ops_prospect_view_all"]
+
+/** Every screen that exists. A phase adds its entries here when its screens ship, so the rail never has a dead link. */
+export const OPS_NAV: NavItem[] = [
+  { href: "/ops", label: "Home", icon: Home, section: "Kaam", exact: true },
+  { href: "/ops/call", label: "Call queue", icon: Headphones, permission: "ops_prospect_call", section: "Kaam" },
+  { href: "/ops/tasks", label: "Callbacks", icon: CalendarClock, permission: CALLERS, section: "Kaam", badge: "tasksDue" },
+  { href: "/ops/prospects", label: "Prospects", icon: ListChecks, permission: CALLERS, section: "Kaam" },
+  { href: "/ops/import", label: "Import vendors", icon: FileSpreadsheet, permission: "ops_prospect_import", section: "Kaam" },
+  { href: "/ops/team", label: "Team", icon: UsersRound, permission: ["ops_reports_team", "ops_reports_all"], section: "Nigrani", badge: "needsReview" },
+  { href: "/ops/staff", label: "Staff & teams", icon: Users, permission: "ops_settings", section: "Setup" },
+  { href: "/ops/settings", label: "Settings", icon: Settings, permission: "ops_settings", section: "Setup" },
+]
+
+function Frame({ children, theme }: { children: React.ReactNode; theme: "light" | "dark" }) {
   return (
-    <Frame>
-      <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-status-danger-soft text-status-danger">
-          <ShieldAlert className="h-6 w-6" aria-hidden />
-        </span>
-        <h1 className="text-xl font-semibold leading-tight tracking-tight text-bridal-charcoal">{title}</h1>
-        <p className="text-sm leading-relaxed text-bridal-text-soft">{body}</p>
-        {action}
-      </div>
-    </Frame>
+    <div className="oshell" data-theme={theme}>
+      <style dangerouslySetInnerHTML={{ __html: OPS_CSS }} />
+      {children}
+    </div>
   )
 }
 
 export function OpsShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ""
   const router = useRouter()
   const { logout } = useUser()
+  const setMode = useThemePrefs((s) => s.setMode)
+  const mode = useResolvedThemeMode()
+  const [root, setRoot] = React.useState<HTMLElement | null>(null)
+  const [navOpen, setNavOpen] = React.useState(false)
 
-  const meQuery = useQuery({
-    queryKey: OPS_ME_KEY,
-    queryFn: opsApi.me,
-    staleTime: 60_000,
-  })
+  // The shell is a fixed overlay with its own scroll region (same as the vendor console): hide the document's scroll
+  // while it is mounted and restore it on unmount, so there is never a second, empty scrollbar.
+  React.useEffect(() => {
+    const html = document.documentElement
+    const prev = { o: html.style.overflow, g: html.style.scrollbarGutter }
+    html.style.overflow = "hidden"
+    html.style.scrollbarGutter = "auto"
+    return () => { html.style.overflow = prev.o; html.style.scrollbarGutter = prev.g }
+  }, [])
+  React.useEffect(() => { setNavOpen(false) }, [pathname])
 
+  const meQuery = useQuery({ queryKey: OPS_ME_KEY, queryFn: opsApi.me, staleTime: 60_000 })
   const me = meQuery.data
-  const can = useCallback(
-    (permission: string | string[]) => {
-      if (!me) return false
-      const wanted = Array.isArray(permission) ? permission : [permission]
-      return wanted.some((p) => me.permissions.includes(p))
-    },
-    [me],
-  )
-  const value = useMemo(() => (me ? { me, can } : null), [me, can])
+  const can = React.useCallback((permission: string | string[]) => {
+    if (!me) return false
+    return (Array.isArray(permission) ? permission : [permission]).some((p) => me.permissions.includes(p))
+  }, [me])
+  const value = React.useMemo(() => (me ? { me, can } : null), [me, can])
 
-  const signOut = async () => {
-    await logout()
-    router.replace("/login")
-  }
+  const signOut = async () => { await logout(); router.replace("/login") }
+  const [search, setSearch] = React.useState("")
+  const canWork = !!me && CALLERS.some((p) => me.permissions.includes(p))
+  const summaryQ = useQuery({ queryKey: ["ops", "summary"], queryFn: reportsApi.summary, enabled: canWork, refetchInterval: 60_000, staleTime: 30_000 })
 
   if (meQuery.isLoading) {
     return (
-      <Frame>
-        <div className="mx-auto max-w-6xl space-y-4 px-4 py-8 md:px-6" aria-busy="true" aria-label="Loading the ops portal">
-          <Skeleton className="h-10 w-64" />
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-40 w-full" />
+      <Frame theme={mode}>
+        <div style={{ padding: 28, maxWidth: 1000 }} aria-busy="true" aria-label="Loading the ops portal">
+          <Skel h={30} w={280} /><div style={{ height: 18 }} /><Skel h={150} /><div style={{ height: 14 }} /><Skel h={150} />
         </div>
       </Frame>
     )
@@ -101,91 +114,86 @@ export function OpsShell({ children }: { children: React.ReactNode }) {
     const status = (meQuery.error as { response?: { status?: number } } | null)?.response?.status
     const forbidden = status === 403
     return (
-      <Message
-        title={forbidden ? "You don't have access to the Ops Portal" : "Couldn't open the Ops Portal"}
-        body={
-          forbidden
-            ? "This area is for Wedding Wala's call-center staff. If you should have access, ask your manager to add you."
-            : opsErrorMessage(meQuery.error, "Please check your connection and try again.")
-        }
-        action={
-          <div className="flex gap-2">
-            {!forbidden && (
-              <Button onClick={() => meQuery.refetch()} className="transition-all duration-150 active:scale-[0.98]">
-                Try again
-              </Button>
-            )}
-            <Button variant="outline" onClick={signOut} className="transition-all duration-150 active:scale-[0.98]">
-              Sign out
-            </Button>
+      <Frame theme={mode}>
+        <div style={{ height: "100%", display: "grid", placeItems: "center", padding: 24 }}>
+          <div className="card" style={{ maxWidth: 440, width: "100%" }}>
+            <Empty
+              icon={<ShieldAlert />}
+              title={forbidden ? "You don't have access to the Ops Portal" : "Couldn't open the Ops Portal"}
+              action={<div className="row" style={{ justifyContent: "center" }}>{!forbidden && <Btn variant="primary" onClick={() => meQuery.refetch()}>Try again</Btn>}<Btn onClick={signOut}>Sign out</Btn></div>}
+            >
+              {forbidden ? "This area is for Wedding Wala's call-center staff. If you should have access, ask your manager to add you." : opsErrorMessage(meQuery.error, "Please check your connection and try again.")}
+            </Empty>
           </div>
-        }
-      />
+        </div>
+      </Frame>
     )
   }
 
-  const items = NAV.filter((n) => !n.permission || can(n.permission))
+  const items = OPS_NAV.filter((n) => !n.permission || can(n.permission))
+  const sections = Array.from(new Set(items.map((n) => n.section)))
+  const isActive = (n: NavItem) => (n.exact ? pathname === n.href : pathname === n.href || pathname.startsWith(`${n.href}/`))
+  const current = items.filter(isActive).sort((a, b) => b.href.length - a.href.length)[0]
+  const roleLabel = me.isSuperAdmin ? "Super admin" : me.roles.map((r) => OPS_ROLE_LABEL[r] ?? r).join(", ")
+  const initials = me.user.fullName.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]!.toUpperCase()).join("") || "?"
 
   return (
     <OpsContext.Provider value={value}>
-      <Frame>
-        <header className="sticky top-0 z-30 border-b border-bridal-beige/70 bg-bridal-cream/95 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 px-4 md:h-14 md:flex-nowrap md:px-6">
-            <Link
-              href="/ops"
-              className="order-1 rounded-md py-3 font-display text-lg font-semibold leading-none tracking-tight text-bridal-charcoal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark focus-visible:ring-offset-2 md:py-0"
-            >
-              Wedding Wala <span className="font-sans text-xs font-medium uppercase tracking-[0.14em] text-bridal-text-label">Ops</span>
-            </Link>
-
-            {/* Phones: the nav drops to its own full-width row under the brand + sign-out, so no tab is ever cropped. */}
-            <nav aria-label="Ops sections" className="order-3 -mx-1 flex w-full min-w-0 items-center gap-1 overflow-x-auto px-1 pb-2 md:order-2 md:w-auto md:flex-1 md:pb-0">
-              {items.map((item) => {
-                const here = pathname ?? ""
-                const active = item.href === "/ops" ? here === "/ops" : here.startsWith(item.href)
-                const Icon = item.icon
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-2 text-sm font-medium md:gap-2 md:px-3 transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bridal-gold-dark active:scale-[0.98]",
-                      active
-                        ? "bg-bridal-sand text-bridal-charcoal"
-                        : "text-bridal-text-soft hover:bg-bridal-sand/60 hover:text-bridal-charcoal",
-                    )}
-                  >
-                    <Icon className="h-4 w-4" aria-hidden />
-                    {item.label}
-                  </Link>
-                )
-              })}
-            </nav>
-
-            <div className="order-2 ml-auto flex shrink-0 items-center gap-3 md:order-3 md:ml-0">
-              <div className="hidden text-right leading-tight sm:block">
-                <p className="text-sm font-medium text-bridal-charcoal">{me.user.fullName}</p>
-                <p className="text-xs text-bridal-text-soft">
-                  {me.isSuperAdmin ? "Super admin" : me.roles.map((r) => OPS_ROLE_LABEL[r] ?? r).join(", ")}
-                </p>
+      <OpsRootContext.Provider value={root}>
+        <div ref={setRoot} className={cx("oshell", navOpen && "nav-open")} data-theme={mode}>
+          <style dangerouslySetInnerHTML={{ __html: OPS_CSS }} />
+          <OpsToastProvider>
+            <div className="app">
+              <aside className="side" aria-label="Ops navigation">
+                <div className="side-top">
+                  <span className="logo" aria-hidden>W</span>
+                  <span className="st-txt"><span className="st-name">Wedding Wala Ops</span><span className="st-sub">Call-center portal</span></span>
+                </div>
+                <nav className="nav">
+                  {sections.map((sec) => (
+                    <React.Fragment key={sec}>
+                      <div className="nav-sec">{sec}</div>
+                      {items.filter((n) => n.section === sec).map((n) => {
+                        const Icon = n.icon
+                        return (
+                          <Link key={n.href} href={n.href} className={cx(isActive(n) && "active")} aria-current={isActive(n) ? "page" : undefined}>
+                            <Icon aria-hidden />{n.label}
+                            {n.badge && (summaryQ.data?.[n.badge] ?? 0) > 0 ? <span className={cx("badge", n.badge === "needsReview" || (n.badge === "tasksDue" && (summaryQ.data?.tasksOverdue ?? 0) > 0) ? "hot" : "")}>{summaryQ.data?.[n.badge]}</span> : null}
+                          </Link>
+                        )
+                      })}
+                    </React.Fragment>
+                  ))}
+                </nav>
+                <div className="side-foot">
+                  <div className="me">
+                    <span className="m-ava" aria-hidden>{initials}</span>
+                    <span className="m-txt"><span className="m-name" style={{ display: "block" }}>{me.user.fullName}</span><span className="m-sub" style={{ display: "block" }}>{roleLabel}</span></span>
+                  </div>
+                </div>
+              </aside>
+              <div className="main">
+                <header className="topbar">
+                  <IconBtn label="Open menu" className="ibtn menu-btn" onClick={() => setNavOpen(true)}><Menu aria-hidden /></IconBtn>
+                  <div className="crumb"><b>Ops Portal</b><span className="sep">/</span><span>{current?.label ?? "Page"}</span></div>
+                  <div className="tb-spring" />
+                  {canWork && (
+                    <form className="search" role="search" onSubmit={(e) => { e.preventDefault(); const t = search.trim(); if (t) router.push(`/ops/prospects?view=all&q=${encodeURIComponent(t)}`) }}>
+                      <SearchIcon aria-hidden /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Find a vendor by name or phone" aria-label="Find a vendor by name or phone" />
+                    </form>
+                  )}
+                  <IconBtn label={mode === "dark" ? "Switch to light theme" : "Switch to dark theme"} onClick={() => setMode(mode === "dark" ? "light" : "dark")}>
+                    {mode === "dark" ? <Sun aria-hidden /> : <Moon aria-hidden />}
+                  </IconBtn>
+                  <IconBtn label="Sign out" onClick={signOut}><LogOut aria-hidden /></IconBtn>
+                </header>
+                <div className="cscroll"><div className="content">{children}</div></div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={signOut}
-                className="gap-2 transition-all duration-150 active:scale-[0.98]"
-                aria-label="Sign out"
-              >
-                <LogOut className="h-4 w-4" aria-hidden />
-                <span className="hidden sm:inline">Sign out</span>
-              </Button>
             </div>
-          </div>
-        </header>
-
-        <main className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-8">{children}</main>
-      </Frame>
+            <div className="scrim" onClick={() => setNavOpen(false)} aria-hidden />
+          </OpsToastProvider>
+        </div>
+      </OpsRootContext.Provider>
     </OpsContext.Provider>
   )
 }
