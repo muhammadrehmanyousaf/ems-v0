@@ -23,7 +23,7 @@ import type { NextRequest } from "next/server"
  * Anything added here must be a non-indexable, token-bearing route.
  */
 // Receipt numbers (WW-SUB-2026-00012) are upper-case too.
-const CASE_SENSITIVE_PATHS = /^\/(sign|review|wedding)\/[^/]+|^\/dashboard\/billing\/receipt\//;
+const CASE_SENSITIVE_PATHS = /^\/(sign|review|wedding|vendor-upload)\/[^/]+|^\/dashboard\/billing\/receipt\//;
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
