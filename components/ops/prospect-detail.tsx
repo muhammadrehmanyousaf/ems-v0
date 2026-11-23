@@ -294,7 +294,16 @@ export function ProspectDetailView({ id }: { id: number }) {
       <PageHead
         title={p.name}
         sub={<span className="row" style={{ gap: 8 }}><StatusBadge status={p.status} />{sub && <span>{sub}</span>}{p.attemptCount > 0 && <span>· {p.attemptCount} attempt{p.attemptCount === 1 ? "" : "s"}</span>}</span>}
-        actions={<>{can("ops_prospect_call") && <Btn icon={<Pencil aria-hidden />} onClick={() => setEditing(true)}>Edit details</Btn>}</>}
+        actions={<>
+          {can("ops_prospect_call") && <Btn icon={<Pencil aria-hidden />} onClick={() => setEditing(true)}>Edit details</Btn>}
+          {p.businessId
+            ? <Link href={`/ops/listings/${p.businessId}`} className="btn btn-primary"><Store size={15} aria-hidden />Open the listing</Link>
+            : (can("ops_onboard_direct") || can("ops_takeover_listing")) && !CLOSED_BLOCKED.has(p.status) && (
+              <Link href={`/ops/prospects/${p.id}/onboarding`} className={cx("btn", ["interested", "onboarding"].includes(p.status) ? "btn-primary" : "btn-ghost")}>
+                <Store size={15} aria-hidden />{p.status === "onboarding" ? "Continue the call sheet" : p.matchedBusinessId ? "Take over the listing" : "Onboard this vendor"}
+              </Link>
+            )}
+        </>}
       />
 
       <div className="stack" style={{ marginBottom: 16 }}>

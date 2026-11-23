@@ -47,6 +47,8 @@ interface NavItem { href: string; label: string; icon: typeof Home; permission?:
 const CALLERS = ["ops_prospect_call", "ops_prospect_view_team", "ops_prospect_view_all"]
 
 /** Every screen that exists. A phase adds its entries here when its screens ship, so the rail never has a dead link. */
+const CRUMB_OVERRIDES: [RegExp, string][] = [[/^\/ops\/prospects\/\d+\/onboarding\/?$/, "Call sheet"], [/^\/ops\/listings\/\d+\/?$/, "Listing"]]
+
 export const OPS_NAV: NavItem[] = [
   { href: "/ops", label: "Home", icon: Home, section: "Kaam", exact: true },
   { href: "/ops/call", label: "Call queue", icon: Headphones, permission: "ops_prospect_call", section: "Kaam" },
@@ -134,6 +136,8 @@ export function OpsShell({ children }: { children: React.ReactNode }) {
   const sections = Array.from(new Set(items.map((n) => n.section)))
   const isActive = (n: NavItem) => (n.exact ? pathname === n.href : pathname === n.href || pathname.startsWith(`${n.href}/`))
   const current = items.filter(isActive).sort((a, b) => b.href.length - a.href.length)[0]
+  // screens reached from a prospect rather than from the rail get their own crumb instead of a generic "Page"
+  const crumb = CRUMB_OVERRIDES.find(([re]) => re.test(pathname))?.[1] ?? current?.label ?? "Page"
   const roleLabel = me.isSuperAdmin ? "Super admin" : me.roles.map((r) => OPS_ROLE_LABEL[r] ?? r).join(", ")
   const initials = me.user.fullName.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]!.toUpperCase()).join("") || "?"
 
@@ -175,7 +179,7 @@ export function OpsShell({ children }: { children: React.ReactNode }) {
               <div className="main">
                 <header className="topbar">
                   <IconBtn label="Open menu" className="ibtn menu-btn" onClick={() => setNavOpen(true)}><Menu aria-hidden /></IconBtn>
-                  <div className="crumb"><b>Ops Portal</b><span className="sep">/</span><span>{current?.label ?? "Page"}</span></div>
+                  <div className="crumb"><b>Ops Portal</b><span className="sep">/</span><span>{crumb}</span></div>
                   <div className="tb-spring" />
                   {canWork && (
                     <form className="search" role="search" onSubmit={(e) => { e.preventDefault(); const t = search.trim(); if (t) router.push(`/ops/prospects?view=all&q=${encodeURIComponent(t)}`) }}>

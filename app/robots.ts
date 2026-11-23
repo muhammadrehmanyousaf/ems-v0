@@ -48,6 +48,7 @@ const PRIVATE_PATHS = [
   '/sign/',
   '/wedding/',
   '/claim/',
+  '/vendor-upload/',
   '/staff/',
   '/portal-shell',
   '/ops',
