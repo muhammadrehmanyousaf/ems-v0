@@ -7,7 +7,7 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Check, Eye, Search as SearchIcon, SlidersHorizontal } from "lucide-react"
+import { Check, Eye, MessageCircle, Search as SearchIcon, SlidersHorizontal } from "lucide-react"
 
 import { fmtPkr } from "@/components/ops/client-bits"
 import { VendorBriefModal } from "@/components/ops/vendor-brief-modal"
@@ -15,7 +15,7 @@ import { Btn, Card, Chip, Empty, ErrorState, Field, Input, Modal, Notice, PageHe
 import { opsApi, opsErrorMessage } from "@/lib/api/ops"
 import { shortlistApi, vendorsApi, type VendorFlag, type VendorQuery, type VendorRow } from "@/lib/api/ops-clients"
 import { opsErrorData } from "@/lib/api/ops-onboarding"
-import { shortlistMessage } from "@/lib/ops/whatsapp"
+import { relatedVenuesMessage, shortlistMessage, waWebLink } from "@/lib/ops/whatsapp"
 import { SITE_URL } from "@/lib/seo/constants"
 import { vendorLeafHref } from "@/lib/seo/vendor-href"
 import { VENDOR_TYPES } from "@/lib/vendor-types"
@@ -78,12 +78,14 @@ function CompareModal({ ids, onClose }: { ids: number[]; onClose: () => void }) 
 export function VendorSearchPanel({
   clientId,
   clientName,
+  clientPhone,
   shortlisted = [],
   onShortlisted,
   initialQuery = "",
 }: {
   clientId?: number
   clientName?: string
+  clientPhone?: string | null
   shortlisted?: number[]
   onShortlisted?: () => void
   initialQuery?: string
@@ -264,6 +266,23 @@ export function VendorSearchPanel({
               </label>
             </div>
             <div><div className="lbl" style={{ marginBottom: 8 }}>Facilities</div><div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>{FLAGS.map((x) => <Chip key={x.value} on={flags.includes(x.value)} onClick={() => toggleFlag(x.value)}>{x.label}</Chip>)}</div></div>
+            {(res.data?.areaOptions?.length ?? 0) > 0 && (
+              <div>
+                <div className="lbl" style={{ marginBottom: 8 }}>Areas in {res.data?.related?.city || f.city}</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {f.area && <Chip on={false} onClick={() => setF((s) => ({ ...s, area: "" }))}>All areas</Chip>}
+                  {res.data!.areaOptions!.map((a) => (
+                    <Chip
+                      key={a.subArea}
+                      on={f.area.toLowerCase() === a.subArea.toLowerCase()}
+                      onClick={() => setF((s) => ({ ...s, area: s.area.toLowerCase() === a.subArea.toLowerCase() ? "" : a.subArea }))}
+                    >
+                      {a.subArea} ({a.count})
+                    </Chip>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : null}
       </Card>
@@ -292,6 +311,68 @@ export function VendorSearchPanel({
           </>
         )}
 
+      {res.data?.related && (res.data.related.sameArea.length > 0 || res.data.related.sameCity.length > 0) && (() => {
+        const rel = res.data!.related!
+        const allRel = [
+          ...rel.sameArea.map((r) => ({ ...r, _relLabel: `Same Area · ${r.subArea || rel.subArea}` })),
+          ...rel.sameCity.map((r) => ({ ...r, _relLabel: r.subArea || rel.city || "Same City" })),
+        ].slice(0, 8)
+        const areaTitle = [rel.subArea, rel.city].filter(Boolean).join(", ")
+        const waRelatedHref = waWebLink(
+          clientPhone,
+          relatedVenuesMessage({
+            clientName,
+            areaLabel: areaTitle,
+            venues: allRel,
+            origin: SITE_URL,
+            href: (v) => vendorLeafHref({ id: v.id, name: v.name, city: v.city, vendorType: v.vendorType }),
+          }),
+        )
+        return (
+          <Card
+            title={`Related Venues in ${areaTitle}`}
+            sub="Share these same-area and same-city options while talking to the couple on call."
+            actions={
+              <a href={waRelatedHref} target="_blank" rel="noopener noreferrer" className="btn btn-ghost sm">
+                <MessageCircle size={13} aria-hidden />Send Related List (WA Web)
+              </a>
+            }
+          >
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
+              {allRel.map((r) => (
+                <div key={r.id} className="card" style={{ padding: 12, display: "grid", gap: 8, background: "var(--surface-2)" }}>
+                  <div className="row between" style={{ gap: 6, alignItems: "flex-start" }}>
+                    <button
+                      type="button"
+                      className="td-name"
+                      style={{ background: "none", border: 0, padding: 0, textAlign: "left", textDecoration: "underline", textDecorationColor: "var(--border-2)" }}
+                      onClick={() => setBriefId(r.id)}
+                    >
+                      {r.name}
+                    </button>
+                    <Status tone={r._relLabel.startsWith("Same Area") ? "acc" : "mut"}>{r._relLabel}</Status>
+                  </div>
+                  <div className="small muted">
+                    {[
+                      r.maxCapacity && r.maxCapacity > 1 ? `Up to ${r.maxCapacity} guests` : "Ask guests",
+                      r.perHeadFromPkr ? `${fmtPkr(r.perHeadFromPkr)}/head` : fmtPkr(r.minimumPrice),
+                      `${r.packagesCount ?? 0} pkg · ${r.menusCount ?? 0} menu · ${r.imagesCount ?? 0} photos`,
+                    ].filter(Boolean).join(" · ")}
+                  </div>
+                  <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+                    <Btn size="sm" icon={<Eye size={13} aria-hidden />} onClick={() => setBriefId(r.id)}>Full Details</Btn>
+                    {clientId && !shortlisted.includes(r.id) && r.isLive !== false && (
+                      <Btn size="sm" variant="primary" loading={add.isPending && add.variables?.[0] === r.id} onClick={() => add.mutate([r.id])}>+ Add</Btn>
+                    )}
+                    {clientId && shortlisted.includes(r.id) && <Status tone="ok"><Check size={12} aria-hidden /> Added</Status>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )
+      })()}
+
       {comparing && <CompareModal ids={picked} onClose={() => setComparing(false)} />}
       <VendorBriefModal
         businessId={briefId}
@@ -299,6 +380,7 @@ export function VendorSearchPanel({
         onClose={() => setBriefId(null)}
         clientId={clientId}
         clientName={clientName}
+        clientPhone={clientPhone}
         shortlisted={shortlisted}
         onShortlisted={onShortlisted}
       />

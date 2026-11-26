@@ -8,14 +8,15 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, CheckCircle2, ClipboardCheck, Phone, Store } from "lucide-react"
+import { ArrowLeft, CheckCircle2, ClipboardCheck, MessageCircle, Phone, Store } from "lucide-react"
 
 import { AvailabilityBadge, EVENT_LABEL, STAGE_META, StageBadge, ageLabel, fmtPkr } from "@/components/ops/client-bits"
 import { Btn, Card, Empty, ErrorState, Field, Input, Notice, PageHead, Seg, SkelRows, Status, Textarea, fmtDay, fmtWhen, useOpsToast } from "@/components/ops/ops-ui"
 import { fmtPhone, telHref, waHref } from "@/components/ops/prospect-bits"
 import { opsErrorMessage } from "@/lib/api/ops"
-import { assignmentsApi, type AssignedItem, type AssignmentStage } from "@/lib/api/ops-clients"
+import { assignmentsApi, type AssignedDetail, type AssignedItem, type AssignmentStage } from "@/lib/api/ops-clients"
 import { opsErrorData } from "@/lib/api/ops-onboarding"
+import { vendorConfirmedClientMessage, waWebLink } from "@/lib/ops/whatsapp"
 
 export function AssignedListView() {
   const router = useRouter()
@@ -58,7 +59,14 @@ export function AssignedListView() {
   )
 }
 
-function ItemCard({ item, defaultDate, open, onSaved }: { item: AssignedItem; defaultDate?: string; open: boolean; onSaved: (suggested: boolean) => void }) {
+function ItemCard({ item, client, events, defaultDate, open, onSaved }: {
+  item: AssignedItem
+  client: AssignedDetail["client"]
+  events: AssignedDetail["events"]
+  defaultDate?: string
+  open: boolean
+  onSaved: (suggested: boolean) => void
+}) {
   const toast = useOpsToast()
   const [result, setResult] = useState<"available" | "unavailable" | "no_answer">(item.availability === "unavailable" ? "unavailable" : item.availability === "no_answer" ? "no_answer" : "available")
   const [checkedDate, setCheckedDate] = useState(item.checkedForDate || defaultDate || "")
@@ -71,6 +79,24 @@ function ItemCard({ item, defaultDate, open, onSaved }: { item: AssignedItem; de
   const [editing, setEditing] = useState(item.availability === "pending")
   const [err, setErr] = useState<{ field?: string; message: string } | null>(null)
   const digits = (item.contactPhone ?? "").replace(/\D/g, "")
+
+  const firstPhone = client.whatsapp || client.phones[0]?.raw || null
+  const primaryEv = events.find((e) => e.eventDate) || events[0]
+  const clientInfoMsg = vendorConfirmedClientMessage({
+    vendorName: item.businessName,
+    kind: client.status === "booked" ? "booking" : client.status === "visit_scheduled" ? "visit" : "availability",
+    clientName: client.name,
+    clientPhone: firstPhone,
+    eventType: primaryEv ? EVENT_LABEL[primaryEv.kind] : null,
+    eventDate: (item.checkedForDate || defaultDate) ? fmtDay(item.checkedForDate || defaultDate!) : null,
+    guests: primaryEv?.guests || client.guests,
+    agreedTotalPkr: item.quotedPricePkr || quoted || null,
+    perHeadPkr: item.perHeadPkr || perHead || null,
+    tokenAmountPkr: item.tokenAmountPkr || token || null,
+    visitAt: client.visitAt ? fmtWhen(client.visitAt) : null,
+    notes: [client.requirements, client.visitNote].filter(Boolean).join(" · ") || null,
+  })
+  const clientInfoWaUrl = digits.length >= 10 ? waWebLink(item.contactPhone, clientInfoMsg) : null
 
   const save = useMutation({
     mutationFn: () =>
@@ -100,7 +126,18 @@ function ItemCard({ item, defaultDate, open, onSaved }: { item: AssignedItem; de
           {item.contactPhone ? (
             <>
               <a className="btn btn-primary sm" href={`tel:${item.contactPhone.replace(/[^\d+]/g, "")}`}><Phone size={14} aria-hidden />{item.contactPhone}</a>
-              {digits.length >= 10 && <a className="btn btn-ghost sm" target="_blank" rel="noopener noreferrer" href={`https://wa.me/92${digits.slice(-10)}`}>WhatsApp</a>}
+              {clientInfoWaUrl && (
+                <a
+                  className="btn btn-ghost sm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  href={clientInfoWaUrl}
+                  title="Open logged-in WhatsApp Web pre-filled with couple name, phone, event date & rates"
+                >
+                  <MessageCircle size={13} aria-hidden />Send Client Info (WA Web)
+                </a>
+              )}
+              {digits.length >= 10 && <a className="btn btn-ghost sm" target="_blank" rel="noopener noreferrer" href={waWebLink(item.contactPhone, `Assalam o alaikum,\nFollowing up from Wedding Wala regarding ${item.businessName}.`)}>Chat</a>}
             </>
           ) : <Status tone="mut">No phone on listing</Status>}
         </span>
@@ -272,7 +309,7 @@ export function AssignedDetailView({ id }: { id: number }) {
       <div className="cols-main">
         <div className="stack">
           {!open && <Notice tone="ok">You sent this reply to Client Team on {d.assignment.closedAt ? fmtWhen(d.assignment.closedAt) : "—"}.</Notice>}
-          {d.items.length === 0 ? <Card><Empty title="No venues on list">Client Team removed them.</Empty></Card> : d.items.map((i) => <ItemCard key={i.id} item={i} defaultDate={defaultDate} open={open} onSaved={refresh} />)}
+          {d.items.length === 0 ? <Card><Empty title="No venues on list">Client Team removed them.</Empty></Card> : d.items.map((i) => <ItemCard key={i.id} item={i} client={d.client} events={d.events} defaultDate={defaultDate} open={open} onSaved={refresh} />)}
         </div>
         <div className="stack">
           {open && (

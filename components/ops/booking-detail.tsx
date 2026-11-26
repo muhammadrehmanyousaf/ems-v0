@@ -10,6 +10,7 @@ import { ArrowLeft, CheckCircle2, MessageCircle, Phone, Store, UserCheck } from 
 import { Btn, Card, Empty, ErrorState, Field, PageHead, Select, SkelRows, Status, fmtDay, fmtNum, fmtWhen, useOpsToast, type Tone } from "@/components/ops/ops-ui"
 import { opsErrorMessage } from "@/lib/api/ops"
 import { opsBookingsApi, type OpsBookingChannel, type OpsBookingParty, type OpsBookingPriority, type OpsBookingStage } from "@/lib/api/ops-bookings"
+import { vendorConfirmedClientMessage, waWebLink } from "@/lib/ops/whatsapp"
 
 const STAGES: { value: OpsBookingStage; label: string }[] = [
   { value: "new", label: "Needs check" },
@@ -174,6 +175,21 @@ export function BookingDetailView({ id }: { id: number }) {
               <div>
                 {vendors.map((v) => {
                   const vp = (v.phone || "").replace(/[^\d+]/g, "")
+                  const waText = vendorConfirmedClientMessage({
+                    vendorName: v.name,
+                    kind: "booking",
+                    bookingId: bk.id,
+                    clientName: bk.customerName || "Couple",
+                    clientPhone: bk.customerPhone,
+                    eventType: bk.eventType,
+                    eventDate: bk.bookingDate ? fmtDay(bk.bookingDate) : null,
+                    timeSlot: bk.bookingTime,
+                    guests: bk.guestCount,
+                    agreedTotalPkr: v.lineTotal || bk.totalAmount,
+                    tokenAmountPkr: bk.advanceDuePkr,
+                    notes: curNotes || bk.additionalRequests,
+                  })
+                  const waHrefVendor = vp.length >= 10 ? waWebLink(v.phone, waText) : null
                   return (
                     <div key={v.businessId} className="list-row" style={{ alignItems: "flex-start" }}>
                       <div className="grow">
@@ -190,8 +206,26 @@ export function BookingDetailView({ id }: { id: number }) {
                           </div>
                         )}
                       </div>
-                      <div className="row" style={{ gap: 6 }}>
+                      <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
                         {vp && <a href={`tel:${vp}`} className="btn btn-ghost sm"><Phone size={13} aria-hidden />Call</a>}
+                        {waHrefVendor && (
+                          <a
+                            href={waHrefVendor}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-primary sm"
+                            onClick={() => {
+                              opsBookingsApi.logContact(id, {
+                                targetParty: "vendor",
+                                channel: "whatsapp",
+                                outcome: "confirmed",
+                                note: `Sent Booking #${bk.id} confirmed client details to ${v.name} via WhatsApp Web`,
+                              }).then(() => refresh()).catch(() => {})
+                            }}
+                          >
+                            <MessageCircle size={13} aria-hidden />Send Client (WA Web)
+                          </a>
+                        )}
                         <Link href={`/ops/find/${v.businessId}`} className="btn btn-ghost sm">Workspace</Link>
                       </div>
                     </div>

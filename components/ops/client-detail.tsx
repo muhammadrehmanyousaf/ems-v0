@@ -17,7 +17,7 @@ import { VendorSearchPanel } from "@/components/ops/vendor-search"
 import { opsApi, opsErrorMessage } from "@/lib/api/ops"
 import { clientsApi, shortlistApi, type ClientDetail, type ClientEventKind, type ClientStatus, type ContactKind } from "@/lib/api/ops-clients"
 import { opsErrorData } from "@/lib/api/ops-onboarding"
-import { checkedResultsMessage, shortlistMessage } from "@/lib/ops/whatsapp"
+import { checkedResultsMessage, shortlistMessage, waWebLink } from "@/lib/ops/whatsapp"
 import { SITE_URL } from "@/lib/seo/constants"
 import { vendorLeafHref } from "@/lib/seo/vendor-href"
 
@@ -351,11 +351,13 @@ export function ClientDetailView({ id }: { id: number }) {
           origin: SITE_URL,
           href: (v) => vendorLeafHref({ id: v.id, name: v.name, city: v.city, vendorType: v.vendorType }),
         })
-    const phone = c.phones[0]
-    const wa = phone ? waHref(phone, msg) : null
+    const phone = c.whatsapp || c.phones[0]?.raw || null
+    const wa = phone ? waWebLink(phone, msg) : null
     try { await navigator.clipboard.writeText(msg) } catch { /* copied via link */ }
-    if (wa) window.open(wa, "_blank", "noopener,noreferrer")
-    else toast({ title: "Quote message copied", body: "Paste it to the couple on WhatsApp." })
+    if (wa) {
+      clientsApi.contact(id, "whatsapp", hasAnyChecked ? "Sent confirmed venue quotes on WhatsApp Web" : "Sent shortlisted venues on WhatsApp Web").then(put).catch(() => {})
+      window.open(wa, "_blank", "noopener,noreferrer")
+    } else toast({ title: "Quote message copied", body: "Paste it to the couple on WhatsApp." })
   }
 
   const nextGuide = (() => {
@@ -635,7 +637,7 @@ export function ClientDetailView({ id }: { id: number }) {
       {booking && <BookModal d={d} onClose={() => setBooking(false)} onSaved={(det, bookingId) => { put(det); router.push(`/ops/bookings/${bookingId}`) }} />}
 
       <Modal open={finding} onClose={() => setFinding(false)} size="xwide" title={`Pick Venues for ${c.name}`}>
-        {finding && <VendorSearchPanel clientId={id} clientName={c.name} shortlisted={d.shortlist.map((s) => s.businessId)} onShortlisted={refresh} />}
+        {finding && <VendorSearchPanel clientId={id} clientName={c.name} clientPhone={c.whatsapp || c.phones[0]?.raw || null} shortlisted={d.shortlist.map((s) => s.businessId)} onShortlisted={refresh} />}
       </Modal>
       <VendorBriefModal
         businessId={briefId}
@@ -643,6 +645,7 @@ export function ClientDetailView({ id }: { id: number }) {
         onClose={() => setBriefId(null)}
         clientId={id}
         clientName={c.name}
+        clientPhone={c.whatsapp || c.phones[0]?.raw || null}
         shortlisted={d.shortlist.map((s) => s.businessId)}
         onShortlisted={refresh}
       />

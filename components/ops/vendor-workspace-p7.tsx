@@ -13,6 +13,7 @@ import { Btn, Card, Empty, ErrorState, Field, Select, SkelRows, Status, fmtDay, 
 import { opsErrorMessage } from "@/lib/api/ops"
 import { directoryOpsApi, type VendorBookingRef, type VendorInquiryRef, type VendorLogRef } from "@/lib/api/ops-directory"
 import api from "@/lib/axiosConfig"
+import { vendorConfirmedClientMessage, waWebLink } from "@/lib/ops/whatsapp"
 
 interface VendorFullP7Response {
   vendor: { id: number; name: string; city: string | null; slug: string | null; phone?: string | null; ownerName?: string | null; completenessScore?: number | null; prospectId?: number | null }
@@ -144,7 +145,40 @@ export function VendorWorkspaceExtras({ businessId }: { businessId: number }) {
                           </div>
                         </td>
                         <td className="r nw num">{bk.totalAmount ? `PKR ${fmtNum(Number(bk.totalAmount))}` : "—"}</td>
-                        <td className="r"><Link href={`/ops/bookings/${bk.id}`} className="btn btn-link sm">Coordinate</Link></td>
+                        <td className="r nw">
+                          <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
+                            {vendor.phone && (
+                              <a
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-ghost sm"
+                                href={waWebLink(
+                                  vendor.phone,
+                                  vendorConfirmedClientMessage({
+                                    vendorName: vendor.name,
+                                    kind: "booking",
+                                    bookingId: bk.id,
+                                    clientName: bk.customerName || "Couple",
+                                    clientPhone: bk.customerPhone,
+                                    eventType: bk.eventType,
+                                    eventDate: bk.bookingDate ? fmtDay(bk.bookingDate) : null,
+                                    agreedTotalPkr: bk.totalAmount,
+                                  }),
+                                )}
+                                onClick={() => {
+                                  directoryOpsApi.logCall(businessId, {
+                                    channel: "whatsapp",
+                                    outcome: "spoke",
+                                    note: `Sent Booking #${bk.id} (${bk.customerName || "Couple"}) details to vendor on WhatsApp Web`,
+                                  }).then(() => qc.invalidateQueries({ queryKey: ["ops", "vendor", businessId] })).catch(() => {})
+                                }}
+                              >
+                                <MessageCircle size={13} aria-hidden />Send Client (WA Web)
+                              </a>
+                            )}
+                            <Link href={`/ops/bookings/${bk.id}`} className="btn btn-link sm">Coordinate</Link>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

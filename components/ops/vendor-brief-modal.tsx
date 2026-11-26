@@ -3,17 +3,19 @@
 // Complete read-only Vendor Fact Sheet for Team B (Client Desk) while talking to a couple on the phone.
 // Shows all packages, menus, dishes, photos, address, rules, busy platform dates, and recent Team A checks —
 // plus a 1-step "Client Called About This Venue -> Save & Ask Team A" workflow.
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { CalendarX2, Check, ExternalLink, MapPin, PhoneCall, Plus, Send, UtensilsCrossed } from "lucide-react"
+import { CalendarX2, Check, Copy, ExternalLink, MapPin, MessageCircle, PhoneCall, Plus, Send, UtensilsCrossed, Video } from "lucide-react"
 
 import { AvailabilityBadge, EVENT_LABEL, fmtPkr } from "@/components/ops/client-bits"
 import { useOps } from "@/components/ops/ops-shell"
 import { Btn, ErrorState, Field, Input, Modal, Notice, Select, SkelRows, Status, fmtDay, fmtWhen, useOpsToast } from "@/components/ops/ops-ui"
 import { opsApi, opsErrorMessage } from "@/lib/api/ops"
-import { clientsApi, shortlistApi, vendorsApi, type ClientEventKind } from "@/lib/api/ops-clients"
+import { clientsApi, shortlistApi, vendorsApi, type ClientEventKind, type VendorRow } from "@/lib/api/ops-clients"
+import { SITE_URL } from "@/lib/seo/constants"
 import { vendorLeafHref } from "@/lib/seo/vendor-href"
+import { vendorMediaMenusMessage, waWebLink } from "@/lib/ops/whatsapp"
 
 const FACT_FLAGS: [string, string][] = [
   ["isAirConditioned", "AC available"],
@@ -32,6 +34,7 @@ export function VendorBriefModal({
   onClose,
   clientId,
   clientName,
+  clientPhone,
   shortlisted = [],
   onShortlisted,
 }: {
@@ -40,6 +43,7 @@ export function VendorBriefModal({
   onClose: () => void
   clientId?: number
   clientName?: string
+  clientPhone?: string | null
   shortlisted?: number[]
   onShortlisted?: () => void
 }) {
@@ -48,15 +52,31 @@ export function VendorBriefModal({
   const qc = useQueryClient()
   const toast = useOpsToast()
 
+  const [activeId, setActiveId] = useState<number | null>(businessId)
+  useEffect(() => {
+    if (open) setActiveId(businessId)
+  }, [businessId, open])
+
   const briefQ = useQuery({
-    queryKey: ["ops", "vendor-brief", businessId],
-    queryFn: () => vendorsApi.brief(businessId!),
-    enabled: open && !!businessId,
+    queryKey: ["ops", "vendor-brief", activeId],
+    queryFn: () => vendorsApi.brief(activeId!),
+    enabled: open && !!activeId,
     staleTime: 30_000,
   })
   const citiesQ = useQuery({ queryKey: ["ops", "cities"], queryFn: opsApi.cities, enabled: open && !clientId })
 
   const [takingCall, setTakingCall] = useState(false)
+  const [sharingWa, setSharingWa] = useState(false)
+  const [waPhone, setWaPhone] = useState(clientPhone || "")
+  useEffect(() => {
+    setWaPhone(clientPhone || "")
+  }, [clientPhone, open])
+  const [incRates, setIncRates] = useState(true)
+  const [incMenus, setIncMenus] = useState(true)
+  const [incPhotos, setIncPhotos] = useState(true)
+  const [incVideos, setIncVideos] = useState(true)
+  const [incMap, setIncMap] = useState(true)
+
   const [cName, setCName] = useState("")
   const [cPhone, setCPhone] = useState("")
   const [cCityId, setCCityId] = useState("")
@@ -67,12 +87,12 @@ export function VendorBriefModal({
   const [sendTeamA, setSendTeamA] = useState(true)
 
   const addShortlistMut = useMutation({
-    mutationFn: () => shortlistApi.add(clientId!, [businessId!]),
-    onSuccess: () => {
+    mutationFn: (targetBid?: number) => shortlistApi.add(clientId!, [targetBid ?? activeId!]),
+    onSuccess: (_r, vars) => {
       qc.invalidateQueries({ queryKey: ["ops", "client", clientId] })
       onShortlisted?.()
       toast({ title: "Venue added to shortlist" })
-      onClose()
+      if (!vars || vars === activeId) onClose()
     },
     onError: (e) => toast({ title: "Could not add", body: opsErrorMessage(e), tone: "bad" }),
   })
@@ -80,7 +100,7 @@ export function VendorBriefModal({
   const createFromCallMut = useMutation({
     mutationFn: () =>
       clientsApi.fromVendor({
-        businessId: businessId!,
+        businessId: activeId!,
         name: cName.trim(),
         phone: cPhone.trim(),
         source: "phone",
@@ -107,9 +127,26 @@ export function VendorBriefModal({
 
   const d = briefQ.data
   const v = d?.vendor
-  const isOnList = !!(businessId && shortlisted.includes(businessId))
+  const isOnList = !!(activeId && shortlisted.includes(activeId))
   const pubUrl = v ? vendorLeafHref({ id: v.id, name: v.name, city: v.city, vendorType: v.vendorType }) : null
   const tsd = (v?.typeSpecificDetails ?? {}) as Record<string, unknown>
+
+  const waPackText = v
+    ? vendorMediaMenusMessage({
+        clientName: clientName || cName.trim() || null,
+        vendor: v,
+        packages: d?.packages,
+        menus: d?.menus,
+        pageUrl: pubUrl && v.isLive ? `${SITE_URL}${pubUrl}` : null,
+        include: { rates: incRates, menus: incMenus, photos: incPhotos, videos: incVideos, map: incMap },
+      })
+    : ""
+  const waPackUrl = v ? waWebLink(waPhone.trim() || cPhone.trim() || null, waPackText) : "#"
+  const logWaShare = () => {
+    if (clientId && v) {
+      clientsApi.contact(clientId, "whatsapp", `Shared ${v.name} rates, menus & photos/videos on WhatsApp Web`).catch(() => {})
+    }
+  }
 
   return (
     <Modal
@@ -136,6 +173,9 @@ export function VendorBriefModal({
                   <MapPin size={13} aria-hidden />Location Map
                 </a>
               )}
+              <Btn size="sm" icon={<MessageCircle size={13} aria-hidden />} onClick={() => setSharingWa((s) => !s)}>
+                {sharingWa ? "Hide WhatsApp Web" : "Share Photos / Menus (WA Web)"}
+              </Btn>
             </div>
             <div className="row">
               {clientId ? (
@@ -148,7 +188,7 @@ export function VendorBriefModal({
                     disabled={!v.isLive}
                     title={v.isLive ? undefined : "Wait until Vendor Team makes this vendor live"}
                     loading={addShortlistMut.isPending}
-                    onClick={() => addShortlistMut.mutate()}
+                    onClick={() => addShortlistMut.mutate(undefined)}
                   >
                     Add to {clientName || "Client"}
                   </Btn>
@@ -160,7 +200,7 @@ export function VendorBriefModal({
                   </Btn>
                 )
               )}
-              <Btn onClick={() => { setTakingCall(false); onClose() }}>Close</Btn>
+              <Btn onClick={() => { setTakingCall(false); setSharingWa(false); onClose() }}>Close</Btn>
             </div>
           </div>
         ) : undefined
@@ -347,15 +387,116 @@ export function VendorBriefModal({
             </div>
           </div>
 
-          {/* Photos */}
-          {v.images.length > 0 && (
+          {/* WhatsApp Web Composer: Send Packages, Menus, Photos & Videos straight to Couple */}
+          {sharingWa && (
+            <div className="card" style={{ padding: 14, borderColor: "var(--accent-line)", background: "var(--surface-2)" }}>
+              <div className="td-name" style={{ marginBottom: 4 }}>Send {v.name} Details on WhatsApp Web</div>
+              <p className="small muted" style={{ marginBottom: 10 }}>
+                Opens your logged-in <b>WhatsApp Web</b> with packages, food menus, photo/video links &amp; map ready (press Enter to send; leave number blank to pick any open chat).
+              </p>
+              <div className="row" style={{ gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
+                <label className="check"><input type="checkbox" checked={incRates} onChange={(e) => setIncRates(e.target.checked)} /> Packages &amp; Rates</label>
+                <label className="check"><input type="checkbox" checked={incMenus} onChange={(e) => setIncMenus(e.target.checked)} /> Menus ({d.menus.length})</label>
+                <label className="check"><input type="checkbox" checked={incPhotos} onChange={(e) => setIncPhotos(e.target.checked)} /> Photos ({v.images.length})</label>
+                <label className="check"><input type="checkbox" checked={incVideos} onChange={(e) => setIncVideos(e.target.checked)} /> Videos ({v.videos.length})</label>
+                <label className="check"><input type="checkbox" checked={incMap} onChange={(e) => setIncMap(e.target.checked)} /> Map &amp; Address</label>
+              </div>
+              <div className="row" style={{ gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
+                <div style={{ flex: "1 1 220px" }}>
+                  <Field label="Couple WhatsApp Number (optional)" htmlFor="vf-waphone">
+                    <Input id="vf-waphone" value={waPhone} onChange={(e) => setWaPhone(e.target.value)} placeholder="0300 1234567 (or leave blank to pick chat)" />
+                  </Field>
+                </div>
+                <a
+                  href={waPackUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary"
+                  onClick={logWaShare}
+                >
+                  <MessageCircle size={14} aria-hidden />Open in WhatsApp Web
+                </a>
+                <Btn
+                  icon={<Copy size={14} aria-hidden />}
+                  onClick={async () => {
+                    try { await navigator.clipboard.writeText(waPackText); toast({ title: "Message copied" }) } catch { toast({ title: "Copy failed", tone: "bad" }) }
+                  }}
+                >
+                  Copy Text
+                </Btn>
+              </div>
+            </div>
+          )}
+
+          {/* Photos & Videos */}
+          {(v.images.length > 0 || v.videos.length > 0) && (
             <div className="card" style={{ padding: 14 }}>
-              <div className="td-name" style={{ marginBottom: 8 }}>Photos ({v.images.length})</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
-                {v.images.slice(0, 8).map((src, i) => (
-                  <a key={src + i} href={src} target="_blank" rel="noopener noreferrer" style={{ display: "block", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", aspectRatio: "4/3" }}>
-                    <img src={src} alt={`${v.name} photo ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                  </a>
+              {v.images.length > 0 && (
+                <>
+                  <div className="td-name" style={{ marginBottom: 8 }}>Photos ({v.images.length})</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
+                    {v.images.slice(0, 8).map((src, i) => (
+                      <a key={src + i} href={src} target="_blank" rel="noopener noreferrer" style={{ display: "block", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", aspectRatio: "4/3" }}>
+                        <img src={src} alt={`${v.name} photo ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      </a>
+                    ))}
+                  </div>
+                </>
+              )}
+              {v.videos.length > 0 && (
+                <div style={{ marginTop: v.images.length > 0 ? 12 : 0 }}>
+                  <div className="row" style={{ gap: 6, marginBottom: 6 }}>
+                    <Video size={14} aria-hidden />
+                    <span className="td-name">Videos ({v.videos.length})</span>
+                  </div>
+                  <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+                    {v.videos.slice(0, 6).map((vid, i) => (
+                      <a key={vid + i} href={vid} target="_blank" rel="noopener noreferrer" className="btn btn-ghost sm">
+                        Video {i + 1} <ExternalLink size={12} aria-hidden />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Other Vendors in Same Sub-Area / City */}
+          {d.nearby && (d.nearby.sameArea.length > 0 || d.nearby.sameCity.length > 0) && (
+            <div className="card" style={{ padding: 14 }}>
+              <div className="td-name" style={{ marginBottom: 4 }}>
+                Related Venues in {[v.subArea, v.city].filter(Boolean).join(", ")}
+              </div>
+              <p className="small muted" style={{ marginBottom: 10 }}>
+                Suggest these nearby options while talking to the couple — click any venue to view full details.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 8 }}>
+                {[
+                  ...d.nearby.sameArea.map((r: VendorRow) => ({ ...r, _tag: v.subArea || "Same area" })),
+                  ...d.nearby.sameCity.map((r: VendorRow) => ({ ...r, _tag: v.city || "Same city" })),
+                ].slice(0, 6).map((rel) => (
+                  <div key={rel.id} className="card" style={{ padding: 10, display: "grid", gap: 6, background: "var(--surface-2)" }}>
+                    <div className="row between" style={{ gap: 6 }}>
+                      <button
+                        type="button"
+                        className="td-name"
+                        style={{ background: "none", border: 0, padding: 0, textAlign: "left", textDecoration: "underline", fontSize: 13 }}
+                        onClick={() => { setActiveId(rel.id); setTakingCall(false) }}
+                      >
+                        {rel.name}
+                      </button>
+                      <Status tone={rel._tag === (v.subArea || "Same area") ? "acc" : "mut"}>{rel._tag}</Status>
+                    </div>
+                    <div className="small muted">
+                      {[rel.maxCapacity && rel.maxCapacity > 1 ? `${rel.maxCapacity} guests` : null, rel.perHeadFromPkr ? `${fmtPkr(rel.perHeadFromPkr)}/head` : fmtPkr(rel.minimumPrice)].filter(Boolean).join(" · ")}
+                    </div>
+                    <div className="row" style={{ gap: 6 }}>
+                      <Btn size="sm" onClick={() => { setActiveId(rel.id); setTakingCall(false) }}>Open Brief</Btn>
+                      {clientId && !shortlisted.includes(rel.id) && rel.isLive !== false && (
+                        <Btn size="sm" variant="primary" loading={addShortlistMut.isPending} onClick={() => addShortlistMut.mutate(rel.id)}>+ Shortlist</Btn>
+                      )}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>

@@ -8,11 +8,11 @@ import { BarChart3, Download } from "lucide-react"
 
 import { useOps } from "@/components/ops/ops-shell"
 import { SOURCE_LABEL } from "@/components/ops/client-bits"
-import { Btn, Card, Empty, ErrorState, Field, Input, Kpi, PageHead, Select, Seg, SkelRows, TabBar, useOpsToast } from "@/components/ops/ops-ui"
+import { Btn, Card, Empty, ErrorState, Field, Input, Kpi, PageHead, Select, Seg, SkelRows, Status, TabBar, useOpsToast, fmtNum } from "@/components/ops/ops-ui"
 import { opsApi, opsErrorMessage } from "@/lib/api/ops"
-import { opsReportsApi, type Report, type TeamAReport, type TeamBReport } from "@/lib/api/ops-reports"
+import { opsReportsApi, type GeoReport, type Report, type TeamAReport, type TeamBReport } from "@/lib/api/ops-reports"
 
-type Tab = "a" | "b"
+type Tab = "geo" | "a" | "b"
 type Preset = "7" | "30" | "90" | "custom"
 
 /** Today in Karachi, not in the browser's zone: the report's days are Karachi days. */
@@ -198,13 +198,159 @@ function TeamBView({ b }: { b: TeamBReport }) {
   )
 }
 
+export function GeoReportView({
+  geo,
+  selectedCity,
+  onPickCity,
+  subAreaSearch,
+  onSubAreaSearch,
+}: {
+  geo: GeoReport
+  selectedCity: string
+  onPickCity: (city: string) => void
+  subAreaSearch: string
+  onSubAreaSearch: (v: string) => void
+}) {
+  const s = geo.summary
+  const qLower = subAreaSearch.trim().toLowerCase()
+  const subRows = qLower
+    ? geo.bySubArea.filter((r) => r.subArea.toLowerCase().includes(qLower) || r.city.toLowerCase().includes(qLower))
+    : geo.bySubArea
+
+  return (
+    <div className="stack">
+      <Section title="City & Sub-Area Overview">
+        <Kpi label="Cities tracked" value={s.totalCities} note={`${s.totalSubAreas} sub-areas active`} />
+        <Kpi label="Live vendors vs total" value={`${s.liveVendors} / ${s.totalVendors}`} note={s.topDemandCity ? `Busiest city: ${s.topDemandCity}` : undefined} />
+        <Kpi label="Couple inquiries" value={s.clientsReceived} note={`${s.websiteLeads} direct website leads`} />
+        <Kpi label="Booked (clients / portal)" value={`${s.clientsBooked} / ${s.bookingsCount}`} note={s.topDemandSubArea ? `Top area: ${s.topDemandSubArea}` : undefined} />
+        <Kpi label="Areas needing halls" value={s.supplyGapSubAreas} note={s.biggestGapSubArea ? `Priority: ${s.biggestGapSubArea}` : "Supply healthy"} />
+      </Section>
+
+      <Card
+        title="City-Wise Performance & Conversion Funnel"
+        sub="Click any city row to drill down into all sub-areas inside that city."
+        flush
+      >
+        {geo.byCity.length === 0 ? (
+          <div style={{ padding: 16 }}><p className="small muted" style={{ margin: 0 }}>No city records for this range.</p></div>
+        ) : (
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>City</th>
+                  <th className="r">Sub-Areas</th>
+                  <th className="r">Live / Total Halls</th>
+                  <th className="r">Missing Photos / Price</th>
+                  <th className="r">Web Leads</th>
+                  <th className="r">Clients</th>
+                  <th className="r">Shortlisted</th>
+                  <th className="r">Visits</th>
+                  <th className="r">Booked</th>
+                  <th className="r">Booked %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {geo.byCity.map((c) => {
+                  const picked = selectedCity.toLowerCase() === c.city.toLowerCase()
+                  return (
+                    <tr
+                      key={c.city}
+                      className="click"
+                      style={picked ? { background: "var(--accent-wash)" } : undefined}
+                      onClick={() => onPickCity(picked ? "" : c.city)}
+                    >
+                      <td className="td-name" style={{ textDecoration: "underline", textDecorationColor: "var(--border-2)" }}>{c.city}</td>
+                      <td className="r num">{c.subAreaCount}</td>
+                      <td className="r num"><b>{c.live}</b> / {c.totalVendors}</td>
+                      <td className="r num td-mut">{c.missingPhotos} / {c.missingPrices}</td>
+                      <td className="r num">{c.websiteLeads}</td>
+                      <td className="r num">{c.clientsReceived}</td>
+                      <td className="r num">{c.shortlistRequests}</td>
+                      <td className="r num">{c.clientsVisits}</td>
+                      <td className="r num"><b>{c.clientsBooked + c.bookings}</b></td>
+                      <td className="r num">{pct(c.bookedRate)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Card
+        title={selectedCity ? `Sub-Areas in ${selectedCity}` : "Sub-Area Demand vs Supply Deep Dive"}
+        sub="Shows where couples are searching vs how many live complete halls we actually have in each neighborhood."
+        actions={
+          <div className="row" style={{ gap: 8 }}>
+            <Input
+              aria-label="Filter sub-area"
+              compact
+              value={subAreaSearch}
+              onChange={(e) => onSubAreaSearch(e.target.value)}
+              placeholder="Filter area (e.g. Gulberg, DHA)..."
+              style={{ width: 220 }}
+            />
+            {selectedCity && <Btn size="sm" onClick={() => onPickCity("")}>Show all cities</Btn>}
+          </div>
+        }
+        flush
+      >
+        {subRows.length === 0 ? (
+          <div style={{ padding: 16 }}><p className="small muted" style={{ margin: 0 }}>No matching sub-areas found.</p></div>
+        ) : (
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>Area / City</th>
+                  <th className="r">Live / Total</th>
+                  <th className="r">Photo / Price Gaps</th>
+                  <th className="r">Outreach List</th>
+                  <th className="r">Web Leads</th>
+                  <th className="r">Shortlist Picks</th>
+                  <th className="r">Free Reply %</th>
+                  <th className="r">Visits / Booked</th>
+                  <th>Area Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {subRows.map((r) => (
+                  <tr key={`${r.city}::${r.subArea}`}>
+                    <td>
+                      <div className="td-name">{r.subArea}</div>
+                      <div className="td-sub">{r.city}</div>
+                    </td>
+                    <td className="r num"><b>{r.supply.live}</b> / {r.supply.total}</td>
+                    <td className="r num td-mut">{r.supply.missingPhotos} / {r.supply.missingPrices}</td>
+                    <td className="r num">{r.outreach.prospects}</td>
+                    <td className="r num">{r.demand.websiteLeads}</td>
+                    <td className="r num">{r.demand.shortlistRequests}</td>
+                    <td className="r num">{pct(r.demand.freeRate)}</td>
+                    <td className="r num">{r.demand.visits} / <b>{r.demand.bookedClients + r.demand.bookings}</b></td>
+                    <td><Status tone={r.gap.tone}>{r.gap.label}</Status></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
 export function ReportsView() {
   const { can } = useOps()
   const toast = useOpsToast()
-  const [tab, setTab] = useState<Tab>("a")
+  const [tab, setTab] = useState<Tab>("geo")
   const [from, setFrom] = useState(() => karachiDay(29))
   const [to, setTo] = useState(() => karachiDay(0))
   const [cityId, setCityId] = useState("")
+  const [selectedCityName, setSelectedCityName] = useState("")
+  const [subAreaSearch, setSubAreaSearch] = useState("")
   const [teamId, setTeamId] = useState("")
 
   const preset: Preset = to === karachiDay(0) ? (from === karachiDay(6) ? "7" : from === karachiDay(29) ? "30" : from === karachiDay(89) ? "90" : "custom") : "custom"
@@ -216,42 +362,73 @@ export function ReportsView() {
   const report = useQuery<Report>({
     queryKey: ["ops", "report", from, to, cityId, teamId],
     queryFn: () => opsReportsApi.overview({ from, to, cityId: cityId || undefined, teamId: teamId || undefined }),
-    enabled: !badRange, placeholderData: (p) => p, staleTime: 30000,
+    enabled: !badRange && tab !== "geo", placeholderData: (p) => p, staleTime: 30000,
+  })
+  const geo = useQuery<GeoReport>({
+    queryKey: ["ops", "report-geo", from, to, cityId, selectedCityName, teamId],
+    queryFn: () => opsReportsApi.geo({ from, to, cityId: !selectedCityName && cityId ? cityId : undefined, city: selectedCityName || undefined, teamId: teamId || undefined }),
+    enabled: !badRange && tab === "geo", placeholderData: (p) => p, staleTime: 30000,
   })
   const exportCsv = useMutation({
-    mutationFn: () => opsReportsApi.downloadClients({ from, to, cityId: cityId || undefined }),
+    mutationFn: () => tab === "geo"
+      ? opsReportsApi.downloadGeo({ from, to, cityId: !selectedCityName && cityId ? cityId : undefined, city: selectedCityName || undefined, subArea: subAreaSearch.trim() || undefined })
+      : opsReportsApi.downloadClients({ from, to, cityId: cityId || undefined }),
     onSuccess: () => toast({ title: "Export started", body: "The download is recorded in the audit trail." }),
     onError: (e) => toast({ title: "Couldn't export", body: e instanceof Error ? e.message : "Please try again.", tone: "bad" }),
   })
 
+  const activeLoading = tab === "geo" ? geo.isLoading : report.isLoading
+  const activeFetching = tab === "geo" ? geo.isFetching : report.isFetching
+  const activeError = tab === "geo" ? geo.isError : report.isError
   const r = report.data
+  const g = geo.data
+  const activeRange = tab === "geo" ? g?.range : r?.range
   return (
     <>
       <PageHead
         title="Reports"
-        sub="How each team is doing, with quality next to volume. A lead sees their own teams; a manager sees everything."
-        actions={can("ops_export") && tab === "b" ? <Btn icon={<Download aria-hidden />} loading={exportCsv.isPending} disabled={badRange} onClick={() => exportCsv.mutate()}>Export clients (CSV)</Btn> : undefined}
+        sub="City & sub-area performance, supply vs couple demand gaps, and Team A / Team B metrics."
+        actions={
+          <div className="row" style={{ gap: 8 }}>
+            {tab === "geo" && (
+              <Btn icon={<Download aria-hidden />} loading={exportCsv.isPending} disabled={badRange} onClick={() => exportCsv.mutate()}>
+                Export Area CSV
+              </Btn>
+            )}
+            {can("ops_export") && tab === "b" && (
+              <Btn icon={<Download aria-hidden />} loading={exportCsv.isPending} disabled={badRange} onClick={() => exportCsv.mutate()}>
+                Export clients (CSV)
+              </Btn>
+            )}
+          </div>
+        }
       />
       <div className="toolbar">
         <Seg<Preset> label="Period" value={preset} onChange={pick} options={[{ value: "7", label: "7 days" }, { value: "30", label: "30 days" }, { value: "90", label: "90 days" }, ...(preset === "custom" ? [{ value: "custom" as const, label: "Custom" }] : [])]} />
         <div className="filters">
           <Field label="From" htmlFor="rp-from"><Input id="rp-from" type="date" compact value={from} max={to} onChange={(e) => setFrom(e.target.value)} /></Field>
           <Field label="To" htmlFor="rp-to"><Input id="rp-to" type="date" compact value={to} min={from} max={karachiDay(0)} onChange={(e) => setTo(e.target.value)} /></Field>
-          <Select aria-label="City" value={cityId} onChange={(e) => setCityId(e.target.value)} style={{ width: 150 }}><option value="">All cities</option>{(cities.data?.cities ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>
+          <Select aria-label="City" value={cityId} onChange={(e) => { setCityId(e.target.value); setSelectedCityName("") }} style={{ width: 150 }}><option value="">All cities</option>{(cities.data?.cities ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>
           {(teams.data?.teams.length ?? 0) > 1 && <Select aria-label="Team" value={teamId} onChange={(e) => setTeamId(e.target.value)} style={{ width: 180 }}><option value="">All my teams</option>{teams.data!.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>}
         </div>
       </div>
       <div style={{ marginBottom: 14 }}>
-        <TabBar<Tab> label="Team" value={tab} onChange={setTab} tabs={[{ value: "a", label: "Vendor outreach (Team A)" }, { value: "b", label: "Client desk (Team B)" }]} />
+        <TabBar<Tab> label="Report View" value={tab} onChange={setTab} tabs={[{ value: "geo", label: "City & Sub-Area Report" }, { value: "a", label: "Vendor Team (Team A)" }, { value: "b", label: "Client Team (Team B)" }]} />
       </div>
 
       {badRange ? <Card><Empty icon={<BarChart3 />} title="Check the dates">The start date must be on or before the end date.</Empty></Card>
-        : report.isLoading ? <Card flush><SkelRows rows={8} /></Card>
-        : report.isError ? <ErrorState message={opsErrorMessage(report.error)} onRetry={() => report.refetch()} />
-        : r ? (
-          <div className="stack" style={{ opacity: report.isFetching ? 0.7 : 1, transition: "opacity .15s" }}>
-            <p className="small muted" style={{ margin: 0 }}>{new Date(`${r.range.from}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })} to {new Date(`${r.range.to}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })} · {r.range.days} day{r.range.days === 1 ? "" : "s"}, Karachi time</p>
-            {tab === "a" ? <TeamAView a={r.teamA} range={r.range} /> : <TeamBView b={r.teamB} />}
+        : activeLoading ? <Card flush><SkelRows rows={8} /></Card>
+        : activeError ? <ErrorState message={opsErrorMessage(tab === "geo" ? geo.error : report.error)} onRetry={() => (tab === "geo" ? geo.refetch() : report.refetch())} />
+        : activeRange ? (
+          <div className="stack" style={{ opacity: activeFetching ? 0.7 : 1, transition: "opacity .15s" }}>
+            <p className="small muted" style={{ margin: 0 }}>{new Date(`${activeRange.from}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })} to {new Date(`${activeRange.to}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })} · {activeRange.days} day{activeRange.days === 1 ? "" : "s"}, Karachi time</p>
+            {tab === "geo" && g ? (
+              <GeoReportView geo={g} selectedCity={selectedCityName} onPickCity={(c) => { setSelectedCityName(c); if (c) setCityId("") }} subAreaSearch={subAreaSearch} onSubAreaSearch={setSubAreaSearch} />
+            ) : tab === "a" && r ? (
+              <TeamAView a={r.teamA} range={r.range} />
+            ) : r ? (
+              <TeamBView b={r.teamB} />
+            ) : null}
             <Card>
               <details className="how">
                 <summary>How these numbers are counted</summary>

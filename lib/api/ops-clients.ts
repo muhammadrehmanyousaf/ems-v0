@@ -126,9 +126,11 @@ export interface VendorRow {
   id: number; name: string; slug: string | null; city: string | null; subArea: string | null; vendorType: string | null; maxCapacity: number | null; minCapacity: number | null; minimumPrice: string | null
   completenessScore: number | null; verificationTier: number | null; parking: boolean | null; carParkingCapacity: number | null; catering: boolean | null; outsideVendorsAllowed: boolean | null
   typeSpecificDetails: Record<string, unknown> | null; venueType: string | null; subBusinessType: string[] | null; claimed: boolean; isLive?: boolean; status?: string
-  imagesCount?: number; packagesCount?: number; menusCount?: number
+  coverImage?: string | null; imagesCount?: number; videosCount?: number; packagesCount?: number; menusCount?: number
   perHeadFromPkr: string | null; perHeadToPkr: string | null; lastConfirmedFreeAt: string | null; dataMissing: boolean
 }
+export interface AreaCount { subArea: string; count: number }
+export interface RelatedVendors { city: string | null; subArea: string | null; sameArea: VendorRow[]; sameCity: VendorRow[] }
 export interface VendorBrief {
   vendor: {
     id: number; name: string; slug: string | null; city: string | null; subArea: string | null; address: string | null; googleMapsUrl: string | null
@@ -146,8 +148,13 @@ export interface VendorBrief {
   menus: { id: number; title: string; price: number | null; pricingUnit: string | null; minGuaranteeCount: number | null; items: string[] }[]
   busyDates: { date: string; slot: string; kind: "booking" | "hold"; status: string }[]
   recentChecks: { id: number; availability: Availability; checkedForDate: string | null; quotedPricePkr: string | null; perHeadPkr: string | null; tokenAmountPkr: string | null; holdUntil: string | null; altSuggestion: string | null; note: string | null; checkedAt: string | null; checkedByName: string | null }[]
+  nearby?: RelatedVendors
 }
-export interface VendorSearchResult { rows: VendorRow[]; total: number; dataMissing: number; page: number; pageSize: number }
+export interface VendorSearchResult {
+  rows: VendorRow[]; total: number; dataMissing: number; page: number; pageSize: number
+  areaOptions?: AreaCount[]
+  related?: RelatedVendors
+}
 
 export const vendorsApi = {
   search: (q: VendorQuery) => unwrap<VendorSearchResult>(api.get(`${BASE}/vendors/search`, { params: { ...q, includePending: q.includePending ? "1" : undefined, flags: q.flags?.length ? q.flags.join(",") : undefined, claimed: q.claimed || undefined } })),

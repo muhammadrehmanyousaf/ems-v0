@@ -95,8 +95,35 @@ async function blobError(e: unknown): Promise<Error> {
   return e instanceof Error ? e : new Error("The download failed. Please try again.")
 }
 
+export interface GeoQuery { from?: string; to?: string; cityId?: number | string; city?: string; subArea?: string; teamId?: number | string }
+export interface GeoCityRow {
+  city: string; subAreaCount: number; live: number; totalVendors: number; missingPhotos: number; missingPrices: number
+  prospects: number; websiteLeads: number; shortlistRequests: number; bookings: number; bookedRevenuePkr: number
+  clientsReceived: number; clientsResponded: number; clientsQualified: number; clientsVisits: number; clientsBooked: number
+  clientsLost: number; bookedRate: number | null; medianReplyMin: number | null
+}
+export interface GeoSubAreaRow {
+  city: string; subArea: string
+  supply: { total: number; live: number; draft: number; venues: number; missingPhotos: number; missingPrices: number; avgCompleteness: number | null }
+  outreach: { prospects: number; importedRange: number; calledRange: number; interested: number; live: number }
+  demand: { websiteLeads: number; shortlistRequests: number; available: number; unavailable: number; noAnswer: number; freeRate: number | null; visits: number; bookedClients: number; bookings: number; confirmedBookings: number; bookedRevenuePkr: number }
+  gap: { code: "supply_deficit" | "incomplete_supply" | "conversion_gap" | "healthy"; label: string; tone: "ok" | "warn" | "bad" }
+}
+export interface GeoReport {
+  range: { from: string; to: string; days: number }
+  filters: { city: string | null; subArea: string | null }
+  summary: {
+    totalCities: number; totalSubAreas: number; liveVendors: number; totalVendors: number
+    websiteLeads: number; clientsReceived: number; clientsBooked: number; bookingsCount: number
+    supplyGapSubAreas: number; topDemandCity: string | null; topDemandSubArea: string | null; biggestGapSubArea: string | null
+  }
+  byCity: GeoCityRow[]
+  bySubArea: GeoSubAreaRow[]
+}
+
 export const opsReportsApi = {
   overview: (query: ReportQuery) => unwrap<Report>(api.get(`${BASE}/reports/overview`, { params: query })),
+  geo: (query: GeoQuery) => unwrap<GeoReport>(api.get(`${BASE}/reports/geo`, { params: query })),
   qa: (params: { view?: QaView; page?: number; pageSize?: number }) => unwrap<QaList>(api.get(`${BASE}/qa`, { params })),
   reviewQa: (businessId: number, body: { result: "passed" | "flagged"; note?: string }) => unwrap<{ businessId: number; qaStatus: QaStatus }>(api.post(`${BASE}/qa/${businessId}/review`, body)),
   consentQueue: (params: { kind?: ConsentQueueKind; page?: number; pageSize?: number }) => unwrap<ConsentQueue>(api.get(`${BASE}/queues/consent`, { params })),
@@ -109,6 +136,18 @@ export const opsReportsApi = {
     const cd = String(res.headers?.["content-disposition"] ?? "")
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi" }).format(new Date())
     const name = /filename="([^"]+)"/.exec(cd)?.[1] ?? `clients-${today}.csv`
+    const url = URL.createObjectURL(res.data as Blob)
+    const a = document.createElement("a")
+    a.href = url; a.download = name
+    document.body.appendChild(a); a.click(); a.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 5000)
+  },
+  async downloadGeo(query: GeoQuery): Promise<void> {
+    let res
+    try { res = await api.get(`${BASE}/reports/geo/export`, { params: query, responseType: "blob" }) } catch (e) { throw await blobError(e) }
+    const cd = String(res.headers?.["content-disposition"] ?? "")
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi" }).format(new Date())
+    const name = /filename="([^"]+)"/.exec(cd)?.[1] ?? `geo-report-${today}.csv`
     const url = URL.createObjectURL(res.data as Blob)
     const a = document.createElement("a")
     a.href = url; a.download = name
