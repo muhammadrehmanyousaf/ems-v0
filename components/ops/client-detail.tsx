@@ -310,6 +310,25 @@ export function ClientDetailView({ id }: { id: number }) {
             </Card>
           )}
 
+          {Array.isArray((d as unknown as { bookings?: unknown[] }).bookings) && (d as unknown as { bookings: { id: number; status: string; paymentStatus: string; bookingDate: string | null; eventCity: string | null; eventType: string | null; totalAmount: number | string | null; opsStage: string | null }[] }).bookings.length > 0 && (
+            <Card title="Bookings" sub="Live marketplace bookings for this couple.">
+              {(d as unknown as { bookings: { id: number; status: string; paymentStatus: string; bookingDate: string | null; eventCity: string | null; eventType: string | null; totalAmount: number | string | null; opsStage: string | null }[] }).bookings.map((bk) => (
+                <div key={bk.id} className="row between" style={{ padding: "8px 0", borderBottom: "1px solid var(--border)", gap: 8 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+                      <Link href={`/ops/bookings/${bk.id}`} style={{ fontWeight: 600 }}>Booking #{bk.id}</Link>
+                      <Status tone={bk.status === "Confirmed" ? "ok" : bk.status === "Cancelled" ? "bad" : "info"}>{bk.status}</Status>
+                    </div>
+                    <div className="small muted">
+                      {[bk.bookingDate ? fmtDay(bk.bookingDate) : null, bk.eventType, bk.eventCity, bk.paymentStatus].filter(Boolean).join(" · ")}
+                    </div>
+                  </div>
+                  <Link href={`/ops/bookings/${bk.id}`} className="btn btn-sm">Open</Link>
+                </div>
+              ))}
+            </Card>
+          )}
+
           {d.tasks.some((t) => !t.doneAt) && (
             <Card title="To do">
               {d.tasks.filter((t) => !t.doneAt).map((t) => <div key={t.id} className="row between" style={{ padding: "6px 0" }}><span>{t.note || t.kind}</span><span className="small muted">{fmtWhen(t.dueAt)}</span></div>)}

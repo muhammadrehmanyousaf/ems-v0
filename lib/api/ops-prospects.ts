@@ -79,6 +79,8 @@ export const prospectsApi = {
   review: (id: number, decision: "retry" | "invalid" | "not_interested", note?: string): Promise<{ prospect: ProspectFull }> => unwrap(api.post(`${BASE}/prospects/${id}/review`, { decision, note })),
   reassign: (ids: number[], ownerUserId: number | null): Promise<{ moved: number; requested: number; notVisible: number }> => unwrap(api.post(`${BASE}/prospects/bulk-reassign`, { ids, ownerUserId })),
   exportCsv: async (params: ProspectQuery): Promise<Blob> => (await api.get(`${BASE}/prospects/export`, { params, responseType: "blob" })).data as Blob,
+  syncDirectory: (body?: { includeImported?: boolean; city?: string; vendorType?: string; limit?: number }): Promise<{ created: number; skippedDup: number; scanned: number }> =>
+    unwrap(api.post(`${BASE}/prospects/sync-directory`, body ?? {})),
 }
 
 export const tasksApi = {

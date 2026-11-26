@@ -8,17 +8,24 @@ import { ImagePlus, Link2, MessageCircle, Trash2, UploadCloud } from "lucide-rea
 
 import { Btn, Card, Check_, Chip, CopyButton, Empty, ErrorState, Modal, Notice, Seg, SkelRows, Status, cx, fmtWhen, useOpsToast } from "@/components/ops/ops-ui"
 import { opsErrorMessage } from "@/lib/api/ops"
+import { directoryOpsApi } from "@/lib/api/ops-directory"
 import { UPLOAD_REASON, mediaApi, type MediaKind, type MediaLinkCreated, type UploadOutcome } from "@/lib/api/ops-onboarding"
 import { uploadMessage, waLink } from "@/lib/ops/whatsapp"
 
 const ACCEPT: Record<MediaKind, string> = { image: "image/jpeg,image/png,image/webp", logo: "image/jpeg,image/png,image/webp", video: "video/mp4,video/quicktime,video/webm" }
 
-export function MediaManager({ listingId, businessName, ownerName, ownerPhone, onChanged }: {
-  listingId: number; businessName: string; ownerName: string | null; ownerPhone: string | null; onChanged?: () => void
+export function MediaManager({ listingId, businessName, ownerName, ownerPhone, onChanged, mode = "listing" }: {
+  listingId: number; businessName: string; ownerName: string | null; ownerPhone: string | null; onChanged?: () => void; mode?: "listing" | "directory"
 }) {
   const qc = useQueryClient()
   const toast = useOpsToast()
-  const q = useQuery({ queryKey: ["ops", "media", listingId], queryFn: () => mediaApi.list(listingId), staleTime: 0, refetchOnWindowFocus: false })
+  const isDir = mode === "directory"
+  const q = useQuery({
+    queryKey: ["ops", isDir ? "directory-media" : "media", listingId],
+    queryFn: () => (isDir ? directoryOpsApi.mediaList(listingId) : mediaApi.list(listingId)),
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+  })
   const [kind, setKind] = useState<MediaKind>("image")
   const [files, setFiles] = useState<File[]>([])
   const [rights, setRights] = useState(false)
@@ -28,15 +35,21 @@ export function MediaManager({ listingId, businessName, ownerName, ownerPhone, o
   const [link, setLink] = useState<MediaLinkCreated | null>(null)
   const input = useRef<HTMLInputElement>(null)
 
-  const refresh = () => { qc.invalidateQueries({ queryKey: ["ops", "media", listingId] }); qc.invalidateQueries({ queryKey: ["ops", "listing", listingId] }); onChanged?.() }
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ["ops", isDir ? "directory-media" : "media", listingId] })
+    qc.invalidateQueries({ queryKey: ["ops", "listing", listingId] })
+    qc.invalidateQueries({ queryKey: ["ops", "vendor", listingId] })
+    qc.invalidateQueries({ queryKey: ["ops", "vendors"] })
+    onChanged?.()
+  }
 
   const upload = useMutation({
-    mutationFn: () => mediaApi.upload(listingId, files, kind, rights),
+    mutationFn: () => (isDir ? directoryOpsApi.mediaUpload(listingId, files, kind, rights) : mediaApi.upload(listingId, files, kind, rights)),
     onSuccess: (r) => { setResult(r); setFiles([]); if (input.current) input.current.value = ""; refresh(); if (r.added.length) toast({ title: `${r.added.length} uploaded` }) },
     onError: (e) => toast({ title: "Upload failed", body: opsErrorMessage(e), tone: "bad" }),
   })
   const remove = useMutation({
-    mutationFn: (url: string) => mediaApi.remove(listingId, url),
+    mutationFn: (url: string) => (isDir ? directoryOpsApi.mediaRemove(listingId, url) : mediaApi.remove(listingId, url)),
     onSuccess: () => { setRemoving(null); refresh(); toast({ title: "Removed from the listing", body: "The file is kept and can be restored by an admin." }) },
     onError: (e) => toast({ title: "Could not remove", body: opsErrorMessage(e), tone: "bad" }),
   })
@@ -62,7 +75,7 @@ export function MediaManager({ listingId, businessName, ownerName, ownerPhone, o
   return (
     <>
       <Card title="Photos and videos" sub={`${m.images.length} of ${m.limits.images} photos · ${m.videos.length} of ${m.limits.videos} videos${m.brandLogo ? " · logo set" : ""}`}
-        actions={<Btn size="sm" icon={<Link2 aria-hidden />} onClick={() => makeLink.mutate()} loading={makeLink.isPending}>Vendor upload link</Btn>}>
+        actions={!isDir ? <Btn size="sm" icon={<Link2 aria-hidden />} onClick={() => makeLink.mutate()} loading={makeLink.isPending}>Vendor upload link</Btn> : undefined}>
         {total === 0 ? (
           <Empty icon={<ImagePlus />} title="No photos yet">A listing needs at least one photo to go live. Upload what the vendor sent on WhatsApp, or send them an upload link so they can add their own.</Empty>
         ) : (

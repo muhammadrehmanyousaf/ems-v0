@@ -1,5 +1,5 @@
-import { HomeView } from "@/components/ops/home-view"
+import { HomeViewP7 } from "@/components/ops/home-view-p7"
 
 export default function OpsHomePage() {
-  return <HomeView />
+  return <HomeViewP7 />
 }

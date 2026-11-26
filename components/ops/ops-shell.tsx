@@ -47,7 +47,7 @@ interface NavItem { href: string; label: string; icon: typeof Home; permission?:
 const CALLERS = ["ops_prospect_call", "ops_prospect_view_team", "ops_prospect_view_all"]
 
 /** Every screen that exists. A phase adds its entries here when its screens ship, so the rail never has a dead link. */
-const CRUMB_OVERRIDES: [RegExp, string][] = [[/^\/ops\/prospects\/\d+\/onboarding\/?$/, "Call sheet"], [/^\/ops\/listings\/\d+\/?$/, "Listing"], [/^\/ops\/clients\/\d+\/?$/, "Client"], [/^\/ops\/assigned\/\d+\/?$/, "Assignment"], [/^\/ops\/find\/\d+\/?$/, "Vendor"]]
+const CRUMB_OVERRIDES: [RegExp, string][] = [[/^\/ops\/prospects\/\d+\/onboarding\/?$/, "Call sheet"], [/^\/ops\/listings\/\d+\/?$/, "Listing"], [/^\/ops\/clients\/\d+\/?$/, "Client"], [/^\/ops\/assigned\/\d+\/?$/, "Assignment"], [/^\/ops\/find\/\d+\/?$/, "Vendor"], [/^\/ops\/bookings\/\d+\/?$/, "Booking"]]
 
 export const OPS_NAV: NavItem[] = [
   { href: "/ops", label: "Home", icon: Home, section: "Kaam", exact: true },
@@ -58,6 +58,7 @@ export const OPS_NAV: NavItem[] = [
   { href: "/ops/prospects", label: "Prospects", icon: ListChecks, permission: CALLERS, section: "Kaam" },
   { href: "/ops/import", label: "Import vendors", icon: FileSpreadsheet, permission: "ops_prospect_import", section: "Kaam" },
   { href: "/ops/clients", label: "Clients", icon: Contact, permission: "ops_client_manage", section: "Client desk" },
+  { href: "/ops/bookings", label: "Bookings", icon: CalendarClock, permission: ["ops_client_manage", "ops_prospect_call", "ops_listing_edit_on_behalf", "ops_reports_team", "ops_reports_all"], section: "Client desk" },
   { href: "/ops/vendors", label: "Find venues", icon: Store, permission: "ops_vendor_search", section: "Client desk" },
   { href: "/ops/team", label: "Team", icon: UsersRound, permission: ["ops_reports_team", "ops_reports_all"], section: "Nigrani", badge: "needsReview" },
   { href: "/ops/reports", label: "Reports", icon: BarChart3, permission: ["ops_reports_team", "ops_reports_all"], section: "Nigrani" },

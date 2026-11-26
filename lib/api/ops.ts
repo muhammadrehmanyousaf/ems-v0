@@ -108,11 +108,53 @@ export interface OpsSetPassword {
   expiresAt: string
   ttlHours: number
 }
+export interface OpsHomeSummary {
+  canWorkVendors: boolean
+  canManageClients: boolean
+  canSeeBookings: boolean
+  teamA?: {
+    tasksDue: number
+    tasksOverdue: number
+    tasksNext24h: number
+    readyToCall: number
+    callsToday: number
+    connectedToday: number
+    interestedToday: number
+    interestedOpen: number
+    assignmentsOpen: number
+  }
+  teamB?: {
+    inbox: number
+    needsResponse: number
+    overdue: number
+    mine: number
+    unassigned: number
+    recentUnanswered: {
+      id: number
+      name: string
+      cityText: string | null
+      source: string
+      status: string
+      createdAt: string
+      firstResponseDueAt: string | null
+      overdue: boolean
+    }[]
+  }
+  bookings?: {
+    total: number
+    needsAction: number
+    confirmed: number
+    pending: number
+    upcoming14d: number
+    recent: import("./ops-bookings").OpsBookingRow[]
+  }
+}
 
 const BASE = "/api/v1/ops"
 
 export const opsApi = {
   me: (): Promise<OpsMe> => unwrap(api.get(`${BASE}/me`)),
+  homeSummary: (): Promise<OpsHomeSummary> => unwrap(api.get(`${BASE}/home-summary`)),
 
   cities: (): Promise<{ cities: OpsCity[] }> => unwrap(api.get(`${BASE}/cities`)),
   createCity: (body: { name: string; province?: string; aliases?: string[] }): Promise<{ city: OpsCity }> =>
