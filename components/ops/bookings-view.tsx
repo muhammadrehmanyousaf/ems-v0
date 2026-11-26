@@ -90,11 +90,11 @@ export function BookingsView() {
   return (
     <>
       <PageHead
-        title="Bookings desk"
-        sub="Track every customer & vendor booking end-to-end: confirm hall readiness with the vendor and arrival details with the couple."
+        title="Bookings"
+        sub="Call the hall and the couple before the event date to make sure everything is confirmed and ready."
         actions={
           <Btn icon={<RefreshCw aria-hidden />} loading={syncMut.isPending} onClick={() => syncMut.mutate()}>
-            Sync marketplace bookings
+            Refresh bookings
           </Btn>
         }
       />
@@ -163,10 +163,10 @@ export function BookingsView() {
         ) : !data || data.rows.length === 0 ? (
           <Empty
             icon={<CalendarCheck2 />}
-            title="No bookings match this filter"
-            action={view !== "all" ? <Btn size="sm" onClick={() => setView("all")}>View all bookings</Btn> : undefined}
+            title="No bookings in this view"
+            action={view !== "all" ? <Btn size="sm" onClick={() => setView("all")}>Show all bookings</Btn> : undefined}
           >
-            Confirmed and pending marketplace bookings sync automatically into OpsBookingMeta without touching payment records.
+            New website bookings and confirmed client bookings appear here automatically.
           </Empty>
         ) : (
           <>

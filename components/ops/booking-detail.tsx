@@ -152,7 +152,7 @@ export function BookingDetailView({ id }: { id: number }) {
               <dd>{[bk.bookingDate ? fmtDay(bk.bookingDate) : "TBD", bk.bookingTime].filter(Boolean).join(" · ")}</dd>
               <dt>City &amp; guests</dt>
               <dd>{[bk.eventCity || "—", bk.guestCount ? `${bk.guestCount} guests` : null].filter(Boolean).join(" · ")}</dd>
-              <dt>Financials (read-only)</dt>
+              <dt>Price &amp; payment info (view only)</dt>
               <dd className="num">
                 Total: {bk.totalAmount ? `PKR ${fmtNum(Number(bk.totalAmount))}` : "—"} · Paid: {bk.downPayment ? `PKR ${fmtNum(Number(bk.downPayment))}` : "PKR 0"}
                 {bk.advanceDuePkr ? ` · Advance due: PKR ${fmtNum(Number(bk.advanceDuePkr))}` : ""}
@@ -233,7 +233,7 @@ export function BookingDetailView({ id }: { id: number }) {
 
         {/* Right Rail: Coordination Stage + Contact Logger */}
         <div className="stack">
-          <Card title="Ops stage &amp; priority">
+          <Card title="Booking stage &amp; priority">
             <div className="stack" style={{ gap: 12 }}>
               <Field label="Coordination stage" htmlFor="bk-stage">
                 <Select id="bk-stage" value={curStage} onChange={(e) => setEditStage(e.target.value as OpsBookingStage)}>
@@ -243,7 +243,7 @@ export function BookingDetailView({ id }: { id: number }) {
               <Field label="Priority" htmlFor="bk-prio">
                 <Select id="bk-prio" value={curPriority} onChange={(e) => setEditPriority(e.target.value as OpsBookingPriority)}>
                   <option value="normal">Normal</option>
-                  <option value="urgent">Urgent (SLA priority)</option>
+                  <option value="urgent">Urgent</option>
                 </Select>
               </Field>
               <Field label="Internal handover notes" htmlFor="bk-notes">

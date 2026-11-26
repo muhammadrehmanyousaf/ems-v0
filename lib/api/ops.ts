@@ -122,6 +122,25 @@ export interface OpsHomeSummary {
     interestedToday: number
     interestedOpen: number
     assignmentsOpen: number
+    recentRequests?: {
+      id: number
+      clientName: string
+      cityName: string | null
+      guests: number | null
+      stage: string
+      createdAt: string
+      nextEventDate: string | null
+      unchecked: number
+      venues: number
+    }[]
+    upcomingVisits?: {
+      clientId: number
+      clientName: string
+      visitAt: string
+      visitNote: string | null
+      venueName: string
+      assignmentId: number | null
+    }[]
   }
   teamB?: {
     inbox: number
@@ -129,6 +148,9 @@ export interface OpsHomeSummary {
     overdue: number
     mine: number
     unassigned: number
+    waitingOnVendors?: number
+    vendorReplied?: number
+    visitsPlanned?: number
     recentUnanswered: {
       id: number
       name: string
@@ -138,6 +160,24 @@ export interface OpsHomeSummary {
       createdAt: string
       firstResponseDueAt: string | null
       overdue: boolean
+    }[]
+    recentReplies?: {
+      id: number
+      name: string
+      cityName: string | null
+      guests: number | null
+      availCount: number
+      totalChecked: number
+      topVenue: string | null
+      repliedAt: string | null
+    }[]
+    upcomingVisits?: {
+      id: number
+      name: string
+      visitAt: string | null
+      visitNote: string | null
+      venueName: string | null
+      cityName: string | null
     }[]
   }
   bookings?: {

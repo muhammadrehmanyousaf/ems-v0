@@ -77,8 +77,8 @@ export function VendorWorkspaceExtras({ businessId }: { businessId: number }) {
       <Card>
         <div className="row between" style={{ gap: 12 }}>
           <div>
-            <div className="td-name">Vendor operations &amp; follow-up</div>
-            <div className="small muted">Manage photos directly, coordinate live bookings, review website leads, and log every outreach touchpoint.</div>
+            <div className="td-name">Vendor details &amp; follow-up</div>
+            <div className="small muted">Update photos and packages, check bookings, see customer inquiries, and save vendor call notes.</div>
           </div>
           <div className="row">
             {publicUrl && (
@@ -178,7 +178,7 @@ export function VendorWorkspaceExtras({ businessId }: { businessId: number }) {
         </div>
 
         {/* Outreach Log & Logger */}
-        <Card title="Vendor outreach log" sub="Calls, WhatsApp follow-ups & notes saved cleanly in OpsVendorLogs.">
+        <Card title="Vendor call &amp; message notes" sub="Save every phone call or WhatsApp follow-up with this vendor.">
           <div className="stack" style={{ gap: 12 }}>
             <div className="form-grid">
               <Field label="Channel" htmlFor={`vl-ch-${businessId}`}>

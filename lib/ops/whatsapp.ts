@@ -43,3 +43,36 @@ export function shortlistMessage(p: { clientName?: string | null; venues: Shortl
   })
   return `${hi(p.clientName)}\n\nThank you for contacting Wedding Wala. Here are the venues we shortlisted for you:\n\n${lines.join("\n")}\n\nWe are confirming dates and prices with each venue and will update you shortly.`
 }
+
+/** Ready WhatsApp message after Team A finishes checking availability & quotes. */
+export function checkedResultsMessage(p: {
+  clientName?: string | null
+  items: {
+    name: string
+    availability: "available" | "unavailable" | "no_answer" | "pending"
+    checkedForDate?: string | null
+    quotedPricePkr?: string | number | null
+    perHeadPkr?: string | number | null
+    tokenAmountPkr?: string | number | null
+    altSuggestion?: string | null
+    note?: string | null
+    link?: string
+  }[]
+  origin: string
+}): string {
+  const avail = p.items.filter((i) => i.availability === "available")
+  if (!avail.length) {
+    const alts = p.items.map((i) => i.altSuggestion).filter(Boolean)
+    return `${hi(p.clientName)}\n\nWe called the shortlisted venue(s) for your event date, and unfortunately they are booked on that day.${alts.length ? `\n\nSuggested options:\n- ${alts.join("\n- ")}` : ""}\n\nWould you like us to check another date or suggest similar venues in your budget?`
+  }
+  const lines = avail.map((v, idx) => {
+    const parts = [
+      v.checkedForDate ? `Date free: ${v.checkedForDate}` : "Date confirmed FREE",
+      v.quotedPricePkr && Number(v.quotedPricePkr) > 0 ? `Package: Rs ${Number(v.quotedPricePkr).toLocaleString("en-PK")}` : null,
+      v.perHeadPkr && Number(v.perHeadPkr) > 0 ? `Per head: Rs ${Number(v.perHeadPkr).toLocaleString("en-PK")}` : null,
+      v.tokenAmountPkr && Number(v.tokenAmountPkr) > 0 ? `Advance token: Rs ${Number(v.tokenAmountPkr).toLocaleString("en-PK")}` : null,
+    ].filter(Boolean)
+    return `${idx + 1}. *${v.name}*\n   ${parts.join(" · ")}${v.note ? `\n   Note: ${v.note}` : ""}${v.link ? `\n   ${p.origin}${v.link}` : ""}`
+  })
+  return `${hi(p.clientName)}\n\nGood news! We confirmed availability with the venue team:\n\n${lines.join("\n\n")}\n\nPlease let us know which time suits you for a hall visit or if you would like us to lock the booking.`
+}
