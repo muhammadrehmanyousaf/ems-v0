@@ -5,6 +5,7 @@ import { getLoggedInUser } from "@/lib/authFunction";
 import Cookies from "js-cookie";
 import axiosInstance from "@/lib/axiosConfig";
 import { clearAuthStorage } from "@/lib/auth/session";
+import { safeRedirect } from "@/lib/auth/safe-redirect";
 import { isOpsOnly } from "@/lib/ops/ops-role";
 
 interface User {
@@ -48,7 +49,10 @@ interface UserContextType {
    * keep working.
    */
   login: (userData: User, token: string, extras?: { jti?: string; flags?: AuthFlags }) => void;
-  logout: () => void | Promise<void>;
+  logout: {
+    (options?: { redirectTo?: string }): void | Promise<void>;
+    (event: unknown): void | Promise<void>;
+  };
   refreshUser: () => Promise<void>;
   /** Mutate the cached flags after an OTP verification succeeds. */
   setFlags: (patch: Partial<AuthFlags>) => void;
@@ -265,7 +269,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const logout = async () => {
+  const logout = async (options?: { redirectTo?: string } | unknown) => {
     // WP34 (SETUP-036): revoke the session on the server BEFORE the token is
     // forgotten, so a token copied off a shared phone or out of a log stops
     // working the moment the vendor signs out (it used to stay valid until its
@@ -290,7 +294,20 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     clearAuthData();
     window.dispatchEvent(new CustomEvent('userLogout'));
     window.dispatchEvent(new CustomEvent('user-logout'));
-    window.location.href = "/";
+    const rawRedirect =
+      options &&
+      typeof options === "object" &&
+      "redirectTo" in options &&
+      typeof (options as { redirectTo?: unknown }).redirectTo === "string"
+        ? (options as { redirectTo: string }).redirectTo
+        : undefined;
+    const allowLoginTarget =
+      rawRedirect &&
+      !/^[/\\]{2}|\\|[\u0000-\u001f\u007f-\u009f]/.test(rawRedirect) &&
+      /^\/login(\?|$)/.test(rawRedirect)
+        ? rawRedirect
+        : null;
+    window.location.href = allowLoginTarget ?? safeRedirect(rawRedirect) ?? "/";
   };
 
   const refreshUser = async () => {

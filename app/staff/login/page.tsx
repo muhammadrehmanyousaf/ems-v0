@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,12 +17,14 @@ export default function StaffLoginPage() {
   // 6-digit code, or an authenticator code). Revealed only when the server asks, so
   // an account that is not challenged sees exactly the old form.
   const [step, setStep] = useState<null | "emailOtp" | "totp">(null);
+  const [opsRedirectHint, setOpsRedirectHint] = useState(false);
   const [code, setCode] = useState("");
   const [sentTo, setSentTo] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setOpsRedirectHint(false);
     setLoading(true);
     try {
       await StaffPortalAPI.login(
@@ -32,7 +35,9 @@ export default function StaffLoginPage() {
       router.push("/staff/today");
     } catch (err: any) {
       const apiCode = err?.response?.data?.data?.code;
-      if (apiCode === "EMAIL_OTP_REQUIRED" || apiCode === "EMAIL_OTP_INVALID") {
+      if (apiCode === "OPS_PORTAL_ACCOUNT") {
+        setOpsRedirectHint(true);
+      } else if (apiCode === "EMAIL_OTP_REQUIRED" || apiCode === "EMAIL_OTP_INVALID") {
         setStep("emailOtp");
         setSentTo(err?.response?.data?.data?.sentTo || null);
         if (apiCode === "EMAIL_OTP_INVALID") setCode("");
@@ -115,9 +120,17 @@ export default function StaffLoginPage() {
         )}
 
         {error && (
-          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
-            {error}
-          </p>
+          <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 space-y-2" role="alert">
+            <p>{error}</p>
+            {opsRedirectHint && (
+              <Link
+                href="/ops"
+                className="inline-block font-semibold underline text-bridal-gold-dark hover:opacity-80"
+              >
+                Open Call-Center Portal (/ops) →
+              </Link>
+            )}
+          </div>
         )}
 
         <Button

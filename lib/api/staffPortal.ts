@@ -7,6 +7,7 @@
 import axios from "axios";
 import { BACKEND_URL } from "@/lib/backend-url";
 import { noteLock } from "@/lib/plans/access-store";
+import { isOpsOnly } from "@/lib/ops/ops-role";
 
 const STAFF_TOKEN_KEY = "staff_auth_token";
 
@@ -88,6 +89,12 @@ export const StaffPortalAPI = {
     if (code?.emailOtp) body.emailOtp = code.emailOtp;
     if (code?.totp) body.totp = code.totp;
     const res = await axios.post(`${BACKEND_URL}api/v1/auth/login`, body);
+    const loginUser = res.data?.data?.user;
+    if (isOpsOnly(loginUser)) {
+      const err: any = new Error("This is a Call-Center Ops account. Please sign in via the Ops Portal (/ops).");
+      err.response = { data: { message: err.message, data: { code: "OPS_PORTAL_ACCOUNT" } } };
+      throw err;
+    }
     const token = res.data?.data?.token;
     if (!token) throw new Error("Login failed");
     if (typeof window !== "undefined") localStorage.setItem(STAFF_TOKEN_KEY, token);

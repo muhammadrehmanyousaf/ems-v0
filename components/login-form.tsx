@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Heart, Mail, Lock, Eye, EyeOff, ShieldCheck, Clock } from "lucide-react"
+import { Heart, Mail, Lock, Eye, EyeOff, ShieldCheck, Clock, AlertCircle } from "lucide-react"
 
 import { Phone, KeyRound } from "lucide-react"
 
@@ -28,7 +28,7 @@ import { AuthShell } from "@/components/bridal/auth-shell"
 
 // ── Validation (unchanged) ─────────────────────────────────────────────────
 const formSchema = z.object({
-  email: z.string().email({ message: "Enter a valid email address" }),
+  email: z.string().trim().email({ message: "Enter a valid email address" }),
   // WP34 (SETUP-001): sign-in must accept ANY password an account was ever given.
   // Accounts exist with 6-7 character passwords (the profile screen used to allow
   // them) and a length rule HERE locked them out before the server even looked.
@@ -41,6 +41,7 @@ type FormData = z.infer<typeof formSchema>
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   // WW-172 — second-factor step-up. Revealed only after the backend asks for it
   // (TWO_FACTOR_REQUIRED), so password-only accounts see no change.
   const [twoFactorRequired, setTwoFactorRequired] = useState(false)
@@ -154,9 +155,10 @@ export function LoginForm() {
   const onSubmit = async (data: FormData) => {
     try {
       setIsLoading(true)
+      setSubmitError(null)
 
       const payload: Record<string, string> = {
-        email: data.email,
+        email: data.email.trim(),
         password: data.password,
       }
       // Only attach the code once the 2FA step is showing and the user typed one.
@@ -177,34 +179,14 @@ export function LoginForm() {
         reset()
         setTwoFactorRequired(false)
         setTotp("")
-
-        const isAdmin = user.roles?.some(
-          (role: any) =>
-            role.id === 1 ||
-            role.name?.toLowerCase() === "super admin" ||
-            role.name?.toLowerCase() === "admin"
-        )
-        const isVendor =
-          user.isVendor === true ||
-          user.roles?.some(
-            (role: any) =>
-              role.id === 2 || role.name?.toLowerCase() === "vendor"
-          )
-
-        if (nextPath) {
-          router.push(nextPath)
-        } else if (isOpsOnly(user)) {
-          router.push("/ops")
-        } else if (isAdmin || isVendor) {
-          router.push("/dashboard")
-        } else {
-          router.push("/")
-        }
+        routeAfterLogin(user)
       } else {
+        setSubmitError("Invalid credentials")
         toast({ title: "Login failed", description: "Invalid credentials" })
       }
     } catch (error: any) {
       const code = loginErrorCode(error)
+      const errMsg = loginErrorMessage(error)
       if (code === "EMAIL_OTP_REQUIRED" || code === "EMAIL_OTP_INVALID") {
         // Password was accepted; the account just needs the emailed code.
         // Never a hard "login failed" — that reads as a wrong password and
@@ -212,39 +194,47 @@ export function LoginForm() {
         setEmailOtpRequired(true)
         const sentTo = error?.response?.data?.data?.sentTo
         if (sentTo) setEmailOtpSentTo(sentTo)
-        if (code === "EMAIL_OTP_INVALID") setEmailOtp("")
+        if (code === "EMAIL_OTP_INVALID") {
+          setEmailOtp("")
+          setSubmitError(errMsg)
+        }
         toast({
           title: code === "EMAIL_OTP_INVALID" ? "That code isn't right" : "Check your email",
-          description: loginErrorMessage(error),
+          description: errMsg,
         })
       } else if (code === "TWO_FACTOR_REQUIRED" || code === "TWO_FACTOR_INVALID") {
         // Password was accepted — reveal (or keep) the 2FA step and let them
         // enter the authenticator code. Don't surface it as a hard failure.
         setTwoFactorRequired(true)
-        if (code === "TWO_FACTOR_INVALID") setTotp("")
+        if (code === "TWO_FACTOR_INVALID") {
+          setTotp("")
+          setSubmitError(errMsg)
+        }
         toast({
           title: code === "TWO_FACTOR_INVALID" ? "Incorrect code" : "One more step",
-          description: loginErrorMessage(error),
+          description: errMsg,
         })
       } else if (code === "ACCOUNT_PENDING_APPROVAL") {
         setPendingApproval(true)
-        setApprovalMessage(loginErrorMessage(error))
+        setApprovalMessage(errMsg)
         toast({
           title: "Account under review",
           description: "Our admin team reviews registrations before activating vendor accounts.",
         })
       } else if (code === "ACCOUNT_REJECTED") {
         setPendingApproval(false)
+        setSubmitError(errMsg)
         toast({
           title: "Registration not approved",
-          description: loginErrorMessage(error),
+          description: errMsg,
           variant: "destructive",
         })
       } else {
         setPendingApproval(false)
+        setSubmitError(errMsg)
         toast({
           title: "Login failed",
-          description: loginErrorMessage(error),
+          description: errMsg,
         })
       }
     } finally {
@@ -406,6 +396,16 @@ export function LoginForm() {
             Forgot password?
           </Link>
         </div>
+
+        {submitError && (
+          <div
+            role="alert"
+            className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/90 dark:bg-red-950/40 dark:border-red-900/60 px-3.5 py-2.5 text-sm text-red-800 dark:text-red-200"
+          >
+            <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+            <span>{submitError}</span>
+          </div>
+        )}
 
         <BridalButton
           type="submit"

@@ -112,7 +112,7 @@ export function OpsShell({ children }: { children: React.ReactNode }) {
   }, [me])
   const value = React.useMemo(() => (me ? { me, can } : null), [me, can])
 
-  const signOut = async () => { await logout(); router.replace("/login") }
+  const signOut = async () => { await logout({ redirectTo: "/login?redirect=%2Fops" }) }
   const [search, setSearch] = React.useState("")
   const canWork = !!me && CALLERS.some((p) => me.permissions.includes(p))
   const canSearchVendors = !!me && (canWork || me.permissions.includes("ops_vendor_search"))

@@ -14,6 +14,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { useUser } from "@/context/UserContext";
+import { isOpsOnly } from "@/lib/ops/ops-role";
 import {
   User,
   Settings,
@@ -30,6 +31,7 @@ import {
   Shield,
   DollarSign,
   MessageCircle,
+  Headphones,
 } from "lucide-react";
 
 type AvatarComponent = {
@@ -61,17 +63,20 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
     logout();
   };
 
+  const isOpsAccount = isOpsOnly(displayUser);
+
   const accessRightNow = displayUser
-    ? displayUser.isVendor === true ||
-      displayUser.isSuperAdmin === true ||
-      displayUser.roles?.some(
-        (role: any) =>
-          role.id === 1 ||
-          role.id === 2 ||
-          role.name?.toLowerCase() === "super admin" ||
-          role.name?.toLowerCase() === "vendor" ||
-          role.name?.toLowerCase() === "admin"
-      )
+    ? !isOpsAccount &&
+      (displayUser.isVendor === true ||
+        displayUser.isSuperAdmin === true ||
+        displayUser.roles?.some(
+          (role: any) =>
+            role.id === 1 ||
+            role.id === 2 ||
+            role.name?.toLowerCase() === "super admin" ||
+            role.name?.toLowerCase() === "vendor" ||
+            role.name?.toLowerCase() === "admin"
+        ))
     : false;
 
   /**
@@ -163,6 +168,16 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
         Dashboard
         <ChevronDown className="w-4 h-4 ml-2 group-hover:scale-110 transition-transform duration-200" />
       </Button>
+    ) : isOpsAccount ? (
+      <Button
+        variant="outline"
+        size="sm"
+        className="bg-gradient-to-r from-bridal-gold to-bridal-gold-dark hover:from-bridal-gold-dark hover:to-bridal-gold-dark text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold group"
+      >
+        <Headphones className="w-4 h-4 mr-2 text-white group-hover:scale-110 transition-transform duration-200" />
+        Ops Desk
+        <ChevronDown className="w-4 h-4 ml-2 group-hover:scale-110 transition-transform duration-200" />
+      </Button>
     ) : (
       <Button
         variant="ghost"
@@ -218,6 +233,39 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
           <div>
             <div className="font-semibold">Logout</div>
             <div className="text-xs text-neutral-500">Sign out</div>
+          </div>
+        </DropdownMenuItem>
+      </>
+    ) : isOpsAccount ? (
+      <>
+        <DropdownMenuLabel className="flex items-start gap-3 p-3 border-b border-bridal-beige dark:border-neutral-800">
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold text-bridal-charcoal dark:text-neutral-100 truncate">{displayUser.fullName}</div>
+            <div className="text-xs text-neutral-500 truncate">{displayUser.email}</div>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuItem asChild>
+          <Link href="/ops" className="flex items-center gap-3 w-full cursor-pointer dark:hover:bg-neutral-800">
+            <div className="w-8 h-8 bg-bridal-gold/15 rounded-lg flex items-center justify-center">
+              <Headphones className="w-4 h-4 text-bridal-gold-dark" />
+            </div>
+            <div>
+              <div className="font-semibold text-bridal-charcoal dark:text-neutral-100">Call-Center Portal</div>
+              <div className="text-xs text-neutral-500">Open Ops Desk (/ops)</div>
+            </div>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => logout({ redirectTo: "/login?redirect=%2Fops" })}
+          className="flex items-center gap-3 cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50"
+        >
+          <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+            <LogOut className="w-4 h-4 text-red-600" />
+          </div>
+          <div>
+            <div className="font-semibold">Switch Account / Logout</div>
+            <div className="text-xs text-neutral-500">Sign out and return to login</div>
           </div>
         </DropdownMenuItem>
       </>
