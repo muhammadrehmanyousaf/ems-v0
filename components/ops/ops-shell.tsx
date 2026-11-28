@@ -70,7 +70,7 @@ export const OPS_NAV: NavItem[] = [
   { href: "/ops/prospects", label: "New Vendors List", icon: ListChecks, permission: CALLERS, section: "Vendor team" },
   { href: "/ops/import", label: "Import Excel", icon: FileSpreadsheet, permission: "ops_prospect_import", section: "Vendor team" },
   { href: "/ops/team", label: "Team", icon: UsersRound, permission: ["ops_reports_team", "ops_reports_all"], section: "Managers", badge: "needsReview" },
-  { href: "/ops/reports", label: "Reports", icon: BarChart3, permission: ["ops_reports_team", "ops_reports_all"], section: "Managers" },
+  { href: "/ops/reports", label: "Analytics & Reports", icon: BarChart3, permission: ["ops_reports_team", "ops_reports_all"], section: "Managers" },
   { href: "/ops/quality", label: "Quality Check", icon: ShieldCheck, permission: ["ops_reports_team", "ops_reports_all"], section: "Managers" },
   { href: "/ops/audit", label: "Activity Log", icon: ScrollText, permission: "ops_reports_all", section: "Managers" },
   { href: "/ops/staff", label: "Staff & Teams", icon: Users, permission: "ops_settings", section: "Setup" },
@@ -175,7 +175,13 @@ export function OpsShell({ children }: { children: React.ReactNode }) {
   const current = items.filter(isActive).sort((a, b) => b.href.length - a.href.length)[0]
   const crumb = CRUMB_OVERRIDES.find(([re]) => re.test(pathname))?.[1] ?? current?.label ?? "Page"
   const roleLabel = me.isSuperAdmin ? "Super admin" : me.roles.map((r) => OPS_ROLE_LABEL[r] ?? r).join(", ")
-  const initials = me.user.fullName.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]!.toUpperCase()).join("") || "?"
+  const initials = me.user.fullName
+    .split(/\s+/)
+    .map((p) => p.replace(/^[^A-Za-z0-9]+/, ""))
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]!.toUpperCase())
+    .join("") || "?"
 
   const handleGlobalSearch = (e: React.FormEvent) => {
     e.preventDefault()

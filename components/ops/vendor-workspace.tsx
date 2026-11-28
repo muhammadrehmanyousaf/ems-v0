@@ -13,6 +13,7 @@ import { SheetFields } from "@/components/ops/sheet-form"
 import { Btn, Card, Empty, ErrorState, Field, Input, Modal, Notice, PageHead, Select, SkelRows, Status, Textarea, fmtWhen, useOpsToast } from "@/components/ops/ops-ui"
 import { useOps } from "@/components/ops/ops-shell"
 import { opsErrorMessage } from "@/lib/api/ops"
+import { directoryOpsApi } from "@/lib/api/ops-directory"
 import { opsErrorData, type FieldError, type SheetData } from "@/lib/api/ops-onboarding"
 import { directoryApi, type HistoryRow, type MenuView, type PackageView, type PricingUnit } from "@/lib/api/ops-vendors"
 import { toWaNumber } from "@/lib/ops/whatsapp"
@@ -199,6 +200,9 @@ function DetailsCard({ id }: { id: number }) {
     onSuccess: (r) => {
       setChanged(new Set()); setErrors([]); setVals(null)
       qc.invalidateQueries({ queryKey: key(id) })
+      if (r.changed.includes("vendorType")) {
+        qc.invalidateQueries({ queryKey: [...key(id), "details"] })
+      }
       toast({ title: r.changed.length ? "Saved" : "Nothing changed", body: r.changed.length ? "Every change is recorded with your name." : undefined })
     },
     onError: (e) => {
@@ -233,6 +237,18 @@ export function VendorWorkspaceView({ id }: { id: number }) {
   const toast = useOpsToast()
   const q = useQuery({ queryKey: key(id), queryFn: () => directoryApi.get(id), staleTime: 0, refetchOnWindowFocus: false })
   const [confirmOff, setConfirmOff] = useState(false)
+  const [ownerEmail, setOwnerEmail] = useState("")
+  const [ownerEmailErr, setOwnerEmailErr] = useState<string | null>(null)
+  const saveEmail = useMutation({
+    mutationFn: () => directoryOpsApi.setOwnerEmail(id, ownerEmail.trim()),
+    onSuccess: () => {
+      setOwnerEmail("")
+      setOwnerEmailErr(null)
+      qc.invalidateQueries({ queryKey: key(id) })
+      toast({ title: "Owner login email saved", body: "This vendor account is now claimed." })
+    },
+    onError: (e) => setOwnerEmailErr(opsErrorMessage(e)),
+  })
   const setLive = useMutation({
     mutationFn: (live: boolean) => directoryApi.setLive(id, live),
     onSuccess: (r) => { qc.invalidateQueries({ queryKey: key(id) }); qc.invalidateQueries({ queryKey: ["ops", "directory"] }); setConfirmOff(false); toast({ title: r.live ? "The vendor is live" : "Taken off the site", body: "Recorded with your name." }) },
@@ -260,8 +276,15 @@ export function VendorWorkspaceView({ id }: { id: number }) {
           : <Btn variant="primary" loading={setLive.isPending} disabled={!d.live.canTakeLive} title={d.live.canTakeLive ? undefined : "Fill in what is missing first"} onClick={() => setLive.mutate(true)}>Put live on the site</Btn>) : undefined}
       />
 
-      {!v.live && d.live.gaps.length > 0 && <div style={{ marginBottom: 14 }}><Notice tone="warn">Before this vendor can go live they still need: {d.live.gaps.map((g) => GAP_WORDS[g] ?? g).join(", ")}.{d.live.gaps.includes("image") ? " Photos are added from the call sheet or by the vendor." : ""}</Notice></div>}
-      {!v.live && d.live.gaps.length === 0 && d.live.status !== "approved" && <div style={{ marginBottom: 14 }}><Notice tone="ok">Everything needed is filled in. You can put this vendor live.</Notice></div>}
+      {v.phoneIsPlaceholder && (
+        <div style={{ marginBottom: 14 }}>
+          <Notice tone="warn">
+            <b>Placeholder phone detected (03274811220):</b> This vendor still carries the directory default number. Call or update their real Phone &amp; WhatsApp in <b>Details</b> below so clients and reminders reach the real owner.
+          </Notice>
+        </div>
+      )}
+      {!v.live && d.live.gaps.length > 0 && <div style={{ marginBottom: 14 }}><Notice tone="warn">Before this vendor can go live they still need: {d.live.gaps.map((g) => GAP_WORDS[g] ?? g).join(", ")}.{d.live.gaps.includes("image") ? " Scroll down to Photos & Media to upload photos or send the vendor an upload link." : ""}</Notice></div>}
+      {!v.live && d.live.gaps.length === 0 && !v.live && <div style={{ marginBottom: 14 }}><Notice tone="ok">Everything needed is filled in. You can put this vendor live.</Notice></div>}
 
       <div className="cols-main">
         <div className="stack">
@@ -286,6 +309,16 @@ export function VendorWorkspaceView({ id }: { id: number }) {
             </div>
             <p className="small muted" style={{ margin: "12px 0 0" }}>Call from your own phone, then record what they tell you here.</p>
           </Card>
+          {(v.emailIsPlaceholder || !v.claimed) && canLive && (
+            <Card title="Attach owner login email" sub="Replace the placeholder email so the vendor can receive leads and sign in.">
+              <Field label="Owner email address" htmlFor="vw-owner-email" error={ownerEmailErr}>
+                <Input id="vw-owner-email" type="email" value={ownerEmail} onChange={(e) => { setOwnerEmail(e.target.value); setOwnerEmailErr(null) }} placeholder="owner@venue.pk" />
+              </Field>
+              <div style={{ marginTop: 10 }}>
+                <Btn size="sm" variant="primary" loading={saveEmail.isPending} disabled={!ownerEmail.trim()} onClick={() => saveEmail.mutate()}>Save login email</Btn>
+              </div>
+            </Card>
+          )}
           <Card title="What changed" sub="Every edit, with who made it.">
             {d.history.length === 0 ? <Empty title="No changes yet">Edits made from the portal appear here.</Empty> : d.history.map((h) => (
               <div key={String(h.id)} style={{ padding: "8px 0", borderBottom: "1px solid var(--border)" }}>

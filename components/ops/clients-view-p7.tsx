@@ -41,6 +41,7 @@ interface ClientRowItem {
   availableCount?: number
   bookingsCount: number
   nextEventDate: string | null
+  venueNames?: string | null
   assigneeName: string | null
   assignmentStage: string | null
 }
@@ -358,6 +359,11 @@ export function ClientsViewP7() {
                           <div className="td-sub">
                             {phoneText}{r.bookingsCount > 0 ? ` · ${r.bookingsCount} booking${r.bookingsCount === 1 ? "" : "s"}` : ""}
                           </div>
+                          {r.venueNames && (
+                            <div className="td-sub" style={{ color: "var(--accent-ink)", marginTop: 2 }}>
+                              Venue: {r.venueNames}
+                            </div>
+                          )}
                         </td>
                         <td className="td-mut">
                           <div>{[r.cityName, r.guests ? `${r.guests} guests` : null].filter(Boolean).join(" · ") || "—"}</div>

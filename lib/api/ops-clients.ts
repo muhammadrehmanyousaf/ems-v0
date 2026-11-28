@@ -31,7 +31,7 @@ export interface ClientRow {
   firstResponseDueAt: string | null; firstResponseAt: string | null; lastContactAt: string | null; createdAt: string; overdue: boolean
   visitAt?: string | null; visitBusinessId?: number | null; visitVenueName?: string | null; visitNote?: string | null; bookingId?: number | null
   inquiries: number; shortlisted: number; availableCount?: number; bookingsCount?: number
-  nextEventDate: string | null; assigneeName: string | null; assignmentStage: AssignmentStage | null
+  nextEventDate: string | null; venueNames?: string | null; assigneeName: string | null; assignmentStage: AssignmentStage | null
 }
 export interface ClientFull extends ClientRow { requirements: string | null; notes: string | null; statusReason: string | null; cityId: number | null }
 export interface ClientEventRow { id: number; kind: ClientEventKind; eventDate: string | null; guests: number | null; budgetPkr: string | null; notes: string | null }

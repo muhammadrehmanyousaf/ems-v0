@@ -4,10 +4,12 @@
 // Loads immediately (no 2-char wait), adds City/Source/Needs/Live/Sort filters, shows photos/packages/bookings/leads signals, and supports queuing any vendor to call.
 import { useState } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowRight, PhoneCall, Search, Store } from "lucide-react"
+import { ArrowRight, PhoneCall, Plus, Search, Store } from "lucide-react"
 
 import { useOps } from "@/components/ops/ops-shell"
+import { AddProspectModal } from "@/components/ops/prospects-view"
 import { Btn, Card, Empty, ErrorState, PageHead, SkelRows, Status, fmtNum, useOpsToast } from "@/components/ops/ops-ui"
 import { opsApi, opsErrorMessage } from "@/lib/api/ops"
 import { directoryOpsApi, type DirectorySearchParams } from "@/lib/api/ops-directory"
@@ -15,17 +17,19 @@ import { VENDOR_TYPES } from "@/lib/vendor-types"
 
 export function VendorFinderP7() {
   const { can } = useOps()
+  const sp = useSearchParams()
   const qc = useQueryClient()
   const toast = useOpsToast()
 
-  const [q, setQ] = useState("")
-  const [type, setType] = useState("")
-  const [city, setCity] = useState("")
-  const [source, setSource] = useState("")
-  const [needs, setNeeds] = useState("")
-  const [live, setLive] = useState<"" | "true" | "false">("")
-  const [sort, setSort] = useState<NonNullable<DirectorySearchParams["sort"]>>("completeness_asc")
+  const [q, setQ] = useState(sp?.get("q") ?? "")
+  const [type, setType] = useState(sp?.get("type") ?? "")
+  const [city, setCity] = useState(sp?.get("city") ?? "")
+  const [source, setSource] = useState(sp?.get("source") ?? "")
+  const [needs, setNeeds] = useState(sp?.get("needs") ?? "")
+  const [live, setLive] = useState<"" | "live" | "notlive" | "true" | "false">((sp?.get("live") as "" | "live" | "notlive" | "true" | "false") ?? "")
+  const [sort, setSort] = useState<NonNullable<DirectorySearchParams["sort"]>>((sp?.get("sort") as NonNullable<DirectorySearchParams["sort"]>) || "completeness_asc")
   const [page, setPage] = useState(1)
+  const [adding, setAdding] = useState(false)
 
   const citiesQ = useQuery({ queryKey: ["ops", "cities"], queryFn: opsApi.cities, staleTime: 60_000 })
 
@@ -65,8 +69,17 @@ export function VendorFinderP7() {
     <>
       <PageHead
         title="Vendors directory"
-        sub="Browse all Wedding Wala businesses, inspect missing photos/packages, view bookings & inquiries, and queue calls."
-        actions={can("ops_prospect_call") ? <Link href="/ops/call" className="btn btn-ghost"><PhoneCall aria-hidden size={15} />Call queue</Link> : undefined}
+        sub="Browse all Wedding Wala businesses, inspect missing photos/packages/phones, and register or update any vendor."
+        actions={
+          <div className="row" style={{ gap: 8 }}>
+            {can(["ops_prospect_import", "ops_prospect_call"]) && (
+              <Btn variant="primary" icon={<Plus aria-hidden />} onClick={() => setAdding(true)}>
+                Add / Register Vendor
+              </Btn>
+            )}
+            {can("ops_prospect_call") && <Link href="/ops/call" className="btn btn-ghost"><PhoneCall aria-hidden size={15} />Call queue</Link>}
+          </div>
+        }
       />
 
       <Card flush>
@@ -94,29 +107,32 @@ export function VendorFinderP7() {
           <select className="fsel" value={source} onChange={(e) => { setSource(e.target.value); setPage(1) }} aria-label="Filter by source">
             <option value="">All sources</option>
             <option value="registered">Registered vendors</option>
-            <option value="ops">Ops onboarded</option>
-            <option value="import">Directory imports</option>
+            <option value="portal">Ops onboarded</option>
+            <option value="imported">Directory imports</option>
           </select>
 
           <select className="fsel" value={needs} onChange={(e) => { setNeeds(e.target.value); setPage(1) }} aria-label="Filter by missing data">
             <option value="">Any profile health</option>
+            <option value="placeholder_phone">Placeholder phone (03274811220)</option>
+            <option value="no_subarea">Missing area / sub-area</option>
             <option value="no_photos">Needs photos</option>
+            <option value="no_price">Missing price / packages / menus</option>
             <option value="no_packages">Needs packages &amp; menus</option>
-            <option value="low_score">Score below 60%</option>
+            <option value="low_completeness">Score below 60%</option>
           </select>
 
-          <select className="fsel" value={live} onChange={(e) => { setLive(e.target.value as "" | "true" | "false"); setPage(1) }} aria-label="Filter by live state">
+          <select className="fsel" value={live} onChange={(e) => { setLive(e.target.value as "" | "live" | "notlive" | "true" | "false"); setPage(1) }} aria-label="Filter by live state">
             <option value="">Live &amp; Draft</option>
-            <option value="true">Live only</option>
-            <option value="false">Draft / Off</option>
+            <option value="live">Live only</option>
+            <option value="notlive">Draft / Off</option>
           </select>
 
           <select className="fsel" value={sort} onChange={(e) => { setSort(e.target.value as NonNullable<DirectorySearchParams["sort"]>); setPage(1) }} aria-label="Sort vendors">
             <option value="completeness_asc">Needs work first</option>
             <option value="completeness_desc">Most complete</option>
-            <option value="bookings">Most bookings</option>
+            <option value="bookings_desc">Most bookings</option>
             <option value="leads">Most leads</option>
-            <option value="newest">Newest</option>
+            <option value="recent">Newest</option>
           </select>
         </div>
 
@@ -148,11 +164,14 @@ export function VendorFinderP7() {
                         {v.name}
                       </Link>
                       <div className="td-sub">
-                        {[v.vendorType, v.ownerName, v.source === "import" ? "Import" : v.source === "ops" ? "Ops" : "Direct"].filter(Boolean).join(" · ")}
+                        {[v.vendorType, v.ownerName, v.source === "imported" ? "Import" : v.source === "portal" ? "Ops" : "Direct"].filter(Boolean).join(" · ")}
                       </div>
                     </td>
                     <td className="td-mut">{[v.city, v.subArea].filter(Boolean).join(", ") || "—"}</td>
-                    <td className="nw num td-mut">{v.phone || "—"}</td>
+                    <td className="nw num td-mut">
+                      <div>{v.phone || "—"}</div>
+                      {v.phoneIsPlaceholder && <Status tone="warn">Placeholder phone</Status>}
+                    </td>
                     <td>
                       <div className="row" style={{ gap: 6 }}>
                         <Status tone={(v.completenessScore ?? 0) >= 75 ? "ok" : (v.completenessScore ?? 0) >= 45 ? "warn" : "bad"}>
@@ -199,6 +218,7 @@ export function VendorFinderP7() {
           </div>
         )}
       </Card>
+      <AddProspectModal open={adding} onClose={() => setAdding(false)} />
     </>
   )
 }

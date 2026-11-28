@@ -2,11 +2,13 @@
 
 // Plain-English Home Dashboard for Team A (Vendor Team) & Team B (Client Team).
 // Shows exact daily priorities, Client <-> Vendor handoff replies, site visits, and active bookings.
+import { useState } from "react"
 import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowRight, CalendarCheck2, CheckCircle2, ClipboardCheck, Contact, Headphones, MapPin, PhoneCall, RefreshCw, Sparkles, Store } from "lucide-react"
+import { ArrowRight, BarChart3, CalendarCheck2, CheckCircle2, ClipboardCheck, Contact, Headphones, MapPin, PhoneCall, Plus, RefreshCw, ShieldCheck, Sparkles, Store } from "lucide-react"
 
 import { useOps } from "@/components/ops/ops-shell"
+import { AddProspectModal } from "@/components/ops/prospects-view"
 import { Btn, Card, Empty, ErrorState, PageHead, SkelRows, Status, fmtDay, fmtNum, fmtWhen, fromNow, useOpsToast } from "@/components/ops/ops-ui"
 import { opsApi, opsErrorMessage } from "@/lib/api/ops"
 import { opsBookingsApi } from "@/lib/api/ops-bookings"
@@ -26,6 +28,7 @@ export function HomeViewP7() {
   const { me, can } = useOps()
   const qc = useQueryClient()
   const toast = useOpsToast()
+  const [addingVendor, setAddingVendor] = useState(false)
 
   const summaryQ = useQuery({
     queryKey: ["ops", "home-summary"],
@@ -76,15 +79,33 @@ export function HomeViewP7() {
         }
         actions={
           <div className="row">
+            {can("ops_reports_all") && <Link href="/ops/reports" className="btn btn-primary"><BarChart3 aria-hidden size={15} />Analytics Control Tower</Link>}
+            {can(["ops_prospect_import", "ops_prospect_call"]) && <Btn icon={<Plus aria-hidden size={15} />} onClick={() => setAddingVendor(true)}>Register New Vendor</Btn>}
             {can("ops_vendor_search") && !can("ops_listing_edit_on_behalf") && (
               <Link href="/ops/vendors" className="btn btn-ghost"><Store aria-hidden size={15} />Check Vendors</Link>
             )}
             {can("ops_listing_edit_on_behalf") && <Link href="/ops/find" className="btn btn-ghost"><Store aria-hidden size={15} />All Vendors</Link>}
             {data?.canSeeBookings && <Link href="/ops/bookings" className="btn btn-ghost"><CalendarCheck2 aria-hidden size={15} />Bookings</Link>}
-            {primaryAction}
+            {!can("ops_reports_all") && primaryAction}
           </div>
         }
       />
+
+      {can("ops_reports_all") && (
+        <div className="card" style={{ padding: 14, marginBottom: 14, background: "var(--accent-wash)", borderColor: "var(--accent-line)" }}>
+          <div className="row between" style={{ gap: 12 }}>
+            <div>
+              <div className="td-name">Manager Command View — Track Both Teams &amp; Platform Health</div>
+              <div className="small muted">Monitor every call, couple SLA, handover speed, GMV revenue, city/sub-area gap, and data-quality hygiene.</div>
+            </div>
+            <div className="row" style={{ gap: 8 }}>
+              <Link href="/ops/reports" className="btn btn-primary sm"><BarChart3 size={14} aria-hidden />Executive Analytics</Link>
+              <Link href="/ops/quality" className="btn btn-ghost sm"><ShieldCheck size={14} aria-hidden />QA &amp; Consent</Link>
+              <Link href="/ops/find?needs=placeholder_phone" className="btn btn-ghost sm">Fix Placeholder Phones</Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {summaryQ.isLoading ? (
         <div className="stack"><SkelRows rows={6} /></div>
@@ -262,6 +283,16 @@ export function HomeViewP7() {
 
               <Card title="Quick Shortcuts" sub="Daily vendor tools.">
                 <div className="stack" style={{ gap: 10 }}>
+                  {can(["ops_prospect_import", "ops_prospect_call"]) && (
+                    <button type="button" onClick={() => setAddingVendor(true)} className="list-row click" style={{ border: "1px solid var(--accent-line)", background: "var(--accent-wash)", borderRadius: 10, textAlign: "left", width: "100%" }}>
+                      <Plus size={18} style={{ color: "var(--accent)" }} aria-hidden />
+                      <div className="grow">
+                        <div className="td-name">Register a new vendor while calling</div>
+                        <div className="small muted">Talking to a new hall or vendor? Enter details &amp; open their call sheet in 1 click.</div>
+                      </div>
+                      <ArrowRight size={15} aria-hidden />
+                    </button>
+                  )}
                   <Link href="/ops/call" className="list-row click" style={{ border: "1px solid var(--border)", borderRadius: 10 }}>
                     <Headphones size={18} style={{ color: "var(--accent)" }} aria-hidden />
                     <div className="grow">
@@ -363,6 +394,7 @@ export function HomeViewP7() {
           </div>
         </div>
       )}
+      <AddProspectModal open={addingVendor} onClose={() => setAddingVendor(false)} />
     </>
   )
 }

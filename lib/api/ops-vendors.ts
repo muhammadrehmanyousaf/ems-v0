@@ -12,6 +12,7 @@ const BASE = "/api/v1/ops/directory"
 export type VendorSource = "registered" | "imported" | "portal"
 export interface VendorRow {
   id: number; name: string; vendorType: string | null; city: string | null; subArea: string | null; ownerName: string | null; phone: string | null
+  phoneIsPlaceholder?: boolean
   live: boolean; status: string; source: VendorSource; packages: number; menus: number; minimumPrice: number | null; maxCapacity: number | null; completenessScore: number | null
 }
 export interface ProspectHit { id: number; name: string; vendorType: string | null; city: string | null; area: string | null; status: string; phone: string | null }
@@ -23,7 +24,7 @@ export interface PackageView { id: number; name: string; description: string; pr
 export interface MenuView { id: number; title: string; price: number | null; pricingUnit: PricingUnit; minGuaranteeCount: number | null; items: string[] }
 export interface HistoryRow { id: number | string; at: string; action: string; actorName: string | null; before: unknown; after: unknown }
 export interface VendorPage {
-  vendor: VendorRow & { slug: string | null; images: number; email: string | null; claimed: boolean }
+  vendor: VendorRow & { slug: string | null; images: number; email: string | null; emailIsPlaceholder?: boolean; claimed: boolean }
   live: { live: boolean; canTakeLive: boolean; gaps: string[]; status: string }
   packages: PackageView[]
   menus: MenuView[]

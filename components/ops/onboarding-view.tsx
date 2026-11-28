@@ -243,9 +243,14 @@ export function OnboardingView({ prospectId }: { prospectId: number }) {
               </div>
             )}
             <div style={{ marginTop: 16, display: "grid", gap: 8 }}>
+              {errors.length > 0 && (
+                <p className="hint" style={{ fontSize: 12, color: "var(--bad)" }}>
+                  Fix {errors.length} highlighted field{errors.length === 1 ? "" : "s"} first before continuing.
+                </p>
+              )}
               {matched
-                ? <Btn variant="primary" loading={take.isPending} disabled={!canTake || busy || takeoverMissing.length > 0} onClick={() => { setBlocker(null); take.mutate() }}>Take over this listing</Btn>
-                : <Btn variant="primary" loading={create.isPending} disabled={!canCreate || busy || !ready} onClick={() => { setBlocker(null); create.mutate() }}>Create listing</Btn>}
+                ? <Btn variant="primary" loading={take.isPending} disabled={!canTake || busy || takeoverMissing.length > 0 || errors.length > 0 || saveState === "error"} onClick={() => { setBlocker(null); take.mutate() }}>Take over this listing</Btn>
+                : <Btn variant="primary" loading={create.isPending} disabled={!canCreate || busy || !ready || errors.length > 0 || saveState === "error"} onClick={() => { setBlocker(null); create.mutate() }}>Create listing</Btn>}
               {!matched && !ready ? <span className="hint" style={{ fontSize: 11.5, color: "var(--ink-3)" }}>The button wakes up when the required answers are in.</span> : null}
             </div>
           </Card>

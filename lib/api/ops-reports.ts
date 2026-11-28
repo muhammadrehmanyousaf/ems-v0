@@ -121,9 +121,62 @@ export interface GeoReport {
   bySubArea: GeoSubAreaRow[]
 }
 
+export interface ExecutiveKpiStat { current: number; previous: number; deltaPct: number | null }
+export interface ExecutiveCategoryRow {
+  vendorType: string; total: number; live: number; livePct: number | null
+  realPhones: number; realPhonesPct: number | null; withSubArea: number; withPhotos: number; withPricing: number
+  avgCompleteness: number | null; inquiriesInRange: number
+}
+export interface ExecutiveDailyRow {
+  day: string; prospectsAdded: number; calls: number; connected: number; onboarded: number
+  clientsReceived: number; clientsBooked: number; bookings: number; gmvPkr: number
+}
+export interface ExecutiveTopVendor {
+  id: number; name: string; city: string | null; subArea: string | null; vendorType: string | null
+  live: boolean; completenessScore: number; leadsCount: number; shortlistsCount: number; bookingsCount: number; revenuePkr: number
+}
+export interface ExecutiveTeamAAgent extends TeamAAgent {
+  handoversReceived: number; handoversDone: number; handoversOpen: number; handoversOverdue: number
+  medianHandoverHours: number | null; venuesChecked: number; venuesAvailable: number
+}
+export interface ExecutiveReport {
+  range: { from: string; to: string; days: number }
+  scope: { all: boolean; teamIds: number[] | null; cityId: number | null }
+  filters: { cityId: number | null; city: string | null; vendorType: string | null }
+  kpis: {
+    prospectsAdded: ExecutiveKpiStat; vendorCalls: ExecutiveKpiStat; vendorConnected: ExecutiveKpiStat; vendorsOnboarded: ExecutiveKpiStat
+    clientsReceived: ExecutiveKpiStat; clientsResponded: ExecutiveKpiStat; clientsBooked: ExecutiveKpiStat
+    bookingsCreated: ExecutiveKpiStat; bookingsConfirmed: ExecutiveKpiStat; confirmedGmvPkr: ExecutiveKpiStat
+  }
+  prospectPool: { totalPool: number; neverCalled: number; inProgress: number; interested: number; onboarding: number; live: number; closedOut: number; needsLeadReview: number }
+  catalogHealth: {
+    total: number; live: number; notLive: number; livePct: number | null
+    byStatus: { approved: number; submitted: number; pendingReview: number; draft: number; suspended: number }
+    bySource: { registered: number; imported: number; portal: number }
+    gaps: { placeholderPhones: number; realPhonesPct: number | null; missingSubArea: number; withSubAreaPct: number | null; missingPhotos: number; withPhotosPct: number | null; missingPricing: number; withPricingPct: number | null; missingCapacity: number; totalVenues: number; lowCompleteness: number; avgCompleteness: number | null }
+    byCategory: ExecutiveCategoryRow[]
+  }
+  bookings: {
+    total: number; confirmed: number; pending: number; awaitingPayment: number; completed: number; cancelled: number; online: number; offline: number
+    confirmedGmvPkr: number; pipelineGmvPkr: number; downPaymentCollectedPkr: number; advanceDuePkr: number
+    byStage: { stage: string; n: number; amountPkr: number }[]
+    byStatus: { status: string; n: number; amountPkr: number }[]
+  }
+  daily: ExecutiveDailyRow[]
+  topVendors: ExecutiveTopVendor[]
+  alerts: {
+    overdueFirstReplies: number; overdueHandovers: number; overdueVendorCallbacks: number
+    bookingsNeedsAction: number; bookingsIssue: number; upcomingVisits48h: number
+    qaPendingOrFlagged: number; withdrawnConsents: number
+  }
+  teamA: Omit<TeamAReport, "agents"> & { agents: ExecutiveTeamAAgent[] }
+  teamB: TeamBReport
+}
+
 export const opsReportsApi = {
   overview: (query: ReportQuery) => unwrap<Report>(api.get(`${BASE}/reports/overview`, { params: query })),
   geo: (query: GeoQuery) => unwrap<GeoReport>(api.get(`${BASE}/reports/geo`, { params: query })),
+  executive: (query: ReportQuery & { city?: string; vendorType?: string }) => unwrap<ExecutiveReport>(api.get(`${BASE}/reports/executive`, { params: query })),
   qa: (params: { view?: QaView; page?: number; pageSize?: number }) => unwrap<QaList>(api.get(`${BASE}/qa`, { params })),
   reviewQa: (businessId: number, body: { result: "passed" | "flagged"; note?: string }) => unwrap<{ businessId: number; qaStatus: QaStatus }>(api.post(`${BASE}/qa/${businessId}/review`, body)),
   consentQueue: (params: { kind?: ConsentQueueKind; page?: number; pageSize?: number }) => unwrap<ConsentQueue>(api.get(`${BASE}/queues/consent`, { params })),
@@ -148,6 +201,18 @@ export const opsReportsApi = {
     const cd = String(res.headers?.["content-disposition"] ?? "")
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi" }).format(new Date())
     const name = /filename="([^"]+)"/.exec(cd)?.[1] ?? `geo-report-${today}.csv`
+    const url = URL.createObjectURL(res.data as Blob)
+    const a = document.createElement("a")
+    a.href = url; a.download = name
+    document.body.appendChild(a); a.click(); a.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 5000)
+  },
+  async downloadExecutive(query: ReportQuery & { city?: string; vendorType?: string }): Promise<void> {
+    let res
+    try { res = await api.get(`${BASE}/reports/executive/export`, { params: query, responseType: "blob" }) } catch (e) { throw await blobError(e) }
+    const cd = String(res.headers?.["content-disposition"] ?? "")
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi" }).format(new Date())
+    const name = /filename="([^"]+)"/.exec(cd)?.[1] ?? `executive-analytics-${today}.csv`
     const url = URL.createObjectURL(res.data as Blob)
     const a = document.createElement("a")
     a.href = url; a.download = name

@@ -190,6 +190,17 @@ export const OPS_CSS = String.raw`
 .oshell .spark .sp{ flex:1; min-width:0; display:flex; align-items:flex-end; height:100%; }
 .oshell .spark .sp i{ display:block; width:100%; border-radius:4px 4px 0 0; background:var(--accent); min-height:3px; }
 .oshell .spark-l{ display:flex; justify-content:space-between; font-size:11px; color:var(--ink-3); margin-top:6px; }
+.oshell .delta{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; padding:1px 6px; border-radius:99px; margin-left:6px; vertical-align:middle; }
+.oshell .delta.up{ background:var(--ok-wash); color:var(--ok); }
+.oshell .delta.down{ background:var(--bad-wash); color:var(--bad); }
+.oshell .delta.flat{ background:var(--surface-3); color:var(--ink-3); }
+.oshell .alert-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(165px,1fr)); gap:10px; }
+.oshell .alert-tile{ display:grid; gap:3px; padding:11px 13px; border-radius:var(--r-sm); border:1px solid var(--border); background:var(--surface); transition:border-color .12s,background .12s; }
+.oshell .alert-tile:hover{ border-color:var(--border-2); background:var(--surface-2); }
+.oshell .alert-tile.warn{ border-color:color-mix(in srgb,var(--warn) 35%,var(--border)); background:var(--warn-wash); }
+.oshell .alert-tile.bad{ border-color:color-mix(in srgb,var(--bad) 40%,var(--border)); background:var(--bad-wash); }
+.oshell .health-meter{ height:9px; border-radius:99px; background:var(--surface-3); overflow:hidden; margin-top:6px; }
+.oshell .health-meter i{ display:block; height:100%; border-radius:99px; transition:width .25s ease; }
 .oshell .audit-json{ margin:6px 0 0; padding:10px 12px; border-radius:var(--r-xs); background:var(--surface-3); border:1px solid var(--border); font:11.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre-wrap; word-break:break-word; max-width:560px; max-height:220px; overflow:auto; }
 .oshell details.how summary{ cursor:pointer; font-weight:600; font-size:12.5px; } .oshell details.how ul{ margin:10px 0 0; padding-left:18px; color:var(--ink-2); font-size:12.5px; display:grid; gap:6px; }
 

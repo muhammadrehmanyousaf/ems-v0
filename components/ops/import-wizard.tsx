@@ -6,7 +6,7 @@
 import Link from "next/link"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { AlertTriangle, FileSpreadsheet, Upload } from "lucide-react"
+import { AlertTriangle, Download, FileSpreadsheet, Upload } from "lucide-react"
 
 import { useOps } from "@/components/ops/ops-shell"
 import { Btn, Card, Empty, ErrorState, Field, Kpi, Notice, PageHead, Select, SkelRows, Status, TabBar, fmtWhen, useOpsToast, type Tone } from "@/components/ops/ops-ui"
@@ -55,6 +55,114 @@ const REASON: Record<string, string> = {
 type Parsed = { fileName: string; headers: string[]; rows: string[][]; sheets: string[]; sheet: string }
 type Step = "setup" | "map" | "review" | "done"
 type PreviewOk = Extract<Awaited<ReturnType<typeof importsApi.preview>>, { needsMapping: false }>
+
+const DEMO_HEADERS = [
+  "Business Name",
+  "Phone",
+  "Category",
+  "City",
+  "Area",
+  "WhatsApp",
+  "Phone 2",
+  "Contact Person",
+  "Address",
+  "Email",
+  "Google Maps Link",
+  "Website",
+  "Notes",
+]
+
+const DEMO_SAMPLE_ROWS: string[][] = [
+  [
+    "Royal Garden Marquee",
+    "03001234567",
+    "Wedding venue",
+    "Lahore",
+    "Gulberg III",
+    "03001234567",
+    "04235761234",
+    "Haji Tariq Mehmood",
+    "Plot 45 Main Boulevard Gulberg III, Lahore",
+    "info@royalgarden.pk",
+    "https://maps.google.com/?q=Royal+Garden+Marquee+Lahore",
+    "https://royalgarden.pk",
+    "Dual banquet halls up to 700 guests",
+  ],
+  [
+    "Noor Bridal Salon & Studio",
+    "03219876543",
+    "Makeup artist",
+    "Karachi",
+    "DHA Phase 6",
+    "03219876543",
+    "",
+    "Sana Salman",
+    "Lane 4 Bukhari Commercial, DHA Phase 6, Karachi",
+    "",
+    "",
+    "https://instagram.com/noorbridalstudio",
+    "Bridal + party makeup packages",
+  ],
+  [
+    "Zaiqa Royale Catering",
+    "03335554433",
+    "Catering",
+    "Islamabad",
+    "F-10 Markaz",
+    "03335554433",
+    "",
+    "Usman Khalid",
+    "Street 12 F-10 Markaz, Islamabad",
+    "orders@zaiqaroyale.pk",
+    "",
+    "",
+    "Specialists in Mutton Qorma & live BBQ",
+  ],
+  [
+    "ClickCraft Wedding Films",
+    "03457778899",
+    "Photographer",
+    "Rawalpindi",
+    "Bahria Town Phase 7",
+    "03457778899",
+    "",
+    "Bilal Ahmed",
+    "Civic Center Bahria Town Phase 7",
+    "",
+    "",
+    "",
+    "Full drone & cinema wedding shoots",
+  ],
+]
+
+async function downloadDemoFile(format: "xlsx" | "csv") {
+  const XLSX = await import("xlsx")
+  const aoa = [DEMO_HEADERS, ...DEMO_SAMPLE_ROWS]
+  if (format === "csv") {
+    const csv = aoa.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\r\n")
+    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "wedding-wala-vendors-demo-template.csv"
+    document.body.appendChild(a); a.click(); a.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 4000)
+    return
+  }
+  const ws = XLSX.utils.aoa_to_sheet(aoa)
+  // Format Phone, WhatsApp & Phone 2 columns strictly as text so Excel never strips leading zeros or prints 3.00E+09
+  const textCols = [1, 5, 6]
+  for (let r = 1; r <= DEMO_SAMPLE_ROWS.length; r++) {
+    for (const c of textCols) {
+      const ref = XLSX.utils.encode_cell({ r, c })
+      if (ws[ref]) { ws[ref].t = "s"; ws[ref].z = "@" }
+    }
+  }
+  ws["!cols"] = DEMO_HEADERS.map((h) => ({ wch: Math.max(16, h.length + 4) }))
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, "Vendors")
+  XLSX.writeFile(wb, "wedding-wala-vendors-demo-template.xlsx")
+}
 
 async function readSheet(file: File, sheetName?: string): Promise<Parsed> {
   const XLSX = await import("xlsx")
@@ -179,6 +287,59 @@ export function ImportWizard() {
         </label>
 
         <Notice tone="info"><b>Tip for phone numbers:</b> before saving from Excel, format the phone column as <b>Text</b>. Otherwise Excel turns long numbers into 3.0E+09 and drops the leading zero, and those digits cannot be recovered. Rows like that are held back, never guessed.</Notice>
+
+        <div className="card" style={{ padding: 14, background: "var(--surface-2)" }}>
+          <div className="row between" style={{ gap: 12, marginBottom: 10 }}>
+            <div>
+              <div className="td-name">Need the right spreadsheet format?</div>
+              <div className="small muted">Download a ready demo file with sample Pakistani vendor rows and phone columns already locked as Text.</div>
+            </div>
+            <div className="row" style={{ gap: 8 }}>
+              <Btn size="sm" variant="primary" icon={<Download size={14} aria-hidden />} onClick={() => void downloadDemoFile("xlsx")}>
+                Download Demo Excel (.xlsx)
+              </Btn>
+              <Btn size="sm" icon={<Download size={14} aria-hidden />} onClick={() => void downloadDemoFile("csv")}>
+                Download Demo CSV
+              </Btn>
+            </div>
+          </div>
+          <details>
+            <summary className="small strong" style={{ cursor: "pointer", color: "var(--accent-ink)" }}>
+              View exact columns &amp; sample record format (2 required, 11 optional)
+            </summary>
+            <div className="tbl-wrap" style={{ marginTop: 10 }}>
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th>Business Name *</th>
+                    <th>Phone *</th>
+                    <th>Category</th>
+                    <th>City</th>
+                    <th>Area</th>
+                    <th>WhatsApp</th>
+                    <th>Contact Person</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {DEMO_SAMPLE_ROWS.slice(0, 2).map((row) => (
+                    <tr key={row[1]}>
+                      <td className="td-name">{row[0]}</td>
+                      <td className="nw num">{row[1]}</td>
+                      <td>{row[2]}</td>
+                      <td>{row[3]}</td>
+                      <td>{row[4]}</td>
+                      <td className="nw num">{row[5]}</td>
+                      <td>{row[7]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="small muted" style={{ marginTop: 8 }}>
+              Optional columns also supported automatically: <code>Phone 2</code>, <code>Address</code>, <code>Email</code>, <code>Google Maps Link</code>, <code>Website</code>, and <code>Notes</code>.
+            </p>
+          </details>
+        </div>
       </div>
     </Card>
   )

@@ -65,9 +65,9 @@ export const prospectsApi = {
   facets: (): Promise<ProspectFacets> => unwrap(api.get(`${BASE}/prospects/facets`)),
   get: (id: number): Promise<ProspectDetail> => unwrap(api.get(`${BASE}/prospects/${id}`)),
   create: (body: {
-    name: string; phone: string; vendorType?: string; city?: string; area?: string; address?: string; email?: string; website?: string; mapsUrl?: string
-    contactPerson?: string; notes?: string; teamId?: number; sourceType?: string; assignToMe?: boolean
-  }): Promise<{ prospect: ProspectFull }> => unwrap(api.post(`${BASE}/prospects`, body)),
+    name: string; phone: string; whatsapp?: string; vendorType?: string; city?: string; area?: string; address?: string; email?: string; website?: string; mapsUrl?: string
+    contactPerson?: string; notes?: string; teamId?: number; sourceType?: string; assignToMe?: boolean; startOnboarding?: boolean
+  }): Promise<{ prospect: ProspectFull; matchedBusinessId?: number | null }> => unwrap(api.post(`${BASE}/prospects`, body)),
   update: (id: number, body: Record<string, unknown>): Promise<{ prospect: ProspectFull }> => unwrap(api.patch(`${BASE}/prospects/${id}`, body)),
   next: (body?: { excludeId?: number; vendorType?: string; cityId?: number }): Promise<{ empty: boolean; id?: number; resumed?: boolean; leaseMinutes?: number; scheduledLater?: number; needsReview?: number }> =>
     unwrap(api.post(`${BASE}/prospects/next`, body ?? {})),

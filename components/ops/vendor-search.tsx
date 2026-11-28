@@ -113,7 +113,7 @@ export function VendorSearchPanel({
   const [picked, setPicked] = useState<number[]>([])
   const [comparing, setComparing] = useState(false)
   const [briefId, setBriefId] = useState<number | null>(null)
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(false)
   const [debounced, setDebounced] = useState(f)
 
   useEffect(() => {
@@ -240,51 +240,53 @@ export function VendorSearchPanel({
       <Card
         title="Search Vendors & Venues"
         sub={clientName ? `Pick venues for ${clientName}` : "Type any name (e.g. Royal Palace) while talking to the client, then click Full Details to read packages, menus, and photos."}
-        actions={<><Btn size="sm" icon={<SlidersHorizontal aria-hidden />} onClick={() => setOpen((o) => !o)}>{open ? "Hide filters" : "Show filters"}</Btn><Btn size="sm" variant="link" onClick={reset}>Reset</Btn></>}
+        actions={<><Btn size="sm" icon={<SlidersHorizontal aria-hidden />} onClick={() => setOpen((o) => !o)}>{open ? "Fewer filters" : "More filters (Capacity, Facilities, Price)"}</Btn><Btn size="sm" variant="link" onClick={reset}>Reset</Btn></>}
       >
-        {open ? (
-          <div style={{ display: "grid", gap: 12 }}>
-            <div className="grid3">
-              <Field label="Vendor / Hall Name" htmlFor="vs-q"><Input id="vs-q" value={f.q} onChange={set("q")} placeholder="Type name, e.g. Royal Palace..." autoComplete="off" /></Field>
-              <Field label="City" htmlFor="vs-city"><Select id="vs-city" value={f.city} onChange={set("city")}><option value="">All cities</option>{(cities.data?.cities ?? []).map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}</Select></Field>
-              <Field label="Area" htmlFor="vs-area"><Input id="vs-area" value={f.area} onChange={set("area")} placeholder="Gulberg, DHA..." autoComplete="off" /></Field>
-            </div>
-            <div className="grid3">
-              <Field label="Type of Business" htmlFor="vs-type"><Select id="vs-type" value={f.vendorType} onChange={set("vendorType")}><option value="">All types</option>{Object.values(VENDOR_TYPES).map((t) => <option key={t} value={t}>{t}</option>)}</Select></Field>
-              <Field label="Number of Guests" htmlFor="vs-guests"><Input id="vs-guests" inputMode="numeric" value={f.guests} onChange={set("guests")} placeholder="e.g. 350" /></Field>
-              <Field label="Max Price (PKR)" htmlFor="vs-pmax"><Input id="vs-pmax" inputMode="numeric" value={f.priceMax} onChange={set("priceMax")} placeholder="e.g. 1500000" /></Field>
-            </div>
-            <div className="grid3">
-              <Field label="Per Head Min (PKR)" htmlFor="vs-phmin"><Input id="vs-phmin" inputMode="numeric" value={f.perHeadMin} onChange={set("perHeadMin")} /></Field>
-              <Field label="Per Head Max (PKR)" htmlFor="vs-phmax"><Input id="vs-phmax" inputMode="numeric" value={f.perHeadMax} onChange={set("perHeadMax")} /></Field>
-              <Field label="Sort" htmlFor="vs-sort"><Select id="vs-sort" value={f.sort} onChange={set("sort")}><option value="fit">Best details first</option><option value="price">Lowest price first</option><option value="capacity">Biggest capacity</option><option value="name">A to Z</option></Select></Field>
-            </div>
-            <div className="row between" style={{ gap: 12 }}>
-              <label className="check">
-                <input type="checkbox" checked={f.includePending} onChange={(e) => setF((s) => ({ ...s, includePending: e.target.checked }))} />
-                Include vendors Vendor Team is still preparing
-              </label>
-            </div>
-            <div><div className="lbl" style={{ marginBottom: 8 }}>Facilities</div><div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>{FLAGS.map((x) => <Chip key={x.value} on={flags.includes(x.value)} onClick={() => toggleFlag(x.value)}>{x.label}</Chip>)}</div></div>
-            {(res.data?.areaOptions?.length ?? 0) > 0 && (
-              <div>
-                <div className="lbl" style={{ marginBottom: 8 }}>Areas in {res.data?.related?.city || f.city}</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {f.area && <Chip on={false} onClick={() => setF((s) => ({ ...s, area: "" }))}>All areas</Chip>}
-                  {res.data!.areaOptions!.map((a) => (
-                    <Chip
-                      key={a.subArea}
-                      on={f.area.toLowerCase() === a.subArea.toLowerCase()}
-                      onClick={() => setF((s) => ({ ...s, area: s.area.toLowerCase() === a.subArea.toLowerCase() ? "" : a.subArea }))}
-                    >
-                      {a.subArea} ({a.count})
-                    </Chip>
-                  ))}
-                </div>
-              </div>
-            )}
+        <div style={{ display: "grid", gap: 12 }}>
+          <div className="grid3">
+            <Field label="Vendor / Hall Name" htmlFor="vs-q"><Input id="vs-q" value={f.q} onChange={set("q")} placeholder="Type name, e.g. Royal Palace..." autoComplete="off" /></Field>
+            <Field label="City" htmlFor="vs-city"><Select id="vs-city" value={f.city} onChange={set("city")}><option value="">All cities</option>{(cities.data?.cities ?? []).map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}</Select></Field>
+            <Field label="Area" htmlFor="vs-area"><Input id="vs-area" value={f.area} onChange={set("area")} placeholder="Gulberg, DHA..." autoComplete="off" /></Field>
           </div>
-        ) : null}
+          {open && (
+            <>
+              <div className="grid3">
+                <Field label="Type of Business" htmlFor="vs-type"><Select id="vs-type" value={f.vendorType} onChange={set("vendorType")}><option value="">All types</option>{Object.values(VENDOR_TYPES).map((t) => <option key={t} value={t}>{t}</option>)}</Select></Field>
+                <Field label="Number of Guests" htmlFor="vs-guests"><Input id="vs-guests" inputMode="numeric" value={f.guests} onChange={set("guests")} placeholder="e.g. 350" /></Field>
+                <Field label="Max Price (PKR)" htmlFor="vs-pmax"><Input id="vs-pmax" inputMode="numeric" value={f.priceMax} onChange={set("priceMax")} placeholder="e.g. 1500000" /></Field>
+              </div>
+              <div className="grid3">
+                <Field label="Per Head Min (PKR)" htmlFor="vs-phmin"><Input id="vs-phmin" inputMode="numeric" value={f.perHeadMin} onChange={set("perHeadMin")} /></Field>
+                <Field label="Per Head Max (PKR)" htmlFor="vs-phmax"><Input id="vs-phmax" inputMode="numeric" value={f.perHeadMax} onChange={set("perHeadMax")} /></Field>
+                <Field label="Sort" htmlFor="vs-sort"><Select id="vs-sort" value={f.sort} onChange={set("sort")}><option value="fit">Best details first</option><option value="price">Lowest price first</option><option value="capacity">Biggest capacity</option><option value="name">A to Z</option></Select></Field>
+              </div>
+              <div className="row between" style={{ gap: 12 }}>
+                <label className="check">
+                  <input type="checkbox" checked={f.includePending} onChange={(e) => setF((s) => ({ ...s, includePending: e.target.checked }))} />
+                  Include vendors Vendor Team is still preparing
+                </label>
+              </div>
+              <div><div className="lbl" style={{ marginBottom: 8 }}>Facilities</div><div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>{FLAGS.map((x) => <Chip key={x.value} on={flags.includes(x.value)} onClick={() => toggleFlag(x.value)}>{x.label}</Chip>)}</div></div>
+            </>
+          )}
+          {(res.data?.areaOptions?.length ?? 0) > 0 && (
+            <div>
+              <div className="lbl" style={{ marginBottom: 8 }}>Areas in {res.data?.related?.city || f.city}</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {f.area && <Chip on={false} onClick={() => setF((s) => ({ ...s, area: "" }))}>All areas</Chip>}
+                {res.data!.areaOptions!.map((a) => (
+                  <Chip
+                    key={a.subArea}
+                    on={f.area.toLowerCase() === a.subArea.toLowerCase()}
+                    onClick={() => setF((s) => ({ ...s, area: s.area.toLowerCase() === a.subArea.toLowerCase() ? "" : a.subArea }))}
+                  >
+                    {a.subArea} ({a.count})
+                  </Chip>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </Card>
 
       {picked.length > 0 && (

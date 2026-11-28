@@ -35,33 +35,90 @@ export function AddProspectModal({ open, onClose }: { open: boolean; onClose: ()
   const vendorTeams = me.memberships.filter((m) => m.kind === "vendor_outreach")
   const allTeams = useQuery({ queryKey: ["ops", "teams"], queryFn: opsApi.teams, enabled: open && me.scope.all })
   const teamOptions = me.scope.all ? (allTeams.data?.teams ?? []).filter((t) => t.kind === "vendor_outreach" && t.active).map((t) => ({ id: t.id, name: t.name })) : vendorTeams.map((t) => ({ id: t.teamId, name: t.teamName }))
-  const [f, setF] = useState({ name: "", phone: "", vendorType: "", city: "", area: "", contactPerson: "", notes: "", teamId: "" })
-  const [dupId, setDupId] = useState<number | null>(null)
-  useEffect(() => { if (open && !f.teamId && teamOptions.length === 1) setF((s) => ({ ...s, teamId: String(teamOptions[0].id) })) }, [open, teamOptions.length]) // eslint-disable-line react-hooks/exhaustive-deps
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF((s) => ({ ...s, [k]: e.target.value }))
+  const [f, setF] = useState({ name: "", phone: "", whatsapp: "", sameWa: true, vendorType: "Wedding venue", city: "", area: "", contactPerson: "", notes: "", teamId: "" })
+  const [dup, setDup] = useState<{ prospectId: number; name?: string } | null>(null)
+  const [mode, setMode] = useState<"queue" | "onboard">("onboard")
+  useEffect(() => {
+    if (open) { setDup(null) }
+    if (open && !f.teamId && teamOptions.length === 1) setF((s) => ({ ...s, teamId: String(teamOptions[0].id) }))
+  }, [open, teamOptions.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  const set = (k: Exclude<keyof typeof f, "sameWa">) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF((s) => ({ ...s, [k]: e.target.value }))
   const create = useMutation({
-    mutationFn: () => prospectsApi.create({ name: f.name, phone: f.phone, vendorType: f.vendorType || undefined, city: f.city || undefined, area: f.area || undefined, contactPerson: f.contactPerson || undefined, notes: f.notes || undefined, teamId: f.teamId ? Number(f.teamId) : undefined, sourceType: "manual", assignToMe: true }),
-    onSuccess: (r) => { qc.invalidateQueries({ queryKey: ["ops", "prospects"] }); toast({ title: "Prospect added" }); onClose(); router.push(`/ops/prospects/${r.prospect.id}`) },
+    mutationFn: (startOnboarding: boolean) => {
+      setMode(startOnboarding ? "onboard" : "queue")
+      return prospectsApi.create({
+        name: f.name,
+        phone: f.phone,
+        whatsapp: (f.sameWa ? f.phone : f.whatsapp) || undefined,
+        vendorType: f.vendorType || undefined,
+        city: f.city || undefined,
+        area: f.area || undefined,
+        contactPerson: f.contactPerson || undefined,
+        notes: f.notes || undefined,
+        teamId: f.teamId ? Number(f.teamId) : undefined,
+        sourceType: "manual",
+        assignToMe: true,
+        startOnboarding,
+      })
+    },
+    onSuccess: (r, startOnboarding) => {
+      qc.invalidateQueries({ queryKey: ["ops", "prospects"] })
+      qc.invalidateQueries({ queryKey: ["ops", "home-summary"] })
+      qc.invalidateQueries({ queryKey: ["ops", "summary"] })
+      onClose()
+      if (startOnboarding) {
+        toast({ title: "Vendor saved — opening call sheet", body: "Fill in hall/service details while speaking to them." })
+        router.push(`/ops/prospects/${r.prospect.id}/onboarding`)
+      } else {
+        toast({ title: "Vendor added to call list" })
+        router.push(`/ops/prospects/${r.prospect.id}`)
+      }
+    },
     onError: (e) => {
-      const data = (e as { response?: { data?: { data?: { prospectId?: number } } } })?.response?.data?.data
-      setDupId(data?.prospectId ?? null)
-      toast({ title: "Couldn't add the prospect", body: opsErrorMessage(e), tone: "bad" })
+      const data = (e as { response?: { data?: { data?: { prospectId?: number; name?: string } } } })?.response?.data?.data
+      setDup(data?.prospectId ? { prospectId: data.prospectId, name: data.name } : null)
+      toast({ title: "Couldn't add vendor", body: opsErrorMessage(e), tone: "bad" })
     },
   })
   return (
-    <Modal open={open} onClose={onClose} title="Add a prospect" description="For a vendor you found yourself (a referral, a signboard). Spreadsheets go through Import."
-      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" loading={create.isPending} disabled={!f.name.trim() || !f.phone.trim()} onClick={() => create.mutate()}>Add prospect</Btn></>}>
-      {dupId && <Notice tone="warn">That number is already in the list. <Link href={`/ops/prospects/${dupId}`} style={{ textDecoration: "underline" }}>Open the existing prospect</Link></Notice>}
-      <Field label="Business name" htmlFor="ap-name" required><Input id="ap-name" value={f.name} onChange={set("name")} /></Field>
-      <Field label="Phone" htmlFor="ap-phone" required><Input id="ap-phone" value={f.phone} onChange={set("phone")} placeholder="0300 1234567" inputMode="tel" /></Field>
+    <Modal open={open} onClose={onClose} title="Add or Register New Vendor" description="Got a random vendor on the phone? Save & open their Call Sheet immediately to register them, or add to your call list for later."
+      footer={
+        <>
+          <Btn onClick={onClose}>Cancel</Btn>
+          <Btn loading={create.isPending && mode === "queue"} disabled={!f.name.trim() || !f.phone.trim() || create.isPending} onClick={() => create.mutate(false)}>
+            Save to Call List
+          </Btn>
+          <Btn variant="primary" loading={create.isPending && mode === "onboard"} disabled={!f.name.trim() || !f.phone.trim() || create.isPending} onClick={() => create.mutate(true)}>
+            Save &amp; Start Call Sheet &rarr;
+          </Btn>
+        </>
+      }>
+      {dup && (
+        <Notice tone="warn">
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <span>Already in the list{dup.name ? ` as “${dup.name}”` : ""}.</span>
+            <span className="row" style={{ gap: 8 }}>
+              <Link href={`/ops/prospects/${dup.prospectId}`} className="btn btn-ghost sm" onClick={onClose}>Open Prospect</Link>
+              <Link href={`/ops/prospects/${dup.prospectId}/onboarding`} className="btn btn-primary sm" onClick={onClose}>Open Call Sheet &rarr;</Link>
+            </span>
+          </div>
+        </Notice>
+      )}
+      <Field label="Business name" htmlFor="ap-name" required><Input id="ap-name" value={f.name} onChange={set("name")} placeholder="e.g. Shahi Taj Marquee" /></Field>
       <div className="form-grid">
-        <Field label="Category" htmlFor="ap-type"><Select id="ap-type" value={f.vendorType} onChange={set("vendorType")}><option value="">Not sure</option>{Object.values(VENDOR_TYPES).map((t) => <option key={t} value={t}>{t}</option>)}</Select></Field>
+        <Field label="Phone" htmlFor="ap-phone" required><Input id="ap-phone" value={f.phone} onChange={set("phone")} placeholder="0300 1234567" inputMode="tel" /></Field>
+        <Field label="WhatsApp number" htmlFor="ap-wa" hint={<label className="check" style={{ marginTop: 2 }}><input type="checkbox" checked={f.sameWa} onChange={(e) => setF((s) => ({ ...s, sameWa: e.target.checked }))} />Same as phone</label>}>
+          <Input id="ap-wa" value={f.sameWa ? f.phone : f.whatsapp} disabled={f.sameWa} onChange={set("whatsapp")} placeholder="0300 1234567" inputMode="tel" />
+        </Field>
+      </div>
+      <div className="form-grid">
+        <Field label="Category" htmlFor="ap-type"><Select id="ap-type" value={f.vendorType} onChange={set("vendorType")}><option value="">Choose later</option>{Object.values(VENDOR_TYPES).map((t) => <option key={t} value={t}>{t}</option>)}</Select></Field>
         <Field label="City" htmlFor="ap-city"><Select id="ap-city" value={f.city} onChange={set("city")}><option value="">Not set</option>{(cities.data?.cities ?? []).filter((c) => c.active).map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}</Select></Field>
-        <Field label="Area" htmlFor="ap-area"><Input id="ap-area" value={f.area} onChange={set("area")} /></Field>
-        <Field label="Contact person" htmlFor="ap-cp"><Input id="ap-cp" value={f.contactPerson} onChange={set("contactPerson")} /></Field>
+        <Field label="Area / Sub-area" htmlFor="ap-area"><Input id="ap-area" value={f.area} onChange={set("area")} placeholder="e.g. Gulberg III, DHA" /></Field>
+        <Field label="Contact person" htmlFor="ap-cp"><Input id="ap-cp" value={f.contactPerson} onChange={set("contactPerson")} placeholder="Owner or manager name" /></Field>
       </div>
       {teamOptions.length !== 1 && <Field label="Team" htmlFor="ap-team" required><Select id="ap-team" value={f.teamId} onChange={set("teamId")}><option value="">Choose…</option>{teamOptions.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select></Field>}
-      <Field label="Notes" htmlFor="ap-notes"><Textarea id="ap-notes" value={f.notes} onChange={set("notes")} /></Field>
+      <Field label="Notes" htmlFor="ap-notes"><Textarea id="ap-notes" value={f.notes} onChange={set("notes")} placeholder="Anything helpful from the call..." /></Field>
     </Modal>
   )
 }
@@ -105,6 +162,7 @@ export function ProspectsView() {
   const tabs = TABS.filter((t) => !t.perm || can(t.perm))
   const defaultView: ProspectView = can("ops_prospect_call") ? "mine" : "all"
   const [view, setView] = useState<ProspectView>((sp?.get("view") as ProspectView) || defaultView)
+  const [tabChosen, setTabChosen] = useState(() => !!sp?.get("view"))
   const [search, setSearch] = useState(sp?.get("q") ?? "")
   const [qDebounced, setQDebounced] = useState(search)
   const [cityId, setCityId] = useState(sp?.get("city") ?? "")
@@ -138,7 +196,14 @@ export function ProspectsView() {
   const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id))
   const toggle = (id: number) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
   const lead = can("ops_prospect_reassign")
-  const onView = (v: ProspectView) => { setView(v); setPage(1); setSelected(new Set()) }
+  const onView = (v: ProspectView) => { setTabChosen(true); setView(v); setPage(1); setSelected(new Set()) }
+
+  useEffect(() => {
+    const cnt = counts.data?.counts
+    if (!tabChosen && cnt && view === "mine" && cnt.mine === 0 && cnt.never > 0) {
+      setView("never")
+    }
+  }, [counts.data, tabChosen, view])
 
   const exportCsv = useMutation({
     mutationFn: async () => {
@@ -169,7 +234,7 @@ export function ProspectsView() {
         sub="Vendors to call. Open one to log a call; open the call queue to be handed the next one."
         actions={<>
           {can("ops_export") && <Btn icon={<Download aria-hidden />} loading={exportCsv.isPending} onClick={() => exportCsv.mutate()}>Export CSV</Btn>}
-          {can(["ops_prospect_import", "ops_prospect_call"]) && <Btn icon={<Plus aria-hidden />} onClick={() => setAdding(true)}>Add prospect</Btn>}
+          {can(["ops_prospect_import", "ops_prospect_call"]) && <Btn variant="ghost" icon={<Plus aria-hidden />} onClick={() => setAdding(true)}>Add / Register Vendor</Btn>}
           {can("ops_prospect_call") && <Link href="/ops/call" className="btn btn-primary">Start calling</Link>}
         </>}
       />

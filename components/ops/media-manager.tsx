@@ -54,12 +54,12 @@ export function MediaManager({ listingId, businessName, ownerName, ownerPhone, o
     onError: (e) => toast({ title: "Could not remove", body: opsErrorMessage(e), tone: "bad" }),
   })
   const makeLink = useMutation({
-    mutationFn: () => mediaApi.createLink(listingId),
+    mutationFn: () => (isDir ? directoryOpsApi.createMediaLink(listingId) : mediaApi.createLink(listingId)),
     onSuccess: (l) => { setLink(l); refresh() },
     onError: (e) => toast({ title: "Could not create the link", body: opsErrorMessage(e), tone: "bad" }),
   })
   const revoke = useMutation({
-    mutationFn: (id: number) => mediaApi.revokeLink(listingId, id),
+    mutationFn: (id: number) => (isDir ? directoryOpsApi.revokeMediaLink(listingId, id) : mediaApi.revokeLink(listingId, id)),
     onSuccess: () => { refresh(); toast({ title: "Link revoked" }) },
     onError: (e) => toast({ title: "Could not revoke", body: opsErrorMessage(e), tone: "bad" }),
   })
@@ -75,7 +75,7 @@ export function MediaManager({ listingId, businessName, ownerName, ownerPhone, o
   return (
     <>
       <Card title="Photos and videos" sub={`${m.images.length} of ${m.limits.images} photos · ${m.videos.length} of ${m.limits.videos} videos${m.brandLogo ? " · logo set" : ""}`}
-        actions={!isDir ? <Btn size="sm" icon={<Link2 aria-hidden />} onClick={() => makeLink.mutate()} loading={makeLink.isPending}>Vendor upload link</Btn> : undefined}>
+        actions={<Btn size="sm" icon={<Link2 aria-hidden />} onClick={() => makeLink.mutate()} loading={makeLink.isPending}>Vendor upload link</Btn>}>
         {total === 0 ? (
           <Empty icon={<ImagePlus />} title="No photos yet">A listing needs at least one photo to go live. Upload what the vendor sent on WhatsApp, or send them an upload link so they can add their own.</Empty>
         ) : (
